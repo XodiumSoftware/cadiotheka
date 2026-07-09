@@ -31,7 +31,7 @@ Use this skill when the user asks to add a new reusable UI component to the Cadi
    ```
 
 4. If the component needs new i18n strings, add them to `src/i18n.rs` following the existing pattern.
-5. Register the component in `src/components/mod.rs` with `pub mod <name>;`. If no `mod.rs` exists yet, create it and expose `pub mod <name>;`.
+5. Register the component in `src/components.rs` with `pub mod <name>;`. If `src/components.rs` does not exist yet, create it and add `pub mod <name>;` there.
 6. Ensure `src/lib.rs` exposes the components module if it does not already: `pub mod components;`.
 7. Run `cargo clippy` and address any warnings you introduced.
 

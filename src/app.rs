@@ -1,16 +1,7 @@
 //! The main Cadiotheka hub application state and UI.
 
-use crate::i18n;
-use crate::pages::hub::Hub;
-use crate::pages::login::LoginForm;
-
-/// The currently selected main view.
-#[derive(Default, PartialEq, Eq)]
-enum View {
-    /// The main hub dashboard.
-    #[default]
-    Hub,
-}
+use crate::components::{Header, View};
+use crate::pages::{Hub, LoginForm};
 
 /// The Cadiotheka hub application.
 #[derive(Default)]
@@ -21,6 +12,8 @@ pub struct CadiothekaApp {
     hub: Hub,
     /// Whether the user has logged in and should see the hub.
     is_logged_in: bool,
+    /// Top navigation header.
+    header: Header,
     /// Currently selected view in the hub.
     view: View,
 }
@@ -29,7 +22,8 @@ impl eframe::App for CadiothekaApp {
     /// Renders the hub UI each frame.
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         if self.is_logged_in {
-            self.render_header(ui);
+            self.header.show(ui);
+            self.view = self.header.view;
         }
 
         egui::CentralPanel::default().show(ui, |ui| {
@@ -40,20 +34,6 @@ impl eframe::App for CadiothekaApp {
             } else if self.login_form.show(ui) {
                 self.is_logged_in = true;
             }
-        });
-    }
-}
-
-impl CadiothekaApp {
-    /// Renders the top navigation header.
-    fn render_header(&mut self, ui: &mut egui::Ui) {
-        egui::Panel::top("hub_header").show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.heading(i18n::Hub::HEADER);
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.selectable_value(&mut self.view, View::Hub, i18n::Hub::HUB_BUTTON);
-                });
-            });
         });
     }
 }

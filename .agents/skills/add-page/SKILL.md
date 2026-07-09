@@ -34,7 +34,7 @@ Use this skill when the user asks to add a new page to the Cadiotheka applicatio
    ```
 
 4. If the page needs new i18n strings, add them to `src/i18n.rs` in a new module-style constants block (follow the existing `Hub` pattern).
-5. Register the page in `src/lib.rs` with `pub mod pages;` if a `pages` module does not already exist, or add `pub mod <name>;` inside `src/pages/mod.rs`.
+5. Register the page in `src/pages.rs` with `pub mod <name>;`. If `src/pages.rs` does not exist yet, create it and add `pub mod <name>;` there. Ensure `src/lib.rs` exposes the pages module if it does not already: `pub mod pages;`.
 6. If the app should navigate to or instantiate the new page, wire it into `src/app.rs` following the existing page routing pattern.
 7. Run `cargo clippy` and address any warnings you introduced.
 

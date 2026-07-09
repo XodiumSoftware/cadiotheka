@@ -4,9 +4,19 @@
 //! [`eframe::run_native`] or in a browser via [`eframe::WebRunner`].
 
 mod app;
+pub mod components {
+    pub mod footer;
+    pub mod header;
+
+    pub use footer::Footer;
+    pub use header::{Header, View};
+}
 pub mod pages {
     pub mod hub;
     pub mod login;
+
+    pub use hub::Hub;
+    pub use login::LoginForm;
 }
 pub mod i18n;
 
