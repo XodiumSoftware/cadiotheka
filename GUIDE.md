@@ -14,12 +14,19 @@
 
 ## Prerequisites
 
-- [Rust](https://www.rust-lang.org/) 1.85+ (edition 2024)
+- [Rust](https://www.rust-lang.org/) 1.92+ (edition 2024)
 
 Install Rust via [rustup](https://rustup.rs/):
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup update
+```
+
+Verify your toolchain:
+
+```bash
+rustc --version
 ```
 
 ## Build from Source

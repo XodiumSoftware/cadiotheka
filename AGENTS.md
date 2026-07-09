@@ -12,7 +12,7 @@
 
 | Category            | Technology                              | Purpose                            |
 |---------------------|-----------------------------------------|------------------------------------|
-| **Core Language**   | [Rust](https://www.rust-lang.org/) 1.85+| Systems/application language       |
+| **Core Language**   | [Rust](https://www.rust-lang.org/) 1.92+| Systems/application language       |
 | **Build Tool**      | [Cargo](https://doc.rust-lang.org/cargo/) | Build automation                   |
 | **CI/CD**           | GitHub Actions                          | Builds, tests, releases            |
 

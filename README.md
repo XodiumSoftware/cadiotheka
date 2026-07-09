@@ -37,7 +37,7 @@ Cadiotheka is an open hub for CAD creators. It collects, organizes, and provides
 
 ## Requirements
 
-- [Rust](https://www.rust-lang.org/) 1.85+ (edition 2024) — for running the hub backend
+- [Rust](https://www.rust-lang.org/) 1.92+ (edition 2024) — for running the hub backend
 
 <p align="right"><a href="#readme-top">▲</a></p>
 
