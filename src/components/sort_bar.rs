@@ -86,7 +86,7 @@ impl SortBar {
         let mut frame = egui::Frame::group(ui.style());
         frame.fill = frame.fill.gamma_multiply(0.65);
         frame.shadow = egui::Shadow {
-            offset: [4, 6],
+            offset: [0, 6],
             blur: 8,
             spread: 0,
             color: ui.visuals().window_shadow.color,

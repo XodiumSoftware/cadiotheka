@@ -91,10 +91,18 @@ impl Hub {
             })
             .inner;
 
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.add_space(16.0);
-            Grid.show(ui, &cards);
-        });
+        egui::ScrollArea::vertical()
+            .auto_shrink([false; 2])
+            .content_margin(egui::Margin {
+                left: 0,
+                right: 48,
+                top: 0,
+                bottom: 0,
+            })
+            .show(ui, |ui| {
+                ui.add_space(16.0);
+                Grid.show(ui, &cards);
+            });
     }
 
     /// Returns cards filtered by the query and sorted by the selection.

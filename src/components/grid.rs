@@ -20,7 +20,7 @@ impl Grid {
                 bottom: margin as i8,
             })
             .show(ui, |ui| {
-                let available_width = ui.available_size_before_wrap().x;
+                let available_width = ui.available_width();
                 let min_card_width = 240.0;
                 let columns = ((available_width + inner_spacing) / (min_card_width + inner_spacing))
                     .floor()
