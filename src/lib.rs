@@ -17,5 +17,6 @@ pub mod pages {
     pub use hub::Hub;
 }
 pub mod i18n;
+pub mod utils;
 
 pub use app::CadiothekaApp;
