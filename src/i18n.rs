@@ -1,22 +1,5 @@
 //! User-facing text strings for the Cadiotheka hub.
 
-/// Strings for the login form.
-pub struct Login;
-
-impl Login {
-    /// Title shown on the login form.
-    pub const TITLE: &str = "Login";
-
-    /// Label for the username or email input field.
-    pub const USERNAME_LABEL: &str = "Username or email:";
-
-    /// Label for the password input field.
-    pub const PASSWORD_LABEL: &str = "Password:";
-
-    /// Text shown on the login button.
-    pub const BUTTON: &str = "Login";
-}
-
 /// Strings for the hub UI.
 pub struct Hub;
 
@@ -35,12 +18,6 @@ impl Hub {
 
     /// Label for the name input field.
     pub const NAME_LABEL: &str = "Your name:";
-
-    /// Power/logout icon shown on the header button.
-    pub const LOGOUT_ICON: &str = "⏻";
-
-    /// Tooltip for the logout button in the header.
-    pub const LOGOUT_TOOLTIP: &str = "Logout";
 
     /// Label for the counter controls.
     pub const COUNTER_LABEL: &str = "Counter:";

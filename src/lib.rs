@@ -13,10 +13,8 @@ pub mod components {
 }
 pub mod pages {
     pub mod hub;
-    pub mod login;
 
     pub use hub::Hub;
-    pub use login::LoginForm;
 }
 pub mod i18n;
 
