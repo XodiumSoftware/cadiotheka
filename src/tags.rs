@@ -51,6 +51,9 @@ pub enum Tag {
     /// Decorative objects and ornaments.
     #[serde(rename = "decor")]
     Decor,
+    /// Medical devices, prosthetics, and anatomy.
+    #[serde(rename = "medical")]
+    Medical,
     /// Game-ready assets.
     #[serde(rename = "game_asset")]
     GameAsset,
@@ -85,6 +88,7 @@ impl Tag {
             Self::Engineering => "Engineering",
             Self::Aerospace => "Aerospace",
             Self::Decor => "Decor",
+            Self::Medical => "Medical",
             Self::GameAsset => "Game Asset",
             Self::Art => "Art",
             Self::Educational => "Educational",
@@ -111,6 +115,7 @@ impl Tag {
             Self::Engineering => "steel",
             Self::Aerospace => "sky",
             Self::Decor => "rose",
+            Self::Medical => "mint",
             Self::GameAsset => "pink",
             Self::Art => "magenta",
             Self::Educational => "teal",
@@ -119,7 +124,7 @@ impl Tag {
     }
 
     /// All available tags in a stable order.
-    pub const fn all() -> [Self; 20] {
+    pub const fn all() -> [Self; 21] {
         [
             Self::Model3d,
             Self::Drawing2d,
@@ -137,6 +142,7 @@ impl Tag {
             Self::Engineering,
             Self::Aerospace,
             Self::Decor,
+            Self::Medical,
             Self::GameAsset,
             Self::Art,
             Self::Educational,
