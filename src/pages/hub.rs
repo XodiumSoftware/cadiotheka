@@ -1,7 +1,7 @@
 //! Main hub UI component shown after a successful login.
 
 use crate::components::card::IconUrl;
-use crate::components::{CardData, DottedBackground, Grid};
+use crate::components::{CardData, DottedBackground, Grid, SortBar};
 use crate::platforms::Platform;
 use crate::tags::Tag;
 
@@ -67,6 +67,10 @@ impl Hub {
             .map(CardEntry::into_card_data)
             .collect();
 
-        Grid.show(ui, &cards);
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            SortBar.show(ui);
+            ui.add_space(16.0);
+            Grid.show(ui, &cards);
+        });
     }
 }
