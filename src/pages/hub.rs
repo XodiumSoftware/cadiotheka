@@ -2,7 +2,7 @@
 
 use crate::components::card::IconUrl;
 use crate::components::{
-    CardData, DottedBackground, Grid, SortBar, SortBy, SortOrder, SortSelection,
+    CardData, DottedBackground, Grid, SearchBar, SortBar, SortBy, SortOrder, SortSelection,
 };
 use crate::platforms::Platform;
 use crate::tags::Tag;
@@ -49,6 +49,8 @@ impl CardEntry {
 pub struct Hub {
     /// All cards loaded from the fixture.
     cards: Vec<CardData>,
+    /// Search control state.
+    search_bar: SearchBar,
     /// Sort control state.
     sort_bar: SortBar,
 }
@@ -65,6 +67,7 @@ impl Default for Hub {
                 .into_iter()
                 .map(CardEntry::into_card_data)
                 .collect(),
+            search_bar: SearchBar::default(),
             sort_bar: SortBar::default(),
         }
     }
@@ -80,8 +83,13 @@ impl Hub {
             .fade_start(0.75)
             .build(ui);
 
-        let sort = self.sort_bar.show(ui);
-        let cards = self.sorted_cards(sort);
+        let cards = ui
+            .horizontal(|ui| {
+                let sort = self.sort_bar.show(ui);
+                let query = self.search_bar.show(ui).to_lowercase();
+                self.filtered_sorted_cards(sort, &query)
+            })
+            .inner;
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.add_space(16.0);
@@ -89,9 +97,19 @@ impl Hub {
         });
     }
 
-    /// Returns the cards sorted according to the selected criterion and order.
-    fn sorted_cards(&self, sort: SortSelection) -> Vec<CardData> {
-        let mut cards = self.cards.clone();
+    /// Returns cards filtered by the query and sorted by the selection.
+    fn filtered_sorted_cards(&self, sort: SortSelection, query: &str) -> Vec<CardData> {
+        let query = query.trim();
+        let mut cards: Vec<CardData> = if query.is_empty() {
+            self.cards.clone()
+        } else {
+            self.cards
+                .iter()
+                .filter(|card| Self::matches_query(card, query))
+                .cloned()
+                .collect()
+        };
+
         match sort.by {
             SortBy::Downloads => {
                 cards.sort_by(|a, b| match sort.order {
@@ -113,5 +131,20 @@ impl Hub {
             }
         }
         cards
+    }
+
+    /// Checks whether a card matches the search query.
+    fn matches_query(card: &CardData, query: &str) -> bool {
+        card.title.to_lowercase().contains(query)
+            || card.author.to_lowercase().contains(query)
+            || card.description.to_lowercase().contains(query)
+            || card
+                .tags
+                .iter()
+                .any(|tag| tag.label().to_lowercase().contains(query))
+            || card
+                .supported_platforms
+                .iter()
+                .any(|platform| platform.label().to_lowercase().contains(query))
     }
 }

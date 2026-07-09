@@ -36,6 +36,13 @@ impl SortBar {
     pub const NEWEST: &str = "Newest";
 }
 
+/// Strings for the search bar UI.
+pub struct SearchBar;
+
+impl SearchBar {
+    pub const PLACEHOLDER: &str = "Search…";
+}
+
 /// Strings for startup and web errors.
 pub struct WebError;
 

@@ -10,6 +10,7 @@ pub mod components {
     pub mod footer;
     pub mod grid;
     pub mod header;
+    pub mod search_bar;
     pub mod sort_bar;
 
     pub use card::{Card, CardData, IconUrl};
@@ -17,6 +18,7 @@ pub mod components {
     pub use footer::Footer;
     pub use grid::Grid;
     pub use header::{Header, View};
+    pub use search_bar::SearchBar;
     pub use sort_bar::{SortBar, SortBy, SortOrder, SortSelection};
 }
 pub mod i18n;
