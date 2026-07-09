@@ -1,6 +1,6 @@
 //! The main Cadiotheka hub application state and UI.
 
-use crate::components::{Header, View};
+use crate::components::{Footer, Header, View};
 use crate::pages::Hub;
 
 /// The Cadiotheka hub application.
@@ -10,6 +10,8 @@ pub struct CadiothekaApp {
     hub: Hub,
     /// Top navigation header.
     header: Header,
+    /// Bottom navigation footer.
+    footer: Footer,
     /// Currently selected view in the hub.
     view: View,
 }
@@ -23,5 +25,7 @@ impl eframe::App for CadiothekaApp {
         egui::CentralPanel::default().show(ui, |ui| match self.view {
             View::Hub => self.hub.show(ui),
         });
+
+        self.footer.show(ui);
     }
 }

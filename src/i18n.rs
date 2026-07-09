@@ -12,21 +12,6 @@ impl Hub {
 
     /// Hub icon shown on the header navigation button.
     pub const HUB_ICON: &str = "🏠";
-
-    /// Main heading shown in the hub UI.
-    pub const HEADING: &str = "Welcome";
-
-    /// Label for the name input field.
-    pub const NAME_LABEL: &str = "Your name:";
-
-    /// Label for the counter controls.
-    pub const COUNTER_LABEL: &str = "Counter:";
-
-    /// Button text for decrementing the counter.
-    pub const DECREMENT_BUTTON: &str = "-";
-
-    /// Button text for incrementing the counter.
-    pub const INCREMENT_BUTTON: &str = "+";
 }
 
 /// Strings for startup and web errors.
