@@ -5,9 +5,11 @@
 
 mod app;
 pub mod components {
+    pub mod dotted_background;
     pub mod footer;
     pub mod header;
 
+    pub use dotted_background::DottedBackground;
     pub use footer::Footer;
     pub use header::{Header, View};
 }
@@ -17,6 +19,5 @@ pub mod pages {
     pub use hub::Hub;
 }
 pub mod i18n;
-pub mod utils;
 
 pub use app::CadiothekaApp;
