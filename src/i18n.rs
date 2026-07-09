@@ -1,38 +1,39 @@
 //! User-facing text strings for the Cadiotheka hub.
 
-/// Strings for the hub UI.
-pub struct Hub;
+/// Strings for the header UI.
+pub struct Header;
 
-impl Hub {
-    /// Header text shown at the top of the hub UI.
+impl Header {
     pub const HEADER: &str = "Cadiotheka";
-
-    /// Label for the Hub navigation button.
     pub const HUB_BUTTON: &str = "Hub";
-
-    /// Hub icon shown on the header navigation button.
     pub const HUB_ICON: &str = "🏠";
+}
+
+/// Strings for the footer UI.
+pub struct Footer;
+
+impl Footer {
+    pub const COPYRIGHT_PREFIX: &str = "© 2026 ";
+    pub const COPYRIGHT_OWNER: &str = "Xodium";
+    pub const COPYRIGHT_URL: &str = "https://xodium.org/";
+    pub const COPYRIGHT_SUFFIX: &str = ". ";
+    pub const POWERED_BY_PREFIX: &str = "Powered by ";
+    pub const AND: &str = " and ";
+    pub const PERIOD: &str = ".";
+    pub const EGUI_LABEL: &str = "egui";
+    pub const EGUI_URL: &str = "https://github.com/emilk/egui";
+    pub const EFRAME_LABEL: &str = "eframe";
+    pub const EFRAME_URL: &str = "https://github.com/emilk/egui/tree/master/crates/eframe";
 }
 
 /// Strings for startup and web errors.
 pub struct WebError;
 
 impl WebError {
-    /// Error message when the browser window is not available.
     pub const NO_WINDOW: &str = "no window";
-
-    /// Error message when the browser document is not available.
     pub const NO_DOCUMENT: &str = "no document";
-
-    /// Error message when the canvas element cannot be found.
     pub const CANVAS_NOT_FOUND: &str = "failed to find the_canvas_id";
-
-    /// Error message when the found element is not a canvas.
     pub const CANVAS_NOT_HTML: &str = "the_canvas_id was not a HtmlCanvasElement";
-
-    /// Message shown to the user when the app crashes on startup.
     pub const CRASH_MESSAGE: &str = "The app has crashed. See the developer console for details.";
-
-    /// Prefix for the panic message when eframe fails to start.
     pub const STARTUP_ERROR: &str = "failed to start eframe";
 }
