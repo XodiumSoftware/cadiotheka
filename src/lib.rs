@@ -11,7 +11,7 @@ pub mod components {
     pub mod grid;
     pub mod header;
 
-    pub use card::{Card, CardData};
+    pub use card::{Card, CardData, IconUrl};
     pub use dotted_background::DottedBackground;
     pub use footer::Footer;
     pub use grid::Grid;

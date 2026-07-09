@@ -2,14 +2,19 @@
 
 use crate::{platforms::Platform, tags::Tag, utils::Utils};
 
+/// A URL pointing to a card's icon asset.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(transparent)]
+pub struct IconUrl(pub String);
+
 /// Data displayed on a content card.
-pub struct CardData<'a> {
+pub struct CardData {
     /// Card title.
-    pub title: &'a str,
+    pub title: String,
     /// Author or creator name.
-    pub author: &'a str,
+    pub author: String,
     /// Short description of the content.
-    pub description: &'a str,
+    pub description: String,
     /// Categorized tags for the content.
     pub tags: Vec<Tag>,
     /// Supported platforms for the content.
@@ -20,8 +25,8 @@ pub struct CardData<'a> {
     pub favorites: u64,
     /// Official timestamp for when the card was published or updated.
     pub timestamp: time::OffsetDateTime,
-    /// Optional icon identifier or URL (reserved for future use).
-    pub icon: Option<&'a str>,
+    /// Optional icon URL (when absent, a colored placeholder is generated).
+    pub icon_url: Option<IconUrl>,
 }
 
 /// State and rendering for a reusable card component.
@@ -30,24 +35,24 @@ pub struct Card;
 
 impl Card {
     /// Draw the card component using the provided data.
-    pub fn show(&self, ui: &mut egui::Ui, data: &CardData<'_>) {
+    pub fn show(&self, ui: &mut egui::Ui, data: &CardData) {
         let mut frame = egui::Frame::group(ui.style());
         frame.fill = frame.fill.gamma_multiply(0.65);
         frame.show(ui, |ui| {
             ui.vertical(|ui| {
                 ui.horizontal(|ui| {
-                    if data.icon.is_none() {
-                        Self::show_icon_placeholder(ui, data.title);
+                    if data.icon_url.is_none() {
+                        Self::show_icon_placeholder(ui, &data.title);
                     }
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = 0.0;
-                        ui.label(egui::RichText::new(data.title).strong().size(18.0));
+                        ui.label(egui::RichText::new(&data.title).strong().size(18.0));
                         ui.label(" by ");
-                        ui.label(egui::RichText::new(data.author).strong());
+                        ui.label(egui::RichText::new(&data.author).strong());
                     });
                 });
                 ui.separator();
-                ui.label(data.description);
+                ui.label(&data.description);
                 ui.separator();
                 ui.horizontal(|ui| {
                     for tag in &data.tags {

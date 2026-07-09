@@ -1,5 +1,6 @@
 //! Main hub UI component shown after a successful login.
 
+use crate::components::card::IconUrl;
 use crate::components::{CardData, DottedBackground, Grid};
 use crate::platforms::Platform;
 use crate::tags::Tag;
@@ -22,22 +23,22 @@ struct CardEntry {
     favorites: u64,
     #[serde(with = "time::serde::rfc3339")]
     timestamp: time::OffsetDateTime,
-    icon: Option<String>,
+    icon_url: Option<IconUrl>,
 }
 
 impl CardEntry {
-    /// Borrow this entry as a [`CardData`] view.
-    fn as_card_data(&self) -> CardData<'_> {
+    /// Convert this entry into an owned [`CardData`].
+    fn into_card_data(self) -> CardData {
         CardData {
-            title: self.title.as_str(),
-            author: self.author.as_str(),
-            description: self.description.as_str(),
-            tags: self.tags.clone(),
-            supported_platforms: self.supported_platforms.clone(),
+            title: self.title,
+            author: self.author,
+            description: self.description,
+            tags: self.tags,
+            supported_platforms: self.supported_platforms,
             downloads: self.downloads,
             favorites: self.favorites,
             timestamp: self.timestamp,
-            icon: self.icon.as_deref(),
+            icon_url: self.icon_url,
         }
     }
 }
@@ -60,7 +61,11 @@ impl Hub {
         let file: CardFile = serde_json::from_str(fixture)
             .expect("test_data/cards.json should contain valid card fixtures");
 
-        let cards: Vec<CardData> = file.cards.iter().map(CardEntry::as_card_data).collect();
+        let cards: Vec<CardData> = file
+            .cards
+            .into_iter()
+            .map(CardEntry::into_card_data)
+            .collect();
 
         Grid.show(ui, &cards);
     }

@@ -9,7 +9,7 @@
       "downloads": 1200,
       "favorites": 84,
       "timestamp": "2026-07-07T14:30:00Z",
-      "icon": null
+      "icon_url": null
     },
     {
       "title": "Modern Chair",
@@ -20,7 +20,7 @@
       "downloads": 856,
       "favorites": 42,
       "timestamp": "2026-07-02T09:15:00Z",
-      "icon": null
+      "icon_url": null
     },
     {
       "title": "Robot Arm",
@@ -31,7 +31,7 @@
       "downloads": 3400,
       "favorites": 215,
       "timestamp": "2026-07-09T11:00:00Z",
-      "icon": null
+      "icon_url": null
     },
     {
       "title": "Desk Lamp",
@@ -42,7 +42,7 @@
       "downloads": 432,
       "favorites": 19,
       "timestamp": "2026-06-09T18:45:00Z",
-      "icon": null
+      "icon_url": null
     },
     {
       "title": "Drone Frame",
@@ -53,7 +53,7 @@
       "downloads": 2100,
       "favorites": 136,
       "timestamp": "2026-07-04T22:20:00Z",
-      "icon": null
+      "icon_url": null
     }
   ]
 }

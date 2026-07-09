@@ -8,7 +8,7 @@ pub struct Grid;
 
 impl Grid {
     /// Draw a grid of cards.
-    pub fn show(&self, ui: &mut egui::Ui, cards: &[CardData<'_>]) {
+    pub fn show(&self, ui: &mut egui::Ui, cards: &[CardData]) {
         let available_width = ui.available_width();
         let min_card_width = 220.0;
         let spacing = ui.spacing().item_spacing.x;
