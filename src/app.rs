@@ -21,11 +21,9 @@ impl eframe::App for CadiothekaApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.header.show(ui);
         self.view = self.header.view;
-
+        self.footer.show(ui);
         egui::CentralPanel::default().show(ui, |ui| match self.view {
             View::Hub => self.hub.show(ui),
         });
-
-        self.footer.show(ui);
     }
 }
