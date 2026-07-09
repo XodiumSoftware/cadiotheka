@@ -17,12 +17,18 @@ impl Login {
     pub const BUTTON: &str = "Login";
 }
 
-/// Strings for the demo hub UI.
-pub struct Demo;
+/// Strings for the hub UI.
+pub struct Hub;
 
-impl Demo {
+impl Hub {
+    /// Header text shown at the top of the hub UI.
+    pub const HEADER: &str = "Cadiotheka";
+
+    /// Label for the Hub navigation button.
+    pub const HUB_BUTTON: &str = "Hub";
+
     /// Main heading shown in the hub UI.
-    pub const HEADING: &str = "Welcome to Cadiotheka";
+    pub const HEADING: &str = "Welcome";
 
     /// Label for the name input field.
     pub const NAME_LABEL: &str = "Your name:";
