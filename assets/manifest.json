@@ -1,0 +1,17 @@
+{
+  "name": "Cadiotheka",
+  "short_name": "Cadiotheka",
+  "icons": [
+    {
+      "src": "./logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "lang": "en-US",
+  "id": "/index.html",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "white",
+  "theme_color": "white"
+}

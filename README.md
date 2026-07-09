@@ -33,29 +33,43 @@
 
 ## About
 
-Cadiotheka is an open hub for CAD creators. It collects, organizes, and provides resources, tooling, and references to support people working with computer-aided design.
+Cadiotheka is an open hub for CAD creators. It collects, organizes, and provides resources, tooling, and references to support people working with computer-aided design. The hub runs as a browser application built with [egui](https://github.com/emilk/egui) and compiled to WebAssembly.
 
 ## Requirements
 
-- [Rust](https://www.rust-lang.org/) 1.92+ (edition 2024) — for running the hub backend
+- [Rust](https://www.rust-lang.org/) — latest stable toolchain
+- `wasm32-unknown-unknown` target
+- [Trunk](https://trunkrs.dev/)
+
+Install the target and Trunk with:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install --locked trunk
+```
 
 <p align="right"><a href="#readme-top">▲</a></p>
 
 ## Running Locally
 
-Clone the repository and run the hub with Cargo:
+Cadiotheka runs in the browser as a WebAssembly application. Start a local
+server with Trunk:
 
 ```bash
 git clone https://github.com/XodiumSoftware/cadiotheka.git
 cd cadiotheka
-cargo run
+trunk serve --port 8080
 ```
 
-For an optimized build:
+Then open <http://localhost:8080/index.html#dev> in a browser.
+
+For a release build:
 
 ```bash
-cargo build --release
+trunk build --release
 ```
+
+The static site is placed in `dist/`.
 
 <p align="right"><a href="#readme-top">▲</a></p>
 

@@ -1,23 +1,42 @@
-//! Cadiotheka — the open hub for CAD creators.
-//!
-//! This crate provides a native desktop GUI built with [`egui`] and [`eframe`].
+//! Entry point for the Cadiotheka web hub.
 
-mod app;
-mod i18n;
+use cadiotheka::i18n;
+use eframe::wasm_bindgen::JsCast;
 
-/// Entry point for the Cadiotheka hub.
+/// Starts the Cadiotheka hub on the web canvas.
 fn main() {
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([800.0, 600.0])
-            .with_title(i18n::WINDOW_TITLE),
-        ..Default::default()
-    };
+    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
 
-    eframe::run_native(
-        i18n::WINDOW_TITLE,
-        options,
-        Box::new(|_cc| Ok(Box::new(app::CadiothekaApp::default()))),
-    )
-    .expect(i18n::STARTUP_ERROR);
+    let web_options = eframe::WebOptions::default();
+
+    wasm_bindgen_futures::spawn_local(async move {
+        let document = web_sys::window()
+            .expect(i18n::NO_WINDOW)
+            .document()
+            .expect(i18n::NO_DOCUMENT);
+
+        let canvas = document
+            .get_element_by_id("the_canvas_id")
+            .expect(i18n::CANVAS_NOT_FOUND)
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .expect(i18n::CANVAS_NOT_HTML);
+
+        let start_result = eframe::WebRunner::new()
+            .start(
+                canvas,
+                web_options,
+                Box::new(|_cc| Ok(Box::new(cadiotheka::CadiothekaApp::default()))),
+            )
+            .await;
+
+        if let Some(loading_text) = document.get_element_by_id("loading_text") {
+            match start_result {
+                Ok(_) => loading_text.remove(),
+                Err(e) => {
+                    loading_text.set_inner_html(i18n::CRASH_MESSAGE);
+                    panic!("{}: {e:?}", i18n::STARTUP_ERROR);
+                }
+            }
+        }
+    });
 }

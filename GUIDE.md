@@ -3,8 +3,8 @@
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [Build from Source](#build-from-source)
-- [Run the Hub](#run-the-hub)
+- [Build for the Web](#build-for-the-web)
+- [Run Locally](#run-locally)
 - [Run Tests](#run-tests)
 - [Run Linting](#run-linting)
 - [Build for Release](#build-for-release)
@@ -14,22 +14,33 @@
 
 ## Prerequisites
 
-- [Rust](https://www.rust-lang.org/) 1.92+ (edition 2024)
+- [Rust](https://www.rust-lang.org/) — latest stable toolchain (edition 2024)
+- `wasm32-unknown-unknown` target
+- [Trunk](https://trunkrs.dev/)
 
 Install Rust via [rustup](https://rustup.rs/):
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup update
+rustup target add wasm32-unknown-unknown
+```
+
+Install Trunk:
+
+```bash
+cargo install --locked trunk
 ```
 
 Verify your toolchain:
 
 ```bash
 rustc --version
+cargo --version
+trunk --version
 ```
 
-## Build from Source
+## Build for the Web
 
 1. Clone the repository:
    ```bash
@@ -37,23 +48,39 @@ rustc --version
    cd cadiotheka
    ```
 
-2. Build the project:
+2. Build and bundle the web app with Trunk:
    ```bash
-   cargo build
+   trunk build
    ```
 
 3. For an optimized release build:
    ```bash
-   cargo build --release
+   trunk build --release
    ```
 
-## Run the Hub
+The output is placed in `dist/`.
 
-Start the hub locally:
+## Run Locally
+
+Start a development server with Trunk:
 
 ```bash
-cargo run
+trunk serve --port 8080
 ```
+
+Then open <http://localhost:8080/index.html#dev> in a browser. The `#dev` hash
+disables the service worker cache so you always see the latest build.
+
+Trunk rebuilds automatically when you edit the project.
+
+## Build for Release
+
+```bash
+trunk build --release
+```
+
+The release site is placed in `dist/`. Upload that folder to any static host
+such as GitHub Pages.
 
 ## Run Tests
 
@@ -73,35 +100,24 @@ To also run tests and checks together:
 cargo test && cargo clippy
 ```
 
-## Build for Release
-
-```bash
-cargo build --release
-```
-
-The release binary will be located at:
-
-```
-target/release/cadiotheka
-```
-
 ## Troubleshooting
 
 ### Build fails
 
-- Verify Rust 1.85+ is installed and active:
+- Verify the latest stable Rust toolchain is installed and active:
   ```bash
   rustc --version
   cargo --version
-  ```
-- Make sure `rustup` is correctly configured:
-  ```bash
   rustup show
+  ```
+- Ensure the `wasm32-unknown-unknown` target is installed:
+  ```bash
+  rustup target list --installed
   ```
 - Try cleaning the build:
   ```bash
   cargo clean
-  cargo build
+  trunk build
   ```
 
 ### Clippy warnings
