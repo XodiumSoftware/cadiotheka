@@ -1,8 +1,8 @@
 //! The main Cadiotheka hub application state and UI.
 
-use crate::components::hub::Hub;
-use crate::components::login::LoginForm;
 use crate::i18n;
+use crate::pages::hub::Hub;
+use crate::pages::login::LoginForm;
 
 /// The currently selected main view.
 #[derive(Default, PartialEq, Eq)]

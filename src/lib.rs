@@ -4,7 +4,7 @@
 //! [`eframe::run_native`] or in a browser via [`eframe::WebRunner`].
 
 mod app;
-pub mod components {
+pub mod pages {
     pub mod hub;
     pub mod login;
 }
