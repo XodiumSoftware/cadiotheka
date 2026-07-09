@@ -85,6 +85,12 @@ impl SortBar {
         let margin = 24.0;
         let mut frame = egui::Frame::group(ui.style());
         frame.fill = frame.fill.gamma_multiply(0.65);
+        frame.shadow = egui::Shadow {
+            offset: [4, 6],
+            blur: 8,
+            spread: 0,
+            color: ui.visuals().window_shadow.color,
+        };
         let spacing = ui.spacing().item_spacing.x;
         let separator_color = ui.visuals().widgets.noninteractive.fg_stroke.color;
 

@@ -39,6 +39,12 @@ impl Card {
     pub fn show(&self, ui: &mut egui::Ui, data: &CardData) {
         let mut frame = egui::Frame::group(ui.style());
         frame.fill = frame.fill.gamma_multiply(0.65);
+        frame.shadow = egui::Shadow {
+            offset: [4, 6],
+            blur: 8,
+            spread: 0,
+            color: ui.visuals().window_shadow.color,
+        };
         frame.show(ui, |ui| {
             ui.vertical(|ui| {
                 ui.horizontal(|ui| {
