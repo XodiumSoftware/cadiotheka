@@ -24,6 +24,10 @@ impl eframe::App for CadiothekaApp {
         if self.is_logged_in {
             self.header.show(ui);
             self.view = self.header.view;
+            if self.header.wants_logout {
+                self.is_logged_in = false;
+                self.header.wants_logout = false;
+            }
         }
 
         egui::CentralPanel::default().show(ui, |ui| {

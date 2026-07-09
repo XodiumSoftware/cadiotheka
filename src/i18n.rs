@@ -27,11 +27,20 @@ impl Hub {
     /// Label for the Hub navigation button.
     pub const HUB_BUTTON: &str = "Hub";
 
+    /// Hub icon shown on the header navigation button.
+    pub const HUB_ICON: &str = "🏠";
+
     /// Main heading shown in the hub UI.
     pub const HEADING: &str = "Welcome";
 
     /// Label for the name input field.
     pub const NAME_LABEL: &str = "Your name:";
+
+    /// Power/logout icon shown on the header button.
+    pub const LOGOUT_ICON: &str = "⏻";
+
+    /// Tooltip for the logout button in the header.
+    pub const LOGOUT_TOOLTIP: &str = "Logout";
 
     /// Label for the counter controls.
     pub const COUNTER_LABEL: &str = "Counter:";
