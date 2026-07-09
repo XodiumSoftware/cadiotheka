@@ -4,6 +4,9 @@
 //! [`eframe::run_native`] or in a browser via [`eframe::WebRunner`].
 
 mod app;
+pub mod components {
+    pub mod login;
+}
 pub mod i18n;
 
 pub use app::CadiothekaApp;

@@ -15,8 +15,6 @@
 
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="white">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#404040">
 
     <style>
         html {
@@ -24,20 +22,13 @@
         }
 
         body {
-            background: #909090;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            body {
-                background: #404040;
-            }
+            margin: 0;
+            padding: 0;
         }
 
         html,
         body {
             overflow: hidden;
-            margin: 0 !important;
-            padding: 0 !important;
             height: 100%;
             width: 100%;
         }
@@ -61,7 +52,6 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: #f0f0f0;
             font-size: 24px;
             font-family: Ubuntu-Light, Helvetica, sans-serif;
             text-align: center;
@@ -80,8 +70,8 @@
             height: 24px;
             margin: 0px;
             border-radius: 50%;
-            border: 3px solid #fff;
-            border-color: #fff transparent #fff transparent;
+            border: 3px solid currentColor;
+            border-color: currentColor transparent currentColor transparent;
             animation: lds-dual-ring 1.2s linear infinite;
         }
 
