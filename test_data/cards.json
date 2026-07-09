@@ -1,0 +1,59 @@
+{
+  "cards": [
+    {
+      "title": "Mountain Bike",
+      "author": "TrailBlazer",
+      "description": "A rugged mountain bike model ready for off-road adventures.",
+      "tags": ["3d_model", "vehicle"],
+      "supported_platforms": ["blender", "freecad"],
+      "downloads": 1200,
+      "favorites": 84,
+      "timestamp": "2026-07-07T14:30:00Z",
+      "icon": null
+    },
+    {
+      "title": "Modern Chair",
+      "author": "FurniStudio",
+      "description": "Minimalist chair design with clean curves and ergonomic proportions.",
+      "tags": ["furniture", "interior"],
+      "supported_platforms": ["sketchup", "blender"],
+      "downloads": 856,
+      "favorites": 42,
+      "timestamp": "2026-07-02T09:15:00Z",
+      "icon": null
+    },
+    {
+      "title": "Robot Arm",
+      "author": "MechLab",
+      "description": "Industrial 6-axis robot arm assembly for automation projects.",
+      "tags": ["robotics", "engineering"],
+      "supported_platforms": ["freecad", "fusion_360"],
+      "downloads": 3400,
+      "favorites": 215,
+      "timestamp": "2026-07-09T11:00:00Z",
+      "icon": null
+    },
+    {
+      "title": "Desk Lamp",
+      "author": "Lumina",
+      "description": "Adjustable articulated desk lamp with a classic workshop look.",
+      "tags": ["lighting", "decor"],
+      "supported_platforms": ["blender"],
+      "downloads": 432,
+      "favorites": 19,
+      "timestamp": "2026-06-09T18:45:00Z",
+      "icon": null
+    },
+    {
+      "title": "Drone Frame",
+      "author": "AeroDesign",
+      "description": "Lightweight quadcopter frame optimized for long flight times.",
+      "tags": ["aerospace", "diy"],
+      "supported_platforms": ["freecad", "kicad"],
+      "downloads": 2100,
+      "favorites": 136,
+      "timestamp": "2026-07-04T22:20:00Z",
+      "icon": null
+    }
+  ]
+}
