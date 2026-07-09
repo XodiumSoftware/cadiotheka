@@ -1,38 +1,31 @@
 //! The main Cadiotheka hub application state and UI.
 
+use crate::components::hub::Hub;
 use crate::components::login::LoginForm;
-use crate::i18n;
 
 /// The Cadiotheka hub application.
 #[derive(Default)]
 pub struct CadiothekaApp {
     /// Login form state.
     login_form: LoginForm,
-    /// Name entered by the user in the demo UI.
-    name: String,
-    /// Demo counter value.
-    counter: i32,
+    /// Main hub UI, shown after a successful login.
+    hub: Hub,
+    /// Whether the user has logged in and should see the hub.
+    is_logged_in: bool,
 }
 
 impl eframe::App for CadiothekaApp {
     /// Renders the hub UI each frame.
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.heading(i18n::Demo::HEADING);
-            ui.horizontal(|ui| {
-                ui.label(i18n::Demo::NAME_LABEL);
-                ui.text_edit_singleline(&mut self.name);
-            });
-            ui.horizontal(|ui| {
-                ui.label(i18n::Demo::COUNTER_LABEL);
-                if ui.button(i18n::Demo::DECREMENT_BUTTON).clicked() {
-                    self.counter -= 1;
+            if self.is_logged_in {
+                self.hub.show(ui);
+            } else {
+                let logged_in = self.login_form.show(ui);
+                if logged_in {
+                    self.is_logged_in = true;
                 }
-                ui.label(self.counter.to_string());
-                if ui.button(i18n::Demo::INCREMENT_BUTTON).clicked() {
-                    self.counter += 1;
-                }
-            });
+            }
         });
     }
 }

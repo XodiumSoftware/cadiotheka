@@ -13,7 +13,9 @@ pub struct LoginForm {
 
 impl LoginForm {
     /// Renders the centered login form.
-    pub fn show(&mut self, ui: &mut egui::Ui) {
+    ///
+    /// Returns `true` when the user submits the form successfully.
+    pub fn show(&mut self, ui: &mut egui::Ui) -> bool {
         let available = ui.available_rect_before_wrap();
 
         ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
@@ -34,9 +36,8 @@ impl LoginForm {
             });
 
             ui.add_space(8.0);
-            if ui.button(i18n::Login::BUTTON).clicked() {
-                // TODO: handle login
-            }
-        });
+            ui.button(i18n::Login::BUTTON).clicked()
+        })
+        .inner
     }
 }

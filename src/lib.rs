@@ -5,6 +5,7 @@
 
 mod app;
 pub mod components {
+    pub mod hub;
     pub mod login;
 }
 pub mod i18n;
