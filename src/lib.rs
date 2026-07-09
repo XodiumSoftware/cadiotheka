@@ -17,7 +17,7 @@ pub mod components {
     pub use footer::Footer;
     pub use grid::Grid;
     pub use header::{Header, View};
-    pub use sort_bar::SortBar;
+    pub use sort_bar::{SortBar, SortBy, SortOrder, SortSelection};
 }
 pub mod i18n;
 pub mod pages {

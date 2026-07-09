@@ -25,7 +25,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|_cc| Ok(Box::new(cadiotheka::CadiothekaApp::default()))),
+                Box::new(|cc| Ok(Box::new(cadiotheka::CadiothekaApp::new(cc)))),
             )
             .await;
 

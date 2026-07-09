@@ -1,7 +1,9 @@
 //! Main hub UI component shown after a successful login.
 
 use crate::components::card::IconUrl;
-use crate::components::{CardData, DottedBackground, Grid, SortBar};
+use crate::components::{
+    CardData, DottedBackground, Grid, SortBar, SortBy, SortOrder, SortSelection,
+};
 use crate::platforms::Platform;
 use crate::tags::Tag;
 
@@ -44,8 +46,29 @@ impl CardEntry {
 }
 
 /// State for the hub UI.
-#[derive(Default)]
-pub struct Hub;
+pub struct Hub {
+    /// All cards loaded from the fixture.
+    cards: Vec<CardData>,
+    /// Sort control state.
+    sort_bar: SortBar,
+}
+
+impl Default for Hub {
+    fn default() -> Self {
+        let fixture = include_str!("../../test_data/cards.json");
+        let file: CardFile = serde_json::from_str(fixture)
+            .expect("test_data/cards.json should contain valid card fixtures");
+
+        Self {
+            cards: file
+                .cards
+                .into_iter()
+                .map(CardEntry::into_card_data)
+                .collect(),
+            sort_bar: SortBar::default(),
+        }
+    }
+}
 
 impl Hub {
     /// Renders the hub UI.
@@ -57,20 +80,38 @@ impl Hub {
             .fade_start(0.75)
             .build(ui);
 
-        let fixture = include_str!("../../test_data/cards.json");
-        let file: CardFile = serde_json::from_str(fixture)
-            .expect("test_data/cards.json should contain valid card fixtures");
-
-        let cards: Vec<CardData> = file
-            .cards
-            .into_iter()
-            .map(CardEntry::into_card_data)
-            .collect();
+        let sort = self.sort_bar.show(ui);
+        let cards = self.sorted_cards(sort);
 
         egui::ScrollArea::vertical().show(ui, |ui| {
-            SortBar.show(ui);
             ui.add_space(16.0);
             Grid.show(ui, &cards);
         });
+    }
+
+    /// Returns the cards sorted according to the selected criterion and order.
+    fn sorted_cards(&self, sort: SortSelection) -> Vec<CardData> {
+        let mut cards = self.cards.clone();
+        match sort.by {
+            SortBy::Downloads => {
+                cards.sort_by(|a, b| match sort.order {
+                    SortOrder::Ascending => a.downloads.cmp(&b.downloads),
+                    SortOrder::Descending => b.downloads.cmp(&a.downloads),
+                });
+            }
+            SortBy::Favorites => {
+                cards.sort_by(|a, b| match sort.order {
+                    SortOrder::Ascending => a.favorites.cmp(&b.favorites),
+                    SortOrder::Descending => b.favorites.cmp(&a.favorites),
+                });
+            }
+            SortBy::Newest => {
+                cards.sort_by(|a, b| match sort.order {
+                    SortOrder::Ascending => a.timestamp.cmp(&b.timestamp),
+                    SortOrder::Descending => b.timestamp.cmp(&a.timestamp),
+                });
+            }
+        }
+        cards
     }
 }

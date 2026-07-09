@@ -8,6 +8,7 @@ use crate::{platforms::Platform, tags::Tag, utils::Utils};
 pub struct IconUrl(pub String);
 
 /// Data displayed on a content card.
+#[derive(Debug, Clone)]
 pub struct CardData {
     /// Card title.
     pub title: String,
