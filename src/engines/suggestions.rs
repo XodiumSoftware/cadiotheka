@@ -61,7 +61,11 @@ impl Suggestion {
 }
 
 /// Generates clickable suggestions from a list of cards.
-pub fn from_cards(cards: &[CardData]) -> Vec<Suggestion> {
+///
+/// When `include_sort` is `false`, sort directives are omitted from the
+/// returned list. This keeps the default suggestion popup free of sort
+/// noise until the user explicitly types `@`.
+pub fn from_cards(cards: &[CardData], include_sort: bool) -> Vec<Suggestion> {
     let mut titles = HashSet::new();
     let mut authors = HashSet::new();
     let mut tags = HashSet::new();
@@ -78,7 +82,11 @@ pub fn from_cards(cards: &[CardData]) -> Vec<Suggestion> {
         }
     }
 
-    let mut suggestions = default_sort_suggestions();
+    let mut suggestions = if include_sort {
+        default_sort_suggestions()
+    } else {
+        Vec::new()
+    };
 
     let mut push_sorted = |set: HashSet<String>, kind: SuggestionKind| {
         let mut items: Vec<String> = set.into_iter().collect();
@@ -173,7 +181,7 @@ mod tests {
     #[test]
     fn from_cards_extracts_unique_values() {
         let card = sample_card();
-        let suggestions = from_cards(&[card.clone(), card]);
+        let suggestions = from_cards(&[card.clone(), card], false);
 
         let plain: Vec<_> = suggestions
             .iter()
@@ -200,13 +208,29 @@ mod tests {
     }
 
     #[test]
+    fn from_cards_includes_sort_when_requested() {
+        let suggestions = from_cards(&[sample_card()], true);
+        let sort_count = suggestions
+            .iter()
+            .filter(|s| s.kind == SuggestionKind::Sort)
+            .count();
+        assert_eq!(sort_count, 6);
+    }
+
+    #[test]
+    fn from_cards_excludes_sort_when_not_requested() {
+        let suggestions = from_cards(&[sample_card()], false);
+        assert!(!suggestions.iter().any(|s| s.kind == SuggestionKind::Sort));
+    }
+
+    #[test]
     fn from_cards_sorts_suggestions_case_insensitively() {
         let mut card_a = sample_card();
         card_a.title = "alpha".to_owned();
         let mut card_b = sample_card();
         card_b.title = "Beta".to_owned();
 
-        let suggestions = from_cards(&[card_a, card_b]);
+        let suggestions = from_cards(&[card_a, card_b], false);
         let plain: Vec<_> = suggestions
             .iter()
             .filter(|s| s.kind == SuggestionKind::Plain)

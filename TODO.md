@@ -20,7 +20,7 @@
 - [ ] **Make tags/platforms clickable.** The card renders them as small buttons but they do nothing. Clicking a tag should append `#tag` to the search query; clicking a platform should append `#platform` or its label.
 - [ ] **Filter matches prefix only.** `#blend` matches `Blender`, but `#model` won't match `3D Model` because the label starts with `3D`. Consider tokenizing labels or substring matching.
 - [ ] **Author suggestion rendering.** The popup shows `@author:AuthorName` for author suggestions, but the suggestion text itself is just the name. That looks correct.
-- [ ] **Sort suggestions.** They always appear first. Consider only showing sort suggestions when the active prefix is `@`.
+- [x] **Sort suggestions.** Sort directives no longer appear first by default. `SearchEngine::suggestions(query)` only includes sort suggestions when the active token starts with `@`, so the initial popup shows titles, authors, tags, and platforms instead.
 
 ## Data & Assets
 

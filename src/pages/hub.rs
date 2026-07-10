@@ -46,7 +46,7 @@ impl Hub {
             card_width
         };
 
-        let suggestions = self.engine.suggestions();
+        let suggestions = self.engine.suggestions(&self.search_bar.query);
         let parsed = ui
             .vertical_centered(|ui| {
                 ui.set_max_width(search_width);

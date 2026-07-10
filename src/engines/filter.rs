@@ -96,8 +96,16 @@ impl SearchEngine {
     }
 
     /// Generates clickable suggestions for the search bar popup.
-    pub fn suggestions(&self) -> Vec<Suggestion> {
-        from_cards(&self.cards)
+    ///
+    /// Sort suggestions are only included when the user is typing a `@` prefixed
+    /// token, so the popup doesn't start with six sort directives on every
+    /// focus.
+    pub fn suggestions(&self, query: &str) -> Vec<Suggestion> {
+        let include_sort = query
+            .split_whitespace()
+            .last()
+            .is_some_and(|token| token.starts_with('@'));
+        from_cards(&self.cards, include_sort)
     }
 
     /// Parses a raw query string into a structured [`ParsedQuery`].
@@ -280,7 +288,7 @@ mod tests {
     #[test]
     fn suggestions_derived_from_cards() {
         let engine = engine();
-        let suggestions = engine.suggestions();
+        let suggestions = engine.suggestions("");
 
         assert!(
             suggestions
@@ -301,6 +309,20 @@ mod tests {
             suggestions
                 .iter()
                 .any(|s| { s.kind == SuggestionKind::Filter && s.text == "Blender" })
+        );
+        assert!(
+            !suggestions.iter().any(|s| s.kind == SuggestionKind::Sort),
+            "sort suggestions should be hidden without @ prefix"
+        );
+    }
+
+    #[test]
+    fn sort_suggestions_shown_with_at_prefix() {
+        let engine = engine();
+        let suggestions = engine.suggestions("@");
+        assert!(
+            suggestions.iter().any(|s| s.kind == SuggestionKind::Sort),
+            "sort suggestions should appear when @ prefix is active"
         );
     }
 
