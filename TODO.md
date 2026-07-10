@@ -24,9 +24,9 @@
 
 ## Data & Assets
 
-- [ ] **Cards fixture is hardcoded.** `hub.rs` embeds `test_data/cards.json` via `include_str!`. Document that this is temporary and plan a real data source (JSON fetch, GitHub repo index, etc.).
+- [x] **Cards fixture is hardcoded.** `src/fixture.rs` embeds `test_data/cards.json` via `include_str!` and documents that this is temporary. The planned future source is a remote JSON endpoint or generated index (e.g., GitHub repo index) loaded at runtime.
 - [ ] **Missing icon support.** `icon_url` exists but no code loads or displays it. Add image loading via `egui_extras` or lazy URL-based icons.
-- [ ] **Validate fixture against enums.** There is a `validate-cards` skill. Use it to keep `cards.json` in sync with `Tag` and `Platform`.
+- [x] **Validate fixture against enums.** `src/fixture.rs` loads `test_data/cards.json` into `Tag` and `Platform` enums. `cargo test` now validates the fixture on every run, and a clear error is returned if a tag or platform drifts out of sync.
 
 ## Tooling & CI
 

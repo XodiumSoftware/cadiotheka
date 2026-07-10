@@ -34,6 +34,7 @@ pub mod engines {
     pub use query::{ParsedQuery, SortBy, SortOrder, SortSelection};
     pub use suggestions::{Suggestion, SuggestionKind};
 }
+pub mod fixture;
 pub mod i18n;
 pub mod pages {
     pub mod hub;
