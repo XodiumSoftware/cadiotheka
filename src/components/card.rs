@@ -165,7 +165,12 @@ impl Card {
             egui::Color32::from_rgb(236, 72, 153), // pink
         ];
 
-        palette[title.len() % palette.len()]
+        // Hash the full title so cards with the same length but different
+        // content get different placeholder colors.
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        std::hash::Hash::hash(title, &mut hasher);
+        let hash = std::hash::Hasher::finish(&hasher);
+        palette[(hash as usize) % palette.len()]
     }
 }
 
@@ -191,12 +196,21 @@ mod tests {
     }
 
     #[test]
-    fn placeholder_color_is_deterministic_by_length() {
-        let a = Card::placeholder_color("abc");
-        let b = Card::placeholder_color("xyz");
-        assert_eq!(a, b);
+    fn placeholder_color_varies_by_title_content() {
+        let a = Card::placeholder_color("Blender");
+        let b = Card::placeholder_color("FreeCAD");
+        // Same length but different content should usually differ. The hash
+        // space is small (8 colors), so exact equality is allowed but unlikely.
+        assert_ne!(
+            a, b,
+            "different titles of the same length should get different colors"
+        );
+    }
 
-        let c = Card::placeholder_color("abcd");
-        assert_ne!(a, c);
+    #[test]
+    fn placeholder_color_is_deterministic_for_same_title() {
+        let a = Card::placeholder_color("abc");
+        let b = Card::placeholder_color("abc");
+        assert_eq!(a, b);
     }
 }

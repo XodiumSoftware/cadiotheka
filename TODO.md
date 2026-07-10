@@ -13,7 +13,7 @@
 - [ ] **Loading state.** `Hub::default()` parses JSON synchronously at startup. For a real fixture this is fine, but document the path or add async loading later.
 - [ ] **Header view is confusing.** `Header.show` writes `self.view` every frame, so `CadiothekaApp` copies it back into `self.view`. This works but is redundant; let `Header` expose the value or make `Hub` own view selection.
 - [ ] **Footer always visible.** Bottom panel plus central panel means the central area can be cramped on small screens. Consider a collapsible footer or moving links to an about page.
-- [ ] **Icon placeholders.** They are deterministic by title length, so two cards starting with different letters can get the same color. Hash the title or first letter for better differentiation.
+- [x] **Icon placeholders.** Placeholder colors now hash the full title string instead of using `title.len() % palette.len()`. Cards with the same length but different content now get different colors, while the same title remains deterministic.
 
 ## Search & Filtering
 
