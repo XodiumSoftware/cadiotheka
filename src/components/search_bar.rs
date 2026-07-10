@@ -324,4 +324,26 @@ mod tests {
         bar.apply_suggestion(&Suggestion::filter("Blender"));
         assert_eq!(bar.query, "#Blender");
     }
+
+    #[test]
+    fn apply_author_replaces_partial_token() {
+        let mut bar = SearchBar {
+            query: "screw @Zen".to_owned(),
+            id: egui::Id::new("test_search_bar"),
+            selected_suggestion: None,
+        };
+        bar.apply_suggestion(&Suggestion::author("ZenFlow"));
+        assert_eq!(bar.query, "screw @author:ZenFlow");
+    }
+
+    #[test]
+    fn apply_author_replaces_lonely_partial_token() {
+        let mut bar = SearchBar {
+            query: "@Zen".to_owned(),
+            id: egui::Id::new("test_search_bar"),
+            selected_suggestion: None,
+        };
+        bar.apply_suggestion(&Suggestion::author("ZenFlow"));
+        assert_eq!(bar.query, "@author:ZenFlow");
+    }
 }
