@@ -42,6 +42,17 @@ impl Grid {
     pub const CLEAR_SEARCH: &str = "Clear search";
 }
 
+/// Strings for the hub UI.
+pub struct Hub;
+
+impl Hub {
+    pub const LOADING_TITLE: &str = "Loading catalog…";
+    pub const LOADING_MESSAGE: &str = "Fetching the latest CAD content.";
+    pub const ERROR_TITLE: &str = "Failed to load";
+    pub const ERROR_MESSAGE_PREFIX: &str = "Could not load the card catalog: ";
+    pub const RETRY: &str = "Retry";
+}
+
 /// Strings for startup and web errors.
 pub struct WebError;
 

@@ -10,9 +10,8 @@
 ## UI/UX
 
 - [x] **Empty state.** `Grid::show` now renders a centered "No results" message with a short explanation and a "Clear search" button when `cards` is empty. Clicking the button emits `CardAction::ClearSearch`, which `Hub` handles by resetting the search query.
-- [ ] **Loading state.** `Hub::default()` parses JSON synchronously at startup. For a real fixture this is fine, but document the path or add async loading later.
+- [x] **Loading state.** `Hub` now tracks a `LoadState` (`Loading`, `Ready`, `Error`) and calls `load()` from `Hub::show` when loading. `Default` starts in `Loading` instead of parsing JSON synchronously. The hub renders a spinner with "Loading catalog…" while loading, and an error message with a retry button on failure. The fixture remains embedded for now; the state machine is ready for an async fetch later.
 - [ ] **Header view is confusing.** `Header.show` writes `self.view` every frame, so `CadiothekaApp` copies it back into `self.view`. This works but is redundant; let `Header` expose the value or make `Hub` own view selection.
-- [ ] **Footer always visible.** Bottom panel plus central panel means the central area can be cramped on small screens. Consider a collapsible footer or moving links to an about page.
 - [x] **Icon placeholders.** Placeholder colors now hash the full title string instead of using `title.len() % palette.len()`. Cards with the same length but different content now get different colors, while the same title remains deterministic.
 
 ## Search & Filtering

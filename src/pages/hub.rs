@@ -8,28 +8,63 @@ use crate::components::{CardAction, CardData, DottedBackground, Grid, Keycap, Se
 use crate::engines::SearchEngine;
 use crate::fixture::load_cards;
 
+/// Current loading state of the hub's card catalog.
+#[derive(Debug, Default)]
+enum LoadState {
+    /// Catalog has not been loaded yet.
+    #[default]
+    Loading,
+    /// Catalog is loaded and ready.
+    Ready,
+    /// Catalog failed to load with an error message.
+    Error(String),
+}
+
 /// State for the hub UI.
 pub struct Hub {
     /// Search engine owning the loaded cards.
     engine: SearchEngine,
     /// Search control state.
     search_bar: SearchBar,
+    /// Current catalog loading state.
+    load_state: LoadState,
 }
 
 impl Default for Hub {
     fn default() -> Self {
-        let cards = load_cards().expect("card fixture should be valid and non-empty");
-
         Self {
-            engine: SearchEngine::new(cards),
+            engine: SearchEngine::new(Vec::new()),
             search_bar: SearchBar::default(),
+            load_state: LoadState::Loading,
         }
     }
 }
 
 impl Hub {
+    /// Attempts to load the card catalog.
+    ///
+    /// This is currently synchronous because the fixture is embedded at compile
+    /// time. In the future it will be replaced by an async fetch, and this
+    /// method can be called repeatedly from [`Hub::show`] until the load
+    /// completes.
+    fn load(&mut self) {
+        match load_cards() {
+            Ok(cards) => {
+                self.engine = SearchEngine::new(cards);
+                self.load_state = LoadState::Ready;
+            }
+            Err(error) => {
+                self.load_state = LoadState::Error(error);
+            }
+        }
+    }
+
     /// Renders the hub UI.
     pub fn show(&mut self, ui: &mut egui::Ui) {
+        if matches!(self.load_state, LoadState::Loading) {
+            self.load();
+        }
+
         DottedBackground::builder()
             .spacing(24.0)
             .radius(1.0)
@@ -38,6 +73,21 @@ impl Hub {
             .build(ui);
 
         ui.add_space(24.0);
+
+        let error_message = match &self.load_state {
+            LoadState::Loading => {
+                self.render_loading(ui);
+                return;
+            }
+            LoadState::Error(error) => Some(error.clone()),
+            LoadState::Ready => None,
+        };
+
+        if let Some(error) = error_message {
+            self.render_error(ui, &error);
+            return;
+        }
+
         let inner_spacing = 20.0;
         let (columns, card_width) = Grid::column_metrics(ui.available_width());
         let search_width = if columns >= 2 {
@@ -82,6 +132,44 @@ impl Hub {
                 let actions = Grid.show(ui, &card_data);
                 self.apply_card_actions(actions);
             });
+    }
+
+    /// Renders a loading indicator while the catalog is being fetched.
+    fn render_loading(&self, ui: &mut egui::Ui) {
+        ui.vertical_centered(|ui| {
+            ui.add_space(64.0);
+            ui.label(
+                egui::RichText::new(crate::i18n::Hub::LOADING_TITLE)
+                    .heading()
+                    .size(24.0),
+            );
+            ui.add_space(8.0);
+            ui.label(crate::i18n::Hub::LOADING_MESSAGE);
+            ui.add_space(16.0);
+            ui.spinner();
+        });
+    }
+
+    /// Renders an error message with a retry action.
+    fn render_error(&mut self, ui: &mut egui::Ui, error: &str) {
+        ui.vertical_centered(|ui| {
+            ui.add_space(64.0);
+            ui.label(
+                egui::RichText::new(crate::i18n::Hub::ERROR_TITLE)
+                    .heading()
+                    .size(24.0),
+            );
+            ui.add_space(8.0);
+            ui.label(format!(
+                "{}{}",
+                crate::i18n::Hub::ERROR_MESSAGE_PREFIX,
+                error
+            ));
+            ui.add_space(16.0);
+            if ui.button(crate::i18n::Hub::RETRY).clicked() {
+                self.load_state = LoadState::Loading;
+            }
+        });
     }
 
     /// Applies actions triggered by clicking interactive card elements.
