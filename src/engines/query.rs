@@ -128,7 +128,8 @@ pub fn parse_query(query: &str) -> ParsedQuery {
 
 /// Parses a single `@sort:<field>:<direction>` directive.
 fn parse_sort_directive(token: &str) -> Option<SortSelection> {
-    let parts: Vec<&str> = token[6..].split(':').collect();
+    let body = token.strip_prefix("@sort:")?;
+    let parts: Vec<&str> = body.split(':').collect();
     if parts.len() != 2 {
         return None;
     }
