@@ -18,7 +18,7 @@
 ## Search & Filtering
 
 - [ ] **Make tags/platforms clickable.** The card renders them as small buttons but they do nothing. Clicking a tag should append `#tag` to the search query; clicking a platform should append `#platform` or its label.
-- [ ] **Filter matches prefix only.** `#blend` matches `Blender`, but `#model` won't match `3D Model` because the label starts with `3D`. Consider tokenizing labels or substring matching.
+- [x] **Filter matches prefix only.** Tag/platform filtering now tokenizes labels on whitespace and non-alphanumeric characters, then performs case-insensitive substring matching per token. `#model` now matches `3D Model` and `#fusion` matches `Fusion 360` while preserving prefix matches like `#blend` → `Blender`.
 - [x] **Author suggestion rendering.** Author suggestions store just the author name and render as `@author:AuthorName` in the popup, inserting the same prefixed form into the query. Added tests in `search_bar.rs` to lock in this behavior.
 - [x] **Sort suggestions.** Sort directives no longer appear first by default. `SearchEngine::suggestions(query)` only includes sort suggestions when the active token starts with `@`, so the initial popup shows titles, authors, tags, and platforms instead.
 

@@ -71,11 +71,11 @@ impl SearchEngine {
         let matches_filters = filters.iter().all(|filter| {
             card.tags
                 .iter()
-                .any(|tag| tag.label().to_lowercase().starts_with(filter))
+                .any(|tag| Self::label_matches(tag.label(), filter))
                 || card
                     .supported_platforms
                     .iter()
-                    .any(|platform| platform.label().to_lowercase().starts_with(filter))
+                    .any(|platform| Self::label_matches(platform.label(), filter))
         });
         if !matches_filters {
             return None;
@@ -93,6 +93,20 @@ impl SearchEngine {
 
         let haystack = Self::searchable_text(card);
         self.matcher.fuzzy_match(&haystack, query)
+    }
+
+    /// Checks whether a user-facing label matches a filter needle.
+    ///
+    /// The label is tokenized on whitespace and non-alphanumeric characters,
+    /// then each token is compared case-insensitively using substring
+    /// matching. This lets `#model` match `3D Model` while still supporting
+    /// prefixes like `#blend` → `Blender`.
+    fn label_matches(label: &str, needle: &str) -> bool {
+        let needle = needle.to_lowercase();
+        label
+            .split(|c: char| !c.is_alphanumeric())
+            .map(|token| token.to_lowercase())
+            .any(|token| token.contains(&needle))
     }
 
     /// Generates clickable suggestions for the search bar popup.
@@ -331,5 +345,34 @@ mod tests {
         let parsed = SearchEngine::parse_query("gear #freecad");
         assert_eq!(parsed.filter, "gear");
         assert_eq!(parsed.filters, vec!["freecad"]);
+    }
+
+    #[test]
+    fn filter_matches_substring_tokens() {
+        let engine = engine();
+        // "3D Model" should match #model even though the label starts with "3D".
+        let parsed = parse_query("#model");
+        let results = engine.search(&parsed);
+        assert!(
+            results.iter().any(|c| c.title == "Parametric Screw"),
+            "#model should match the 3D Model tag"
+        );
+
+        // "Fusion 360" should match #fusion (and #360).
+        let parsed = parse_query("#fusion");
+        let results = engine.search(&parsed);
+        assert!(
+            results.iter().any(|c| c.title == "Parametric Screw"),
+            "#fusion should match the Fusion 360 platform"
+        );
+    }
+
+    #[test]
+    fn label_matches_tokenizes_and_substring_matches() {
+        assert!(SearchEngine::label_matches("3D Model", "model"));
+        assert!(SearchEngine::label_matches("3D Model", "3d"));
+        assert!(SearchEngine::label_matches("Fusion 360", "fusion"));
+        assert!(SearchEngine::label_matches("Blender", "blend"));
+        assert!(!SearchEngine::label_matches("Blender", "model"));
     }
 }
