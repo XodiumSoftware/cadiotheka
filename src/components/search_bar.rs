@@ -1,6 +1,7 @@
 //! Search bar widget for the Cadiotheka hub.
 
 use crate::i18n;
+use egui_phosphor_icons::icons;
 
 /// State and rendering for a search control bar.
 #[derive(Default)]
@@ -29,8 +30,8 @@ impl SearchBar {
             .show(ui, |ui| {
                 frame.show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.add_sized(
-                            egui::vec2(240.0, 28.0),
+                        ui.label(icons::MAGNIFYING_GLASS.regular().size(14.0));
+                        ui.add(
                             egui::TextEdit::singleline(&mut self.query)
                                 .hint_text(i18n::SearchBar::PLACEHOLDER)
                                 .margin(egui::vec2(12.0, 6.0)),

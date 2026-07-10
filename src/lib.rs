@@ -5,16 +5,22 @@
 
 mod app;
 pub mod components {
+    pub mod builders {
+        pub mod dotted_background;
+        pub mod keycap;
+
+        pub use dotted_background::DottedBackground;
+        pub use keycap::Keycap;
+    }
     pub mod card;
-    pub mod dotted_background;
     pub mod footer;
     pub mod grid;
     pub mod header;
     pub mod search_bar;
     pub mod sort_bar;
 
+    pub use builders::{DottedBackground, Keycap};
     pub use card::{Card, CardData, IconUrl};
-    pub use dotted_background::DottedBackground;
     pub use footer::Footer;
     pub use grid::Grid;
     pub use header::{Header, View};
