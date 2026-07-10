@@ -37,4 +37,4 @@
 ## Documentation
 
 - [ ] **README mismatch.** The README links to `docs.rs/cadiotheka`, but this is a web-only application crate. That docs badge is misleading.
-- [ ] **CONTRIBUTING setup.** There is a `CONTRIBUTING.md`; make sure it mentions `cargo clippy` and `trunk serve --port 8080`.
+- [x] **CONTRIBUTING setup.** Updated `CONTRIBUTING.md` with `cargo clippy` and `trunk serve --port 8080` instructions.
