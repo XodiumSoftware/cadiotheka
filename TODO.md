@@ -3,7 +3,7 @@
 ## Code Quality & Architecture
 
 - [x] **Add tests.** Added tests for `filter.rs`, `suggestions.rs`, `utils.rs`, `card.rs`, and `grid.rs`; fixed pre-existing broken tests in `search_bar.rs` and `query.rs`. Tests compile for `wasm32-unknown-unknown`; run with `wasm-pack test` in a browser environment.
-- [ ] **Hide implementation details.** `lib.rs` re-exports many internals. Consider keeping engine internals private (`parse_query`, `from_cards`) and exposing only `SearchEngine` and `Suggestion`.
+- [x] **Hide implementation details.** `lib.rs` now keeps engine submodules (`filter`, `query`, `suggestions`) and most component submodules crate-private, re-exporting only `SearchEngine`, `Suggestion`, `SuggestionKind`, and the public query/sort types. Fixture, utils, and most internal modules are also `pub(crate)`.
 - [ ] **Reduce clones in search.** `filter.rs` clones every matching card. If `CardData` stays owned, consider returning indices or `Rc<CardData>` for large catalogs.
 - [ ] **Use `&str` over owned strings.** `ParsedQuery` fields like `filter`, `filters`, and `author` allocate on every keystroke. For short-lived query parsing this is fine, but benchmarking may show it matters.
 

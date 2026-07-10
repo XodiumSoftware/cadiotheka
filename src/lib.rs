@@ -5,18 +5,18 @@
 
 mod app;
 pub mod components {
-    pub mod builders {
+    pub(crate) mod builders {
         pub mod dotted_background;
         pub mod keycap;
 
         pub use dotted_background::DottedBackground;
         pub use keycap::Keycap;
     }
-    pub mod card;
-    pub mod footer;
-    pub mod grid;
-    pub mod header;
-    pub mod search_bar;
+    pub(crate) mod card;
+    pub(crate) mod footer;
+    pub(crate) mod grid;
+    pub(crate) mod header;
+    pub(crate) mod search_bar;
 
     pub use builders::{DottedBackground, Keycap};
     pub use card::{Card, CardAction, CardData, IconUrl};
@@ -26,23 +26,23 @@ pub mod components {
     pub use search_bar::SearchBar;
 }
 pub mod engines {
-    pub mod filter;
-    pub mod query;
-    pub mod suggestions;
+    pub(crate) mod filter;
+    pub(crate) mod query;
+    pub(crate) mod suggestions;
 
     pub use filter::SearchEngine;
     pub use query::{ParsedQuery, SortBy, SortOrder, SortSelection};
     pub use suggestions::{Suggestion, SuggestionKind};
 }
-pub mod fixture;
+pub(crate) mod fixture;
 pub mod i18n;
 pub mod pages {
-    pub mod hub;
+    pub(crate) mod hub;
 
     pub use hub::Hub;
 }
 pub mod platforms;
 pub mod tags;
-pub mod utils;
+pub(crate) mod utils;
 
 pub use app::CadiothekaApp;
