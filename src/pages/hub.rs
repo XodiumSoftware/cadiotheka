@@ -1,10 +1,8 @@
 //! Main hub UI component shown after a successful login.
 
 use crate::components::card::IconUrl;
-use crate::components::{
-    CardData, DottedBackground, Grid, ParsedQuery, SearchBar, SortBy, SortOrder, Suggestion,
-    SuggestionKind,
-};
+use crate::components::{CardData, DottedBackground, Grid, SearchBar};
+use crate::engines::SearchEngine;
 use crate::platforms::Platform;
 use crate::tags::Tag;
 
@@ -48,8 +46,8 @@ impl CardEntry {
 
 /// State for the hub UI.
 pub struct Hub {
-    /// All cards loaded from the fixture.
-    cards: Vec<CardData>,
+    /// Search engine owning the loaded cards.
+    engine: SearchEngine,
     /// Search control state.
     search_bar: SearchBar,
 }
@@ -61,11 +59,12 @@ impl Default for Hub {
             .expect("test_data/cards.json should contain valid card fixtures");
 
         Self {
-            cards: file
-                .cards
-                .into_iter()
-                .map(CardEntry::into_card_data)
-                .collect(),
+            engine: SearchEngine::new(
+                file.cards
+                    .into_iter()
+                    .map(CardEntry::into_card_data)
+                    .collect(),
+            ),
             search_bar: SearchBar::default(),
         }
     }
@@ -90,15 +89,16 @@ impl Hub {
             card_width
         };
 
-        let suggestions = self.collect_suggestions();
+        let suggestions = self.engine.suggestions();
         let parsed = ui
             .vertical_centered(|ui| {
                 ui.set_max_width(search_width);
-                self.search_bar.show(ui, &suggestions)
+                self.search_bar
+                    .show(ui, &suggestions, SearchEngine::parse_query)
             })
             .inner;
         ui.add_space(24.0);
-        let cards = self.filtered_sorted_cards(&parsed);
+        let cards = self.engine.search(&parsed);
 
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
@@ -112,104 +112,5 @@ impl Hub {
                 ui.add_space(16.0);
                 Grid.show(ui, &cards);
             });
-    }
-
-    /// Returns cards filtered by the query and sorted by the selection.
-    fn filtered_sorted_cards(&self, parsed: &ParsedQuery) -> Vec<CardData> {
-        let query = parsed.filter.to_lowercase();
-        let mut cards: Vec<CardData> = self
-            .cards
-            .iter()
-            .filter(|card| Self::matches_query(card, &query, &parsed.filters))
-            .cloned()
-            .collect();
-
-        match parsed.sort.by {
-            SortBy::Downloads => {
-                cards.sort_by(|a, b| match parsed.sort.order {
-                    SortOrder::Ascending => a.downloads.cmp(&b.downloads),
-                    SortOrder::Descending => b.downloads.cmp(&a.downloads),
-                });
-            }
-            SortBy::Favorites => {
-                cards.sort_by(|a, b| match parsed.sort.order {
-                    SortOrder::Ascending => a.favorites.cmp(&b.favorites),
-                    SortOrder::Descending => b.favorites.cmp(&a.favorites),
-                });
-            }
-            SortBy::Newest => {
-                cards.sort_by(|a, b| match parsed.sort.order {
-                    SortOrder::Ascending => a.timestamp.cmp(&b.timestamp),
-                    SortOrder::Descending => b.timestamp.cmp(&a.timestamp),
-                });
-            }
-        }
-        cards
-    }
-
-    /// Collects search suggestions from the loaded cards.
-    fn collect_suggestions(&self) -> Vec<Suggestion> {
-        use std::collections::HashSet;
-
-        let mut titles = HashSet::new();
-        let mut authors = HashSet::new();
-        let mut tags = HashSet::new();
-        let mut platforms = HashSet::new();
-
-        for card in &self.cards {
-            titles.insert(card.title.clone());
-            authors.insert(card.author.clone());
-            for tag in &card.tags {
-                tags.insert(tag.label().to_owned());
-            }
-            for platform in &card.supported_platforms {
-                platforms.insert(platform.label().to_owned());
-            }
-        }
-
-        let mut suggestions = SearchBar::default_sort_suggestions();
-
-        let mut push_sorted = |set: HashSet<String>, kind: SuggestionKind| {
-            let mut items: Vec<String> = set.into_iter().collect();
-            items.sort_by_key(|a| a.to_lowercase());
-            for item in items {
-                suggestions.push(Suggestion { text: item, kind });
-            }
-        };
-
-        push_sorted(titles, SuggestionKind::Plain);
-        push_sorted(authors, SuggestionKind::Plain);
-        push_sorted(tags, SuggestionKind::Filter);
-        push_sorted(platforms, SuggestionKind::Filter);
-
-        suggestions
-    }
-
-    /// Checks whether a card matches the free-text query and all exact filters.
-    fn matches_query(card: &CardData, query: &str, filters: &[String]) -> bool {
-        let matches_text = query.trim().is_empty()
-            || card.title.to_lowercase().contains(query)
-            || card.author.to_lowercase().contains(query)
-            || card.description.to_lowercase().contains(query)
-            || card
-                .tags
-                .iter()
-                .any(|tag| tag.label().to_lowercase().contains(query))
-            || card
-                .supported_platforms
-                .iter()
-                .any(|platform| platform.label().to_lowercase().contains(query));
-
-        let matches_filters = filters.iter().all(|filter| {
-            card.tags
-                .iter()
-                .any(|tag| tag.label().to_lowercase() == *filter)
-                || card
-                    .supported_platforms
-                    .iter()
-                    .any(|platform| platform.label().to_lowercase() == *filter)
-        });
-
-        matches_text && matches_filters
     }
 }

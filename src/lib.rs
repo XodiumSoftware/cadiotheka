@@ -23,9 +23,16 @@ pub mod components {
     pub use footer::Footer;
     pub use grid::Grid;
     pub use header::{Header, View};
-    pub use search_bar::{
-        ParsedQuery, SearchBar, SortBy, SortOrder, SortSelection, Suggestion, SuggestionKind,
-    };
+    pub use search_bar::SearchBar;
+}
+pub mod engines {
+    pub mod filter;
+    pub mod query;
+    pub mod suggestions;
+
+    pub use filter::SearchEngine;
+    pub use query::{ParsedQuery, SortBy, SortOrder, SortSelection};
+    pub use suggestions::{Suggestion, SuggestionKind};
 }
 pub mod i18n;
 pub mod pages {
