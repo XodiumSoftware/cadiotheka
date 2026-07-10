@@ -1,7 +1,7 @@
 //! Main hub UI component shown after a successful login.
 
 use crate::components::card::IconUrl;
-use crate::components::{CardData, DottedBackground, Grid, SearchBar};
+use crate::components::{CardData, DottedBackground, Grid, Keycap, SearchBar};
 use crate::engines::SearchEngine;
 use crate::platforms::Platform;
 use crate::tags::Tag;
@@ -97,6 +97,17 @@ impl Hub {
                     .show(ui, &suggestions, SearchEngine::parse_query)
             })
             .inner;
+
+        let mut focus_search = false;
+        Keycap::builder()
+            .keys(&[egui::Key::C, egui::Key::S])
+            .execute(|| focus_search = true)
+            .build(ui);
+
+        if focus_search {
+            ui.memory_mut(|mem| mem.request_focus(self.search_bar.id));
+        }
+
         ui.add_space(24.0);
         let cards = self.engine.search(&parsed);
 

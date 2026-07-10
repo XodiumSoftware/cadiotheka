@@ -7,12 +7,23 @@ use crate::engines::{ParsedQuery, Suggestion, SuggestionKind};
 use crate::i18n;
 
 /// State and rendering for a search control bar.
-#[derive(Default)]
 pub struct SearchBar {
     /// Current raw search query.
     pub query: String,
+    /// Persistent widget id used to request focus programmatically.
+    pub id: egui::Id,
     /// Currently selected suggestion index in the popup, if any.
     selected_suggestion: Option<usize>,
+}
+
+impl Default for SearchBar {
+    fn default() -> Self {
+        Self {
+            query: String::new(),
+            id: egui::Id::new("hub_search_bar"),
+            selected_suggestion: None,
+        }
+    }
 }
 
 impl SearchBar {
@@ -29,6 +40,7 @@ impl SearchBar {
         let response = ui
             .add(
                 egui::TextEdit::singleline(&mut self.query)
+                    .id(self.id)
                     .hint_text(i18n::SearchBar::PLACEHOLDER)
                     .margin(egui::vec2(16.0, 12.0))
                     .desired_width(f32::INFINITY),
