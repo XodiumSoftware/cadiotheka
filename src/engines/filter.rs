@@ -30,7 +30,7 @@ impl SearchEngine {
             .cards
             .iter()
             .filter_map(|card| {
-                let score = self.score(card, &query, &parsed.filters)?;
+                let score = self.score(card, &query, &parsed.filters, &parsed.author)?;
                 Some((score, card.clone()))
             })
             .collect();
@@ -61,7 +61,13 @@ impl SearchEngine {
     }
 
     /// Returns a fuzzy match score for a card, or `None` if it does not match.
-    fn score(&self, card: &CardData, query: &str, filters: &[String]) -> Option<i64> {
+    fn score(
+        &self,
+        card: &CardData,
+        query: &str,
+        filters: &[String],
+        author: &Option<String>,
+    ) -> Option<i64> {
         let matches_filters = filters.iter().all(|filter| {
             card.tags
                 .iter()
@@ -72,6 +78,12 @@ impl SearchEngine {
                     .any(|platform| platform.label().to_lowercase().starts_with(filter))
         });
         if !matches_filters {
+            return None;
+        }
+
+        if let Some(author) = author
+            && !card.author.to_lowercase().starts_with(author)
+        {
             return None;
         }
 

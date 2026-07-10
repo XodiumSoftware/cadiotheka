@@ -91,6 +91,8 @@ pub struct ParsedQuery {
     pub filter: String,
     /// Exact tag/platform filters requested with `#`.
     pub filters: Vec<String>,
+    /// Author filter requested with `@author:`.
+    pub author: Option<String>,
     /// Sort selection parsed from directives.
     pub sort: SortSelection,
 }
@@ -99,6 +101,7 @@ pub struct ParsedQuery {
 pub fn parse_query(query: &str) -> ParsedQuery {
     let mut filter_parts = Vec::new();
     let mut filters = Vec::new();
+    let mut author: Option<String> = None;
     let mut sort = SortSelection::default();
     let mut sort_found = false;
 
@@ -107,6 +110,13 @@ pub fn parse_query(query: &str) -> ParsedQuery {
             if !sort_found && let Some(parsed) = parse_sort_directive(token) {
                 sort = parsed;
                 sort_found = true;
+                continue;
+            }
+            if let Some(value) = token.strip_prefix("@author:") {
+                if !value.is_empty() {
+                    author = Some(value.to_lowercase());
+                }
+                continue;
             }
             continue;
         }
@@ -122,6 +132,7 @@ pub fn parse_query(query: &str) -> ParsedQuery {
     ParsedQuery {
         filter: filter_parts.join(" "),
         filters,
+        author,
         sort,
     }
 }

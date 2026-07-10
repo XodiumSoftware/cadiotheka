@@ -9,6 +9,8 @@ use std::collections::HashSet;
 pub enum SuggestionKind {
     /// A sort directive such as `@sort:downloads:ascending`.
     Sort,
+    /// An author filter such as `ZenFlow` (displayed as `@author:ZenFlow`).
+    Author,
     /// A tag or platform filter such as `Blender` (displayed as `#Blender`).
     Filter,
     /// A plain search term such as a title or author.
@@ -38,6 +40,14 @@ impl Suggestion {
         Self {
             text: text.into(),
             kind: SuggestionKind::Filter,
+        }
+    }
+
+    /// Creates a new author filter suggestion.
+    pub fn author(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            kind: SuggestionKind::Author,
         }
     }
 
@@ -79,7 +89,7 @@ pub fn from_cards(cards: &[CardData]) -> Vec<Suggestion> {
     };
 
     push_sorted(titles, SuggestionKind::Plain);
-    push_sorted(authors, SuggestionKind::Plain);
+    push_sorted(authors, SuggestionKind::Author);
     push_sorted(tags, SuggestionKind::Filter);
     push_sorted(platforms, SuggestionKind::Filter);
 
