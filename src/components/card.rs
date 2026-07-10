@@ -30,11 +30,13 @@ pub struct CardData {
     pub icon_url: Option<IconUrl>,
 }
 
-/// An action triggered by interacting with a card.
+/// An action triggered by interacting with a card or the grid.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CardAction {
     /// Append a tag or platform filter to the search query.
     Filter(String),
+    /// Clear the current search query.
+    ClearSearch,
 }
 
 /// State and rendering for a reusable card component.

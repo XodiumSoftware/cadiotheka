@@ -33,6 +33,15 @@ impl SearchBar {
     pub const PLACEHOLDER: &str = "Search… (e.g. #Blender @sort:downloads:descending)";
 }
 
+/// Strings for the grid UI.
+pub struct Grid;
+
+impl Grid {
+    pub const EMPTY_TITLE: &str = "No results";
+    pub const EMPTY_MESSAGE: &str = "No cards match your current search.";
+    pub const CLEAR_SEARCH: &str = "Clear search";
+}
+
 /// Strings for startup and web errors.
 pub struct WebError;
 

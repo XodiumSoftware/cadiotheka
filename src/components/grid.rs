@@ -1,6 +1,7 @@
 //! Grid layout widget for Cadiotheka.
 
 use crate::components::{Card, CardAction, CardData};
+use crate::i18n;
 
 /// State and rendering for a reusable grid component.
 #[derive(Default)]
@@ -20,13 +21,31 @@ impl Grid {
         (columns, card_width)
     }
 
-    /// Draw a grid of cards.
+    /// Draw a grid of cards, or an empty-state message if there are none.
     ///
-    /// Returns any actions triggered by clicking interactive card elements.
+    /// Returns any actions triggered by clicking interactive elements.
     pub fn show(&self, ui: &mut egui::Ui, cards: &[CardData]) -> Vec<CardAction> {
         let margin = 24.0;
         let inner_spacing = 20.0;
         let mut actions = Vec::new();
+
+        if cards.is_empty() {
+            ui.vertical_centered(|ui| {
+                ui.add_space(64.0);
+                ui.label(
+                    egui::RichText::new(i18n::Grid::EMPTY_TITLE)
+                        .heading()
+                        .size(24.0),
+                );
+                ui.add_space(8.0);
+                ui.label(i18n::Grid::EMPTY_MESSAGE);
+                ui.add_space(16.0);
+                if ui.button(i18n::Grid::CLEAR_SEARCH).clicked() {
+                    actions.push(CardAction::ClearSearch);
+                }
+            });
+            return actions;
+        }
 
         egui::Frame::new()
             .inner_margin(egui::Margin {

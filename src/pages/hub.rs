@@ -94,6 +94,9 @@ impl Hub {
                     }
                     query.push_str(&filter);
                 }
+                CardAction::ClearSearch => {
+                    self.search_bar.query.clear();
+                }
             }
         }
     }
