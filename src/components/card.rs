@@ -38,7 +38,7 @@ impl Card {
     /// Draw the card component using the provided data.
     pub fn show(&self, ui: &mut egui::Ui, data: &CardData) {
         let mut frame = egui::Frame::group(ui.style());
-        frame.fill = frame.fill.gamma_multiply(0.65);
+        frame.fill = ui.visuals().panel_fill;
         frame.shadow = egui::Shadow {
             offset: [0, 6],
             blur: 8,

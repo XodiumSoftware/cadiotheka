@@ -84,7 +84,7 @@ impl SortBar {
     pub fn show(&mut self, ui: &mut egui::Ui) -> SortSelection {
         let margin = 24.0;
         let mut frame = egui::Frame::group(ui.style());
-        frame.fill = frame.fill.gamma_multiply(0.65);
+        frame.fill = ui.visuals().panel_fill;
         frame.shadow = egui::Shadow {
             offset: [0, 6],
             blur: 8,
