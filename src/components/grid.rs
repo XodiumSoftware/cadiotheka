@@ -1,6 +1,6 @@
 //! Grid layout widget for Cadiotheka.
 
-use crate::components::{Card, CardData};
+use crate::components::{Card, CardAction, CardData};
 
 /// State and rendering for a reusable grid component.
 #[derive(Default)]
@@ -21,9 +21,12 @@ impl Grid {
     }
 
     /// Draw a grid of cards.
-    pub fn show(&self, ui: &mut egui::Ui, cards: &[CardData]) {
+    ///
+    /// Returns any actions triggered by clicking interactive card elements.
+    pub fn show(&self, ui: &mut egui::Ui, cards: &[CardData]) -> Vec<CardAction> {
         let margin = 24.0;
         let inner_spacing = 20.0;
+        let mut actions = Vec::new();
 
         egui::Frame::new()
             .inner_margin(egui::Margin {
@@ -44,7 +47,9 @@ impl Grid {
                             ui.vertical(|ui| {
                                 ui.set_min_width(card_width);
                                 ui.set_max_width(card_width);
-                                card.show(ui, data);
+                                if let Some(action) = card.show(ui, data) {
+                                    actions.push(action);
+                                }
                             });
                             if i + 1 < row.len() {
                                 ui.add_space(inner_spacing);
@@ -54,6 +59,8 @@ impl Grid {
                     ui.add_space(inner_spacing);
                 }
             });
+
+        actions
     }
 }
 

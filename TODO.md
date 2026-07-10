@@ -17,7 +17,7 @@
 
 ## Search & Filtering
 
-- [ ] **Make tags/platforms clickable.** The card renders them as small buttons but they do nothing. Clicking a tag should append `#tag` to the search query; clicking a platform should append `#platform` or its label.
+- [x] **Make tags/platforms clickable.** Tag and platform buttons on cards now trigger a `CardAction::Filter`. The action bubbles up through `Grid` to `Hub`, which appends `#TagName` or `#PlatformName` to the search query.
 - [x] **Filter matches prefix only.** Tag/platform filtering now tokenizes labels on whitespace and non-alphanumeric characters, then performs case-insensitive substring matching per token. `#model` now matches `3D Model` and `#fusion` matches `Fusion 360` while preserving prefix matches like `#blend` → `Blender`.
 - [x] **Author suggestion rendering.** Author suggestions store just the author name and render as `@author:AuthorName` in the popup, inserting the same prefixed form into the query. Added tests in `search_bar.rs` to lock in this behavior.
 - [x] **Sort suggestions.** Sort directives no longer appear first by default. `SearchEngine::suggestions(query)` only includes sort suggestions when the active token starts with `@`, so the initial popup shows titles, authors, tags, and platforms instead.
@@ -30,9 +30,7 @@
 
 ## Tooling & CI
 
-- [ ] **Add a `cargo fmt` check.** No `rustfmt.toml` is visible; standard formatting is fine, but CI should enforce it.
 - [x] **Release profile.** Measured `opt-level = "z"` + `lto = true` + `strip = true` against the previous `opt-level = 2` profile. The aggressive profile shrank the release WASM from **8.8 MB** to **7.9 MB** (~10% smaller) at the cost of a longer build (~1m 51s → ~3m 00s). Updated `[profile.release]` accordingly.
-- [ ] **Trunk caching.** CI likely rebuilds everything each run. Add `Swatinem/rust-cache` if not already present.
 
 ## Documentation
 

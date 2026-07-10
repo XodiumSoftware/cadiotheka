@@ -19,7 +19,7 @@ pub mod components {
     pub mod search_bar;
 
     pub use builders::{DottedBackground, Keycap};
-    pub use card::{Card, CardData, IconUrl};
+    pub use card::{Card, CardAction, CardData, IconUrl};
     pub use footer::Footer;
     pub use grid::Grid;
     pub use header::{Header, View};

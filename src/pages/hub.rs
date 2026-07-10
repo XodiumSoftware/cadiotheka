@@ -4,7 +4,7 @@
 //! [`crate::fixture`]. See that module for notes on the planned move to a
 //! runtime data source.
 
-use crate::components::{DottedBackground, Grid, Keycap, SearchBar};
+use crate::components::{CardAction, DottedBackground, Grid, Keycap, SearchBar};
 use crate::engines::SearchEngine;
 use crate::fixture::load_cards;
 
@@ -78,7 +78,23 @@ impl Hub {
             })
             .show(ui, |ui| {
                 ui.add_space(16.0);
-                Grid.show(ui, &cards);
+                let actions = Grid.show(ui, &cards);
+                self.apply_card_actions(actions);
             });
+    }
+
+    /// Applies actions triggered by clicking interactive card elements.
+    fn apply_card_actions(&mut self, actions: Vec<CardAction>) {
+        for action in actions {
+            match action {
+                CardAction::Filter(filter) => {
+                    let query = &mut self.search_bar.query;
+                    if !query.is_empty() && !query.ends_with(' ') {
+                        query.push(' ');
+                    }
+                    query.push_str(&filter);
+                }
+            }
+        }
     }
 }

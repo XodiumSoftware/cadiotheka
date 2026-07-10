@@ -30,13 +30,24 @@ pub struct CardData {
     pub icon_url: Option<IconUrl>,
 }
 
+/// An action triggered by interacting with a card.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CardAction {
+    /// Append a tag or platform filter to the search query.
+    Filter(String),
+}
+
 /// State and rendering for a reusable card component.
 #[derive(Default)]
 pub struct Card;
 
 impl Card {
     /// Draw the card component using the provided data.
-    pub fn show(&self, ui: &mut egui::Ui, data: &CardData) {
+    ///
+    /// Returns a [`CardAction`] if the user clicked an interactive element.
+    pub fn show(&self, ui: &mut egui::Ui, data: &CardData) -> Option<CardAction> {
+        let mut action = None;
+
         let mut frame = egui::Frame::group(ui.style());
         frame.fill = ui.visuals().panel_fill;
         frame.shadow = egui::Shadow {
@@ -63,15 +74,20 @@ impl Card {
                 ui.separator();
                 ui.horizontal(|ui| {
                     for tag in &data.tags {
-                        ui.add(
+                        let label = format!("#{}", tag.label());
+                        let response = ui.add(
                             egui::Button::new(egui::RichText::new(tag.label()).size(11.0))
                                 .fill(ui.visuals().widgets.inactive.bg_fill)
                                 .small(),
                         );
+                        if response.clicked() {
+                            action = Some(CardAction::Filter(label));
+                        }
                     }
                     ui.separator();
                     for platform in &data.supported_platforms {
-                        ui.add(
+                        let label = format!("#{}", platform.label());
+                        let response = ui.add(
                             egui::Button::new(
                                 egui::RichText::new(platform.label())
                                     .size(11.0)
@@ -80,6 +96,9 @@ impl Card {
                             .fill(ui.visuals().widgets.inactive.bg_fill)
                             .small(),
                         );
+                        if response.clicked() {
+                            action = Some(CardAction::Filter(label));
+                        }
                     }
                 });
                 ui.separator();
@@ -102,6 +121,8 @@ impl Card {
                 });
             });
         });
+
+        action
     }
 
     fn show_icon_placeholder(ui: &mut egui::Ui, title: &str) {
