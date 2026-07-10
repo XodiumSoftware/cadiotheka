@@ -17,7 +17,7 @@
 
 [![Contributors][contributors_shield_url]][contributors_url]
 [![Issues][issues_shield_url]][issues_url]
-[![Docs][docs_shield_url]][docs_url]
+[![License][license_shield_url]][license_url]
 </div>
 
 ## Table of Contents
@@ -90,13 +90,11 @@ The static site is placed in `dist/`.
 
 [contributors_url]: https://github.com/XodiumSoftware/cadiotheka/graphs/contributors
 
-[docs_shield_url]: https://img.shields.io/badge/Docs-Click%20Me!-blue.svg?style=for-the-badge
-
-[docs_url]: https://docs.rs/cadiotheka
-
 [issues_shield_url]: https://img.shields.io/github/issues/XodiumSoftware/cadiotheka?style=for-the-badge&color=yellow
 
 [issues_url]: https://github.com/XodiumSoftware/cadiotheka/issues
+
+[license_shield_url]: https://img.shields.io/github/license/XodiumSoftware/cadiotheka?style=for-the-badge&color=blue
 
 [license_url]: https://github.com/XodiumSoftware/cadiotheka?tab=AGPL-3.0-1-ov-file
 

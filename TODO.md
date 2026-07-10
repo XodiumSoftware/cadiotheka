@@ -36,5 +36,5 @@
 
 ## Documentation
 
-- [ ] **README mismatch.** The README links to `docs.rs/cadiotheka`, but this is a web-only application crate. That docs badge is misleading.
+- [x] **README mismatch.** Replaced the misleading `docs.rs/cadiotheka` badge with a GitHub license badge that points to the actual repository.
 - [x] **CONTRIBUTING setup.** Updated `CONTRIBUTING.md` with `cargo clippy` and `trunk serve --port 8080` instructions.
