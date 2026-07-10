@@ -46,14 +46,14 @@ impl Hub {
             card_width
         };
 
-        let suggestions = self.engine.suggestions(&self.search_bar.query);
-        let parsed = ui
-            .vertical_centered(|ui| {
-                ui.set_max_width(search_width);
-                self.search_bar
-                    .show(ui, &suggestions, SearchEngine::parse_query)
-            })
-            .inner;
+        let query = self.search_bar.query.clone();
+        let suggestions = self.engine.suggestions(&query);
+        ui.vertical_centered(|ui| {
+            ui.set_max_width(search_width);
+            self.search_bar.show(ui, &query, &suggestions);
+        });
+
+        let parsed = SearchEngine::parse_query(&self.search_bar.query);
 
         let mut focus_search = false;
         Keycap::builder()

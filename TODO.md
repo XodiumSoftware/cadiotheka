@@ -5,7 +5,7 @@
 - [x] **Add tests.** Added tests for `filter.rs`, `suggestions.rs`, `utils.rs`, `card.rs`, and `grid.rs`; fixed pre-existing broken tests in `search_bar.rs` and `query.rs`. Tests compile for `wasm32-unknown-unknown`; run with `wasm-pack test` in a browser environment.
 - [x] **Hide implementation details.** `lib.rs` now keeps engine submodules (`filter`, `query`, `suggestions`) and most component submodules crate-private, re-exporting only `SearchEngine`, `Suggestion`, `SuggestionKind`, and the public query/sort types. Fixture, utils, and most internal modules are also `pub(crate)`.
 - [x] **Reduce clones in search.** `SearchEngine::search` now returns `Vec<&CardData>` instead of cloning every matching card. `Hub` clones only the results it passes to the UI grid, so the search path itself is allocation-free for card data.
-- [ ] **Use `&str` over owned strings.** `ParsedQuery` fields like `filter`, `filters`, and `author` allocate on every keystroke. For short-lived query parsing this is fine, but benchmarking may show it matters.
+- [x] **Use `&str` over owned strings.** `ParsedQuery` now borrows from the original query string: `filter`, `filters`, and `author` are stored as `&str` slices instead of owned `String`s. This removes per-keystroke allocations during parsing. `Hub` clones the query once per frame for suggestion generation, and parsing happens outside the UI closure to keep borrows clean.
 
 ## UI/UX
 

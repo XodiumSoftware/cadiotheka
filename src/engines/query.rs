@@ -84,24 +84,27 @@ pub struct SortSelection {
     pub order: SortOrder,
 }
 
-/// Parsed search query.
+/// Parsed search query, borrowing from the original query string.
+///
+/// Using borrowed `&str` slices avoids allocating a new `String` for every
+/// token on every keystroke.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct ParsedQuery {
-    /// Free-text filter with directives and filters removed.
-    pub filter: String,
+pub struct ParsedQuery<'a> {
+    /// Free-text filter tokens with directives and filters removed.
+    pub filter: Vec<&'a str>,
     /// Exact tag/platform filters requested with `#`.
-    pub filters: Vec<String>,
+    pub filters: Vec<&'a str>,
     /// Author filter requested with `@author:`.
-    pub author: Option<String>,
+    pub author: Option<&'a str>,
     /// Sort selection parsed from directives.
     pub sort: SortSelection,
 }
 
 /// Parses a raw query string into a structured [`ParsedQuery`].
-pub fn parse_query(query: &str) -> ParsedQuery {
+pub fn parse_query(query: &str) -> ParsedQuery<'_> {
     let mut filter_parts = Vec::new();
     let mut filters = Vec::new();
-    let mut author: Option<String> = None;
+    let mut author: Option<&str> = None;
     let mut sort = SortSelection::default();
     let mut sort_found = false;
 
@@ -114,7 +117,7 @@ pub fn parse_query(query: &str) -> ParsedQuery {
             }
             if let Some(value) = token.strip_prefix("@author:") {
                 if !value.is_empty() {
-                    author = Some(value.to_lowercase());
+                    author = Some(value);
                 }
                 continue;
             }
@@ -122,7 +125,7 @@ pub fn parse_query(query: &str) -> ParsedQuery {
         }
 
         if let Some(filter) = token.strip_prefix('#') {
-            filters.push(filter.to_lowercase());
+            filters.push(filter);
             continue;
         }
 
@@ -130,7 +133,7 @@ pub fn parse_query(query: &str) -> ParsedQuery {
     }
 
     ParsedQuery {
-        filter: filter_parts.join(" "),
+        filter: filter_parts,
         filters,
         author,
         sort,
@@ -157,7 +160,7 @@ mod tests {
     #[test]
     fn parse_empty_query() {
         let parsed = parse_query("");
-        assert_eq!(parsed.filter, "");
+        assert!(parsed.filter.is_empty());
         assert!(parsed.filters.is_empty());
         assert_eq!(parsed.sort.by, SortBy::Downloads);
         assert_eq!(parsed.sort.order, SortOrder::Ascending);
@@ -166,21 +169,21 @@ mod tests {
     #[test]
     fn parse_filter_only() {
         let parsed = parse_query("parametric screw");
-        assert_eq!(parsed.filter, "parametric screw");
+        assert_eq!(parsed.filter, vec!["parametric", "screw"]);
         assert!(parsed.filters.is_empty());
     }
 
     #[test]
     fn parse_tag_and_platform_filters() {
         let parsed = parse_query("screw #Blender #FreeCAD");
-        assert_eq!(parsed.filter, "screw");
-        assert_eq!(parsed.filters, vec!["blender", "freecad"]);
+        assert_eq!(parsed.filter, vec!["screw"]);
+        assert_eq!(parsed.filters, vec!["Blender", "FreeCAD"]);
     }
 
     #[test]
     fn parse_sort_directive() {
         let parsed = parse_query("screw @sort:favorites:descending");
-        assert_eq!(parsed.filter, "screw");
+        assert_eq!(parsed.filter, vec!["screw"]);
         assert_eq!(parsed.sort.by, SortBy::Favorites);
         assert_eq!(parsed.sort.order, SortOrder::Descending);
     }
@@ -188,7 +191,7 @@ mod tests {
     #[test]
     fn parse_sort_short_direction() {
         let parsed = parse_query("@sort:newest:asc");
-        assert_eq!(parsed.filter, "");
+        assert!(parsed.filter.is_empty());
         assert_eq!(parsed.sort.by, SortBy::Newest);
         assert_eq!(parsed.sort.order, SortOrder::Ascending);
     }
@@ -196,7 +199,7 @@ mod tests {
     #[test]
     fn invalid_sort_token_ignored() {
         let parsed = parse_query("gear @sort:rating:descending");
-        assert_eq!(parsed.filter, "gear");
+        assert_eq!(parsed.filter, vec!["gear"]);
         assert!(parsed.filters.is_empty());
         assert_eq!(parsed.sort.by, SortBy::Downloads);
         assert_eq!(parsed.sort.order, SortOrder::Ascending);
@@ -205,7 +208,7 @@ mod tests {
     #[test]
     fn incomplete_sort_token_ignored() {
         let parsed = parse_query("gear @sort:downloads:in");
-        assert_eq!(parsed.filter, "gear");
+        assert_eq!(parsed.filter, vec!["gear"]);
         assert!(parsed.filters.is_empty());
         assert_eq!(parsed.sort.by, SortBy::Downloads);
         assert_eq!(parsed.sort.order, SortOrder::Ascending);
@@ -214,9 +217,17 @@ mod tests {
     #[test]
     fn only_first_sort_directive_used() {
         let parsed = parse_query("@sort:favorites:asc @sort:downloads:desc");
-        assert_eq!(parsed.filter, "");
+        assert!(parsed.filter.is_empty());
         assert!(parsed.filters.is_empty());
         assert_eq!(parsed.sort.by, SortBy::Favorites);
         assert_eq!(parsed.sort.order, SortOrder::Ascending);
+    }
+
+    #[test]
+    fn parse_author_filter_borrows_slice() {
+        let query = "screw @author:ZenFlow";
+        let parsed = parse_query(query);
+        assert_eq!(parsed.filter, vec!["screw"]);
+        assert_eq!(parsed.author, Some("ZenFlow"));
     }
 }

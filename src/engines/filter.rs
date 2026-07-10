@@ -27,14 +27,14 @@ impl SearchEngine {
     ///
     /// Returning `&CardData` avoids cloning the owned card data on every
     /// search, which matters as the catalog grows.
-    pub fn search(&self, parsed: &ParsedQuery) -> Vec<&CardData> {
-        let query = parsed.filter.trim().to_lowercase();
+    pub fn search<'a>(&'a self, parsed: &ParsedQuery) -> Vec<&'a CardData> {
+        let query = parsed.filter.to_vec().join(" ").to_lowercase();
 
         let mut scored: Vec<(i64, &CardData)> = self
             .cards
             .iter()
             .filter_map(|card| {
-                let score = self.score(card, &query, &parsed.filters, &parsed.author)?;
+                let score = self.score(card, &query, &parsed.filters, parsed.author)?;
                 Some((score, card))
             })
             .collect();
@@ -69,8 +69,8 @@ impl SearchEngine {
         &self,
         card: &CardData,
         query: &str,
-        filters: &[String],
-        author: &Option<String>,
+        filters: &[&str],
+        author: Option<&str>,
     ) -> Option<i64> {
         let matches_filters = filters.iter().all(|filter| {
             card.tags
@@ -86,7 +86,10 @@ impl SearchEngine {
         }
 
         if let Some(author) = author
-            && !card.author.to_lowercase().starts_with(author)
+            && !card
+                .author
+                .to_lowercase()
+                .starts_with(author.to_lowercase().as_str())
         {
             return None;
         }
@@ -127,7 +130,7 @@ impl SearchEngine {
     }
 
     /// Parses a raw query string into a structured [`ParsedQuery`].
-    pub fn parse_query(query: &str) -> ParsedQuery {
+    pub fn parse_query(query: &str) -> ParsedQuery<'_> {
         parse_query(query)
     }
 

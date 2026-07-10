@@ -3,7 +3,8 @@
 //! This file only handles rendering and user interaction. All query parsing,
 //! filtering, scoring, and suggestion logic lives in [`crate::engines`].
 
-use crate::engines::{ParsedQuery, Suggestion, SuggestionKind};
+use crate::engines::Suggestion;
+use crate::engines::SuggestionKind;
 use crate::i18n;
 
 /// State and rendering for a search control bar.
@@ -27,16 +28,11 @@ impl Default for SearchBar {
 }
 
 impl SearchBar {
-    /// Draws the search input and returns the parsed query.
+    /// Draws the search input.
     ///
     /// When focused, a suggestion popup is shown below the input. Suggestions
     /// can be selected with the mouse, or with arrow keys and Enter.
-    pub fn show(
-        &mut self,
-        ui: &mut egui::Ui,
-        suggestions: &[Suggestion],
-        parse: impl FnOnce(&str) -> ParsedQuery,
-    ) -> ParsedQuery {
+    pub fn show(&mut self, ui: &mut egui::Ui, _query: &str, suggestions: &[Suggestion]) {
         let response = ui
             .add(
                 egui::TextEdit::singleline(&mut self.query)
@@ -78,8 +74,6 @@ impl SearchBar {
             ui.set_max_width(popup_width);
             self.render_suggestions(ui, &filtered, selected)
         });
-
-        parse(&self.query)
     }
 
     /// Handles arrow-key navigation, Enter selection, and Escape closing.
