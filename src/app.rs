@@ -16,11 +16,12 @@ pub struct CadiothekaApp {
 }
 
 impl CadiothekaApp {
-    /// Creates the app and registers the Phosphor icon fonts.
+    /// Creates the app and registers the Phosphor icon fonts and image loaders.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let mut fonts = egui::FontDefinitions::default();
         add_fonts(&mut fonts);
         cc.egui_ctx.set_fonts(fonts);
+        egui_extras::install_image_loaders(&cc.egui_ctx);
 
         Self::default()
     }

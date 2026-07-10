@@ -61,7 +61,9 @@ impl Card {
         frame.show(ui, |ui| {
             ui.vertical(|ui| {
                 ui.horizontal(|ui| {
-                    if data.icon_url.is_none() {
+                    if let Some(icon_url) = &data.icon_url {
+                        Self::show_icon_image(ui, &icon_url.0);
+                    } else {
                         Self::show_icon_placeholder(ui, &data.title);
                     }
                     ui.horizontal(|ui| {
@@ -127,6 +129,19 @@ impl Card {
         action
     }
 
+    fn show_icon_image(ui: &mut egui::Ui, url: &str) {
+        let size = egui::vec2(48.0, 48.0);
+        let (rect, response) = ui.allocate_exact_size(size, egui::Sense::hover());
+
+        // Draw a placeholder background so the layout doesn't jump while the
+        // remote icon loads asynchronously.
+        ui.painter()
+            .rect_filled(rect, 4.0, ui.visuals().widgets.inactive.bg_fill);
+
+        ui.put(rect, egui::Image::new(url).fit_to_exact_size(size));
+        response.on_hover_text(url);
+    }
+
     fn show_icon_placeholder(ui: &mut egui::Ui, title: &str) {
         let first_letter = Self::placeholder_letter(title);
         let color = Self::placeholder_color(title);
@@ -188,6 +203,26 @@ mod tests {
 
         let decoded: IconUrl = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded, url);
+    }
+
+    #[test]
+    fn card_data_can_hold_icon_url() {
+        let data = CardData {
+            title: "Gear".to_owned(),
+            author: "Author".to_owned(),
+            description: "A gear.".to_owned(),
+            tags: vec![Tag::Model3d],
+            supported_platforms: vec![Platform::Blender],
+            downloads: 0,
+            favorites: 0,
+            timestamp: time::macros::datetime!(2024-01-01 00:00:00 UTC),
+            icon_url: Some(IconUrl("https://example.com/gear.svg".to_owned())),
+        };
+        assert!(data.icon_url.is_some());
+        assert_eq!(
+            data.icon_url.as_ref().unwrap().0,
+            "https://example.com/gear.svg"
+        );
     }
 
     #[test]
