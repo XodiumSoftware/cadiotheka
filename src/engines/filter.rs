@@ -22,16 +22,20 @@ impl SearchEngine {
         }
     }
 
-    /// Returns cards matching the parsed query, ranked or sorted as requested.
-    pub fn search(&self, parsed: &ParsedQuery) -> Vec<CardData> {
+    /// Returns references to cards matching the parsed query, ranked or sorted
+    /// as requested.
+    ///
+    /// Returning `&CardData` avoids cloning the owned card data on every
+    /// search, which matters as the catalog grows.
+    pub fn search(&self, parsed: &ParsedQuery) -> Vec<&CardData> {
         let query = parsed.filter.trim().to_lowercase();
 
-        let mut scored: Vec<(i64, CardData)> = self
+        let mut scored: Vec<(i64, &CardData)> = self
             .cards
             .iter()
             .filter_map(|card| {
                 let score = self.score(card, &query, &parsed.filters, &parsed.author)?;
-                Some((score, card.clone()))
+                Some((score, card))
             })
             .collect();
 
@@ -374,5 +378,15 @@ mod tests {
         assert!(SearchEngine::label_matches("Fusion 360", "fusion"));
         assert!(SearchEngine::label_matches("Blender", "blend"));
         assert!(!SearchEngine::label_matches("Blender", "model"));
+    }
+
+    #[test]
+    fn search_returns_card_references_without_cloning() {
+        let engine = engine();
+        let parsed = parse_query("");
+        let results = engine.search(&parsed);
+        assert_eq!(results.len(), 3);
+        // References should point to the engine's owned cards.
+        assert!(std::ptr::eq(results[0], &engine.cards[0]));
     }
 }

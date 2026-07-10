@@ -4,7 +4,7 @@
 //! [`crate::fixture`]. See that module for notes on the planned move to a
 //! runtime data source.
 
-use crate::components::{CardAction, DottedBackground, Grid, Keycap, SearchBar};
+use crate::components::{CardAction, CardData, DottedBackground, Grid, Keycap, SearchBar};
 use crate::engines::SearchEngine;
 use crate::fixture::load_cards;
 
@@ -67,6 +67,7 @@ impl Hub {
 
         ui.add_space(24.0);
         let cards = self.engine.search(&parsed);
+        let card_data: Vec<CardData> = cards.into_iter().cloned().collect();
 
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
@@ -78,7 +79,7 @@ impl Hub {
             })
             .show(ui, |ui| {
                 ui.add_space(16.0);
-                let actions = Grid.show(ui, &cards);
+                let actions = Grid.show(ui, &card_data);
                 self.apply_card_actions(actions);
             });
     }
