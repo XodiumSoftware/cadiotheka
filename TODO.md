@@ -31,7 +31,7 @@
 ## Tooling & CI
 
 - [ ] **Add a `cargo fmt` check.** No `rustfmt.toml` is visible; standard formatting is fine, but CI should enforce it.
-- [ ] **Release profile.** `opt-level = 2` is conservative. For a web app, measure whether `opt-level = "z"` / `lto = true` / `strip = true` gives smaller WASM.
+- [x] **Release profile.** Measured `opt-level = "z"` + `lto = true` + `strip = true` against the previous `opt-level = 2` profile. The aggressive profile shrank the release WASM from **8.8 MB** to **7.9 MB** (~10% smaller) at the cost of a longer build (~1m 51s → ~3m 00s). Updated `[profile.release]` accordingly.
 - [ ] **Trunk caching.** CI likely rebuilds everything each run. Add `Swatinem/rust-cache` if not already present.
 
 ## Documentation
