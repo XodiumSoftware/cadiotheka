@@ -81,10 +81,10 @@ impl<'a> Keycap<'a> {
     /// Checks the configured chord, runs `execute` if triggered, and attaches
     /// the keycap tooltip to the given response's hover event.
     pub fn attach(self, ui: &mut egui::Ui, response: &egui::Response) {
-        if self.check_chord(ui) {
-            if let Some(mut f) = self.execute {
-                f();
-            }
+        if self.check_chord(ui)
+            && let Some(mut f) = self.execute
+        {
+            f();
         }
 
         let keys = self.keys.clone();
@@ -113,10 +113,8 @@ impl<'a> Keycap<'a> {
     /// last key is pressed on this frame.
     pub fn build(mut self, ui: &mut egui::Ui) -> bool {
         let triggered = self.check_chord(ui);
-        if triggered {
-            if let Some(ref mut f) = self.execute {
-                f();
-            }
+        if triggered && let Some(ref mut f) = self.execute {
+            f();
         }
         if self.tooltip {
             ui.horizontal(|ui| self.draw_sequence(ui));

@@ -2,7 +2,7 @@
 
 use crate::components::card::IconUrl;
 use crate::components::{
-    CardData, DottedBackground, Grid, SearchBar, SortBar, SortBy, SortOrder, SortSelection,
+    CardData, DottedBackground, Grid, ParsedQuery, SearchBar, SortBy, SortOrder,
 };
 use crate::platforms::Platform;
 use crate::tags::Tag;
@@ -51,8 +51,6 @@ pub struct Hub {
     cards: Vec<CardData>,
     /// Search control state.
     search_bar: SearchBar,
-    /// Sort control state.
-    sort_bar: SortBar,
 }
 
 impl Default for Hub {
@@ -68,7 +66,6 @@ impl Default for Hub {
                 .map(CardEntry::into_card_data)
                 .collect(),
             search_bar: SearchBar::default(),
-            sort_bar: SortBar::default(),
         }
     }
 }
@@ -83,13 +80,23 @@ impl Hub {
             .fade_start(0.75)
             .build(ui);
 
-        let cards = ui
-            .horizontal(|ui| {
-                let sort = self.sort_bar.show(ui);
-                let query = self.search_bar.show(ui).to_lowercase();
-                self.filtered_sorted_cards(sort, &query)
+        ui.add_space(24.0);
+        let inner_spacing = 20.0;
+        let (columns, card_width) = Grid::column_metrics(ui.available_width());
+        let search_width = if columns >= 2 {
+            card_width * 2.0 + inner_spacing
+        } else {
+            card_width
+        };
+
+        let parsed = ui
+            .vertical_centered(|ui| {
+                ui.set_max_width(search_width);
+                self.search_bar.show(ui)
             })
             .inner;
+        ui.add_space(24.0);
+        let cards = self.filtered_sorted_cards(&parsed);
 
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
@@ -106,33 +113,33 @@ impl Hub {
     }
 
     /// Returns cards filtered by the query and sorted by the selection.
-    fn filtered_sorted_cards(&self, sort: SortSelection, query: &str) -> Vec<CardData> {
-        let query = query.trim();
-        let mut cards: Vec<CardData> = if query.is_empty() {
+    fn filtered_sorted_cards(&self, parsed: &ParsedQuery) -> Vec<CardData> {
+        let query = parsed.filter.to_lowercase();
+        let mut cards: Vec<CardData> = if query.trim().is_empty() {
             self.cards.clone()
         } else {
             self.cards
                 .iter()
-                .filter(|card| Self::matches_query(card, query))
+                .filter(|card| Self::matches_query(card, &query))
                 .cloned()
                 .collect()
         };
 
-        match sort.by {
+        match parsed.sort.by {
             SortBy::Downloads => {
-                cards.sort_by(|a, b| match sort.order {
+                cards.sort_by(|a, b| match parsed.sort.order {
                     SortOrder::Ascending => a.downloads.cmp(&b.downloads),
                     SortOrder::Descending => b.downloads.cmp(&a.downloads),
                 });
             }
             SortBy::Favorites => {
-                cards.sort_by(|a, b| match sort.order {
+                cards.sort_by(|a, b| match parsed.sort.order {
                     SortOrder::Ascending => a.favorites.cmp(&b.favorites),
                     SortOrder::Descending => b.favorites.cmp(&a.favorites),
                 });
             }
             SortBy::Newest => {
-                cards.sort_by(|a, b| match sort.order {
+                cards.sort_by(|a, b| match parsed.sort.order {
                     SortOrder::Ascending => a.timestamp.cmp(&b.timestamp),
                     SortOrder::Descending => b.timestamp.cmp(&a.timestamp),
                 });

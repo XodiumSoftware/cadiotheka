@@ -26,21 +26,11 @@ impl Footer {
     pub const EFRAME_URL: &str = "https://github.com/emilk/egui/tree/master/crates/eframe";
 }
 
-/// Strings for the sort bar UI.
-pub struct SortBar;
-
-impl SortBar {
-    pub const LABEL: &str = "Sort by:";
-    pub const DOWNLOADS: &str = "Downloads";
-    pub const FAVORITES: &str = "Favorites";
-    pub const NEWEST: &str = "Newest";
-}
-
 /// Strings for the search bar UI.
 pub struct SearchBar;
 
 impl SearchBar {
-    pub const PLACEHOLDER: &str = "Search…";
+    pub const PLACEHOLDER: &str = "Search… (e.g. @sort:downloads:descending)";
 }
 
 /// Strings for startup and web errors.

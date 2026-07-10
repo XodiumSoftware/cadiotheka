@@ -17,15 +17,13 @@ pub mod components {
     pub mod grid;
     pub mod header;
     pub mod search_bar;
-    pub mod sort_bar;
 
     pub use builders::{DottedBackground, Keycap};
     pub use card::{Card, CardData, IconUrl};
     pub use footer::Footer;
     pub use grid::Grid;
     pub use header::{Header, View};
-    pub use search_bar::SearchBar;
-    pub use sort_bar::{SortBar, SortBy, SortOrder, SortSelection};
+    pub use search_bar::{ParsedQuery, SearchBar, SortBy, SortOrder, SortSelection};
 }
 pub mod i18n;
 pub mod pages {
