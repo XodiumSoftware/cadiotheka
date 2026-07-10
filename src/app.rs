@@ -13,8 +13,6 @@ pub struct CadiothekaApp {
     header: Header,
     /// Bottom navigation footer.
     footer: Footer,
-    /// Currently selected view in the hub.
-    view: View,
 }
 
 impl CadiothekaApp {
@@ -32,9 +30,8 @@ impl eframe::App for CadiothekaApp {
     /// Renders the hub UI each frame.
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.header.show(ui);
-        self.view = self.header.view;
         self.footer.show(ui);
-        egui::CentralPanel::default().show(ui, |ui| match self.view {
+        egui::CentralPanel::default().show(ui, |ui| match self.header.view() {
             View::Hub => self.hub.show(ui),
         });
     }

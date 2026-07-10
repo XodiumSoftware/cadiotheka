@@ -14,10 +14,15 @@ pub enum View {
 #[derive(Default)]
 pub struct Header {
     /// Currently selected view in the hub.
-    pub view: View,
+    view: View,
 }
 
 impl Header {
+    /// Returns the currently selected view.
+    pub fn view(&self) -> View {
+        self.view
+    }
+
     /// Draw the top navigation header.
     pub fn show(&mut self, ui: &mut egui::Ui) {
         egui::Panel::top("hub_header").show(ui, |ui| {
