@@ -105,24 +105,8 @@ impl Card {
     }
 
     fn show_icon_placeholder(ui: &mut egui::Ui, title: &str) {
-        let palette: [egui::Color32; 8] = [
-            egui::Color32::from_rgb(239, 68, 68),  // red
-            egui::Color32::from_rgb(249, 115, 22), // orange
-            egui::Color32::from_rgb(234, 179, 8),  // yellow
-            egui::Color32::from_rgb(34, 197, 94),  // green
-            egui::Color32::from_rgb(6, 182, 212),  // cyan
-            egui::Color32::from_rgb(59, 130, 246), // blue
-            egui::Color32::from_rgb(168, 85, 247), // purple
-            egui::Color32::from_rgb(236, 72, 153), // pink
-        ];
-
-        let first_letter = title
-            .chars()
-            .next()
-            .unwrap_or('?')
-            .to_uppercase()
-            .to_string();
-        let color = palette[title.len() % palette.len()];
+        let first_letter = Self::placeholder_letter(title);
+        let color = Self::placeholder_color(title);
 
         let (rect, _response) =
             ui.allocate_exact_size(egui::vec2(48.0, 48.0), egui::Sense::hover());
@@ -137,5 +121,61 @@ impl Card {
             font_id,
             text_color,
         );
+    }
+
+    fn placeholder_letter(title: &str) -> String {
+        title
+            .chars()
+            .next()
+            .unwrap_or('?')
+            .to_uppercase()
+            .to_string()
+    }
+
+    fn placeholder_color(title: &str) -> egui::Color32 {
+        let palette: [egui::Color32; 8] = [
+            egui::Color32::from_rgb(239, 68, 68),  // red
+            egui::Color32::from_rgb(249, 115, 22), // orange
+            egui::Color32::from_rgb(234, 179, 8),  // yellow
+            egui::Color32::from_rgb(34, 197, 94),  // green
+            egui::Color32::from_rgb(6, 182, 212),  // cyan
+            egui::Color32::from_rgb(59, 130, 246), // blue
+            egui::Color32::from_rgb(168, 85, 247), // purple
+            egui::Color32::from_rgb(236, 72, 153), // pink
+        ];
+
+        palette[title.len() % palette.len()]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn icon_url_serializes_transparently() {
+        let url = IconUrl("https://example.com/icon.svg".to_owned());
+        let json = serde_json::to_string(&url).unwrap();
+        assert_eq!(json, "\"https://example.com/icon.svg\"");
+
+        let decoded: IconUrl = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded, url);
+    }
+
+    #[test]
+    fn placeholder_letter_uppercases_first_char() {
+        assert_eq!(Card::placeholder_letter("Blender"), "B");
+        assert_eq!(Card::placeholder_letter("freecad"), "F");
+        assert_eq!(Card::placeholder_letter(""), "?");
+    }
+
+    #[test]
+    fn placeholder_color_is_deterministic_by_length() {
+        let a = Card::placeholder_color("abc");
+        let b = Card::placeholder_color("xyz");
+        assert_eq!(a, b);
+
+        let c = Card::placeholder_color("abcd");
+        assert_ne!(a, c);
     }
 }

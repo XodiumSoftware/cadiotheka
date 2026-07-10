@@ -56,3 +56,45 @@ impl Grid {
             });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn column_metrics_clamps_to_one_for_narrow_widths() {
+        let (columns, width) = Grid::column_metrics(100.0);
+        assert_eq!(columns, 1);
+        assert_eq!(width, 100.0);
+    }
+
+    #[test]
+    fn column_metrics_fits_two_columns_at_exact_breakpoint() {
+        // (width + spacing) / (min + spacing) == 2
+        let min_card_width = 240.0;
+        let inner_spacing = 20.0;
+        let breakpoint = 2.0 * (min_card_width + inner_spacing) - inner_spacing;
+        let (columns, width) = Grid::column_metrics(breakpoint);
+        assert_eq!(columns, 2);
+        assert!((width - min_card_width).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn column_metrics_caps_at_six_columns() {
+        let (columns, width) = Grid::column_metrics(10_000.0);
+        assert_eq!(columns, 6);
+        let expected_width = (10_000.0 - 20.0 * 5.0) / 6.0;
+        assert!((width - expected_width).abs() < 0.01);
+    }
+
+    #[test]
+    fn column_metrics_increases_columns_with_width() {
+        let (narrow, _) = Grid::column_metrics(200.0);
+        let (medium, _) = Grid::column_metrics(600.0);
+        let (wide, _) = Grid::column_metrics(1_400.0);
+
+        assert_eq!(narrow, 1);
+        assert!(medium >= 2);
+        assert!(wide >= 5);
+    }
+}

@@ -110,3 +110,109 @@ fn default_sort_suggestions() -> Vec<Suggestion> {
     }
     suggestions
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::card::CardData;
+    use crate::platforms::Platform;
+    use crate::tags::Tag;
+    use time::macros::datetime;
+
+    fn sample_card() -> CardData {
+        CardData {
+            title: "Sample Gear".to_owned(),
+            author: "TestAuthor".to_owned(),
+            description: "A sample gear.".to_owned(),
+            tags: vec![Tag::Parametric, Tag::Model3d],
+            supported_platforms: vec![Platform::Blender, Platform::FreeCAD],
+            downloads: 100,
+            favorites: 10,
+            timestamp: datetime!(2024-06-01 10:00:00 UTC),
+            icon_url: None,
+        }
+    }
+
+    #[test]
+    fn default_sort_suggestions_contains_all_combinations() {
+        let suggestions = default_sort_suggestions();
+        assert_eq!(suggestions.len(), 6);
+        assert!(suggestions.iter().all(|s| s.kind == SuggestionKind::Sort));
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.text == "@sort:downloads:ascending")
+        );
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.text == "@sort:downloads:descending")
+        );
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.text == "@sort:favorites:ascending")
+        );
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.text == "@sort:favorites:descending")
+        );
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.text == "@sort:newest:ascending")
+        );
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.text == "@sort:newest:descending")
+        );
+    }
+
+    #[test]
+    fn from_cards_extracts_unique_values() {
+        let card = sample_card();
+        let suggestions = from_cards(&[card.clone(), card]);
+
+        let plain: Vec<_> = suggestions
+            .iter()
+            .filter(|s| s.kind == SuggestionKind::Plain)
+            .map(|s| s.text.clone())
+            .collect();
+        let authors: Vec<_> = suggestions
+            .iter()
+            .filter(|s| s.kind == SuggestionKind::Author)
+            .map(|s| s.text.clone())
+            .collect();
+        let filters: Vec<_> = suggestions
+            .iter()
+            .filter(|s| s.kind == SuggestionKind::Filter)
+            .map(|s| s.text.clone())
+            .collect();
+
+        assert_eq!(plain, vec!["Sample Gear"]);
+        assert_eq!(authors, vec!["TestAuthor"]);
+        assert!(filters.contains(&"Parametric".to_owned()));
+        assert!(filters.contains(&"3D Model".to_owned()));
+        assert!(filters.contains(&"Blender".to_owned()));
+        assert!(filters.contains(&"FreeCAD".to_owned()));
+    }
+
+    #[test]
+    fn from_cards_sorts_suggestions_case_insensitively() {
+        let mut card_a = sample_card();
+        card_a.title = "alpha".to_owned();
+        let mut card_b = sample_card();
+        card_b.title = "Beta".to_owned();
+
+        let suggestions = from_cards(&[card_a, card_b]);
+        let plain: Vec<_> = suggestions
+            .iter()
+            .filter(|s| s.kind == SuggestionKind::Plain)
+            .map(|s| s.text.clone())
+            .collect();
+
+        assert_eq!(plain, vec!["alpha", "Beta"]);
+    }
+}

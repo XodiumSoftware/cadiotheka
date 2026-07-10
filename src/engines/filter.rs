@@ -126,3 +126,188 @@ impl SearchEngine {
         .to_lowercase()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::card::CardData;
+    use crate::engines::query::parse_query;
+    use crate::engines::suggestions::SuggestionKind;
+    use crate::platforms::Platform;
+    use crate::tags::Tag;
+    use time::macros::datetime;
+
+    fn card(
+        title: &str,
+        author: &str,
+        description: &str,
+        tags: &[Tag],
+        platforms: &[Platform],
+        downloads: u64,
+        favorites: u64,
+    ) -> CardData {
+        CardData {
+            title: title.to_owned(),
+            author: author.to_owned(),
+            description: description.to_owned(),
+            tags: tags.to_vec(),
+            supported_platforms: platforms.to_vec(),
+            downloads,
+            favorites,
+            timestamp: datetime!(2024-01-15 12:00:00 UTC),
+            icon_url: None,
+        }
+    }
+
+    fn engine() -> SearchEngine {
+        SearchEngine::new(vec![
+            card(
+                "Parametric Screw",
+                "ZenFlow",
+                "A fully parametric screw model.",
+                &[Tag::Parametric, Tag::Model3d],
+                &[Platform::Blender, Platform::FreeCAD],
+                1_200,
+                80,
+            ),
+            card(
+                "Workshop Bench",
+                "MakerJoe",
+                "Sturdy bench for the garage.",
+                &[Tag::Furniture, Tag::Fabrication, Tag::Diy],
+                &[Platform::SketchUp],
+                3_400,
+                250,
+            ),
+            card(
+                "PCB Holder",
+                "ZenFlow",
+                "Holder for KiCad projects.",
+                &[Tag::Electronics, Tag::Tooling],
+                &[Platform::KiCad],
+                900,
+                45,
+            ),
+        ])
+    }
+
+    #[test]
+    fn empty_query_returns_all_cards() {
+        let engine = engine();
+        let parsed = parse_query("");
+        let results = engine.search(&parsed);
+        assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn fuzzy_search_matches_title_and_description() {
+        let engine = engine();
+        let parsed = parse_query("screw");
+        let results = engine.search(&parsed);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Parametric Screw");
+    }
+
+    #[test]
+    fn tag_filter_excludes_non_matching_cards() {
+        let engine = engine();
+        let parsed = parse_query("#electronics");
+        let results = engine.search(&parsed);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "PCB Holder");
+    }
+
+    #[test]
+    fn platform_filter_matches_card() {
+        let engine = engine();
+        let parsed = parse_query("#sketchup");
+        let results = engine.search(&parsed);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Workshop Bench");
+    }
+
+    #[test]
+    fn author_filter_limits_results() {
+        let engine = engine();
+        let parsed = parse_query("@author:zen");
+        let results = engine.search(&parsed);
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|c| c.author == "ZenFlow"));
+    }
+
+    #[test]
+    fn combined_filter_and_text_query() {
+        let engine = engine();
+        let parsed = parse_query("holder #electronics");
+        let results = engine.search(&parsed);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "PCB Holder");
+    }
+
+    #[test]
+    fn sort_by_downloads_descending() {
+        let engine = engine();
+        let parsed = parse_query("@sort:downloads:descending");
+        let results = engine.search(&parsed);
+        let titles: Vec<_> = results.iter().map(|c| c.title.as_str()).collect();
+        assert_eq!(
+            titles,
+            vec!["Workshop Bench", "Parametric Screw", "PCB Holder"]
+        );
+    }
+
+    #[test]
+    fn sort_by_favorites_ascending() {
+        let engine = engine();
+        let parsed = parse_query("@sort:favorites:ascending");
+        let results = engine.search(&parsed);
+        let titles: Vec<_> = results.iter().map(|c| c.title.as_str()).collect();
+        assert_eq!(
+            titles,
+            vec!["PCB Holder", "Parametric Screw", "Workshop Bench"]
+        );
+    }
+
+    #[test]
+    fn sort_by_newest_uses_timestamp() {
+        let engine = engine();
+        let parsed = parse_query("@sort:newest:descending");
+        let results = engine.search(&parsed);
+        // All timestamps are identical in the fixture, so order is preserved by sort stability.
+        assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn suggestions_derived_from_cards() {
+        let engine = engine();
+        let suggestions = engine.suggestions();
+
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| { s.kind == SuggestionKind::Plain && s.text == "Parametric Screw" })
+        );
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| { s.kind == SuggestionKind::Author && s.text == "ZenFlow" })
+        );
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| { s.kind == SuggestionKind::Filter && s.text == "Parametric" })
+        );
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| { s.kind == SuggestionKind::Filter && s.text == "Blender" })
+        );
+    }
+
+    #[test]
+    fn parse_query_exposed_as_method() {
+        let parsed = SearchEngine::parse_query("gear #freecad");
+        assert_eq!(parsed.filter, "gear");
+        assert_eq!(parsed.filters, vec!["freecad"]);
+    }
+}

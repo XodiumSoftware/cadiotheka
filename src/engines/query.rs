@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn incomplete_sort_token_ignored() {
-        let parsed = parse_query("gear @sort:downloads:desc");
+        let parsed = parse_query("gear @sort:downloads:in");
         assert_eq!(parsed.filter, "gear");
         assert!(parsed.filters.is_empty());
         assert_eq!(parsed.sort.by, SortBy::Downloads);

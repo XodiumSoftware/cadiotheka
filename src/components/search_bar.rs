@@ -277,13 +277,15 @@ mod tests {
     fn active_prefix_detects_hash() {
         let mut bar = SearchBar {
             query: "screw #Ble".to_owned(),
+            id: egui::Id::new("test_search_bar"),
+            selected_suggestion: None,
         };
         assert_eq!(bar.active_prefix(), Some('#'));
-        assert_eq!(bar.active_needle(), "Ble".to_lowercase());
+        assert_eq!(bar.active_needle(), "Ble");
 
         bar.query = "@sort:down".to_owned();
         assert_eq!(bar.active_prefix(), Some('@'));
-        assert_eq!(bar.active_needle(), "sort:down".to_lowercase());
+        assert_eq!(bar.active_needle(), "sort:down");
 
         bar.query = "parametric".to_owned();
         assert_eq!(bar.active_prefix(), None);
@@ -294,6 +296,8 @@ mod tests {
     fn apply_sort_replaces_partial_token() {
         let mut bar = SearchBar {
             query: "screw @so".to_owned(),
+            id: egui::Id::new("test_search_bar"),
+            selected_suggestion: None,
         };
         bar.apply_suggestion(&Suggestion::sort("@sort:downloads:ascending"));
         assert_eq!(bar.query, "screw @sort:downloads:ascending");
@@ -303,6 +307,8 @@ mod tests {
     fn apply_filter_replaces_partial_token() {
         let mut bar = SearchBar {
             query: "screw #Ble".to_owned(),
+            id: egui::Id::new("test_search_bar"),
+            selected_suggestion: None,
         };
         bar.apply_suggestion(&Suggestion::filter("Blender"));
         assert_eq!(bar.query, "screw #Blender");
@@ -312,6 +318,8 @@ mod tests {
     fn apply_filter_replaces_lonely_partial_token() {
         let mut bar = SearchBar {
             query: "#Ble".to_owned(),
+            id: egui::Id::new("test_search_bar"),
+            selected_suggestion: None,
         };
         bar.apply_suggestion(&Suggestion::filter("Blender"));
         assert_eq!(bar.query, "#Blender");

@@ -30,8 +30,11 @@ impl Utils {
 
     /// Returns a human-readable relative age string such as "2 weeks ago".
     pub fn format_time_ago(timestamp: time::OffsetDateTime) -> String {
-        let now = Self::now_utc();
-        let duration = now - timestamp;
+        Self::format_duration_ago(Self::now_utc() - timestamp)
+    }
+
+    /// Formats a duration as a relative age string.
+    fn format_duration_ago(duration: time::Duration) -> String {
         let seconds = duration.whole_seconds();
 
         let value = if seconds < 60 {
@@ -72,5 +75,72 @@ impl Utils {
         time::OffsetDateTime::from_unix_timestamp(seconds)
             .unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
             + time::Duration::nanoseconds(nanos.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_number_compact() {
+        assert_eq!(Utils::format_number(0), "0");
+        assert_eq!(Utils::format_number(999), "999");
+        assert_eq!(Utils::format_number(1_000), "1.0k");
+        assert_eq!(Utils::format_number(1_500), "1.5k");
+        assert_eq!(Utils::format_number(1_000_000), "1.0M");
+        assert_eq!(Utils::format_number(1_500_000), "1.5M");
+        assert_eq!(Utils::format_number(1_000_000_000), "1.0B");
+        assert_eq!(Utils::format_number(2_500_000_000), "2.5B");
+    }
+
+    #[test]
+    fn format_number_full_separates_thousands() {
+        assert_eq!(Utils::format_number_full(0), "0");
+        assert_eq!(Utils::format_number_full(1_000), "1.000");
+        assert_eq!(Utils::format_number_full(1_234_567), "1.234.567");
+        assert_eq!(Utils::format_number_full(12_345_678_901), "12.345.678.901");
+    }
+
+    #[test]
+    fn format_duration_ago_handles_all_units() {
+        assert_eq!(
+            Utils::format_duration_ago(time::Duration::seconds(45)),
+            "45 seconds ago"
+        );
+        assert_eq!(
+            Utils::format_duration_ago(time::Duration::seconds(1)),
+            "1 second ago"
+        );
+        assert_eq!(
+            Utils::format_duration_ago(time::Duration::minutes(5)),
+            "5 minutes ago"
+        );
+        assert_eq!(
+            Utils::format_duration_ago(time::Duration::hours(3)),
+            "3 hours ago"
+        );
+        assert_eq!(
+            Utils::format_duration_ago(time::Duration::days(2)),
+            "2 days ago"
+        );
+        assert_eq!(
+            Utils::format_duration_ago(time::Duration::weeks(2)),
+            "2 weeks ago"
+        );
+        assert_eq!(
+            Utils::format_duration_ago(time::Duration::days(60)),
+            "2 months ago"
+        );
+        assert_eq!(
+            Utils::format_duration_ago(time::Duration::days(730)),
+            "2 years ago"
+        );
+    }
+
+    #[test]
+    fn format_time_full_known_timestamp() {
+        let timestamp = time::OffsetDateTime::from_unix_timestamp(0).unwrap();
+        assert_eq!(Utils::format_time_full(timestamp), "01/01/1970 at 00:00");
     }
 }
