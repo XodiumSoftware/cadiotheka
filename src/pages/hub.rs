@@ -2,7 +2,8 @@
 
 use crate::components::card::IconUrl;
 use crate::components::{
-    CardData, DottedBackground, Grid, ParsedQuery, SearchBar, SortBy, SortOrder,
+    CardData, DottedBackground, Grid, ParsedQuery, SearchBar, SortBy, SortOrder, Suggestion,
+    SuggestionKind,
 };
 use crate::platforms::Platform;
 use crate::tags::Tag;
@@ -89,10 +90,11 @@ impl Hub {
             card_width
         };
 
+        let suggestions = self.collect_suggestions();
         let parsed = ui
             .vertical_centered(|ui| {
                 ui.set_max_width(search_width);
-                self.search_bar.show(ui)
+                self.search_bar.show(ui, &suggestions)
             })
             .inner;
         ui.add_space(24.0);
@@ -115,15 +117,12 @@ impl Hub {
     /// Returns cards filtered by the query and sorted by the selection.
     fn filtered_sorted_cards(&self, parsed: &ParsedQuery) -> Vec<CardData> {
         let query = parsed.filter.to_lowercase();
-        let mut cards: Vec<CardData> = if query.trim().is_empty() {
-            self.cards.clone()
-        } else {
-            self.cards
-                .iter()
-                .filter(|card| Self::matches_query(card, &query))
-                .cloned()
-                .collect()
-        };
+        let mut cards: Vec<CardData> = self
+            .cards
+            .iter()
+            .filter(|card| Self::matches_query(card, &query, &parsed.filters))
+            .cloned()
+            .collect();
 
         match parsed.sort.by {
             SortBy::Downloads => {
@@ -148,9 +147,48 @@ impl Hub {
         cards
     }
 
-    /// Checks whether a card matches the search query.
-    fn matches_query(card: &CardData, query: &str) -> bool {
-        card.title.to_lowercase().contains(query)
+    /// Collects search suggestions from the loaded cards.
+    fn collect_suggestions(&self) -> Vec<Suggestion> {
+        use std::collections::HashSet;
+
+        let mut titles = HashSet::new();
+        let mut authors = HashSet::new();
+        let mut tags = HashSet::new();
+        let mut platforms = HashSet::new();
+
+        for card in &self.cards {
+            titles.insert(card.title.clone());
+            authors.insert(card.author.clone());
+            for tag in &card.tags {
+                tags.insert(tag.label().to_owned());
+            }
+            for platform in &card.supported_platforms {
+                platforms.insert(platform.label().to_owned());
+            }
+        }
+
+        let mut suggestions = SearchBar::default_sort_suggestions();
+
+        let mut push_sorted = |set: HashSet<String>, kind: SuggestionKind| {
+            let mut items: Vec<String> = set.into_iter().collect();
+            items.sort_by_key(|a| a.to_lowercase());
+            for item in items {
+                suggestions.push(Suggestion { text: item, kind });
+            }
+        };
+
+        push_sorted(titles, SuggestionKind::Plain);
+        push_sorted(authors, SuggestionKind::Plain);
+        push_sorted(tags, SuggestionKind::Filter);
+        push_sorted(platforms, SuggestionKind::Filter);
+
+        suggestions
+    }
+
+    /// Checks whether a card matches the free-text query and all exact filters.
+    fn matches_query(card: &CardData, query: &str, filters: &[String]) -> bool {
+        let matches_text = query.trim().is_empty()
+            || card.title.to_lowercase().contains(query)
             || card.author.to_lowercase().contains(query)
             || card.description.to_lowercase().contains(query)
             || card
@@ -160,6 +198,18 @@ impl Hub {
             || card
                 .supported_platforms
                 .iter()
-                .any(|platform| platform.label().to_lowercase().contains(query))
+                .any(|platform| platform.label().to_lowercase().contains(query));
+
+        let matches_filters = filters.iter().all(|filter| {
+            card.tags
+                .iter()
+                .any(|tag| tag.label().to_lowercase() == *filter)
+                || card
+                    .supported_platforms
+                    .iter()
+                    .any(|platform| platform.label().to_lowercase() == *filter)
+        });
+
+        matches_text && matches_filters
     }
 }

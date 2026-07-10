@@ -30,7 +30,7 @@ impl Footer {
 pub struct SearchBar;
 
 impl SearchBar {
-    pub const PLACEHOLDER: &str = "Search… (e.g. @sort:downloads:descending)";
+    pub const PLACEHOLDER: &str = "Search… (e.g. #Blender @sort:downloads:descending)";
 }
 
 /// Strings for startup and web errors.
