@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn parse_query_exposed_as_method() {
         let parsed = SearchEngine::parse_query("gear #freecad");
-        assert_eq!(parsed.filter, "gear");
+        assert_eq!(parsed.filter, vec!["gear"]);
         assert_eq!(parsed.filters, vec!["freecad"]);
     }
 
