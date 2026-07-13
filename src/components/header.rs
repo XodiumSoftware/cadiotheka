@@ -36,7 +36,7 @@ impl Header {
                         format!("{} {}", i18n::Header::HUB_ICON, i18n::Header::HUB_BUTTON),
                     );
                     Keycap::builder()
-                        .keys(&[egui::Key::C, egui::Key::H])
+                        .keys(&[egui::Key::C, egui::Key::H][..])
                         .execute(|| self.view = View::Hub)
                         .attach(ui, &response);
                 });
