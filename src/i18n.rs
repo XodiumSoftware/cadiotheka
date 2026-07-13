@@ -46,10 +46,7 @@ impl Grid {
 pub struct ProjectPopup;
 
 impl ProjectPopup {
-    pub const TITLE: &str = "Project";
-    pub const PROJECT_LABEL: &str = "Project";
-    pub const STUB_MESSAGE: &str = "Project details will appear here soon.";
-    pub const CLOSE: &str = "Close";
+    pub const CLOSE: &str = "x";
 }
 
 /// Strings for the hub UI.

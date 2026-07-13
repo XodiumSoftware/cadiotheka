@@ -60,17 +60,18 @@ impl Grid {
 
                 let card = Card;
 
-                for row in cards.chunks(columns) {
+                for (row_idx, row) in cards.chunks(columns).enumerate() {
                     ui.horizontal(|ui| {
-                        for (i, data) in row.iter().enumerate() {
+                        for (col, data) in row.iter().enumerate() {
+                            let index = row_idx * columns + col;
                             ui.vertical(|ui| {
                                 ui.set_min_width(card_width);
                                 ui.set_max_width(card_width);
-                                if let Some(action) = card.show(ui, data) {
+                                if let Some(action) = card.show(ui, index, data) {
                                     actions.push(action);
                                 }
                             });
-                            if i + 1 < row.len() {
+                            if col + 1 < row.len() {
                                 ui.add_space(inner_spacing);
                             }
                         }

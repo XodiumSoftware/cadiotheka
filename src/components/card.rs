@@ -8,7 +8,7 @@ use crate::{platforms::Platform, tags::Tag, utils::Utils};
 pub struct IconUrl(pub String);
 
 /// Data displayed on a content card.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CardData {
     /// Card title.
     pub title: String,
@@ -37,8 +37,8 @@ pub enum CardAction {
     Filter(String),
     /// Clear the current search query.
     ClearSearch,
-    /// Open the project details popup for the clicked card.
-    OpenProject,
+    /// Open the project details popup for the clicked card at the given index.
+    OpenProject(usize),
 }
 
 /// State and rendering for a reusable card component.
@@ -48,8 +48,11 @@ pub struct Card;
 impl Card {
     /// Draw the card component using the provided data.
     ///
+    /// `index` is the position of this card in the current search results, used
+    /// to identify which project should be opened in the details popup.
+    ///
     /// Returns a [`CardAction`] if the user clicked an interactive element.
-    pub fn show(&self, ui: &mut egui::Ui, data: &CardData) -> Option<CardAction> {
+    pub fn show(&self, ui: &mut egui::Ui, index: usize, data: &CardData) -> Option<CardAction> {
         let mut action = None;
 
         let mut frame = egui::Frame::group(ui.style());
@@ -82,7 +85,7 @@ impl Card {
                         ui.label(" by ");
                         ui.label(egui::RichText::new(&data.author).strong());
                         if title_response.clicked() {
-                            action = Some(CardAction::OpenProject);
+                            action = Some(CardAction::OpenProject(index));
                         }
                     });
                 });
@@ -142,7 +145,7 @@ impl Card {
         action
     }
 
-    fn show_icon_image(ui: &mut egui::Ui, url: &str) {
+    pub(crate) fn show_icon_image(ui: &mut egui::Ui, url: &str) {
         let size = egui::vec2(48.0, 48.0);
         let (rect, response) = ui.allocate_exact_size(size, egui::Sense::hover());
 
@@ -155,7 +158,7 @@ impl Card {
         response.on_hover_text(url);
     }
 
-    fn show_icon_placeholder(ui: &mut egui::Ui, title: &str) {
+    pub(crate) fn show_icon_placeholder(ui: &mut egui::Ui, title: &str) {
         let first_letter = Self::placeholder_letter(title);
         let color = Self::placeholder_color(title);
 

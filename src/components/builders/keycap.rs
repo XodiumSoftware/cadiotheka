@@ -153,8 +153,20 @@ impl<'a> Keycap<'a> {
         let bg = ui.visuals().widgets.inactive.bg_fill;
         let stroke = ui.visuals().widgets.inactive.fg_stroke;
         let text_color = ui.visuals().widgets.inactive.fg_stroke.color;
+        let padding = 8.0f32;
+        let font_id = egui::FontId::proportional(font_size);
+        let galley = ui.ctx().fonts_mut(|f| {
+            f.layout(
+                label.to_string(),
+                font_id.clone(),
+                text_color,
+                f32::INFINITY,
+            )
+        });
+        let text_width = galley.size().x.max(size - padding);
+        let width = text_width + padding;
         let (rect, _response) =
-            ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::hover());
+            ui.allocate_exact_size(egui::vec2(width, size), egui::Sense::hover());
 
         ui.painter().rect_filled(rect, rounding, bg);
         ui.painter()
@@ -163,7 +175,7 @@ impl<'a> Keycap<'a> {
             rect.center(),
             egui::Align2::CENTER_CENTER,
             label,
-            egui::FontId::proportional(font_size),
+            font_id,
             text_color,
         );
     }
@@ -173,8 +185,20 @@ impl<'a> Keycap<'a> {
         let bg = ui.visuals().widgets.inactive.bg_fill;
         let stroke = ui.visuals().widgets.inactive.fg_stroke;
         let text_color = ui.visuals().widgets.inactive.fg_stroke.color;
+        let padding = 8.0f32;
+        let font_id = egui::FontId::proportional(self.font_size);
+        let galley = ui.ctx().fonts_mut(|f| {
+            f.layout(
+                label.to_string(),
+                font_id.clone(),
+                text_color,
+                f32::INFINITY,
+            )
+        });
+        let text_width = galley.size().x.max(self.size - padding);
+        let width = text_width + padding;
         let (rect, _response) =
-            ui.allocate_exact_size(egui::vec2(self.size, self.size), egui::Sense::hover());
+            ui.allocate_exact_size(egui::vec2(width, self.size), egui::Sense::hover());
 
         ui.painter().rect_filled(rect, self.rounding, bg);
         ui.painter()
@@ -183,7 +207,7 @@ impl<'a> Keycap<'a> {
             rect.center(),
             egui::Align2::CENTER_CENTER,
             label,
-            egui::FontId::proportional(self.font_size),
+            font_id,
             text_color,
         );
     }

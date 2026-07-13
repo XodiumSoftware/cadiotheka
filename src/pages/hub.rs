@@ -138,7 +138,8 @@ impl Hub {
                 self.apply_card_actions(ui, actions, &card_data);
             });
 
-        self.project_popup.show(ui);
+        let popup_actions = self.project_popup.show(ui);
+        self.apply_card_actions(ui, popup_actions, &card_data);
     }
 
     /// Renders a loading indicator while the catalog is being fetched.
@@ -186,7 +187,7 @@ impl Hub {
         actions: Vec<CardAction>,
         card_data: &[CardData],
     ) {
-        for (i, action) in actions.into_iter().enumerate() {
+        for action in actions {
             match action {
                 CardAction::Filter(filter) => {
                     let query = &mut self.search_bar.query;
@@ -198,8 +199,8 @@ impl Hub {
                 CardAction::ClearSearch => {
                     self.search_bar.query.clear();
                 }
-                CardAction::OpenProject => {
-                    if let Some(data) = card_data.get(i) {
+                CardAction::OpenProject(index) => {
+                    if let Some(data) = card_data.get(index) {
                         self.project_popup.open(data);
                     }
                 }
