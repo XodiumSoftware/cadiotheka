@@ -107,7 +107,7 @@ impl Hub {
 
         let mut focus_search = false;
         Keycap::builder()
-            .keys(&[egui::Key::C, egui::Key::S])
+            .keys(&[egui::Key::C, egui::Key::S][..])
             .execute(|| focus_search = true)
             .build(ui);
 
