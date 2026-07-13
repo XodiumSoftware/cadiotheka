@@ -64,7 +64,7 @@ impl Utils {
     /// Returns a full timestamp formatted as "dd/mm/yyyy at hh:mm".
     pub fn format_time_full(timestamp: time::OffsetDateTime) -> String {
         let format = time::macros::format_description!("[day]/[month]/[year] at [hour]:[minute]");
-        timestamp.format(format).unwrap_or_default()
+        timestamp.format(&format).unwrap_or_default()
     }
 
     /// Returns the current UTC time using the JavaScript `Date` API.

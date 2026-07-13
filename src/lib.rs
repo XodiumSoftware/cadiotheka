@@ -16,6 +16,7 @@ pub mod components {
     pub(crate) mod footer;
     pub(crate) mod grid;
     pub(crate) mod header;
+    pub(crate) mod project_popup;
     pub(crate) mod search_bar;
 
     pub use builders::{DottedBackground, Keycap};
@@ -23,6 +24,7 @@ pub mod components {
     pub use footer::Footer;
     pub use grid::Grid;
     pub use header::{Header, View};
+    pub use project_popup::ProjectPopup;
     pub use search_bar::SearchBar;
 }
 pub mod engines {

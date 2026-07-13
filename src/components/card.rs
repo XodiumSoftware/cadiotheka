@@ -37,6 +37,8 @@ pub enum CardAction {
     Filter(String),
     /// Clear the current search query.
     ClearSearch,
+    /// Open the project details popup for the clicked card.
+    OpenProject,
 }
 
 /// State and rendering for a reusable card component.
@@ -66,11 +68,22 @@ impl Card {
                     } else {
                         Self::show_icon_placeholder(ui, &data.title);
                     }
-                    ui.horizontal(|ui| {
+                    let card_id = egui::Id::new(("card", &data.title, &data.author));
+                    ui.push_id(card_id, |ui| {
                         ui.spacing_mut().item_spacing.x = 0.0;
-                        ui.label(egui::RichText::new(&data.title).strong().size(18.0));
+                        let title_response = ui
+                            .add(
+                                egui::Label::new(
+                                    egui::RichText::new(&data.title).strong().size(18.0),
+                                )
+                                .sense(egui::Sense::click()),
+                            )
+                            .on_hover_cursor(egui::CursorIcon::PointingHand);
                         ui.label(" by ");
                         ui.label(egui::RichText::new(&data.author).strong());
+                        if title_response.clicked() {
+                            action = Some(CardAction::OpenProject);
+                        }
                     });
                 });
                 ui.separator();

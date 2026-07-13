@@ -4,7 +4,9 @@
 //! [`crate::fixture`]. See that module for notes on the planned move to a
 //! runtime data source.
 
-use crate::components::{CardAction, CardData, DottedBackground, Grid, Keycap, SearchBar};
+use crate::components::{
+    CardAction, CardData, DottedBackground, Grid, Keycap, ProjectPopup, SearchBar,
+};
 use crate::engines::SearchEngine;
 use crate::fixture::load_cards;
 
@@ -26,6 +28,8 @@ pub struct Hub {
     engine: SearchEngine,
     /// Search control state.
     search_bar: SearchBar,
+    /// Project details popup.
+    project_popup: ProjectPopup,
     /// Current catalog loading state.
     load_state: LoadState,
 }
@@ -35,6 +39,7 @@ impl Default for Hub {
         Self {
             engine: SearchEngine::new(Vec::new()),
             search_bar: SearchBar::default(),
+            project_popup: ProjectPopup::default(),
             load_state: LoadState::Loading,
         }
     }
@@ -130,8 +135,10 @@ impl Hub {
             .show(ui, |ui| {
                 ui.add_space(16.0);
                 let actions = Grid.show(ui, &card_data);
-                self.apply_card_actions(actions);
+                self.apply_card_actions(ui, actions, &card_data);
             });
+
+        self.project_popup.show(ui);
     }
 
     /// Renders a loading indicator while the catalog is being fetched.
@@ -173,8 +180,13 @@ impl Hub {
     }
 
     /// Applies actions triggered by clicking interactive card elements.
-    fn apply_card_actions(&mut self, actions: Vec<CardAction>) {
-        for action in actions {
+    fn apply_card_actions(
+        &mut self,
+        _ui: &mut egui::Ui,
+        actions: Vec<CardAction>,
+        card_data: &[CardData],
+    ) {
+        for (i, action) in actions.into_iter().enumerate() {
             match action {
                 CardAction::Filter(filter) => {
                     let query = &mut self.search_bar.query;
@@ -185,6 +197,11 @@ impl Hub {
                 }
                 CardAction::ClearSearch => {
                     self.search_bar.query.clear();
+                }
+                CardAction::OpenProject => {
+                    if let Some(data) = card_data.get(i) {
+                        self.project_popup.open(data);
+                    }
                 }
             }
         }
