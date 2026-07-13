@@ -33,78 +33,68 @@ impl ProjectPopup {
     /// Returns any [`CardAction`]s triggered by clicking interactive popup
     /// elements (e.g., tags).
     pub fn show(&mut self, ui: &mut egui::Ui) -> Vec<CardAction> {
-        let Some(data) = self.project.as_ref() else {
+        let Some(data) = self.project.clone() else {
             return Vec::new();
         };
 
-        let mut open = true;
         let mut actions = Vec::new();
-        let title = &data.title;
-        let _response = egui::Window::new(title)
-            .collapsible(false)
-            .resizable(false)
-            .title_bar(false)
-            .default_width(480.0)
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .show(ui.ctx(), |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(title).heading());
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let close_response = ui.button(crate::i18n::ProjectPopup::CLOSE);
-                        Keycap::builder()
-                            .keys(&[egui::Key::Escape])
-                            .attach(ui, &close_response);
-                        if close_response.clicked() {
-                            open = false;
-                        }
-                    });
-                });
-                ui.separator();
-                ui.add_space(8.0);
-                ui.horizontal(|ui| {
-                    if let Some(icon_url) = &data.icon_url {
-                        Card::show_icon_image(ui, &icon_url.0);
-                    } else {
-                        Card::show_icon_placeholder(ui, &data.title);
+        let title = data.title.clone();
+        let modal_id = egui::Id::new("project_popup");
+        let response = egui::Modal::new(modal_id).show(ui.ctx(), |ui| {
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new(&title).heading());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let close_response = ui.button(crate::i18n::ProjectPopup::CLOSE);
+                    Keycap::builder()
+                        .keys(&[egui::Key::Escape])
+                        .attach(ui, &close_response);
+                    if close_response.clicked() {
+                        self.close();
                     }
-                    ui.vertical(|ui| {
-                        ui.label(&data.description);
-                    });
-                });
-                ui.separator();
-                ui.horizontal(|ui| {
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        for tag in &data.tags {
-                            let label = format!("#{}", tag.label());
-                            let response = ui.add(
-                                egui::Button::new(egui::RichText::new(tag.label()).size(11.0))
-                                    .fill(ui.visuals().widgets.inactive.bg_fill)
-                                    .small(),
-                            );
-                            if response.clicked() {
-                                actions.push(CardAction::Filter(label));
-                                open = false;
-                            }
-                        }
-                        ui.label(format!("❤ {}", Utils::format_number(data.favorites)))
-                            .on_hover_text(format!(
-                                "{} favorites",
-                                Utils::format_number_full(data.favorites)
-                            ));
-                        ui.label(format!("⬇ {}", Utils::format_number(data.downloads)))
-                            .on_hover_text(format!(
-                                "{} downloads",
-                                Utils::format_number_full(data.downloads)
-                            ));
-                    });
                 });
             });
+            ui.separator();
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                if let Some(icon_url) = &data.icon_url {
+                    Card::show_icon_image(ui, &icon_url.0);
+                } else {
+                    Card::show_icon_placeholder(ui, &data.title);
+                }
+                ui.vertical(|ui| {
+                    ui.label(&data.description);
+                });
+            });
+            ui.separator();
+            ui.horizontal(|ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    for tag in &data.tags {
+                        let label = format!("#{}", tag.label());
+                        let response = ui.add(
+                            egui::Button::new(egui::RichText::new(tag.label()).size(11.0))
+                                .fill(ui.visuals().widgets.inactive.bg_fill)
+                                .small(),
+                        );
+                        if response.clicked() {
+                            actions.push(CardAction::Filter(label));
+                            self.close();
+                        }
+                    }
+                    ui.label(format!("❤ {}", Utils::format_number(data.favorites)))
+                        .on_hover_text(format!(
+                            "{} favorites",
+                            Utils::format_number_full(data.favorites)
+                        ));
+                    ui.label(format!("⬇ {}", Utils::format_number(data.downloads)))
+                        .on_hover_text(format!(
+                            "{} downloads",
+                            Utils::format_number_full(data.downloads)
+                        ));
+                });
+            });
+        });
 
-        if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-            open = false;
-        }
-
-        if !open {
+        if response.should_close() {
             self.close();
         }
 
