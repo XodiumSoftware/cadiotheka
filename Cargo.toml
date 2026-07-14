@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 leptos = { version = "0.8.17", features = ["csr"] }
 leptos_i18n = { version = "0.6.2", default-features = false, features = ["csr"] }
-wasm-bindgen = "0.2.114"
 gloo-timers = { version = "0.4.0", features = ["futures"] }
 time = { version = "0.3", features = ["serde", "wasm-bindgen", "macros", "formatting", "parsing"] }
 serde = { version = "1.0.228", features = ["derive"] }
@@ -26,10 +25,9 @@ wasm-bindgen-test = "0.3"
 unsafe_code = "forbid"
 
 [package.metadata.cargo-machete]
-# wasm-bindgen is required at runtime by leptos/wasm-bindgen internals, but our
-# code only accesses it through leptos re-exports (e.g. leptos::wasm_bindgen::JsCast).
-# cargo-machete does not detect this indirect usage, so keep it ignored.
-ignored = ["wasm-bindgen", "leptos_i18n"]
+# leptos_i18n is used at compile time by leptos_i18n_build and referenced
+# through generated code, which cargo-machete cannot detect.
+ignored = ["leptos_i18n"]
 
 [profile.release]
 opt-level = "z"
