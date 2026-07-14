@@ -7,7 +7,7 @@ use crate::i18n::{t, t_string, use_i18n};
 use leptos::prelude::*;
 
 #[component]
-pub fn ProjectsSection() -> impl IntoView {
+pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     let i18n = use_i18n();
     let (retry_count, set_retry_count) = signal(0u32);
     let resource = LocalResource::new(move || {
@@ -20,7 +20,7 @@ pub fn ProjectsSection() -> impl IntoView {
     };
 
     view! {
-        <section id="projects" class="relative py-24 sm:py-32 px-6">
+        <section id="projects" class={format!("relative py-24 sm:py-32 px-6 flex-1 flex flex-col {}", class)}>
             <FadeOverlay />
             <div class="mx-auto max-w-7xl relative z-10">
                 <div class="flex gap-8 items-stretch">
