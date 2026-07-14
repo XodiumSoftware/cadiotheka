@@ -33,7 +33,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                     }
                 }
             >
-                <div class="flex justify-center mb-8">
+                <div class="hidden min-[1920px]:flex justify-center mb-8">
                     <ToggleSliderWithSlashLabel
                         checked=layout.wide
                         on_change=move |value| layout.set_wide.set(value)

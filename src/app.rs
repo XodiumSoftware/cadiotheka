@@ -24,8 +24,14 @@ fn InnerApp() -> impl IntoView {
         let layout = LayoutContext::use_context();
         window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("l") {
-                ev.prevent_default();
-                layout.set_wide.set(!layout.wide.get());
+                let wide_enough = web_sys::window()
+                    .and_then(|w| w.inner_width().ok())
+                    .and_then(|w| w.as_f64())
+                    .is_some_and(|width| width >= 1920.0);
+                if wide_enough {
+                    ev.prevent_default();
+                    layout.set_wide.set(!layout.wide.get());
+                }
             }
         });
     });
