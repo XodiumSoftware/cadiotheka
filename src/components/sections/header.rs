@@ -153,7 +153,7 @@ pub fn Header() -> impl IntoView {
                 <div class="navbar-end">
                     <button
                         type="button"
-                        class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content bg-base-200 hover:bg-base-300 border border-base-content/30 rounded shadow-kbd transition-colors"
+                        class="btn btn-primary hover:btn-warning btn-lift"
                         on:click=move |_| set_search_open.set(true)
                         aria-label=t_string!(i18n, search.open)
                     >
@@ -171,7 +171,7 @@ pub fn Header() -> impl IntoView {
                             <circle cx="11" cy="11" r="8" />
                             <path d="m21 21-4.3-4.3" />
                         </svg>
-                        <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-base-content bg-base-200 border border-base-content/30 rounded shadow-kbd">"Alt + S"</kbd>
+                        <kbd class="inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">"Alt + S"</kbd>
                     </button>
                 </div>
             </nav>
