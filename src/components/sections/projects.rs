@@ -40,7 +40,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                         on_change=move |value| layout.set_wide.set(value)
                         label_left=t_string!(i18n, projects.narrow_mode)
                         label_right=t_string!(i18n, projects.wide_mode)
-                        shortcut_hint="Alt + L"
+                        shortcut_hint="Alt + W"
                     />
                 </div>
                 {move || {

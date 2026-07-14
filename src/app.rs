@@ -23,7 +23,7 @@ fn InnerApp() -> impl IntoView {
     Effect::new(move |_| {
         let layout = LayoutContext::use_context();
         window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
-            if ev.alt_key() && ev.key().eq_ignore_ascii_case("l") {
+            if ev.alt_key() && ev.key().eq_ignore_ascii_case("w") {
                 let wide_enough = web_sys::window()
                     .and_then(|w| w.inner_width().ok())
                     .and_then(|w| w.as_f64())
