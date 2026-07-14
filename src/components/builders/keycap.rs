@@ -203,7 +203,7 @@ impl<'a> Keycap<'a> {
         let bg = ui.visuals().widgets.inactive.bg_fill;
         let stroke = ui.visuals().widgets.inactive.fg_stroke;
         let text_color = ui.visuals().widgets.inactive.fg_stroke.color;
-        let padding = 8.0f32;
+        let padding = 10.0f32;
         let font_id = egui::FontId::proportional(font_size);
         let galley = ui.ctx().fonts_mut(|f| {
             f.layout(
@@ -234,7 +234,7 @@ impl<'a> Keycap<'a> {
         let bg = ui.visuals().widgets.inactive.bg_fill;
         let stroke = ui.visuals().widgets.inactive.fg_stroke;
         let text_color = ui.visuals().widgets.inactive.fg_stroke.color;
-        let padding = 8.0f32;
+        let padding = 10.0f32;
         let font_id = egui::FontId::proportional(self.font_size);
         let galley = ui.ctx().fonts_mut(|f| {
             f.layout(

@@ -94,7 +94,7 @@ fn search_button(
     });
 
     let icon_size = icon_galley.size();
-    let keycap_size = egui::vec2(keycap_galley.size().x + 8.0, 16.0);
+    let keycap_size = egui::vec2(keycap_galley.size().x + 10.0, 16.0);
     let content_spacing = 6.0;
     let content_size = egui::vec2(
         icon_size.x + content_spacing + keycap_size.x,
