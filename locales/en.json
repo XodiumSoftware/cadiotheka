@@ -6,14 +6,24 @@
     "projects": {
         "empty": "No projects found.",
         "wide_mode": "Wide",
-        "narrow_mode": "Narrow"
+        "narrow_mode": "Narrow",
+        "shortcut_wide": "Alt + W"
     },
     "search": {
         "open": "Open search",
         "title": "Search",
         "placeholder": "Search projects, tags, platforms, authors...",
         "clear": "Clear search",
-        "no_suggestions": "No suggestions available."
+        "clear_button": "Clear Search",
+        "clear_card_title": "Click to Clear Search",
+        "no_suggestions": "No suggestions available.",
+        "shortcut_open": "Alt + S",
+        "shortcut_clear": "Alt + C",
+        "keyboard_esc": "esc",
+        "keyboard_return": "return",
+        "hint_or": "or",
+        "hint_dismiss": "to dismiss",
+        "hint_select": "to select"
     },
     "footer": {
         "company_name": "XODIUM™",

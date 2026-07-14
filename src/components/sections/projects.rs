@@ -40,7 +40,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                         on_change=move |value| layout.set_wide.set(value)
                         label_left=t_string!(i18n, projects.narrow_mode)
                         label_right=t_string!(i18n, projects.wide_mode)
-                        shortcut_hint="Alt + W"
+                        shortcut_hint=t_string!(i18n, projects.shortcut_wide)
                     />
                 </div>
                 {move || {
@@ -60,9 +60,9 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                 class="btn btn-outline btn-outline-ghost btn-hover-warning btn-lift gap-1.5"
                                                 on:click=move |_| search.set_query.set(String::new())
                                             >
-                                                <span>"Clear Search"</span>
-                                                <span class="w-1"></span>
-                                                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"alt + c"</kbd>
+                                                <span>{t_string!(i18n, search.clear_button)}</span>
+                                                    <span class="w-1"></span>
+                                                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.shortcut_clear)}</kbd>
                                             </button>
                                         })
                                     }
@@ -91,9 +91,9 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                 on:click=move |_| search.set_query.set(String::new())
                                             >
                                                 <CornerFrame style="square" class="h-full w-full flex flex-col items-center justify-center">
-                                                    <span class="font-bold text-lg text-black">"Click to Clear Search"</span>
+                                                    <span class="font-bold text-lg text-black">{t_string!(i18n, search.clear_card_title)}</span>
                                                     <span class="text-sm text-black/60 mt-1">
-                                                        <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-black bg-black/10 border border-black/30 rounded shadow-kbd">"Alt + C"</kbd>
+                                                        <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-black bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.shortcut_clear)}</kbd>
                                                     </span>
                                                 </CornerFrame>
                                             </button>

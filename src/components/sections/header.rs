@@ -405,7 +405,7 @@ pub fn Header() -> impl IntoView {
                             <circle cx="11" cy="11" r="8" />
                             <path d="m21 21-4.3-4.3" />
                         </svg>
-                        <kbd class="inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">"Alt + S"</kbd>
+                        <kbd class="inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">{t_string!(i18n, search.shortcut_open)}</kbd>
                     </button>
                 </div>
             </nav>
@@ -530,15 +530,15 @@ pub fn Header() -> impl IntoView {
 
                     <div class="flex items-center justify-end gap-4 text-xs text-base-content/50 px-3 py-2">
                         <div class="flex items-center gap-1.5">
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"esc"</kbd>
-                            <span>"to dismiss"</span>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_esc)}</kbd>
+                            <span>{t_string!(i18n, search.hint_dismiss)}</span>
                         </div>
 
                         <span class="text-base-content/30" aria-hidden="true">"|"</span>
 
                         <div class="flex items-center gap-1.5">
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"return"</kbd>
-                            <span>"to select"</span>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_return)}</kbd>
+                            <span>{t_string!(i18n, search.hint_select)}</span>
                         </div>
                     </div>
                 </div>

@@ -1,3 +1,4 @@
+use crate::i18n::{t_string, use_i18n};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -52,6 +53,7 @@ pub fn ToggleSliderWithSlashLabel(
     #[prop(into)] label_right: &'static str,
     #[prop(optional)] shortcut_hint: Option<&'static str>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let input_id = "layout-toggle-slash";
 
     view! {
@@ -81,7 +83,7 @@ pub fn ToggleSliderWithSlashLabel(
 
             {shortcut_hint.map(|hint| {
                 view! {
-                    <span class="mx-1 text-base-content/50">"or"</span>
+                    <span class="mx-1 text-base-content/50">{t_string!(i18n, search.hint_or)}</span>
                     <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{hint}</kbd>
                 }
             })}
