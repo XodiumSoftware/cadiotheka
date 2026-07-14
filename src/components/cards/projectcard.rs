@@ -169,7 +169,7 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                                             .map(|tag| OverflowItem::new(tag.label(), tag.color()))
                                             .collect::<Vec<_>>()}
                                         max_visible=3
-                                        badge_class="badge badge-xs badge-outline rounded-none text-neutral-900 border-base-content/10 bg-transparent"
+                                        badge_class="badge badge-xs badge-outline rounded-none text-neutral-900 border-base-content/10"
                                     />
                                     {if !props.tags.is_empty() && !props.supported_platforms.is_empty() {
                                         view! {
@@ -186,7 +186,7 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                                             .map(|platform| OverflowItem::new(platform.label(), platform.color()))
                                             .collect::<Vec<_>>()}
                                         max_visible=2
-                                        badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 bg-transparent"
+                                        badge_class="badge badge-xs badge-outline rounded-none border-base-content/10"
                                     />
                                 </div>
                             </div>
