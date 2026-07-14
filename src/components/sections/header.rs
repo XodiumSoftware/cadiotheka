@@ -430,13 +430,24 @@ pub fn Header() -> impl IntoView {
                     <hr class="border-base-content/10" />
 
                     <div class="max-h-72 overflow-y-auto flex-1 min-h-0">
+                        <div class="sr-only" role="status">
+                            {move || {
+                                let groups = suggestions.get();
+                                let has_suggestions = groups.iter().any(|g| !g.suggestions.is_empty());
+                                if has_suggestions {
+                                    t_string!(i18n, search.suggestions_available)
+                                } else {
+                                    t_string!(i18n, search.no_suggestions)
+                                }
+                            }}
+                        </div>
                         {move || {
                             let groups = suggestions.get();
                             let selected = selected_index.get();
 
                             if groups.iter().all(|group| group.suggestions.is_empty()) {
                                 view! {
-                                    <p class="text-base-content/50 text-sm px-3 py-2">{t_string!(i18n, search.no_suggestions)}</p>
+                                    <p class="text-base-content/50 text-sm px-3 py-2" aria-live="polite" aria-atomic="true">{t_string!(i18n, search.no_suggestions)}</p>
                                 }
                                     .into_any()
                             } else {

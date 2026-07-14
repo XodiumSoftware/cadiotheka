@@ -17,6 +17,7 @@
         "clear_button": "Clear Search",
         "clear_card_title": "Click to Clear Search",
         "no_suggestions": "No suggestions available.",
+        "suggestions_available": "Suggestions available.",
         "shortcut_open": "Alt + S",
         "shortcut_clear": "Alt + C",
         "keyboard_esc": "esc",
