@@ -42,11 +42,12 @@ impl<'a> Keycap<'a> {
         self
     }
 
-    /// Enables or disables tooltip-style rendering.
+    /// Enables inline rendering of the keycap sequence in the current layout.
     ///
-    /// When enabled, the keys are rendered inside a horizontal layout.
-    pub fn tooltip(mut self, tooltip: bool) -> Self {
-        self.tooltip = tooltip;
+    /// Useful for showing a keycap next to a button or label without a hover
+    /// tooltip.
+    pub fn inline(mut self, inline: bool) -> Self {
+        self.tooltip = inline;
         self
     }
 
