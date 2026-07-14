@@ -420,24 +420,13 @@ pub fn Header() -> impl IntoView {
                                 if search.query.get().is_empty() {
                                     "hidden"
                                 } else {
-                                    "absolute right-10 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
+                                    "absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
                                 }
                             }
                             aria-label=t_string!(i18n, search.clear)
                             on:click=move |_| search.set_query.set(String::new())
                         >
                             "×"
-                        </button>
-                        <button
-                            type="button"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
-                            aria-label=t_string!(i18n, search.close)
-                            on:click=move |_| {
-                                search.set_query.set(String::new());
-                                set_search_open.set(false);
-                            }
-                        >
-                            "✕"
                         </button>
                     </div>
 
