@@ -248,25 +248,22 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
 mod tests {
     use super::*;
     use crate::data::IconUrl;
-    use wasm_bindgen_test::*;
 
-    wasm_bindgen_test_configure!(run_in_browser);
-
-    #[wasm_bindgen_test]
+    #[test]
     fn test_placeholder_letter() {
         assert_eq!(placeholder_letter("Blender"), "B");
         assert_eq!(placeholder_letter("freecad"), "F");
         assert_eq!(placeholder_letter(""), "?");
     }
 
-    #[wasm_bindgen_test]
+    #[test]
     fn test_placeholder_color_is_deterministic() {
         let a = placeholder_color("abc");
         let b = placeholder_color("abc");
         assert_eq!(a, b);
     }
 
-    #[wasm_bindgen_test]
+    #[test]
     fn test_project_card_properties_from_card_data() {
         let card = CardData {
             title: "Gear".to_owned(),
