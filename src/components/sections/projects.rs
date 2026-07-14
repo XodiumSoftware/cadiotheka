@@ -1,5 +1,4 @@
 use crate::components::cards::projectcard::ProjectCard;
-use crate::components::effects::hexgrid::HexPattern;
 use crate::components::effects::sectionfade::FadeOverlay;
 use crate::components::ui::cornerframe::CornerFrame;
 use crate::components::ui::datagrid::data_grid;
@@ -22,7 +21,6 @@ pub fn ProjectsSection() -> impl IntoView {
 
     view! {
         <section id="projects" class="relative py-24 sm:py-32 px-6">
-            <HexPattern />
             <FadeOverlay />
             <div class="mx-auto max-w-7xl relative z-10">
                 <div class="flex gap-8 items-stretch">

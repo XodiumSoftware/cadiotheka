@@ -1,19 +1,8 @@
 {
     "skip_to_content": "Skip to main content",
     "nav": {
-        "projects": "PROJECTS",
-        "team": "TEAM",
         "github": "Github",
         "sponsor": "Sponsor"
-    },
-    "landing": {
-        "terminal_title": "xodium.sh",
-        "cta_get_started": "Get Started",
-        "cta_join_us": "Join us",
-        "value_1": "Building open-source tools for developers",
-        "value_2": "Crafting CAD software with precision",
-        "value_3": "Empowering creativity through code",
-        "value_4": "Made with passion"
     },
     "projects": {
         "title": "PROJECTS",
@@ -25,22 +14,7 @@
             "repo_alt": "GitHub Repository"
         }
     },
-    "team": {
-        "title": "THE TEAM",
-        "empty": "No team members found.",
-        "retry": "Retry",
-        "rotate_label": "Rotate team deck",
-        "deck_label": "Team deck",
-        "keyboard_hint_press": "Press",
-        "keyboard_hint_space": "Space",
-        "keyboard_hint_to_rotate": "to rotate",
-        "keyboard_hint_enter": "Enter",
-        "keyboard_hint_enter_to_open": "to open"
-    },
     "footer": {
-        "about": "About",
-        "licensing": "Licensing",
-        "contact": "Contact",
         "company_name": "XODIUM™",
         "tagline": ". Open-Source (CAD) Software Company."
     }

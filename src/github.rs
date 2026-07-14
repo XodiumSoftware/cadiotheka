@@ -1,7 +1,5 @@
 use gloo_net::http::Request;
-use leptos::web_sys;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::time::Duration;
 
 const ORG: &str = "XodiumSoftware";
@@ -10,14 +8,6 @@ const CACHE_TTL_MS: f64 = 5.0 * 60.0 * 1000.0;
 const MAX_RETRIES: u32 = 3;
 const RETRY_BASE_MS: u64 = 1000;
 const PER_PAGE: usize = 100;
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Member {
-    pub login: String,
-    pub html_url: String,
-    pub avatar_url: String,
-    pub role: Option<String>,
-}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Repo {
@@ -133,33 +123,6 @@ async fn fetch_all<T: for<'de> Deserialize<'de> + Serialize>(
     Ok(all)
 }
 
-pub async fn fetch_members() -> Result<Vec<Member>, String> {
-    let mut members = fetch_all::<Member>(&format!("/orgs/{ORG}/members")).await?;
-
-    // Fetch all admins (owners) using role filter
-    let owners = match fetch_all::<Member>(&format!("/orgs/{ORG}/members?role=admin")).await {
-        Ok(o) => o,
-        Err(e) => {
-            web_sys::console::warn_1(
-                &format!("Failed to fetch owner roles from GitHub API: {e}. All members will be labeled as 'Member'.").into()
-            );
-            Vec::new()
-        }
-    };
-    let owner_logins: HashSet<String> = owners.into_iter().map(|m| m.login).collect();
-
-    // Mark role for each member
-    for member in &mut members {
-        member.role = if owner_logins.contains(&member.login) {
-            Some("Owner".to_string())
-        } else {
-            Some("Member".to_string())
-        };
-    }
-
-    Ok(members)
-}
-
 pub async fn fetch_repos() -> Result<Vec<Repo>, String> {
     let mut repos = fetch_all::<Repo>(&format!("/orgs/{ORG}/repos?type=public")).await?;
     repos.retain(|r| !r.fork);
@@ -186,31 +149,9 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn test_retry_delay_calculation() {
-        // Test exponential backoff delays: RETRY_BASE_MS << attempt
-        // attempt 0: no delay (immediate)
-        // attempt 1: 1000 << 0 = 1000ms
-        // attempt 2: 1000 << 1 = 2000ms
-        // attempt 3: 1000 << 2 = 4000ms
         assert_eq!(RETRY_BASE_MS, 1000);
         assert_eq!(RETRY_BASE_MS << 1, 2000);
         assert_eq!(RETRY_BASE_MS << 2, 4000);
-    }
-
-    #[wasm_bindgen_test]
-    fn test_member_deserialization() {
-        let json = r#"{
-            "login": "testuser",
-            "html_url": "https://github.com/testuser",
-            "avatar_url": "https://avatars.githubusercontent.com/u/123?v=4"
-        }"#;
-
-        let member: Member = serde_json::from_str(json).unwrap();
-        assert_eq!(member.login, "testuser");
-        assert_eq!(member.html_url, "https://github.com/testuser");
-        assert_eq!(
-            member.avatar_url,
-            "https://avatars.githubusercontent.com/u/123?v=4"
-        );
     }
 
     #[wasm_bindgen_test]
@@ -271,24 +212,18 @@ mod tests {
             },
         ];
 
-        // Apply the same logic as fetch_repos
         repos.retain(|r| !r.fork);
         repos.sort_by_key(|b| std::cmp::Reverse(b.stargazers_count));
 
         assert_eq!(repos.len(), 2);
-        assert_eq!(repos[0].name, "repo-b"); // 50 stars
-        assert_eq!(repos[1].name, "repo-a"); // 10 stars
+        assert_eq!(repos[0].name, "repo-b");
+        assert_eq!(repos[1].name, "repo-a");
     }
 
     #[wasm_bindgen_test]
     async fn test_cache_operations() {
-        // Test cache key format
-        let endpoint = "/orgs/XodiumSoftware/members";
+        let endpoint = "/orgs/XodiumSoftware/repos";
         let cache_key = format!("xodium:{endpoint}");
-        assert_eq!(cache_key, "xodium:/orgs/XodiumSoftware/members");
-
-        // Note: Full cache_get/cache_set tests require localStorage
-        // which needs a browser environment. These are covered by
-        // the integration tests when running with wasm-pack test.
+        assert_eq!(cache_key, "xodium:/orgs/XodiumSoftware/repos");
     }
 }

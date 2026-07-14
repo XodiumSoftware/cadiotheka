@@ -1,6 +1,4 @@
-use crate::components::{
-    Footer, Header, LandingSection, LineDraw, ProjectsSection, TeamDeckSection,
-};
+use crate::components::{Footer, Header, ProjectsSection};
 use crate::i18n::{I18nContextProvider, t, use_i18n};
 use leptos::prelude::*;
 
@@ -26,23 +24,11 @@ fn InnerApp() -> impl IntoView {
             </a>
             <Header />
 
-        <main id="main-content" tabindex="-1">
-        <LandingSection />
+            <main id="main-content" tabindex="-1">
+                <ProjectsSection />
+            </main>
 
-        // Line divider between hero and projects
-        <LineDraw />
-
-        // Projects section
-        <ProjectsSection />
-
-        // Line draw divider
-        <LineDraw />
-
-        // Team section
-        <TeamDeckSection />
-        </main>
-
-        <Footer />
-    </div>
+            <Footer />
+        </div>
     }
 }

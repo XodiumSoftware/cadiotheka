@@ -1,8 +1,6 @@
-use crate::i18n::{t, use_i18n};
-use crate::utils::{observe_intersections, window_event_listener};
+use crate::utils::window_event_listener;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys;
 use std::time::Duration;
 
@@ -16,7 +14,7 @@ struct SocialLink {
 
 const SOCIAL_LINKS: &[SocialLink] = &[
     SocialLink {
-        href: "https://github.com/XodiumSoftware",
+        href: "https://github.com/XodiumSoftware/cadiotheka",
         label: "Github",
         is_external: true,
         icon_path: "/icons/github.svg",
@@ -33,9 +31,7 @@ const SOCIAL_LINKS: &[SocialLink] = &[
 
 #[component]
 pub fn Header() -> impl IntoView {
-    let i18n = use_i18n();
     let (is_scrolled, set_is_scrolled) = signal(false);
-    let (active_section, set_active_section) = signal(String::new());
     let (is_logo_active, set_is_logo_active) = signal(false);
 
     // Scroll listener for backdrop blur
@@ -47,46 +43,6 @@ pub fn Header() -> impl IntoView {
             set_is_scrolled.set(scrolled);
         });
     });
-
-    // IntersectionObserver to track which section is most visible
-    Effect::new(move |_| {
-        let Some(window) = web_sys::window() else {
-            return;
-        };
-        let Some(document) = window.document() else {
-            return;
-        };
-
-        let elements: Vec<web_sys::Element> = ["projects", "team"]
-            .iter()
-            .filter_map(|id| document.get_element_by_id(id))
-            .collect();
-
-        observe_intersections(&elements, 0.25, move |entries| {
-            let best = entries
-                .iter()
-                .filter_map(|entry| {
-                    let ratio = entry.intersection_ratio();
-                    if ratio <= 0.0 {
-                        return None;
-                    }
-                    let target = entry.target();
-                    let target = target.dyn_ref::<web_sys::Element>()?;
-                    let id = target.id();
-                    if id.is_empty() {
-                        return None;
-                    }
-                    Some((id, ratio))
-                })
-                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-
-            if let Some((id, _)) = best {
-                set_active_section.set(id);
-            }
-        });
-    });
-
-    let is_active = move |id: &str| active_section.get() == id;
 
     view! {
         <header
@@ -161,20 +117,6 @@ pub fn Header() -> impl IntoView {
                                 </linearGradient>
                             </defs>
                         </svg>
-                    </a>
-                    <a
-                        href="#projects"
-                        class="hover:text-primary text-sm font-semibold lift"
-                        aria-current=move || if is_active("projects") { Some("true") } else { None }
-                    >
-                        {t!(i18n, nav.projects)}
-                    </a>
-                    <a
-                        href="#team"
-                        class="hover:text-primary text-sm font-semibold lift"
-                        aria-current=move || if is_active("team") { Some("true") } else { None }
-                    >
-                        {t!(i18n, nav.team)}
                     </a>
                 </div>
                 // Right side
