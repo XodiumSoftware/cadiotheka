@@ -33,7 +33,7 @@
 
 ## About
 
-Cadiotheka is an open hub for CAD creators. It collects, organizes, and provides resources, tooling, and references to support people working with computer-aided design. The hub runs as a browser application built with [egui](https://github.com/emilk/egui) and compiled to WebAssembly.
+Cadiotheka is an open hub for CAD creators. It collects, organizes, and provides resources, tooling, and references to support people working with computer-aided design. The hub runs as a browser application built with [leptos](https://github.com/leptos-rs/leptos) and compiled to WebAssembly.
 
 ## Requirements
 
@@ -62,6 +62,18 @@ trunk serve --port 8080
 ```
 
 Then open <http://localhost:8080/index.html#dev> in a browser.
+
+Run the unit tests:
+
+```bash
+cargo test
+```
+
+Lint with the WASM target:
+
+```bash
+cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
+```
 
 For a release build:
 
