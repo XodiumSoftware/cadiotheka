@@ -17,16 +17,14 @@ struct SuggestionGroup {
     suggestions: Vec<Suggestion>,
 }
 
-/// Filters and groups suggestions by kind, limiting each group to 8 items
-/// and matching the active completion needle.
-fn group_and_filter_suggestions(suggestions: &[Suggestion], needle: &str) -> Vec<SuggestionGroup> {
-    let needle = needle.to_lowercase();
+/// Groups suggestions by kind, limiting each group to 8 items.
+fn group_and_filter_suggestions(suggestions: &[Suggestion]) -> Vec<SuggestionGroup> {
     let max_per_group = 8;
 
     let filter_kind = |kind: SuggestionKind| {
         suggestions
             .iter()
-            .filter(|s| s.kind == kind && s.text.to_lowercase().contains(&needle))
+            .filter(|s| s.kind == kind)
             .take(max_per_group)
             .cloned()
             .collect::<Vec<_>>()
@@ -50,21 +48,6 @@ fn group_and_filter_suggestions(suggestions: &[Suggestion], needle: &str) -> Vec
             suggestions: filter_kind(SuggestionKind::Sort),
         },
     ]
-}
-
-/// Returns the current completion needle within the active prefix token.
-fn active_needle(query: &str) -> String {
-    query
-        .split_whitespace()
-        .last()
-        .map(|token| {
-            if token.starts_with('@') || token.starts_with('#') {
-                token[1..].to_owned()
-            } else {
-                token.to_owned()
-            }
-        })
-        .unwrap_or_default()
 }
 
 /// Applies a clicked suggestion to a query, replacing the partial token when
@@ -129,7 +112,7 @@ pub fn Header() -> impl IntoView {
     let suggestions = Memo::new(move |_| {
         let query = search.query.get();
         let all = engine.suggestions(&query);
-        group_and_filter_suggestions(&all, &active_needle(&query))
+        group_and_filter_suggestions(&all)
     });
 
     let insert_suggestion = move |text: String, kind: SuggestionKind| {

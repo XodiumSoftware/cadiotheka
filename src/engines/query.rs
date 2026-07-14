@@ -145,6 +145,24 @@ pub fn parse_query(query: &str) -> ParsedQuery<'_> {
     }
 }
 
+/// Returns the current completion needle within the active prefix token.
+///
+/// For prefixed tokens such as `#model` or `@sort:down`, the prefix is stripped
+/// so the matcher can rank the actual label. Plain tokens are returned as-is.
+pub fn active_needle(query: &str) -> String {
+    query
+        .split_whitespace()
+        .last()
+        .map(|token| {
+            if token.starts_with('@') || token.starts_with('#') {
+                token[1..].to_owned()
+            } else {
+                token.to_owned()
+            }
+        })
+        .unwrap_or_default()
+}
+
 /// Parses a single `@sort:<field>:<direction>` directive.
 fn parse_sort_directive(token: &str) -> Option<SortSelection> {
     let body = token.strip_prefix("@sort:")?;

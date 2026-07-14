@@ -1,7 +1,7 @@
 //! Fuzzy matching and card filtering for the Cadiotheka search engine.
 
 use crate::data::CardData;
-use crate::engines::query::{ParsedQuery, SortBy, SortOrder, parse_query};
+use crate::engines::query::{ParsedQuery, SortBy, SortOrder, active_needle, parse_query};
 use crate::engines::suggestions::{Suggestion, from_cards};
 use crate::metadata::tags::Tag;
 use fuzzy_matcher::FuzzyMatcher;
@@ -125,15 +125,16 @@ impl SearchEngine {
 
     /// Generates clickable suggestions for the search bar popup.
     ///
+    /// Suggestions are ranked by fuzzy relevance to the active completion needle.
     /// Sort suggestions are only included when the user is typing a `@` prefixed
-    /// token, so the popup doesn't start with six sort directives on every
-    /// focus.
+    /// token, so the popup doesn't start with six sort directives on every focus.
     pub fn suggestions(&self, query: &str) -> Vec<Suggestion> {
         let include_sort = query
             .split_whitespace()
             .last()
             .is_some_and(|token| token.starts_with('@'));
-        from_cards(&self.cards, include_sort)
+        let needle = active_needle(query);
+        from_cards(&self.cards, include_sort, &needle)
     }
 
     /// Parses a raw query string into a structured [`ParsedQuery`].

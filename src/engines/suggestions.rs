@@ -2,6 +2,8 @@
 
 use crate::data::CardData;
 use crate::engines::query::{SortBy, SortOrder};
+use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use std::collections::HashSet;
 
 /// Kind of suggestion shown in the search bar popup.
@@ -62,10 +64,14 @@ impl Suggestion {
 
 /// Generates clickable suggestions from a list of cards.
 ///
-/// When `include_sort` is `false`, sort directives are omitted from the
-/// returned list. This keeps the default suggestion popup free of sort
-/// noise until the user explicitly types `@`.
-pub fn from_cards(cards: &[CardData], include_sort: bool) -> Vec<Suggestion> {
+/// Suggestions are ranked by fuzzy relevance to `needle` and filtered out when
+/// they do not match a non-empty needle. Sort directives are only included when
+/// `include_sort` is `true`, which is typically when the user has typed `@`.
+pub fn from_cards(cards: &[CardData], include_sort: bool, needle: &str) -> Vec<Suggestion> {
+    let matcher = SkimMatcherV2::default();
+    let needle_lower = needle.to_lowercase();
+    let needle_empty = needle_lower.is_empty();
+
     let mut titles = HashSet::new();
     let mut authors = HashSet::new();
     let mut tags = HashSet::new();
@@ -83,25 +89,73 @@ pub fn from_cards(cards: &[CardData], include_sort: bool) -> Vec<Suggestion> {
     }
 
     let mut suggestions = if include_sort {
-        default_sort_suggestions()
+        score_suggestions(
+            default_sort_suggestions(),
+            &matcher,
+            &needle_lower,
+            needle_empty,
+        )
     } else {
         Vec::new()
     };
 
-    let mut push_sorted = |set: HashSet<String>, kind: SuggestionKind| {
-        let mut items: Vec<String> = set.into_iter().collect();
-        items.sort_by_key(|a| a.to_lowercase());
-        for item in items {
-            suggestions.push(Suggestion { text: item, kind });
-        }
+    let mut push_scored = |set: HashSet<String>, kind: SuggestionKind| {
+        suggestions.extend(score_suggestions(
+            set.into_iter()
+                .map(|text| Suggestion { text, kind })
+                .collect(),
+            &matcher,
+            &needle_lower,
+            needle_empty,
+        ));
     };
 
-    push_sorted(titles, SuggestionKind::Plain);
-    push_sorted(authors, SuggestionKind::Author);
-    push_sorted(tags, SuggestionKind::Filter);
-    push_sorted(platforms, SuggestionKind::Filter);
+    push_scored(titles, SuggestionKind::Plain);
+    push_scored(authors, SuggestionKind::Author);
+    push_scored(tags, SuggestionKind::Filter);
+    push_scored(platforms, SuggestionKind::Filter);
+
+    suggestions.sort_by(|a, b| {
+        b.score.cmp(&a.score).then_with(|| {
+            a.suggestion
+                .text
+                .to_lowercase()
+                .cmp(&b.suggestion.text.to_lowercase())
+        })
+    });
 
     suggestions
+        .into_iter()
+        .map(|scored| scored.suggestion)
+        .collect()
+}
+
+/// A suggestion paired with its fuzzy match score.
+struct ScoredSuggestion {
+    score: i64,
+    suggestion: Suggestion,
+}
+
+/// Scores a batch of suggestions against the needle and drops non-matches when
+/// the needle is non-empty.
+fn score_suggestions(
+    suggestions: Vec<Suggestion>,
+    matcher: &SkimMatcherV2,
+    needle: &str,
+    needle_empty: bool,
+) -> Vec<ScoredSuggestion> {
+    suggestions
+        .into_iter()
+        .filter_map(|suggestion| {
+            let score = matcher
+                .fuzzy_match(&suggestion.text.to_lowercase(), needle)
+                .unwrap_or(0);
+            if !needle_empty && score == 0 {
+                return None;
+            }
+            Some(ScoredSuggestion { score, suggestion })
+        })
+        .collect()
 }
 
 /// Default sort directive suggestions.
@@ -181,7 +235,7 @@ mod tests {
     #[test]
     fn from_cards_extracts_unique_values() {
         let card = sample_card();
-        let suggestions = from_cards(&[card.clone(), card], false);
+        let suggestions = from_cards(&[card.clone(), card], false, "");
 
         let plain: Vec<_> = suggestions
             .iter()
@@ -209,7 +263,7 @@ mod tests {
 
     #[test]
     fn from_cards_includes_sort_when_requested() {
-        let suggestions = from_cards(&[sample_card()], true);
+        let suggestions = from_cards(&[sample_card()], true, "");
         let sort_count = suggestions
             .iter()
             .filter(|s| s.kind == SuggestionKind::Sort)
@@ -219,7 +273,7 @@ mod tests {
 
     #[test]
     fn from_cards_excludes_sort_when_not_requested() {
-        let suggestions = from_cards(&[sample_card()], false);
+        let suggestions = from_cards(&[sample_card()], false, "");
         assert!(!suggestions.iter().any(|s| s.kind == SuggestionKind::Sort));
     }
 
@@ -230,7 +284,7 @@ mod tests {
         let mut card_b = sample_card();
         card_b.title = "Beta".to_owned();
 
-        let suggestions = from_cards(&[card_a, card_b], false);
+        let suggestions = from_cards(&[card_a, card_b], false, "");
         let plain: Vec<_> = suggestions
             .iter()
             .filter(|s| s.kind == SuggestionKind::Plain)
@@ -238,5 +292,35 @@ mod tests {
             .collect();
 
         assert_eq!(plain, vec!["alpha", "Beta"]);
+    }
+
+    #[test]
+    fn from_cards_ranks_by_fuzzy_relevance() {
+        let mut gear = sample_card();
+        gear.title = "Parametric Gear".to_owned();
+        let mut screw = sample_card();
+        screw.title = "Machine Screw".to_owned();
+
+        let suggestions = from_cards(&[gear, screw], false, "screw");
+        let plain: Vec<_> = suggestions
+            .iter()
+            .filter(|s| s.kind == SuggestionKind::Plain)
+            .map(|s| s.text.clone())
+            .collect();
+
+        assert_eq!(plain, vec!["Machine Screw"]);
+    }
+
+    #[test]
+    fn from_cards_matches_prefixed_needle() {
+        let card = sample_card();
+        let suggestions = from_cards(&[card], false, "model");
+
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.kind == SuggestionKind::Filter && s.text == "3D Model"),
+            "#model should match the 3D Model tag"
+        );
     }
 }
