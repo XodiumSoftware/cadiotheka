@@ -16,10 +16,11 @@ impl OverflowItem {
     }
 }
 
-/// Renders a row of badge-like items, collapsing overflow into a "+N" box.
+/// Renders a row of badge-like items with overflow collapsed into a "+N" box.
 ///
-/// `max_visible` controls how many items are shown before the overflow box
-/// appears. The overflow box shows a tooltip listing all hidden labels.
+/// The container is `flex-nowrap` so it never wraps. Items beyond `max_visible`
+/// are hidden and summarized by the overflow box, which shows a tooltip listing
+/// all hidden labels.
 #[component]
 pub fn OverflowRow(
     #[prop(into)] items: Vec<OverflowItem>,
@@ -37,27 +38,29 @@ pub fn OverflowRow(
         .join(", ");
 
     view! {
-        {visible
-            .into_iter()
-            .map(|item| {
-                let class = format!("{} {}", badge_class, item.color_class);
+        <div class="flex flex-nowrap items-center gap-1 overflow-hidden">
+            {visible
+                .into_iter()
+                .map(|item| {
+                    let class = format!("{} {} whitespace-nowrap", badge_class, item.color_class);
+                    view! {
+                        <span class=class>{item.label}</span>
+                    }
+                })
+                .collect_view()}
+            {if overflow_count > 0 {
                 view! {
-                    <span class=class>{item.label}</span>
+                    <span
+                        class="badge badge-xs badge-outline rounded-none border-base-content/20 text-base-content/70 cursor-help flex-shrink-0"
+                        title={tooltip}
+                    >
+                        {format!("+{}", overflow_count)}
+                    </span>
                 }
-            })
-            .collect_view()}
-        {if overflow_count > 0 {
-            view! {
-                <span
-                    class="badge badge-xs badge-outline rounded-none border-base-content/20 text-base-content/70 cursor-help"
-                    title={tooltip}
-                >
-                    {format!("+{}", overflow_count)}
-                </span>
-            }
-                .into_any()
-        } else {
-            ().into_any()
-        }}
+                    .into_any()
+            } else {
+                ().into_any()
+            }}
+        </div>
     }
 }

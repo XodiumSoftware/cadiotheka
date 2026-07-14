@@ -161,19 +161,19 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                                     </span>
                                 </h2>
 
-                                <div class="flex flex-wrap items-center gap-1">
+                                <div class="flex flex-nowrap items-center gap-1 overflow-hidden">
                                     <OverflowRow
                                         items={props
                                             .tags
                                             .iter()
                                             .map(|tag| OverflowItem::new(tag.label(), tag.color()))
                                             .collect::<Vec<_>>()}
-                                        max_visible=3
-                                        badge_class="badge badge-xs badge-outline rounded-none text-neutral-900 border-base-content/10"
+                                        max_visible=2
+                                        badge_class="badge badge-xs badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
                                     />
                                     {if !props.tags.is_empty() && !props.supported_platforms.is_empty() {
                                         view! {
-                                            <span class="w-px h-4 bg-base-content/20 self-center mx-1" aria-hidden="true" />
+                                            <span class="w-px h-4 bg-base-content/20 self-center mx-1 flex-shrink-0" aria-hidden="true" />
                                         }
                                             .into_any()
                                     } else {
@@ -185,8 +185,8 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                                             .iter()
                                             .map(|platform| OverflowItem::new(platform.label(), platform.color()))
                                             .collect::<Vec<_>>()}
-                                        max_visible=2
-                                        badge_class="badge badge-xs badge-outline rounded-none border-base-content/10"
+                                        max_visible=1
+                                        badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 whitespace-nowrap"
                                     />
                                 </div>
                             </div>
