@@ -1,40 +1,35 @@
 [package]
 name = "cadiotheka"
-version = "0.0.1"
+version = "0.0.0"
 edition = "2024"
-authors = ["Xodium"]
-description = "The open hub for CAD creators"
-license = "AGPL-3.0"
 
 [dependencies]
-egui = "0.35.0"
-eframe = { version = "0.35.0", default-features = false, features = ["glow"] }
-egui_extras = { version = "0.35.0", features = ["image"] }
-egui_phosphor_icons = "0.4.0"
-fuzzy-matcher = "0.3.7"
-log = "0.4.27"
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.150"
-time = { version = "0.3.53", features = ["serde", "formatting", "parsing", "macros"] }
-wasm-bindgen-futures = "0.4.58"
+leptos = { version = "0.8.17", features = ["csr"] }
+leptos_i18n = { version = "0.6.2", default-features = false, features = ["csr"] }
+wasm-bindgen = "0.2.114"
+gloo-net = { version = "0.7", features = ["http", "json"] }
+gloo-timers = { version = "0.4.0", features = ["futures"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "HtmlElement", "Node", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry"] }
+console_error_panic_hook = "0.1.7"
+
+[build-dependencies]
+leptos_i18n_build = "0.6.2"
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.50"
+wasm-bindgen-test = "0.3"
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-js-sys = "0.3.103"
-web-sys = { version = "0.3.103", features = ["Window", "Document", "Element", "HtmlCanvasElement"] }
+[package.metadata.cargo-machete]
+# wasm-bindgen is required at runtime by leptos/wasm-bindgen internals, but our
+# code only accesses it through leptos re-exports (e.g. leptos::wasm_bindgen::JsCast).
+# cargo-machete does not detect this indirect usage, so keep it ignored.
+ignored = ["wasm-bindgen"]
 
 [profile.release]
 opt-level = "z"
 lto = true
+codegen-units = 1
+panic = "abort"
 strip = true
-
-[profile.dev.package."*"]
-opt-level = 2
-
-[lints.rust]
-unsafe_code = "forbid"
-
-[lints.clippy]
-all = "warn"
