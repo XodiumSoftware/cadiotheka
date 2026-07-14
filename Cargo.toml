@@ -13,7 +13,7 @@ time = { version = "0.3", features = ["serde", "wasm-bindgen", "macros", "format
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1"
 js-sys = "0.3"
-web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "HtmlElement", "Node", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry"] }
+web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "Node", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry"] }
 console_error_panic_hook = "0.1.7"
 
 [build-dependencies]

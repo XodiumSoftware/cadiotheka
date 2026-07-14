@@ -19,8 +19,8 @@ impl OverflowItem {
 /// Renders a row of badge-like items with overflow collapsed into a "+N" box.
 ///
 /// The container is `flex-nowrap` so it never wraps. Items beyond `max_visible`
-/// are hidden and summarized by the overflow box, which shows a tooltip listing
-/// all hidden labels.
+/// are hidden and summarized by the overflow box, which shows a native tooltip
+/// listing all hidden labels vertically.
 #[component]
 pub fn OverflowRow(
     #[prop(into)] items: Vec<OverflowItem>,
@@ -35,7 +35,7 @@ pub fn OverflowRow(
         .iter()
         .map(|item| item.label.as_str())
         .collect::<Vec<_>>()
-        .join(", ");
+        .join("\n");
 
     view! {
         <div class="flex flex-nowrap items-center gap-1 overflow-hidden">
