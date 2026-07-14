@@ -38,6 +38,7 @@ pub mod engines {
 }
 pub(crate) mod fixture;
 pub mod i18n;
+pub mod theme;
 pub mod pages {
     pub(crate) mod hub;
 

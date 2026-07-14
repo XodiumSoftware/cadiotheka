@@ -2,6 +2,7 @@
 
 use crate::components::{Footer, Header, View};
 use crate::pages::Hub;
+use crate::theme;
 use egui_phosphor_icons::add_fonts;
 
 /// The Cadiotheka hub application.
@@ -18,6 +19,9 @@ pub struct CadiothekaApp {
 impl CadiothekaApp {
     /// Creates the app and registers the Phosphor icon fonts and image loaders.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        cc.egui_ctx.set_style_of(egui::Theme::Dark, theme::style());
+        cc.egui_ctx.set_theme(egui::ThemePreference::Dark);
+
         let mut fonts = egui::FontDefinitions::default();
         add_fonts(&mut fonts);
         cc.egui_ctx.set_fonts(fonts);
