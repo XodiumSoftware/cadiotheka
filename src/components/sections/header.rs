@@ -385,9 +385,6 @@ pub fn Header() -> impl IntoView {
             <Modal
                 open=Signal::from(search_open)
                 on_close=move |_| set_search_open.set(false)
-                on_inner_click=move |_| {
-                    input_ref.get().map(|input| input.focus().ok());
-                }
             >
                 <div class="space-y-0 flex flex-col min-h-0">
                     <div class="relative">

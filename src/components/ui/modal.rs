@@ -7,7 +7,7 @@ use leptos::wasm_bindgen::JsCast;
 pub fn Modal(
     #[prop(into)] open: Signal<bool>,
     #[prop(into)] on_close: Callback<()>,
-    #[prop(into)] on_inner_click: Callback<()>,
+    #[prop(into, default = Callback::new(|_| {}))] on_inner_click: Callback<()>,
     children: Children,
 ) -> impl IntoView {
     let children_view = children();
