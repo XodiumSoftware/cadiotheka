@@ -136,6 +136,8 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
     let _i18n = use_i18n();
     let letter = placeholder_letter(&props.title);
     let bg = placeholder_color(&props.title);
+    let icon_url = props.icon_url.as_ref().map(|IconUrl(url)| url.clone());
+    let title = props.title.clone();
     let downloads = props.downloads;
     let favorites = props.favorites;
     let timestamp = props.timestamp;
@@ -146,12 +148,26 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                 <div class="card bg-ghost h-full rounded-none">
                     <div class="card-body p-4">
                         <div class="flex items-start gap-3">
-                            <div
-                                class=move || format!("flex-shrink-0 w-10 h-10 rounded flex items-center justify-center text-white font-bold {}", bg)
-                                aria-hidden="true"
-                            >
-                                {letter.clone()}
-                            </div>
+                            {move || match icon_url.clone() {
+                                Some(url) => view! {
+                                    <img
+                                        src={url}
+                                        alt={format!("{} icon", title.clone())}
+                                        class="flex-shrink-0 w-10 h-10 rounded object-cover"
+                                        loading="lazy"
+                                    />
+                                }
+                                    .into_any(),
+                                None => view! {
+                                    <div
+                                        class={format!("flex-shrink-0 w-10 h-10 rounded flex items-center justify-center text-white font-bold {}", bg)}
+                                        aria-hidden="true"
+                                    >
+                                        {letter.clone()}
+                                    </div>
+                                }
+                                    .into_any(),
+                            }}
                             <div class="min-w-0 flex-1 flex flex-col gap-2">
                                 <h2 class="card-title text-primary text-base leading-tight">
                                     <span class="truncate" title={props.title.clone()}>{props.title.clone()}</span>
