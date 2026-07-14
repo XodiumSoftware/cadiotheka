@@ -368,7 +368,7 @@ pub fn Header() -> impl IntoView {
                 open=Signal::from(search_open)
                 on_close=move |_| set_search_open.set(false)
             >
-                <div class="space-y-4">
+                <div class="space-y-0">
                     <div class="relative">
                         <input
                             type="text"
@@ -398,32 +398,29 @@ pub fn Header() -> impl IntoView {
                         </button>
                     </div>
 
-                    <div class="max-h-72 overflow-y-auto space-y-2">
+                    <hr class="border-base-content/10" />
+
+                    <div class="max-h-72 overflow-y-auto">
                         {move || {
                             let groups = suggestions.get();
                             let selected = selected_index.get();
-                            let non_empty_indices: Vec<usize> = groups
-                                .iter()
-                                .enumerate()
-                                .filter(|(_, group)| !group.suggestions.is_empty())
-                                .map(|(index, _)| index)
-                                .collect();
 
                             if groups.iter().all(|group| group.suggestions.is_empty()) {
                                 view! {
-                                    <p class="text-base-content/50 text-sm">{t_string!(i18n, search.no_suggestions)}</p>
+                                    <p class="text-base-content/50 text-sm px-3 py-2">{t_string!(i18n, search.no_suggestions)}</p>
                                 }
                                     .into_any()
                             } else {
                                 let mut global_index = 0usize;
+                                let group_count = groups.iter().filter(|g| !g.suggestions.is_empty()).count();
                                 view! {
-                                    <div class="space-y-2">
+                                    <div class="py-2">
                                         {groups
                                             .into_iter()
+                                            .filter(|group| !group.suggestions.is_empty())
                                             .enumerate()
-                                            .filter(|(_, group)| !group.suggestions.is_empty())
-                                            .map(|(group_index, group)| {
-                                                let is_last = non_empty_indices.last().is_some_and(|last| *last == group_index);
+                                            .map(|(index, group)| {
+                                                let is_last = index + 1 == group_count;
                                                 let group_view = group.suggestions.into_iter().map(|suggestion| {
                                                     let is_selected = selected == Some(global_index);
                                                     let text = suggestion.text.clone();
@@ -433,17 +430,11 @@ pub fn Header() -> impl IntoView {
                                                         SuggestionKind::Filter => format!("#{}", suggestion.text),
                                                         SuggestionKind::Plain => suggestion.text.clone(),
                                                     };
-                                                    let badge = match suggestion.kind {
-                                                        SuggestionKind::Sort => "sort",
-                                                        SuggestionKind::Author => "author",
-                                                        SuggestionKind::Filter => "filter",
-                                                        SuggestionKind::Plain => "search",
-                                                    };
                                                     let kind = suggestion.kind;
                                                     let item_class = if is_selected {
-                                                        "flex items-center justify-between w-full px-3 py-2 bg-primary text-primary-content rounded"
+                                                        "flex items-center w-full px-3 py-2 bg-base-content/10 text-base-content rounded"
                                                     } else {
-                                                        "flex items-center justify-between w-full px-3 py-2 hover:bg-base-300 rounded"
+                                                        "flex items-center w-full px-3 py-2 text-base-content hover:bg-base-content/5 rounded"
                                                     };
                                                     let index = global_index;
                                                     global_index += 1;
@@ -455,21 +446,20 @@ pub fn Header() -> impl IntoView {
                                                             on:mouseenter=move |_| set_selected_index.set(Some(index))
                                                         >
                                                             <span class="truncate">{label}</span>
-                                                            <span class="badge badge-xs badge-ghost ml-2">{badge}</span>
                                                         </button>
                                                     }
                                                 }).collect_view();
 
                                                 view! {
-                                                    <div class="space-y-1">
-                                                        <span class="text-xs font-semibold text-base-content/50 uppercase tracking-wider px-1">{group.title}</span>
+                                                    <div class="space-y-0">
+                                                        <div class="px-3 pt-3 pb-1 text-xs font-semibold text-base-content/40 uppercase tracking-wider">{group.title.trim_end_matches(':')}</div>
                                                         {group_view}
                                                         {move || {
                                                             if is_last {
                                                                 None
                                                             } else {
                                                                 Some(view! {
-                                                                    <hr class="border-base-content/10 my-2" />
+                                                                    <hr class="border-base-content/10 mt-2" />
                                                                 })
                                                             }
                                                         }}
@@ -482,6 +472,22 @@ pub fn Header() -> impl IntoView {
                                     .into_any()
                             }
                         }}
+                    </div>
+
+                    <hr class="border-base-content/10" />
+
+                    <div class="flex items-center justify-end gap-4 text-xs text-base-content/50 px-3 py-2">
+                        <div class="flex items-center gap-1.5">
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-base-content bg-base-200 border border-base-content/30 rounded shadow-kbd">"esc"</kbd>
+                            <span>"to dismiss"</span>
+                        </div>
+
+                        <span class="text-base-content/30" aria-hidden="true">"|"</span>
+
+                        <div class="flex items-center gap-1.5">
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-base-content bg-base-200 border border-base-content/30 rounded shadow-kbd">"return"</kbd>
+                            <span>"to select"</span>
+                        </div>
                     </div>
                 </div>
             </Modal>

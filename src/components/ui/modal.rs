@@ -1,3 +1,4 @@
+use crate::components::ui::cornerframe::CornerFrame;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -28,8 +29,14 @@ pub fn Modal(
                 }
             }
         >
-            <div class="bg-base-100 border border-base-content/20 rounded-lg shadow-2xl max-w-lg w-full p-6">
-                {children_view}
+            <div class="w-full max-w-lg">
+                <div class="block p-2 bg-base-100 border-2 border-primary">
+                    <CornerFrame style="square" class="w-full">
+                        <div class="h-full rounded-none p-6">
+                            {children_view}
+                        </div>
+                    </CornerFrame>
+                </div>
             </div>
         </div>
     }
