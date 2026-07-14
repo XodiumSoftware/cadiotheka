@@ -1,4 +1,5 @@
 use crate::components::{Footer, Header, ProjectsSection};
+use crate::context::LayoutContext;
 use crate::i18n::{I18nContextProvider, t, use_i18n};
 use leptos::prelude::*;
 
@@ -14,6 +15,8 @@ pub fn App() -> impl IntoView {
 #[component]
 fn InnerApp() -> impl IntoView {
     let i18n = use_i18n();
+    LayoutContext::provide_with_default(false);
+
     view! {
         <div class="min-h-screen flex flex-col">
             <a

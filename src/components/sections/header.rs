@@ -1,3 +1,5 @@
+use crate::components::ui::toggle::ToggleSlider;
+use crate::context::LayoutContext;
 use crate::i18n::{t_string, use_i18n};
 use crate::utils::window_event_listener;
 use leptos::prelude::*;
@@ -8,6 +10,7 @@ use std::time::Duration;
 #[component]
 pub fn Header() -> impl IntoView {
     let i18n = use_i18n();
+    let layout = LayoutContext::use_context();
     let (is_scrolled, set_is_scrolled) = signal(false);
     let (is_logo_active, set_is_logo_active) = signal(false);
     let (letters_visible, set_letters_visible) = signal(true);
@@ -133,6 +136,15 @@ pub fn Header() -> impl IntoView {
                             {letter_elements.into_iter().collect_view()}
                         </span>
                     </a>
+                </div>
+
+                <div class="navbar-end">
+                    <ToggleSlider
+                        checked=layout.wide
+                        on_change=move |value| layout.set_wide.set(value)
+                        label_left=t_string!(i18n, projects.narrow_mode)
+                        label_right=t_string!(i18n, projects.wide_mode)
+                    />
                 </div>
             </nav>
         </header>

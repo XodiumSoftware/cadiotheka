@@ -19,6 +19,7 @@ pub mod components {
     pub mod ui {
         pub mod cornerframe;
         pub mod datagrid;
+        pub mod toggle;
     }
 
     pub use sections::footer::Footer;
@@ -31,7 +32,10 @@ pub mod components {
 
     pub use ui::cornerframe::CornerFrame;
     pub use ui::datagrid::data_grid;
+    pub use ui::toggle::ToggleSlider;
 }
+
+pub mod context;
 
 pub mod data;
 
@@ -50,6 +54,7 @@ include!(concat!(env!("OUT_DIR"), "/i18n/mod.rs"));
 
 pub use app::*;
 pub use components::*;
+pub use context::*;
 pub use data::*;
 pub use i18n::*;
 pub use metadata::*;

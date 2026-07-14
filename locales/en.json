@@ -11,6 +11,8 @@
         "title": "PROJECTS",
         "empty": "No projects found.",
         "retry": "Retry",
+        "wide_mode": "Wide",
+        "narrow_mode": "Narrow",
         "card": {
             "no_description": "(No description)",
             "docs": "Docs",
