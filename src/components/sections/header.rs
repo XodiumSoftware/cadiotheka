@@ -416,7 +416,7 @@ pub fn Header() -> impl IntoView {
                 open=Signal::from(search_open)
                 on_close=move |_| set_search_open.set(false)
             >
-                <div class="space-y-0">
+                <div class="space-y-0 flex flex-col min-h-0">
                     <div class="relative">
                         <input
                             type="text"
@@ -449,7 +449,7 @@ pub fn Header() -> impl IntoView {
 
                     <hr class="border-base-content/10" />
 
-                    <div class="max-h-72 overflow-y-auto">
+                    <div class="max-h-72 overflow-y-auto flex-1 min-h-0">
                         {move || {
                             let groups = suggestions.get();
                             let selected = selected_index.get();

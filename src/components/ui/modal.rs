@@ -10,9 +10,24 @@ pub fn Modal(
     children: Children,
 ) -> impl IntoView {
     let children_view = children();
+    let backdrop_ref: NodeRef<leptos::html::Div> = NodeRef::new();
+
+    Effect::new(move |_| {
+        if let Some(body) = leptos::web_sys::window()
+            .and_then(|w| w.document())
+            .and_then(|d| d.body())
+        {
+            if open.get() {
+                body.class_list().add_1("overflow-hidden").ok();
+            } else {
+                body.class_list().remove_1("overflow-hidden").ok();
+            }
+        }
+    });
 
     view! {
         <div
+            node_ref=backdrop_ref
             class=move || {
                 if open.get() {
                     "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
@@ -22,17 +37,18 @@ pub fn Modal(
             }
             on:click=move |ev: leptos::web_sys::MouseEvent| {
                 if let Some(target) = ev.target()
-                    && let Ok(element) = target.dyn_into::<leptos::web_sys::Element>()
-                    && element.tag_name() == "DIV"
+                    && let Ok(clicked) = target.dyn_into::<leptos::web_sys::Node>()
+                    && let Some(backdrop) = backdrop_ref.get()
+                    && backdrop.is_same_node(Some(&clicked))
                 {
                     on_close.run(());
                 }
             }
         >
-            <div class="w-full max-w-lg">
-                <div class="block p-2 bg-base-100 border-2 border-primary">
+            <div class="w-full max-w-lg max-h-[80vh] flex flex-col">
+                <div class="block p-2 bg-base-100 border-2 border-primary overflow-hidden">
                     <CornerFrame style="square" class="w-full">
-                        <div class="h-full rounded-none p-6">
+                        <div class="h-full rounded-none p-6 overflow-hidden flex flex-col">
                             {children_view}
                         </div>
                     </CornerFrame>
