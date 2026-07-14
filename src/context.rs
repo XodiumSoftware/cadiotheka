@@ -2,6 +2,22 @@
 
 use leptos::prelude::*;
 
+const LAYOUT_WIDE_KEY: &str = "cadiotheka.layout_wide";
+
+fn load_layout_wide() -> Option<bool> {
+    let storage = leptos::web_sys::window()?.local_storage().ok().flatten()?;
+    let value = storage.get_item(LAYOUT_WIDE_KEY).ok().flatten()?;
+    Some(value == "true")
+}
+
+fn save_layout_wide(wide: bool) {
+    if let Some(window) = leptos::web_sys::window()
+        && let Ok(Some(storage)) = window.local_storage()
+    {
+        let _ = storage.set_item(LAYOUT_WIDE_KEY, if wide { "true" } else { "false" });
+    }
+}
+
 /// Provides and reads the wide/narrow grid layout preference.
 ///
 /// `true` = wide (5 columns), `false` = narrow (3 columns).
@@ -12,12 +28,18 @@ pub struct LayoutContext {
 }
 
 impl LayoutContext {
-    /// Create a provider context with a default value.
+    /// Create a provider context, reading any persisted preference from
+    /// `localStorage` and falling back to `default` if none exists.
     pub fn provide_with_default(default: bool) {
-        let (wide, set_wide) = signal(default);
+        let initial = load_layout_wide().unwrap_or(default);
+        let (wide, set_wide) = signal(initial);
         provide_context(Self {
             wide: wide.into(),
             set_wide,
+        });
+
+        Effect::new(move |_| {
+            save_layout_wide(wide.get());
         });
     }
 
