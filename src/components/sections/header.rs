@@ -146,6 +146,19 @@ pub fn Header() -> impl IntoView {
             .collect::<Vec<Suggestion>>()
     };
 
+    // Alt+C clears the search query.
+    Effect::new(move |_| {
+        let search = search;
+        window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
+            if ev.alt_key() && ev.key().eq_ignore_ascii_case("c") {
+                ev.prevent_default();
+                search.set_query.set(String::new());
+                set_selected_index.set(None);
+                input_ref.get().map(|input| input.focus().ok());
+            }
+        });
+    });
+
     // Scroll listener for backdrop blur
     Effect::new(move |_| {
         window_event_listener::<web_sys::Event, _>("scroll", move |_ev| {

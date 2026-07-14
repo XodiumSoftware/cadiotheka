@@ -44,10 +44,28 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                 </div>
                 {move || {
                     let cards = filtered.get();
+                    let query = search.query.get();
                     if cards.is_empty() {
                         view! {
-                            <div class="flex items-center justify-center text-center h-full">
-                                <span class="text-base-content/70">{t!(i18n, projects.empty)}</span>
+                            <div class="flex flex-col items-center justify-center text-center h-full gap-4">
+                                <span class="text-error">{t!(i18n, projects.empty)}</span>
+                                {move || {
+                                    if query.is_empty() {
+                                        None
+                                    } else {
+                                        Some(view! {
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline btn-outline-ghost btn-hover-warning btn-lift gap-1.5"
+                                                on:click=move |_| search.set_query.set(String::new())
+                                            >
+                                                <span>"Clear Search"</span>
+                                                <span class="w-1"></span>
+                                                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-base-content bg-base-200 border border-base-content/30 rounded shadow-kbd">"alt + c"</kbd>
+                                            </button>
+                                        })
+                                    }
+                                }}
                             </div>
                         }
                             .into_any()
