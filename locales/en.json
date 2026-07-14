@@ -3,21 +3,10 @@
     "header": {
         "logo_wordmark": "Cadiotheka"
     },
-    "nav": {
-        "github": "Github",
-        "sponsor": "Sponsor"
-    },
     "projects": {
-        "title": "PROJECTS",
         "empty": "No projects found.",
-        "retry": "Retry",
         "wide_mode": "Wide",
-        "narrow_mode": "Narrow",
-        "card": {
-            "no_description": "(No description)",
-            "docs": "Docs",
-            "repo_alt": "GitHub Repository"
-        }
+        "narrow_mode": "Narrow"
     },
     "search": {
         "open": "Open search",
