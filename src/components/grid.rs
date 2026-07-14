@@ -40,7 +40,7 @@ impl Grid {
                 ui.add_space(8.0);
                 ui.label(i18n::Grid::EMPTY_MESSAGE);
                 ui.add_space(16.0);
-                if ui.button(i18n::Grid::CLEAR_SEARCH).clicked() {
+                if clear_search_button(ui).clicked() {
                     actions.push(CardAction::ClearSearch);
                 }
             });
@@ -82,6 +82,87 @@ impl Grid {
 
         actions
     }
+}
+
+/// Draws the "Clear search" button with a `Ctrl + C` keycap inside it.
+fn clear_search_button(ui: &mut egui::Ui) -> egui::Response {
+    let label_text = i18n::Grid::CLEAR_SEARCH;
+    let keycap_label = "Ctrl + C";
+
+    let label_font = egui::FontId::proportional(13.0);
+    let keycap_font = egui::FontId::proportional(10.0);
+    let keycap_visuals = ui.visuals().widgets.inactive;
+
+    let label_galley = ui.ctx().fonts_mut(|f| {
+        f.layout(
+            label_text.to_owned(),
+            label_font.clone(),
+            ui.visuals().text_color(),
+            f32::INFINITY,
+        )
+    });
+    let keycap_galley = ui.ctx().fonts_mut(|f| {
+        f.layout(
+            keycap_label.to_owned(),
+            keycap_font.clone(),
+            keycap_visuals.fg_stroke.color,
+            f32::INFINITY,
+        )
+    });
+
+    let label_size = label_galley.size();
+    let keycap_size = egui::vec2(keycap_galley.size().x + 8.0, 16.0);
+    let content_spacing = 6.0;
+    let content_size = egui::vec2(
+        label_size.x + content_spacing + keycap_size.x,
+        label_size.y.max(keycap_size.y),
+    );
+    let button_padding = ui.spacing().button_padding;
+    let desired_size = content_size + 2.0 * button_padding;
+
+    let (rect, response) = ui.allocate_at_least(desired_size, egui::Sense::click());
+    let visuals = ui.style().interact(&response);
+
+    ui.painter()
+        .rect_filled(rect, visuals.corner_radius, visuals.bg_fill);
+    ui.painter().rect_stroke(
+        rect,
+        visuals.corner_radius,
+        visuals.bg_stroke,
+        egui::StrokeKind::Inside,
+    );
+
+    let content_rect = rect.shrink2(button_padding);
+    let label_pos = egui::pos2(
+        content_rect.left(),
+        content_rect.center().y - label_size.y / 2.0,
+    );
+    ui.painter()
+        .galley(label_pos, label_galley, visuals.fg_stroke.color);
+
+    let keycap_rect = egui::Rect::from_min_size(
+        egui::pos2(
+            label_pos.x + label_size.x + content_spacing,
+            content_rect.center().y - keycap_size.y / 2.0,
+        ),
+        keycap_size,
+    );
+    ui.painter()
+        .rect_filled(keycap_rect, 3.0, keycap_visuals.bg_fill);
+    ui.painter().rect_stroke(
+        keycap_rect,
+        3.0,
+        keycap_visuals.fg_stroke,
+        egui::StrokeKind::Inside,
+    );
+    let keycap_text_pos = keycap_rect.center() - keycap_galley.size() * 0.5;
+    ui.painter().galley(
+        keycap_text_pos,
+        keycap_galley,
+        keycap_visuals.fg_stroke.color,
+    );
+
+    response
 }
 
 #[cfg(test)]

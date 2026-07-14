@@ -4,6 +4,7 @@
 //! [`crate::fixture`]. See that module for notes on the planned move to a
 //! runtime data source.
 
+use crate::components::Keycap;
 use crate::components::{CardAction, CardData, DottedBackground, Grid, ProjectPopup, SearchBar};
 use crate::engines::SearchEngine;
 use crate::fixture::load_cards;
@@ -97,6 +98,16 @@ impl Hub {
         let cards = self.engine.search(&parsed);
         let card_data: Vec<CardData> = cards.into_iter().cloned().collect();
 
+        let mut clear_search = false;
+        Keycap::builder()
+            .keys(&[egui::Key::C][..])
+            .ctrl(true)
+            .execute(|| clear_search = true)
+            .build(ui);
+        if clear_search {
+            search_bar.reset();
+        }
+
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .content_margin(egui::Margin {
@@ -129,15 +140,64 @@ impl Hub {
         let modal_response =
             egui::Modal::new(egui::Id::new("hub_search_modal")).show(ui.ctx(), |ui| {
                 ui.set_width(modal_width);
-                let wants_close = search_bar.show(ui, &query, &suggestions);
-                if wants_close {
-                    *search_open = false;
-                }
+                ui.set_height(500.0);
+
+                ui.vertical(|ui| {
+                    let applied = search_bar.handle_input(ui, &suggestions);
+                    search_bar.render_input(ui);
+
+                    let footer_height = 40.0;
+                    let dropdown_height = (ui.available_height() - footer_height).max(120.0);
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(ui.available_width(), dropdown_height),
+                        egui::Layout::top_down(egui::Align::Min),
+                        |ui| {
+                            search_bar.render_dropdown(ui, &suggestions, f32::INFINITY);
+                        },
+                    );
+
+                    Self::render_search_footer(ui);
+
+                    let escape_pressed = ui.input(|i| i.key_pressed(egui::Key::Escape));
+                    let backspace_empty = search_bar.query.is_empty()
+                        && ui.input(|i| i.key_pressed(egui::Key::Backspace));
+                    if search_bar.wants_close(ui, applied) {
+                        if escape_pressed || backspace_empty {
+                            search_bar.reset();
+                        }
+                        *search_open = false;
+                    }
+                });
             });
 
         if modal_response.should_close() {
             *search_open = false;
         }
+    }
+
+    /// Renders the search modal footer with keycap hints.
+    fn render_search_footer(ui: &mut egui::Ui) {
+        use crate::components::Keycap;
+
+        ui.add_space(4.0);
+        ui.separator();
+        ui.add_space(2.0);
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.spacing_mut().item_spacing.x = 4.0;
+            ui.label(egui::RichText::new("to select").color(ui.visuals().weak_text_color()));
+            Keycap::builder()
+                .keys(&[egui::Key::Enter][..])
+                .combine(true)
+                .inline(true)
+                .build(ui);
+            ui.separator();
+            ui.label(egui::RichText::new("to dismiss").color(ui.visuals().weak_text_color()));
+            Keycap::builder()
+                .keys(&[egui::Key::Escape][..])
+                .combine(true)
+                .inline(true)
+                .build(ui);
+        });
     }
 
     /// Renders a loading indicator while the catalog is being fetched.

@@ -41,11 +41,25 @@ impl SearchBar {
         self.request_focus = true;
     }
 
+    /// Clears the query and selection.
+    pub fn reset(&mut self) {
+        self.query.clear();
+        self.selected_suggestion = None;
+    }
+
     /// Draws the search input and its inline category dropdown.
     ///
     /// Returns `true` when the user pressed Escape, signaling that the caller
     /// may want to close the containing modal.
     pub fn show(&mut self, ui: &mut egui::Ui, _query: &str, suggestions: &[Suggestion]) -> bool {
+        let _response = self.render_input(ui);
+        let applied = self.handle_input(ui, suggestions);
+        self.render_dropdown(ui, suggestions, 320.0);
+        self.wants_close(ui, applied)
+    }
+
+    /// Renders only the search input.
+    pub fn render_input(&mut self, ui: &mut egui::Ui) -> egui::Response {
         let response = ui.add(
             egui::TextEdit::singleline(&mut self.query)
                 .id(self.id)
@@ -59,120 +73,134 @@ impl SearchBar {
             self.request_focus = false;
         }
 
-        let groups = self.grouped_suggestions(suggestions);
-        let flattened: Vec<&Suggestion> =
-            groups.iter().flat_map(|group| &group.suggestions).collect();
-
-        if response.changed() || flattened.is_empty() {
-            self.selected_suggestion = flattened.first().map(|_| 0);
-        }
-
-        self.handle_keyboard(ui, &flattened);
-        self.render_dropdown(ui, &groups, self.selected_suggestion);
-
-        ui.input(|i| i.key_pressed(egui::Key::Escape))
+        response
     }
 
-    /// Handles arrow-key navigation, Enter selection, and Escape clearing.
-    fn handle_keyboard(&mut self, ui: &mut egui::Ui, flattened: &[&Suggestion]) {
-        if flattened.is_empty() {
-            return;
-        }
-
-        let count = flattened.len();
-        let mut changed = false;
-
-        if ui.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
-            self.selected_suggestion = Some(
-                self.selected_suggestion
-                    .map(|index| (index + 1) % count)
-                    .unwrap_or(0),
-            );
-            changed = true;
-        }
-
-        if ui.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
-            self.selected_suggestion = Some(
-                self.selected_suggestion
-                    .map(|index| index.saturating_sub(1))
-                    .unwrap_or(count - 1),
-            );
-            changed = true;
-        }
-
-        if changed {
-            return;
-        }
-
-        if ui.input(|i| i.key_pressed(egui::Key::Enter))
-            && let Some(index) = self.selected_suggestion
-            && let Some(suggestion) = flattened.get(index)
-        {
-            self.apply_suggestion(suggestion);
-            self.selected_suggestion = None;
-        }
-
-        if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-            self.selected_suggestion = None;
-        }
-    }
-
-    /// Renders the inline dropdown with category headers and selectable items.
-    fn render_dropdown(
+    /// Renders only the inline category dropdown.
+    ///
+    /// `max_height` limits the dropdown height. Use `f32::INFINITY` to let it
+    /// fill the available space.
+    pub fn render_dropdown(
         &mut self,
         ui: &mut egui::Ui,
-        groups: &[SuggestionGroup],
-        selected: Option<usize>,
+        suggestions: &[Suggestion],
+        max_height: f32,
     ) {
+        let groups = self.grouped_suggestions(suggestions);
+
         if groups.iter().all(|group| group.suggestions.is_empty()) {
             return;
         }
 
         ui.add_space(8.0);
 
-        egui::ScrollArea::vertical()
-            .max_height(320.0)
-            .show(ui, |ui| {
-                let mut global_index = 0usize;
-                let group_count = groups.len();
-                let mut selected_rect = None;
+        let mut scroll_area = egui::ScrollArea::vertical();
+        if max_height.is_finite() {
+            scroll_area = scroll_area.max_height(max_height);
+        }
 
-                for (group_index, group) in groups.iter().enumerate() {
-                    if group.suggestions.is_empty() {
-                        continue;
-                    }
+        scroll_area.show(ui, |ui| {
+            let mut global_index = 0usize;
+            let mut selected_rect = None;
+            let non_empty_indices: Vec<usize> = groups
+                .iter()
+                .enumerate()
+                .filter(|(_, group)| !group.suggestions.is_empty())
+                .map(|(index, _)| index)
+                .collect();
 
-                    ui.label(
-                        egui::RichText::new(group.title)
-                            .small()
-                            .color(ui.visuals().weak_text_color()),
-                    );
-
-                    for suggestion in &group.suggestions {
-                        let is_selected = selected == Some(global_index);
-                        let label = self.suggestion_label(suggestion);
-
-                        let item = ui.selectable_label(is_selected, label);
-                        if is_selected {
-                            selected_rect = Some(item.rect);
-                        }
-                        if item.clicked() {
-                            self.apply_suggestion(suggestion);
-                            self.selected_suggestion = None;
-                        }
-
-                        global_index += 1;
-                    }
-
-                    if group_index + 1 < group_count {
-                        ui.separator();
-                    }
+            for (group_index, group) in groups.iter().enumerate() {
+                if group.suggestions.is_empty() {
+                    continue;
                 }
 
-                if let Some(rect) = selected_rect {
-                    ui.scroll_to_rect(rect, Some(egui::Align::Center));
+                ui.label(egui::RichText::new(group.title).color(ui.visuals().weak_text_color()));
+
+                for suggestion in &group.suggestions {
+                    let is_selected = self.selected_suggestion == Some(global_index);
+                    let label = self.suggestion_label(suggestion);
+
+                    let item = ui.selectable_label(is_selected, label);
+                    if is_selected {
+                        selected_rect = Some(item.rect);
+                    }
+                    if item.clicked() {
+                        self.apply_suggestion(suggestion);
+                        self.selected_suggestion = None;
+                    }
+
+                    global_index += 1;
                 }
-            });
+
+                if non_empty_indices
+                    .last()
+                    .is_some_and(|last| *last != group_index)
+                {
+                    ui.separator();
+                }
+            }
+
+            if let Some(rect) = selected_rect {
+                ui.scroll_to_rect(rect, Some(egui::Align::Center));
+            }
+        });
+    }
+
+    /// Handles keyboard navigation and selection.
+    ///
+    /// Returns `true` if the user pressed Enter and a suggestion was applied.
+    pub fn handle_input(&mut self, ui: &mut egui::Ui, suggestions: &[Suggestion]) -> bool {
+        let groups = self.grouped_suggestions(suggestions);
+        let flattened: Vec<&Suggestion> =
+            groups.iter().flat_map(|group| &group.suggestions).collect();
+
+        // Ensure the selection is always valid and defaults to the first item.
+        if self
+            .selected_suggestion
+            .is_none_or(|index| index >= flattened.len())
+        {
+            self.selected_suggestion = flattened.first().map(|_| 0);
+        }
+
+        if ui.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+            self.selected_suggestion = Some(
+                self.selected_suggestion
+                    .map(|index| (index + 1) % flattened.len())
+                    .unwrap_or(0),
+            );
+        } else if ui.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+            self.selected_suggestion = Some(
+                self.selected_suggestion
+                    .map(|index| index.saturating_sub(1))
+                    .unwrap_or(flattened.len().saturating_sub(1)),
+            );
+        } else if ui.input(|i| i.key_pressed(egui::Key::Enter))
+            && let Some(index) = self.selected_suggestion
+            && let Some(suggestion) = flattened.get(index)
+        {
+            self.apply_suggestion(suggestion);
+            self.selected_suggestion = None;
+            return true;
+        } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.selected_suggestion = None;
+        } else if ui.input(|i| i.key_pressed(egui::Key::Backspace)) && self.query.is_empty() {
+            // Backspace on empty input also signals dismissal, matching Zed-like
+            // behavior.
+            self.selected_suggestion = None;
+        }
+
+        false
+    }
+
+    /// Returns `true` when the user pressed Escape (or Backspace on an empty
+    /// query), indicating the caller should close the search modal.
+    ///
+    /// `just_applied` is typically the result of [`Self::handle_input`]; when
+    /// `true`, Enter was just pressed and the modal should also close.
+    pub fn wants_close(&self, ui: &egui::Ui, just_applied: bool) -> bool {
+        just_applied
+            || ui.input(|i| i.key_pressed(egui::Key::Escape))
+            || (self.query.is_empty() && ui.input(|i| i.key_pressed(egui::Key::Backspace)))
     }
 
     /// Builds the display label for a suggestion based on its kind.
