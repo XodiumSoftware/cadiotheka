@@ -42,9 +42,9 @@ impl SortBy {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum SortOrder {
     /// Ascending order (lowest first).
-    #[default]
     Ascending,
     /// Descending order (highest first).
+    #[default]
     Descending,
 }
 
@@ -98,6 +98,10 @@ pub struct ParsedQuery<'a> {
     pub author: Option<&'a str>,
     /// Sort selection parsed from directives.
     pub sort: SortSelection,
+    /// Whether the user explicitly requested a sort directive.
+    ///
+    /// When `false`, results are ranked by fuzzy match score instead.
+    pub sort_explicit: bool,
 }
 
 /// Parses a raw query string into a structured [`ParsedQuery`].
@@ -137,6 +141,7 @@ pub fn parse_query(query: &str) -> ParsedQuery<'_> {
         filters,
         author,
         sort,
+        sort_explicit: sort_found,
     }
 }
 
@@ -163,7 +168,7 @@ mod tests {
         assert!(parsed.filter.is_empty());
         assert!(parsed.filters.is_empty());
         assert_eq!(parsed.sort.by, SortBy::Downloads);
-        assert_eq!(parsed.sort.order, SortOrder::Ascending);
+        assert_eq!(parsed.sort.order, SortOrder::Descending);
     }
 
     #[test]
@@ -202,7 +207,7 @@ mod tests {
         assert_eq!(parsed.filter, vec!["gear"]);
         assert!(parsed.filters.is_empty());
         assert_eq!(parsed.sort.by, SortBy::Downloads);
-        assert_eq!(parsed.sort.order, SortOrder::Ascending);
+        assert_eq!(parsed.sort.order, SortOrder::Descending);
     }
 
     #[test]
@@ -211,7 +216,7 @@ mod tests {
         assert_eq!(parsed.filter, vec!["gear"]);
         assert!(parsed.filters.is_empty());
         assert_eq!(parsed.sort.by, SortBy::Downloads);
-        assert_eq!(parsed.sort.order, SortOrder::Ascending);
+        assert_eq!(parsed.sort.order, SortOrder::Descending);
     }
 
     #[test]

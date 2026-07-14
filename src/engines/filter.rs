@@ -47,8 +47,7 @@ impl SearchEngine {
             })
             .collect();
 
-        let use_fuzzy_rank =
-            parsed.sort.by == SortBy::default() && parsed.sort.order == SortOrder::default();
+        let use_fuzzy_rank = !parsed.sort_explicit;
 
         if use_fuzzy_rank {
             scored.sort_by_key(|a| std::cmp::Reverse(a.0));
