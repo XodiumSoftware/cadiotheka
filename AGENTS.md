@@ -3,7 +3,7 @@
 ## Project at a Glance
 
 - **Name:** Cadiotheka
-- **Type:** Rust hub application (browser-only WebAssembly via `eframe`)
+- **Type:** Rust hub application (browser-only WebAssembly via `leptos`)
 - **Language:** Rust (edition 2024)
 - **Build Tool:** Cargo + [Trunk](https://trunkrs.dev/)
 - **Target:** `wasm32-unknown-unknown`
@@ -14,7 +14,7 @@
 | Category            | Technology                              | Purpose                            |
 |---------------------|-----------------------------------------|------------------------------------|
 | **Core Language**   | [Rust](https://www.rust-lang.org/) latest stable | Systems/application language       |
-| **UI Framework**    | [egui](https://github.com/emilk/egui) / [eframe](https://github.com/emilk/egui/tree/master/crates/eframe) | Browser GUI                        |
+| **UI Framework**    | [leptos](https://github.com/leptos-rs/leptos) | Browser GUI                        |
 | **Web Bundler**     | [Trunk](https://trunkrs.dev/)           | WASM build and dev server          |
 | **Build Tool**      | [Cargo](https://doc.rust-lang.org/cargo/) | Build automation                   |
 | **CI/CD**           | GitHub Actions                          | Builds, tests, releases            |
@@ -22,8 +22,8 @@
 ## Quick Commands
 
 ```bash
-# Lint the project
-cargo clippy
+# Lint the project (use WASM target for release-equivalent checks)
+cargo clippy --target wasm32-unknown-unknown
 
 # Run the test suite
 cargo test
@@ -62,10 +62,10 @@ Cadiotheka/
 
 ### Entry Points
 
-1. **`src/main.rs`** — Web entry point. Uses `eframe::WebRunner` when compiled for `wasm32` via Trunk.
-2. **`src/lib.rs`** — Public re-export of [`CadiothekaApp`].
-3. **`src/app.rs`** — `CadiothekaApp` struct and [`eframe::App`] UI implementation.
-4. **`src/i18n.rs`** — Centralized user-facing strings.
+1. **`src/main.rs`** — Web entry point. Uses `leptos::mount_to_body` when compiled for `wasm32` via Trunk.
+2. **`src/lib.rs`** — Public re-export of the `App` component.
+3. **`src/app.rs`** — `App` state and [`leptos::IntoView`] UI implementation.
+4. **`src/i18n.rs`** — Centralized user-facing strings (leptos_i18n integration).
 
 ## Key Conventions
 

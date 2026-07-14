@@ -12,7 +12,7 @@ Remember to give the project a star! Thanks again!
 Before submitting a pull request, make sure your changes pass the linter and the test suite:
 
 ```bash
-cargo clippy
+cargo clippy --target wasm32-unknown-unknown
 cargo test
 ```
 

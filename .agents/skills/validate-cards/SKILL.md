@@ -19,7 +19,7 @@ Use this skill when adding or editing test cards in `test_data/cards.json`.
    - `downloads` and `favorites` must be non-negative integers.
 5. If the user wants to add new test cases, generate additional entries using only valid tag and platform names. Vary titles, authors, descriptions, counts, and timestamps.
 6. If the user wants to fix errors, replace unknown tags/platforms with the closest valid alternatives or ask the user for guidance if no close match exists.
-7. Run `cargo clippy` (WASM target is fine) to confirm the JSON still deserializes correctly.
+7. Run `cargo clippy --target wasm32-unknown-unknown` to confirm the JSON still deserializes correctly.
 
 ## Tag/Platform Name Rules
 
@@ -32,7 +32,7 @@ Use this skill when adding or editing test cards in `test_data/cards.json`.
 You can run a quick JSON shape check with:
 
 ```bash
-cargo clippy
+cargo clippy --target wasm32-unknown-unknown
 ```
 
 A panic at `src/pages/hub.rs` while deserializing the fixture means an unknown tag or platform variant was found. The error message lists all valid names.

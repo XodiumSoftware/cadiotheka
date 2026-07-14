@@ -91,13 +91,13 @@ cargo test
 ## Run Linting
 
 ```bash
-cargo clippy
+cargo clippy --target wasm32-unknown-unknown
 ```
 
 To also run tests and checks together:
 
 ```bash
-cargo test && cargo clippy
+cargo test && cargo clippy --target wasm32-unknown-unknown
 ```
 
 ## Troubleshooting
