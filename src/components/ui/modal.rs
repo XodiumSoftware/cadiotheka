@@ -26,6 +26,17 @@ pub fn Modal(
         }
     });
 
+    // Ensure the body scroll lock is released if the modal is unmounted while
+    // still open.
+    leptos::prelude::on_cleanup(move || {
+        if let Some(body) = leptos::web_sys::window()
+            .and_then(|w| w.document())
+            .and_then(|d| d.body())
+        {
+            body.class_list().remove_1("overflow-hidden").ok();
+        }
+    });
+
     view! {
         <div
             node_ref=backdrop_ref
