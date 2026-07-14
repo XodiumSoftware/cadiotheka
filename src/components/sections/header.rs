@@ -194,7 +194,7 @@ pub fn Header() -> impl IntoView {
                 gloo_timers::future::sleep(Duration::from_millis(50)).await;
                 if let Some(input) = input_ref.get() {
                     let _ = input.focus();
-                    let _ = input.select();
+                    input.select();
                 }
             });
         }
