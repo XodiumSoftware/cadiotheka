@@ -19,6 +19,11 @@
             "repo_alt": "GitHub Repository"
         }
     },
+    "search": {
+        "open": "Open search",
+        "title": "Search",
+        "stub_message": "Search is not implemented yet."
+    },
     "footer": {
         "company_name": "XODIUM™",
         "tagline": ". Open-Source (CAD) Software Company."

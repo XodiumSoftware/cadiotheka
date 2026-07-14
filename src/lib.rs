@@ -19,6 +19,7 @@ pub mod components {
     pub mod ui {
         pub mod cornerframe;
         pub mod datagrid;
+        pub mod modal;
         pub mod overflowrow;
         pub mod toggle;
     }
@@ -33,8 +34,10 @@ pub mod components {
 
     pub use ui::cornerframe::CornerFrame;
     pub use ui::datagrid::data_grid;
+    pub use ui::modal::Modal;
     pub use ui::overflowrow::OverflowRow;
     pub use ui::toggle::ToggleSlider;
+    pub use ui::toggle::ToggleSliderWithSlashLabel;
 }
 
 pub mod context;

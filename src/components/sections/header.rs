@@ -1,3 +1,4 @@
+use crate::components::ui::modal::Modal;
 use crate::context::LayoutContext;
 use crate::i18n::{t_string, use_i18n};
 use crate::utils::window_event_listener;
@@ -13,6 +14,7 @@ pub fn Header() -> impl IntoView {
     let (is_scrolled, set_is_scrolled) = signal(false);
     let (is_logo_active, set_is_logo_active) = signal(false);
     let (letters_visible, set_letters_visible) = signal(true);
+    let (search_open, set_search_open) = signal(false);
 
     // Scroll listener for backdrop blur
     Effect::new(move |_| {
@@ -21,6 +23,17 @@ pub fn Header() -> impl IntoView {
                 .map(|w| w.scroll_y().unwrap_or(0.0) > 0.0)
                 .unwrap_or(false);
             set_is_scrolled.set(scrolled);
+        });
+    });
+
+    // Alt+S opens the search modal
+    Effect::new(move |_| {
+        let set_search_open = set_search_open;
+        window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
+            if ev.alt_key() && ev.key().eq_ignore_ascii_case("s") {
+                ev.prevent_default();
+                set_search_open.set(true);
+            }
         });
     });
 
@@ -138,8 +151,40 @@ pub fn Header() -> impl IntoView {
                 </div>
 
                 <div class="navbar-end">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content bg-base-200 hover:bg-base-300 border border-base-content/30 rounded shadow-kbd transition-colors"
+                        on:click=move |_| set_search_open.set(true)
+                        aria-label=t_string!(i18n, search.open)
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.3-4.3" />
+                        </svg>
+                        <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-base-content bg-base-200 border border-base-content/30 rounded shadow-kbd">"Alt + S"</kbd>
+                    </button>
                 </div>
             </nav>
+
+            <Modal
+                open=Signal::from(search_open)
+                on_close=move |_| set_search_open.set(false)
+            >
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-base-content">{t_string!(i18n, search.title)}</h2>
+                    <p class="text-base-content/70">{t_string!(i18n, search.stub_message)}</p>
+                </div>
+            </Modal>
         </header>
     }
 }
