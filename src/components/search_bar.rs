@@ -6,6 +6,7 @@
 use crate::engines::Suggestion;
 use crate::engines::SuggestionKind;
 use crate::i18n;
+use egui_phosphor_icons::icons::MAGNIFYING_GLASS;
 
 /// State and rendering for a search control bar.
 pub struct SearchBar {
@@ -33,15 +34,18 @@ impl SearchBar {
     /// When focused, a suggestion popup is shown below the input. Suggestions
     /// can be selected with the mouse, or with arrow keys and Enter.
     pub fn show(&mut self, ui: &mut egui::Ui, _query: &str, suggestions: &[Suggestion]) {
-        let response = ui
-            .add(
-                egui::TextEdit::singleline(&mut self.query)
-                    .id(self.id)
-                    .hint_text(i18n::SearchBar::PLACEHOLDER)
-                    .margin(egui::vec2(16.0, 12.0))
-                    .desired_width(f32::INFINITY),
-            )
-            .on_hover_text("Use @sort:field:direction to sort, #tag to filter");
+        let placeholder = format!(
+            "{} {}",
+            MAGNIFYING_GLASS.as_str(),
+            i18n::SearchBar::PLACEHOLDER
+        );
+        let response = ui.add(
+            egui::TextEdit::singleline(&mut self.query)
+                .id(self.id)
+                .hint_text(placeholder)
+                .margin(egui::vec2(16.0, 12.0))
+                .desired_width(f32::INFINITY),
+        );
 
         let filtered = self.filtered_suggestions(suggestions);
 

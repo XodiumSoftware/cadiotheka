@@ -24,6 +24,11 @@ impl CadiothekaApp {
 
         let mut fonts = egui::FontDefinitions::default();
         add_fonts(&mut fonts);
+        fonts
+            .families
+            .entry(egui::FontFamily::Proportional)
+            .or_default()
+            .push("phosphor-icons".to_owned());
         cc.egui_ctx.set_fonts(fonts);
         egui_extras::install_image_loaders(&cc.egui_ctx);
 

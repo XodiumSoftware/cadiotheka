@@ -10,6 +10,7 @@ pub struct Keycap<'a> {
     font_size: f32,
     separator: &'static str,
     tooltip: bool,
+    combine: bool,
     keys: Vec<egui::Key>,
     execute: Option<Box<dyn FnMut() + 'a>>,
 }
@@ -22,6 +23,7 @@ impl Default for Keycap<'_> {
             font_size: 12.0,
             separator: "+",
             tooltip: false,
+            combine: false,
             keys: Vec::new(),
             execute: None,
         }
@@ -45,6 +47,15 @@ impl<'a> Keycap<'a> {
     /// When enabled, the keys are rendered inside a horizontal layout.
     pub fn tooltip(mut self, tooltip: bool) -> Self {
         self.tooltip = tooltip;
+        self
+    }
+
+    /// Renders all configured keys inside a single combined keycap.
+    ///
+    /// When disabled (default), each key gets its own keycap separated by
+    /// [`Self::separator`].
+    pub fn combine(mut self, combine: bool) -> Self {
+        self.combine = combine;
         self
     }
 
@@ -81,27 +92,19 @@ impl<'a> Keycap<'a> {
     /// Checks the configured chord, runs `execute` if triggered, and attaches
     /// the keycap tooltip to the given response's hover event.
     pub fn attach(self, ui: &mut egui::Ui, response: &egui::Response) {
+        let label = self.combined_label();
+
         if self.check_chord(ui)
             && let Some(mut f) = self.execute
         {
             f();
         }
 
-        let keys = self.keys.clone();
         let size = self.size;
         let rounding = self.rounding;
         let font_size = self.font_size;
-        let separator = self.separator;
         response.clone().on_hover_ui(move |ui| {
-            ui.horizontal(|ui| {
-                let mut iter = keys.iter().peekable();
-                while let Some(key) = iter.next() {
-                    Self::draw_key_static(ui, *key, size, rounding, font_size);
-                    if iter.peek().is_some() {
-                        ui.label(separator);
-                    }
-                }
-            });
+            Self::draw_key_static(ui, &label, size, rounding, font_size);
         });
     }
 
@@ -122,6 +125,15 @@ impl<'a> Keycap<'a> {
         triggered
     }
 
+    fn combined_label(&self) -> String {
+        let spaced_separator = format!(" {} ", self.separator);
+        self.keys
+            .iter()
+            .map(|key| key.name())
+            .collect::<Vec<_>>()
+            .join(&spaced_separator)
+    }
+
     fn check_chord(&self, ui: &egui::Ui) -> bool {
         if self.keys.len() < 2 {
             return false;
@@ -133,23 +145,21 @@ impl<'a> Keycap<'a> {
     }
 
     fn draw_sequence(&self, ui: &mut egui::Ui) {
-        let mut iter = self.keys.iter().peekable();
-        while let Some(key) = iter.next() {
-            self.draw_key(ui, key);
-            if iter.peek().is_some() {
-                ui.label(self.separator);
+        if self.combine {
+            let label = self.combined_label();
+            self.draw_key(ui, &label);
+        } else {
+            let mut iter = self.keys.iter().peekable();
+            while let Some(key) = iter.next() {
+                self.draw_key(ui, key.name());
+                if iter.peek().is_some() {
+                    ui.label(self.separator);
+                }
             }
         }
     }
 
-    fn draw_key_static(
-        ui: &mut egui::Ui,
-        key: egui::Key,
-        size: f32,
-        rounding: f32,
-        font_size: f32,
-    ) {
-        let label = key.name();
+    fn draw_key_static(ui: &mut egui::Ui, label: &str, size: f32, rounding: f32, font_size: f32) {
         let bg = ui.visuals().widgets.inactive.bg_fill;
         let stroke = ui.visuals().widgets.inactive.fg_stroke;
         let text_color = ui.visuals().widgets.inactive.fg_stroke.color;
@@ -180,8 +190,7 @@ impl<'a> Keycap<'a> {
         );
     }
 
-    fn draw_key(&self, ui: &mut egui::Ui, key: &egui::Key) {
-        let label = key.name();
+    fn draw_key(&self, ui: &mut egui::Ui, label: &str) {
         let bg = ui.visuals().widgets.inactive.bg_fill;
         let stroke = ui.visuals().widgets.inactive.fg_stroke;
         let text_color = ui.visuals().widgets.inactive.fg_stroke.color;

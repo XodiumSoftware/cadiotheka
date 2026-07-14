@@ -38,6 +38,7 @@ impl Header {
                     Keycap::builder()
                         .keys(&[egui::Key::C, egui::Key::H][..])
                         .execute(|| self.view = View::Hub)
+                        .combine(true)
                         .attach(ui, &response);
                 });
             });
