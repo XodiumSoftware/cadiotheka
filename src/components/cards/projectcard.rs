@@ -1,4 +1,5 @@
 use crate::components::ui::cornerframe::CornerFrame;
+use crate::components::ui::overflowrow::{OverflowItem, OverflowRow};
 use crate::data::{CardData, IconUrl};
 use crate::i18n::use_i18n;
 use crate::metadata::platforms::Platform;
@@ -151,7 +152,7 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                             >
                                 {letter.clone()}
                             </div>
-                            <div class="min-w-0 flex-1">
+                            <div class="min-w-0 flex-1 flex flex-col gap-2">
                                 <h2 class="card-title text-primary text-base leading-tight">
                                     <span class="truncate" title={props.title.clone()}>{props.title.clone()}</span>
                                     <span class="text-base-content/60 font-normal">{" by "}</span>
@@ -159,38 +160,36 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                                         {props.author.clone()}
                                     </span>
                                 </h2>
+
+                                <div class="flex flex-wrap items-center gap-1">
+                                    <OverflowRow
+                                        items={props
+                                            .tags
+                                            .iter()
+                                            .map(|tag| OverflowItem::new(tag.label(), tag.color()))
+                                            .collect::<Vec<_>>()}
+                                        max_visible=3
+                                        badge_class="badge badge-xs badge-outline rounded-none text-neutral-900 border-base-content/10 bg-transparent"
+                                    />
+                                    {if !props.tags.is_empty() && !props.supported_platforms.is_empty() {
+                                        view! {
+                                            <span class="w-px h-4 bg-base-content/20 self-center mx-1" aria-hidden="true" />
+                                        }
+                                            .into_any()
+                                    } else {
+                                        ().into_any()
+                                    }}
+                                    <OverflowRow
+                                        items={props
+                                            .supported_platforms
+                                            .iter()
+                                            .map(|platform| OverflowItem::new(platform.label(), platform.color()))
+                                            .collect::<Vec<_>>()}
+                                        max_visible=2
+                                        badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 bg-transparent"
+                                    />
+                                </div>
                             </div>
-                        </div>
-
-                        <hr class="border-base-content/10 my-3" />
-
-                        <div class="flex flex-wrap gap-1">
-                            {props
-                                .tags
-                                .iter()
-                                .map(|tag| {
-                                    let color = tag.color();
-                                    let label = tag.label();
-                                    view! {
-                                        <span class=format!("badge badge-xs badge-outline text-base-content/80 border-base-content/10 {}", color)>
-                                            {label}
-                                        </span>
-                                    }
-                                })
-                                .collect_view()}
-                            {props
-                                .supported_platforms
-                                .iter()
-                                .map(|platform| {
-                                    let color = platform.color();
-                                    let label = platform.label();
-                                    view! {
-                                        <span class=format!("badge badge-xs badge-outline border-base-content/10 {}", color)>
-                                            {label}
-                                        </span>
-                                    }
-                                })
-                                .collect_view()}
                         </div>
 
                         <hr class="border-base-content/10 my-3" />
