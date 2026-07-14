@@ -26,6 +26,16 @@
         "hint_dismiss": "to dismiss",
         "hint_select": "to select"
     },
+    "project_modal": {
+        "close": "Close project details",
+        "by": "by",
+        "description": "Description",
+        "downloads": "Downloads",
+        "favorites": "Favorites",
+        "updated": "Updated",
+        "hint_dismiss": "to close",
+        "empty": "No project selected."
+    },
     "footer": {
         "company_name": "XODIUM™",
         "tagline": ". Open-Source (CAD) Software Company."

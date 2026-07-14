@@ -2,9 +2,9 @@ use crate::components::ui::cornerframe::CornerFrame;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
-/// A minimal stub modal dialog.
+/// A reusable modal dialog with a search-modal visual style.
 #[component]
-pub fn Modal(
+pub fn SearchModal(
     #[prop(into)] open: Signal<bool>,
     #[prop(into)] on_close: Callback<()>,
     #[prop(into, default = Callback::new(|_| {}))] on_inner_click: Callback<()>,

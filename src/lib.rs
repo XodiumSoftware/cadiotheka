@@ -18,7 +18,10 @@ pub mod components {
 
     pub mod ui {
         pub mod cornerframe;
-        pub mod modal;
+        pub mod modals {
+            pub mod projectmodal;
+            pub mod searchmodal;
+        }
         pub mod overflowrow;
         pub mod toggle;
     }
@@ -27,12 +30,13 @@ pub mod components {
     pub use sections::header::Header;
     pub use sections::projects::ProjectsSection;
 
-    pub use cards::projectcard::{ProjectCard, ProjectCardProperties};
+    pub use cards::projectcard::{ProjectCard, ProjectCardProperties, from_card_data};
 
     pub use effects::sectionfade::FadeOverlay;
 
     pub use ui::cornerframe::CornerFrame;
-    pub use ui::modal::Modal;
+    pub use ui::modals::projectmodal::ProjectModal;
+    pub use ui::modals::searchmodal::SearchModal;
     pub use ui::overflowrow::OverflowRow;
     pub use ui::toggle::ToggleSlider;
     pub use ui::toggle::ToggleSliderWithSlashLabel;

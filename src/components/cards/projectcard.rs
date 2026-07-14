@@ -1,5 +1,6 @@
 use crate::components::ui::cornerframe::CornerFrame;
 use crate::components::ui::overflowrow::{OverflowItem, OverflowRow};
+use crate::context::ProjectModalContext;
 use crate::data::{CardData, IconUrl};
 use crate::i18n::use_i18n;
 use crate::metadata::platforms::Platform;
@@ -22,27 +23,33 @@ pub struct ProjectCardProperties {
 
 impl From<CardData> for ProjectCardProperties {
     fn from(card: CardData) -> Self {
-        let description = if card.description.trim().is_empty() {
-            "(No description)".to_string()
-        } else {
-            card.description
-        };
-        Self {
-            title: card.title,
-            author: card.author,
-            description,
-            tags: card.tags,
-            supported_platforms: card.supported_platforms,
-            downloads: card.downloads,
-            favorites: card.favorites,
-            timestamp: card.timestamp,
-            icon_url: card.icon_url,
-        }
+        project_card_properties_from_card_data(card)
     }
 }
 
+pub fn project_card_properties_from_card_data(card: CardData) -> ProjectCardProperties {
+    let description = if card.description.trim().is_empty() {
+        "(No description)".to_string()
+    } else {
+        card.description
+    };
+    ProjectCardProperties {
+        title: card.title,
+        author: card.author,
+        description,
+        tags: card.tags,
+        supported_platforms: card.supported_platforms,
+        downloads: card.downloads,
+        favorites: card.favorites,
+        timestamp: card.timestamp,
+        icon_url: card.icon_url,
+    }
+}
+
+pub use project_card_properties_from_card_data as from_card_data;
+
 #[component]
-fn DownloadIcon() -> impl IntoView {
+pub fn DownloadIcon() -> impl IntoView {
     view! {
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -63,7 +70,7 @@ fn DownloadIcon() -> impl IntoView {
 }
 
 #[component]
-fn HeartIcon() -> impl IntoView {
+pub fn HeartIcon() -> impl IntoView {
     view! {
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -82,7 +89,7 @@ fn HeartIcon() -> impl IntoView {
 }
 
 #[component]
-fn ClockIcon() -> impl IntoView {
+pub fn ClockIcon() -> impl IntoView {
     view! {
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -101,7 +108,7 @@ fn ClockIcon() -> impl IntoView {
     }
 }
 
-fn placeholder_letter(title: &str) -> String {
+pub fn placeholder_letter(title: &str) -> String {
     title
         .chars()
         .next()
@@ -110,7 +117,7 @@ fn placeholder_letter(title: &str) -> String {
         .to_string()
 }
 
-fn placeholder_color(title: &str) -> &'static str {
+pub fn placeholder_color(title: &str) -> &'static str {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
@@ -142,8 +149,26 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
     let favorites = props.favorites;
     let timestamp = props.timestamp;
 
+    let props_for_modal = props.clone();
+    let open_modal = move |_| {
+        ProjectModalContext::use_context().open(props_for_modal.clone());
+    };
+    let aria_label = format!("Open details for {} by {}", props.title, props.author);
+    let card_title = props.title.clone();
+    let card_author = props.author.clone();
+    let tags = props.tags.clone();
+    let platforms = props.supported_platforms.clone();
+
+    let description = props.description.clone();
+
     view! {
-        <article class="btn-lift hover:border-primary block h-full p-2">
+        <article
+            class="btn-lift hover:border-primary block h-full p-2 cursor-pointer"
+            on:click=open_modal
+            role="button"
+            tabindex="0"
+            aria-label=aria_label
+        >
             <CornerFrame style="square" class="h-full">
                 <div class="card bg-ghost h-full rounded-none">
                     <div class="card-body p-4">
@@ -170,34 +195,30 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                             }}
                             <div class="min-w-0 flex-1 flex flex-col gap-2">
                                 <h2 class="card-title text-primary text-base leading-tight">
-                                    <span class="truncate" title={props.title.clone()}>{props.title.clone()}</span>
+                                    <span class="truncate" title={card_title.clone()}>{card_title.clone()}</span>
                                     <span class="text-base-content/60 font-normal">{" by "}</span>
-                                    <span class="text-base-content font-semibold truncate" title={props.author.clone()}>
-                                        {props.author.clone()}
+                                    <span class="text-base-content font-semibold truncate" title={card_author.clone()}>
+                                        {card_author.clone()}
                                     </span>
                                 </h2>
 
                                 <div class="flex flex-nowrap items-center gap-1 overflow-hidden">
                                     <OverflowRow
-                                        items={props
-                                            .tags
+                                        items={tags
                                             .iter()
                                             .map(|tag| OverflowItem::new(tag.label(), tag.color()))
                                             .collect::<Vec<_>>()}
                                         max_visible=2
                                         badge_class="badge badge-xs badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
                                     />
-                                    {if !props.tags.is_empty() && !props.supported_platforms.is_empty() {
+                                    {(!tags.is_empty() && !platforms.is_empty()).then(|| {
                                         view! {
                                             <span class="w-px h-4 bg-base-content/20 self-center mx-1 flex-shrink-0" aria-hidden="true" />
                                         }
                                             .into_any()
-                                    } else {
-                                        ().into_any()
-                                    }}
+                                    })}
                                     <OverflowRow
-                                        items={props
-                                            .supported_platforms
+                                        items={platforms
                                             .iter()
                                             .map(|platform| OverflowItem::new(platform.label(), platform.color()))
                                             .collect::<Vec<_>>()}
@@ -210,7 +231,7 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
 
                         <hr class="border-base-content/10 my-3" />
 
-                        <p class="text-base-content/70 flex-grow text-sm">{props.description}</p>
+                        <p class="text-base-content/70 flex-grow text-sm">{description}</p>
 
                         <hr class="border-base-content/10 my-3" />
 

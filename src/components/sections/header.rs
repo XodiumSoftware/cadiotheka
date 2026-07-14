@@ -1,4 +1,4 @@
-use crate::components::ui::modal::Modal;
+use crate::components::ui::modals::searchmodal::SearchModal;
 use crate::context::{LayoutContext, SearchContext};
 use crate::data::load_cards;
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
@@ -382,7 +382,7 @@ pub fn Header() -> impl IntoView {
                 </div>
             </nav>
 
-            <Modal
+            <SearchModal
                 open=Signal::from(search_open)
                 on_close=move |_| set_search_open.set(false)
             >
@@ -543,7 +543,7 @@ pub fn Header() -> impl IntoView {
                         </div>
                     </div>
                 </div>
-            </Modal>
+            </SearchModal>
         </header>
     }
 }
