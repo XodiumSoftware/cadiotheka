@@ -255,9 +255,8 @@ pub fn Header() -> impl IntoView {
                 ev.prevent_default();
                 let new_idx = selected_index
                     .get_untracked()
-                    .unwrap_or(usize::MAX)
-                    .saturating_add(1)
-                    .min(flat.len() - 1);
+                    .map(|idx| (idx + 1) % flat.len())
+                    .unwrap_or(0);
                 set_selected_index.set(Some(new_idx));
                 set_keyboard_index.set(Some(new_idx));
             }
@@ -265,9 +264,8 @@ pub fn Header() -> impl IntoView {
                 ev.prevent_default();
                 let new_idx = selected_index
                     .get_untracked()
-                    .unwrap_or(flat.len())
-                    .saturating_sub(1)
-                    .min(flat.len() - 1);
+                    .map(|idx| if idx == 0 { flat.len() - 1 } else { idx - 1 })
+                    .unwrap_or(flat.len() - 1);
                 set_selected_index.set(Some(new_idx));
                 set_keyboard_index.set(Some(new_idx));
             }
