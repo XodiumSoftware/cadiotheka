@@ -1,6 +1,6 @@
 //! The main Cadiotheka hub application state and UI.
 
-use crate::components::{Footer, Header, View};
+use crate::components::{Footer, Header, SearchBar, View};
 use crate::pages::Hub;
 use crate::theme;
 use egui_phosphor_icons::add_fonts;
@@ -14,6 +14,10 @@ pub struct CadiothekaApp {
     header: Header,
     /// Bottom navigation footer.
     footer: Footer,
+    /// Global search bar state.
+    search_bar: SearchBar,
+    /// Whether the search modal is open.
+    search_open: bool,
 }
 
 impl CadiothekaApp {
@@ -39,10 +43,13 @@ impl CadiothekaApp {
 impl eframe::App for CadiothekaApp {
     /// Renders the hub UI each frame.
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        self.header.show(ui);
+        self.header
+            .show(ui, &mut self.search_bar, &mut self.search_open);
         self.footer.show(ui);
         egui::CentralPanel::default().show(ui, |ui| match self.header.view() {
-            View::Hub => self.hub.show(ui),
+            View::Hub => self
+                .hub
+                .show(ui, &mut self.search_bar, &mut self.search_open),
         });
     }
 }

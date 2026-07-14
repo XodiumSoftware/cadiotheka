@@ -30,7 +30,7 @@ impl Footer {
 pub struct SearchBar;
 
 impl SearchBar {
-    pub const PLACEHOLDER: &str = "Search… (e.g. #Blender @sort:downloads:descending)";
+    pub const PLACEHOLDER: &str = "Navigate...";
 }
 
 /// Strings for the grid UI.

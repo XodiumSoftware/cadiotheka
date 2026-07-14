@@ -4,9 +4,7 @@
 //! [`crate::fixture`]. See that module for notes on the planned move to a
 //! runtime data source.
 
-use crate::components::{
-    CardAction, CardData, DottedBackground, Grid, Keycap, ProjectPopup, SearchBar,
-};
+use crate::components::{CardAction, CardData, DottedBackground, Grid, ProjectPopup, SearchBar};
 use crate::engines::SearchEngine;
 use crate::fixture::load_cards;
 
@@ -26,8 +24,6 @@ enum LoadState {
 pub struct Hub {
     /// Search engine owning the loaded cards.
     engine: SearchEngine,
-    /// Search control state.
-    search_bar: SearchBar,
     /// Project details popup.
     project_popup: ProjectPopup,
     /// Current catalog loading state.
@@ -38,7 +34,6 @@ impl Default for Hub {
     fn default() -> Self {
         Self {
             engine: SearchEngine::new(Vec::new()),
-            search_bar: SearchBar::default(),
             project_popup: ProjectPopup::default(),
             load_state: LoadState::Loading,
         }
@@ -65,7 +60,7 @@ impl Hub {
     }
 
     /// Renders the hub UI.
-    pub fn show(&mut self, ui: &mut egui::Ui) {
+    pub fn show(&mut self, ui: &mut egui::Ui, search_bar: &mut SearchBar, search_open: &mut bool) {
         if matches!(self.load_state, LoadState::Loading) {
             self.load();
         }
@@ -93,34 +88,12 @@ impl Hub {
             return;
         }
 
-        let inner_spacing = 20.0;
-        let (columns, card_width) = Grid::column_metrics(ui.available_width());
-        let search_width = if columns >= 2 {
-            card_width * 2.0 + inner_spacing
-        } else {
-            card_width
-        };
-
-        let query = self.search_bar.query.clone();
-        let suggestions = self.engine.suggestions(&query);
-        ui.vertical_centered(|ui| {
-            ui.set_max_width(search_width);
-            self.search_bar.show(ui, &query, &suggestions);
-        });
-
-        let parsed = SearchEngine::parse_query(&self.search_bar.query);
-
-        let mut focus_search = false;
-        Keycap::builder()
-            .keys(&[egui::Key::C, egui::Key::S][..])
-            .execute(|| focus_search = true)
-            .build(ui);
-
-        if focus_search {
-            ui.memory_mut(|mem| mem.request_focus(self.search_bar.id));
+        if *search_open {
+            self.render_search_modal(ui, search_bar, search_open);
         }
 
         ui.add_space(24.0);
+        let parsed = SearchEngine::parse_query(&search_bar.query);
         let cards = self.engine.search(&parsed);
         let card_data: Vec<CardData> = cards.into_iter().cloned().collect();
 
@@ -135,11 +108,36 @@ impl Hub {
             .show(ui, |ui| {
                 ui.add_space(16.0);
                 let actions = Grid.show(ui, &card_data);
-                self.apply_card_actions(ui, actions, &card_data);
+                self.apply_card_actions(ui, actions, &card_data, search_bar);
             });
 
         let popup_actions = self.project_popup.show(ui);
-        self.apply_card_actions(ui, popup_actions, &card_data);
+        self.apply_card_actions(ui, popup_actions, &card_data, search_bar);
+    }
+
+    /// Renders a search modal with the search input and suggestions.
+    fn render_search_modal(
+        &mut self,
+        ui: &mut egui::Ui,
+        search_bar: &mut SearchBar,
+        search_open: &mut bool,
+    ) {
+        let modal_width = 600.0;
+        let query = search_bar.query.clone();
+        let suggestions = self.engine.suggestions(&query);
+
+        let modal_response =
+            egui::Modal::new(egui::Id::new("hub_search_modal")).show(ui.ctx(), |ui| {
+                ui.set_width(modal_width);
+                let wants_close = search_bar.show(ui, &query, &suggestions);
+                if wants_close {
+                    *search_open = false;
+                }
+            });
+
+        if modal_response.should_close() {
+            *search_open = false;
+        }
     }
 
     /// Renders a loading indicator while the catalog is being fetched.
@@ -186,18 +184,19 @@ impl Hub {
         _ui: &mut egui::Ui,
         actions: Vec<CardAction>,
         card_data: &[CardData],
+        search_bar: &mut SearchBar,
     ) {
         for action in actions {
             match action {
                 CardAction::Filter(filter) => {
-                    let query = &mut self.search_bar.query;
+                    let query = &mut search_bar.query;
                     if !query.is_empty() && !query.ends_with(' ') {
                         query.push(' ');
                     }
                     query.push_str(&filter);
                 }
                 CardAction::ClearSearch => {
-                    self.search_bar.query.clear();
+                    search_bar.query.clear();
                 }
                 CardAction::OpenProject(index) => {
                     if let Some(data) = card_data.get(index) {

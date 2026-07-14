@@ -11,6 +11,8 @@ pub struct Keycap<'a> {
     separator: &'static str,
     tooltip: bool,
     combine: bool,
+    ctrl: bool,
+    alt: bool,
     keys: Vec<egui::Key>,
     execute: Option<Box<dyn FnMut() + 'a>>,
 }
@@ -24,6 +26,8 @@ impl Default for Keycap<'_> {
             separator: "+",
             tooltip: false,
             combine: false,
+            ctrl: false,
+            alt: false,
             keys: Vec::new(),
             execute: None,
         }
@@ -57,6 +61,18 @@ impl<'a> Keycap<'a> {
     /// [`Self::separator`].
     pub fn combine(mut self, combine: bool) -> Self {
         self.combine = combine;
+        self
+    }
+
+    /// Requires the Ctrl modifier to be held for the chord to trigger.
+    pub fn ctrl(mut self, ctrl: bool) -> Self {
+        self.ctrl = ctrl;
+        self
+    }
+
+    /// Requires the Alt modifier to be held for the chord to trigger.
+    pub fn alt(mut self, alt: bool) -> Self {
+        self.alt = alt;
         self
     }
 
@@ -128,20 +144,43 @@ impl<'a> Keycap<'a> {
 
     fn combined_label(&self) -> String {
         let spaced_separator = format!(" {} ", self.separator);
-        self.keys
+        let keys = self
+            .keys
             .iter()
             .map(|key| key.name())
             .collect::<Vec<_>>()
-            .join(&spaced_separator)
+            .join(&spaced_separator);
+
+        let mut prefix = String::new();
+        if self.ctrl {
+            prefix.push_str("Ctrl");
+        }
+        if self.alt {
+            if !prefix.is_empty() {
+                prefix.push_str(&spaced_separator);
+            }
+            prefix.push_str("Alt");
+        }
+
+        if prefix.is_empty() {
+            keys
+        } else if keys.is_empty() {
+            prefix
+        } else {
+            format!("{prefix}{spaced_separator}{keys}")
+        }
     }
 
     fn check_chord(&self, ui: &egui::Ui) -> bool {
-        if self.keys.len() < 2 {
+        if self.keys.is_empty() {
             return false;
         }
         let last = self.keys.len() - 1;
         ui.input(|i| {
-            self.keys[..last].iter().all(|key| i.key_down(*key)) && i.key_pressed(self.keys[last])
+            let modifiers_ok = (!self.ctrl || i.modifiers.ctrl) && (!self.alt || i.modifiers.alt);
+            modifiers_ok
+                && self.keys[..last].iter().all(|key| i.key_down(*key))
+                && i.key_pressed(self.keys[last])
         })
     }
 

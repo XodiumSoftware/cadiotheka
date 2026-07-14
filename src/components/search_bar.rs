@@ -3,10 +3,8 @@
 //! This file only handles rendering and user interaction. All query parsing,
 //! filtering, scoring, and suggestion logic lives in [`crate::engines`].
 
-use crate::engines::Suggestion;
-use crate::engines::SuggestionKind;
+use crate::engines::{Suggestion, SuggestionKind};
 use crate::i18n;
-use egui_phosphor_icons::icons::MAGNIFYING_GLASS;
 
 /// State and rendering for a search control bar.
 pub struct SearchBar {
@@ -14,7 +12,9 @@ pub struct SearchBar {
     pub query: String,
     /// Persistent widget id used to request focus programmatically.
     pub id: egui::Id,
-    /// Currently selected suggestion index in the popup, if any.
+    /// Whether to request focus on the input during the next render.
+    request_focus: bool,
+    /// Currently selected suggestion index across the flattened dropdown list.
     selected_suggestion: Option<usize>,
 }
 
@@ -23,76 +23,69 @@ impl Default for SearchBar {
         Self {
             query: String::new(),
             id: egui::Id::new("hub_search_bar"),
+            request_focus: false,
             selected_suggestion: None,
         }
     }
 }
 
+/// A group of suggestions shown under a category header in the dropdown.
+struct SuggestionGroup {
+    title: &'static str,
+    suggestions: Vec<Suggestion>,
+}
+
 impl SearchBar {
-    /// Draws the search input.
+    /// Requests focus for the search input on the next render.
+    pub fn request_focus(&mut self) {
+        self.request_focus = true;
+    }
+
+    /// Draws the search input and its inline category dropdown.
     ///
-    /// When focused, a suggestion popup is shown below the input. Suggestions
-    /// can be selected with the mouse, or with arrow keys and Enter.
-    pub fn show(&mut self, ui: &mut egui::Ui, _query: &str, suggestions: &[Suggestion]) {
-        let placeholder = format!(
-            "{} {}",
-            MAGNIFYING_GLASS.as_str(),
-            i18n::SearchBar::PLACEHOLDER
-        );
+    /// Returns `true` when the user pressed Escape, signaling that the caller
+    /// may want to close the containing modal.
+    pub fn show(&mut self, ui: &mut egui::Ui, _query: &str, suggestions: &[Suggestion]) -> bool {
         let response = ui.add(
             egui::TextEdit::singleline(&mut self.query)
                 .id(self.id)
-                .hint_text(placeholder)
+                .hint_text(i18n::SearchBar::PLACEHOLDER)
                 .margin(egui::vec2(16.0, 12.0))
                 .desired_width(f32::INFINITY),
         );
 
-        let filtered = self.filtered_suggestions(suggestions);
-
-        if response.changed() || filtered.is_empty() {
-            self.selected_suggestion = filtered.first().map(|_| 0);
+        if self.request_focus {
+            ui.memory_mut(|mem| mem.request_focus(self.id));
+            self.request_focus = false;
         }
 
-        self.handle_keyboard(ui, &filtered);
+        let groups = self.grouped_suggestions(suggestions);
+        let flattened: Vec<&Suggestion> =
+            groups.iter().flat_map(|group| &group.suggestions).collect();
 
-        let popup = egui::Popup::from_response(&response)
-            .open_memory(
-                response
-                    .changed()
-                    .then_some(egui::SetOpenCommand::Bool(true)),
-            )
-            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-            .layout(egui::Layout::top_down_justified(egui::Align::Min))
-            .width(response.rect.width())
-            .frame(
-                egui::Frame::new()
-                    .inner_margin(0.0)
-                    .fill(ui.visuals().panel_fill)
-                    .corner_radius(6.0),
-            );
+        if response.changed() || flattened.is_empty() {
+            self.selected_suggestion = flattened.first().map(|_| 0);
+        }
 
-        let popup_width = response.rect.width();
-        let selected = self.selected_suggestion;
-        popup.show(|ui| {
-            ui.set_min_width(popup_width);
-            ui.set_max_width(popup_width);
-            self.render_suggestions(ui, &filtered, selected)
-        });
+        self.handle_keyboard(ui, &flattened);
+        self.render_dropdown(ui, &groups, self.selected_suggestion);
+
+        ui.input(|i| i.key_pressed(egui::Key::Escape))
     }
 
-    /// Handles arrow-key navigation, Enter selection, and Escape closing.
-    fn handle_keyboard(&mut self, ui: &mut egui::Ui, filtered: &[Suggestion]) {
-        if filtered.is_empty() {
+    /// Handles arrow-key navigation, Enter selection, and Escape clearing.
+    fn handle_keyboard(&mut self, ui: &mut egui::Ui, flattened: &[&Suggestion]) {
+        if flattened.is_empty() {
             return;
         }
 
-        let count = filtered.len();
+        let count = flattened.len();
         let mut changed = false;
 
         if ui.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
             self.selected_suggestion = Some(
                 self.selected_suggestion
-                    .map(|i| (i + 1) % count)
+                    .map(|index| (index + 1) % count)
                     .unwrap_or(0),
             );
             changed = true;
@@ -101,7 +94,7 @@ impl SearchBar {
         if ui.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
             self.selected_suggestion = Some(
                 self.selected_suggestion
-                    .map(|i| i.saturating_sub(1))
+                    .map(|index| index.saturating_sub(1))
                     .unwrap_or(count - 1),
             );
             changed = true;
@@ -113,97 +106,117 @@ impl SearchBar {
 
         if ui.input(|i| i.key_pressed(egui::Key::Enter))
             && let Some(index) = self.selected_suggestion
-            && let Some(suggestion) = filtered.get(index)
+            && let Some(suggestion) = flattened.get(index)
         {
             self.apply_suggestion(suggestion);
             self.selected_suggestion = None;
-            egui::Popup::close_all(ui.ctx());
         }
 
         if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.selected_suggestion = None;
-            egui::Popup::close_all(ui.ctx());
         }
     }
 
-    /// Renders clickable suggestion rows inside the popup.
-    fn render_suggestions(
+    /// Renders the inline dropdown with category headers and selectable items.
+    fn render_dropdown(
         &mut self,
         ui: &mut egui::Ui,
-        suggestions: &[Suggestion],
+        groups: &[SuggestionGroup],
         selected: Option<usize>,
     ) {
-        if suggestions.is_empty() {
+        if groups.iter().all(|group| group.suggestions.is_empty()) {
             return;
         }
 
-        egui::ScrollArea::vertical()
-            .max_height(200.0)
-            .show(ui, |ui| {
-                for (index, suggestion) in suggestions.iter().enumerate() {
-                    let is_selected = selected == Some(index);
-                    let label = match suggestion.kind {
-                        SuggestionKind::Sort => egui::RichText::new(&suggestion.text).monospace(),
-                        SuggestionKind::Author => {
-                            egui::RichText::new(format!("@author:{}", suggestion.text))
-                        }
-                        SuggestionKind::Filter => {
-                            egui::RichText::new(format!("#{}", suggestion.text))
-                        }
-                        SuggestionKind::Plain => egui::RichText::new(&suggestion.text),
-                    };
+        ui.add_space(8.0);
 
-                    let item = ui.selectable_label(is_selected, label);
-                    if item.clicked() {
-                        self.apply_suggestion(suggestion);
-                        self.selected_suggestion = None;
-                        egui::Popup::close_all(ui.ctx());
+        egui::ScrollArea::vertical()
+            .max_height(320.0)
+            .show(ui, |ui| {
+                let mut global_index = 0usize;
+                let group_count = groups.len();
+                let mut selected_rect = None;
+
+                for (group_index, group) in groups.iter().enumerate() {
+                    if group.suggestions.is_empty() {
+                        continue;
                     }
+
+                    ui.label(
+                        egui::RichText::new(group.title)
+                            .small()
+                            .color(ui.visuals().weak_text_color()),
+                    );
+
+                    for suggestion in &group.suggestions {
+                        let is_selected = selected == Some(global_index);
+                        let label = self.suggestion_label(suggestion);
+
+                        let item = ui.selectable_label(is_selected, label);
+                        if is_selected {
+                            selected_rect = Some(item.rect);
+                        }
+                        if item.clicked() {
+                            self.apply_suggestion(suggestion);
+                            self.selected_suggestion = None;
+                        }
+
+                        global_index += 1;
+                    }
+
+                    if group_index + 1 < group_count {
+                        ui.separator();
+                    }
+                }
+
+                if let Some(rect) = selected_rect {
+                    ui.scroll_to_rect(rect, Some(egui::Align::Center));
                 }
             });
     }
 
-    /// Returns suggestions filtered by the current query context.
-    fn filtered_suggestions(&self, suggestions: &[Suggestion]) -> Vec<Suggestion> {
-        let prefix = self.active_prefix();
-        let needle = self.active_needle();
-        let needle_lower = needle.to_lowercase();
-
-        suggestions
-            .iter()
-            .filter(|s| {
-                if let Some(prefix) = prefix {
-                    match s.kind {
-                        SuggestionKind::Sort if prefix == '@' => {
-                            s.text.to_lowercase().contains(&needle_lower)
-                        }
-                        SuggestionKind::Author if prefix == '@' => {
-                            s.text.to_lowercase().contains(&needle_lower)
-                        }
-                        SuggestionKind::Filter if prefix == '#' => {
-                            s.text.to_lowercase().contains(&needle_lower)
-                        }
-                        _ => false,
-                    }
-                } else {
-                    s.kind == SuggestionKind::Plain && s.text.to_lowercase().contains(&needle_lower)
-                }
-            })
-            .take(8)
-            .cloned()
-            .collect()
+    /// Builds the display label for a suggestion based on its kind.
+    fn suggestion_label(&self, suggestion: &Suggestion) -> egui::RichText {
+        match suggestion.kind {
+            SuggestionKind::Sort => egui::RichText::new(&suggestion.text).monospace(),
+            SuggestionKind::Author => egui::RichText::new(format!("@author:{}", suggestion.text)),
+            SuggestionKind::Filter => egui::RichText::new(format!("#{}", suggestion.text)),
+            SuggestionKind::Plain => egui::RichText::new(&suggestion.text),
+        }
     }
 
-    /// Determines which prefix context the user is currently typing in.
-    fn active_prefix(&self) -> Option<char> {
-        let last = self.query.split_whitespace().last()?;
-        if last.starts_with('@') {
-            Some('@')
-        } else if last.starts_with('#') {
-            Some('#')
-        } else {
-            None
-        }
+    /// Returns suggestions filtered by the current query, grouped by kind.
+    fn grouped_suggestions(&self, suggestions: &[Suggestion]) -> Vec<SuggestionGroup> {
+        let needle = self.active_needle().to_lowercase();
+        let max_per_group = 8;
+
+        let filter_kind = |kind: SuggestionKind| {
+            suggestions
+                .iter()
+                .filter(|s| s.kind == kind && s.text.to_lowercase().contains(&needle))
+                .take(max_per_group)
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+
+        vec![
+            SuggestionGroup {
+                title: "name:",
+                suggestions: filter_kind(SuggestionKind::Plain),
+            },
+            SuggestionGroup {
+                title: "tag:",
+                suggestions: filter_kind(SuggestionKind::Filter),
+            },
+            SuggestionGroup {
+                title: "author:",
+                suggestions: filter_kind(SuggestionKind::Author),
+            },
+            SuggestionGroup {
+                title: "sort:",
+                suggestions: filter_kind(SuggestionKind::Sort),
+            },
+        ]
     }
 
     /// Returns the current completion needle within the active prefix token.
@@ -272,21 +285,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn active_prefix_detects_hash() {
+    fn active_needle_detects_hash() {
         let mut bar = SearchBar {
             query: "screw #Ble".to_owned(),
             id: egui::Id::new("test_search_bar"),
+            request_focus: false,
             selected_suggestion: None,
         };
-        assert_eq!(bar.active_prefix(), Some('#'));
         assert_eq!(bar.active_needle(), "Ble");
 
         bar.query = "@sort:down".to_owned();
-        assert_eq!(bar.active_prefix(), Some('@'));
         assert_eq!(bar.active_needle(), "sort:down");
 
         bar.query = "parametric".to_owned();
-        assert_eq!(bar.active_prefix(), None);
         assert_eq!(bar.active_needle(), "parametric");
     }
 
@@ -295,6 +306,7 @@ mod tests {
         let mut bar = SearchBar {
             query: "screw @so".to_owned(),
             id: egui::Id::new("test_search_bar"),
+            request_focus: false,
             selected_suggestion: None,
         };
         bar.apply_suggestion(&Suggestion::sort("@sort:downloads:ascending"));
@@ -306,6 +318,7 @@ mod tests {
         let mut bar = SearchBar {
             query: "screw #Ble".to_owned(),
             id: egui::Id::new("test_search_bar"),
+            request_focus: false,
             selected_suggestion: None,
         };
         bar.apply_suggestion(&Suggestion::filter("Blender"));
@@ -317,6 +330,7 @@ mod tests {
         let mut bar = SearchBar {
             query: "#Ble".to_owned(),
             id: egui::Id::new("test_search_bar"),
+            request_focus: false,
             selected_suggestion: None,
         };
         bar.apply_suggestion(&Suggestion::filter("Blender"));
@@ -328,6 +342,7 @@ mod tests {
         let mut bar = SearchBar {
             query: "screw @Zen".to_owned(),
             id: egui::Id::new("test_search_bar"),
+            request_focus: false,
             selected_suggestion: None,
         };
         bar.apply_suggestion(&Suggestion::author("ZenFlow"));
@@ -339,6 +354,7 @@ mod tests {
         let mut bar = SearchBar {
             query: "@Zen".to_owned(),
             id: egui::Id::new("test_search_bar"),
+            request_focus: false,
             selected_suggestion: None,
         };
         bar.apply_suggestion(&Suggestion::author("ZenFlow"));
