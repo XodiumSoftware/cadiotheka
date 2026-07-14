@@ -1,4 +1,4 @@
-use crate::components::ui::toggle::ToggleSlider;
+use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
 use crate::context::LayoutContext;
 use crate::i18n::{t_string, use_i18n};
 use crate::utils::window_event_listener;
@@ -139,11 +139,12 @@ pub fn Header() -> impl IntoView {
                 </div>
 
                 <div class="navbar-end">
-                    <ToggleSlider
+                    <ToggleSliderWithSlashLabel
                         checked=layout.wide
                         on_change=move |value| layout.set_wide.set(value)
                         label_left=t_string!(i18n, projects.narrow_mode)
                         label_right=t_string!(i18n, projects.wide_mode)
+                        shortcut_hint="Alt + L"
                     />
                 </div>
             </nav>
