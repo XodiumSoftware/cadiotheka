@@ -69,8 +69,11 @@ pub fn format_time_ago(timestamp: time::OffsetDateTime) -> String {
 }
 
 /// Formats a duration as a relative age string.
+///
+/// Negative durations are clamped to zero so timestamps in the future do not
+/// produce confusing output such as "-5 seconds ago".
 fn format_duration_ago(duration: time::Duration) -> String {
-    let seconds = duration.whole_seconds();
+    let seconds = duration.max(time::Duration::ZERO).whole_seconds();
 
     let value = if seconds < 60 {
         (seconds, "second")
@@ -134,6 +137,18 @@ pub fn language_color(language: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn format_duration_ago_clamps_negative_durations() {
+        assert_eq!(
+            format_duration_ago(time::Duration::seconds(-5)),
+            "0 seconds ago"
+        );
+        assert_eq!(
+            format_duration_ago(time::Duration::hours(-24)),
+            "0 seconds ago"
+        );
+    }
 
     #[test]
     fn format_number_compact() {
