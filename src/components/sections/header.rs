@@ -413,12 +413,15 @@ pub fn Header() -> impl IntoView {
             <Modal
                 open=Signal::from(search_open)
                 on_close=move |_| set_search_open.set(false)
+                on_inner_click=move |_| {
+                    input_ref.get().map(|input| input.focus().ok());
+                }
             >
                 <div class="space-y-0 flex flex-col min-h-0">
                     <div class="relative">
                         <input
                             type="text"
-                            class="input w-full pr-10 bg-transparent border-0 focus:outline-none focus:ring-0"
+                            class="input w-full pr-10 bg-transparent !border-0 !outline-none !ring-0 focus:!outline-none focus:!ring-0"
                             placeholder=t_string!(i18n, search.placeholder)
                             prop:value=move || search.query.get()
                             on:input=move |ev| {

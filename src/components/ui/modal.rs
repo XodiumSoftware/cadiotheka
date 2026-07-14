@@ -7,6 +7,7 @@ use leptos::wasm_bindgen::JsCast;
 pub fn Modal(
     #[prop(into)] open: Signal<bool>,
     #[prop(into)] on_close: Callback<()>,
+    #[prop(into)] on_inner_click: Callback<()>,
     children: Children,
 ) -> impl IntoView {
     let children_view = children();
@@ -39,9 +40,12 @@ pub fn Modal(
                 if let Some(target) = ev.target()
                     && let Ok(clicked) = target.dyn_into::<leptos::web_sys::Node>()
                     && let Some(backdrop) = backdrop_ref.get()
-                    && backdrop.is_same_node(Some(&clicked))
                 {
-                    on_close.run(());
+                    if backdrop.is_same_node(Some(&clicked)) {
+                        on_close.run(());
+                    } else {
+                        on_inner_click.run(());
+                    }
                 }
             }
         >
