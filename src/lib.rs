@@ -44,6 +44,8 @@ pub mod context;
 
 pub mod data;
 
+pub mod engines;
+
 pub mod metadata {
     pub mod platforms;
     pub mod tags;
@@ -61,6 +63,7 @@ pub use app::*;
 pub use components::*;
 pub use context::*;
 pub use data::*;
+pub use engines::*;
 pub use i18n::*;
 pub use metadata::*;
 pub use utils::*;

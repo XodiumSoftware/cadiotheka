@@ -1,5 +1,7 @@
 use crate::components::ui::modal::Modal;
-use crate::context::LayoutContext;
+use crate::context::{LayoutContext, SearchContext};
+use crate::data::load_cards;
+use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
 use crate::i18n::{t_string, use_i18n};
 use crate::utils::window_event_listener;
 use leptos::prelude::*;
@@ -7,14 +9,142 @@ use leptos::task::spawn_local;
 use leptos::web_sys;
 use std::time::Duration;
 
+/// A grouped slice of suggestions shown under a category header.
+#[derive(Clone, PartialEq)]
+struct SuggestionGroup {
+    title: &'static str,
+    suggestions: Vec<Suggestion>,
+}
+
+/// Filters and groups suggestions by kind, limiting each group to 8 items
+/// and matching the active completion needle.
+fn group_and_filter_suggestions(suggestions: &[Suggestion], needle: &str) -> Vec<SuggestionGroup> {
+    let needle = needle.to_lowercase();
+    let max_per_group = 8;
+
+    let filter_kind = |kind: SuggestionKind| {
+        suggestions
+            .iter()
+            .filter(|s| s.kind == kind && s.text.to_lowercase().contains(&needle))
+            .take(max_per_group)
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+
+    vec![
+        SuggestionGroup {
+            title: "name:",
+            suggestions: filter_kind(SuggestionKind::Plain),
+        },
+        SuggestionGroup {
+            title: "tag:",
+            suggestions: filter_kind(SuggestionKind::Filter),
+        },
+        SuggestionGroup {
+            title: "author:",
+            suggestions: filter_kind(SuggestionKind::Author),
+        },
+        SuggestionGroup {
+            title: "sort:",
+            suggestions: filter_kind(SuggestionKind::Sort),
+        },
+    ]
+}
+
+/// Returns the current completion needle within the active prefix token.
+fn active_needle(query: &str) -> String {
+    query
+        .split_whitespace()
+        .last()
+        .map(|token| {
+            if token.starts_with('@') || token.starts_with('#') {
+                token[1..].to_owned()
+            } else {
+                token.to_owned()
+            }
+        })
+        .unwrap_or_default()
+}
+
+/// Applies a clicked suggestion to a query, replacing the partial token when
+/// completing a prefixed suggestion.
+fn apply_suggestion(query: &str, text: &str, kind: SuggestionKind) -> String {
+    let mut parts: Vec<String> = query.split_whitespace().map(|s| s.to_owned()).collect();
+
+    match kind {
+        SuggestionKind::Sort => {
+            parts.retain(|p| !p.starts_with("@sort:"));
+            if parts.last().is_some_and(|p| p.starts_with('@')) {
+                parts.pop();
+            }
+            parts.push(text.to_owned());
+        }
+        SuggestionKind::Author => {
+            let replacement = format!("@author:{}", text);
+            replace_last_token(&mut parts, replacement);
+        }
+        SuggestionKind::Filter => {
+            let replacement = format!("#{}", text);
+            replace_last_token(&mut parts, replacement);
+        }
+        SuggestionKind::Plain => {
+            let needs_space = !query.is_empty() && !query.ends_with(' ');
+            if needs_space {
+                return format!("{} {}", query, text);
+            }
+            return format!("{}{}", query, text);
+        }
+    }
+
+    parts.join(" ")
+}
+
+/// Replaces the last whitespace-separated token with a new string.
+fn replace_last_token(parts: &mut Vec<String>, replacement: String) {
+    if parts.is_empty() {
+        parts.push(replacement);
+    } else {
+        parts.pop();
+        parts.push(replacement);
+    }
+}
+
 #[component]
 pub fn Header() -> impl IntoView {
     let i18n = use_i18n();
     let _layout = LayoutContext::use_context();
+    let search = SearchContext::use_context();
     let (is_scrolled, set_is_scrolled) = signal(false);
     let (is_logo_active, set_is_logo_active) = signal(false);
     let (letters_visible, set_letters_visible) = signal(true);
     let (search_open, set_search_open) = signal(false);
+    let input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
+    let (selected_index, set_selected_index) = signal::<Option<usize>>(None);
+
+    let cards = load_cards();
+    let engine = SearchEngine::new(cards);
+
+    let suggestions = Memo::new(move |_| {
+        let query = search.query.get();
+        let all = engine.suggestions(&query);
+        group_and_filter_suggestions(&all, &active_needle(&query))
+    });
+
+    let insert_suggestion = move |text: String, kind: SuggestionKind| {
+        let current = search.query.get();
+        let new_query = apply_suggestion(&current, &text, kind);
+        search.set_query.set(new_query + " ");
+        set_selected_index.set(None);
+        input_ref.get().map(|input| input.focus().ok());
+    };
+
+    let flattened_suggestions = move || {
+        suggestions
+            .get()
+            .into_iter()
+            .flat_map(|group| group.suggestions)
+            .collect::<Vec<Suggestion>>()
+    };
 
     // Scroll listener for backdrop blur
     Effect::new(move |_| {
@@ -26,13 +156,29 @@ pub fn Header() -> impl IntoView {
         });
     });
 
-    // Alt+S opens the search modal
+    // Alt+S opens the search modal and focuses the input
     Effect::new(move |_| {
         let set_search_open = set_search_open;
-        window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
+        let input_ref = input_ref;
+        window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("s") {
                 ev.prevent_default();
                 set_search_open.set(true);
+                set_selected_index.set(None);
+                input_ref.get().map(|input| input.focus().ok());
+            }
+        });
+    });
+
+    // Global Escape closes the search modal and resets the query.
+    Effect::new(move |_| {
+        let search = search;
+        window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
+            if search_open.get() && ev.key().as_str() == "Escape" {
+                ev.prevent_default();
+                search.set_query.set(String::new());
+                set_search_open.set(false);
+                set_selected_index.set(None);
             }
         });
     });
@@ -52,6 +198,48 @@ pub fn Header() -> impl IntoView {
     };
 
     let logo_wordmark = t_string!(i18n, header.logo_wordmark);
+
+    let handle_keydown = move |ev: leptos::web_sys::KeyboardEvent| {
+        let flat = flattened_suggestions();
+        if flat.is_empty() {
+            return;
+        }
+
+        match ev.key().as_str() {
+            "ArrowDown" => {
+                ev.prevent_default();
+                set_selected_index.update(|idx| {
+                    *idx = Some(
+                        idx.unwrap_or(usize::MAX)
+                            .saturating_add(1)
+                            .min(flat.len() - 1),
+                    );
+                });
+            }
+            "ArrowUp" => {
+                ev.prevent_default();
+                set_selected_index.update(|idx| {
+                    *idx = Some(
+                        idx.unwrap_or(flat.len())
+                            .saturating_sub(1)
+                            .min(flat.len() - 1),
+                    );
+                });
+            }
+            "Enter" => {
+                if let Some(idx) = selected_index.get()
+                    && let Some(suggestion) = flat.get(idx)
+                {
+                    ev.prevent_default();
+                    let text = suggestion.text.clone();
+                    let kind = suggestion.kind;
+                    insert_suggestion(text, kind);
+                }
+            }
+            _ => {}
+        }
+    };
+
     let letter_elements = logo_wordmark
         .chars()
         .enumerate()
@@ -181,8 +369,120 @@ pub fn Header() -> impl IntoView {
                 on_close=move |_| set_search_open.set(false)
             >
                 <div class="space-y-4">
-                    <h2 class="text-xl font-semibold text-base-content">{t_string!(i18n, search.title)}</h2>
-                    <p class="text-base-content/70">{t_string!(i18n, search.stub_message)}</p>
+                    <div class="relative">
+                        <input
+                            type="text"
+                            class="input input-bordered w-full pr-10"
+                            placeholder=t_string!(i18n, search.placeholder)
+                            prop:value=move || search.query.get()
+                            on:input=move |ev| {
+                                search.set_query.set(event_target_value(&ev));
+                                set_selected_index.set(None);
+                            }
+                            on:keydown=handle_keydown
+                            node_ref=input_ref
+                        />
+                        <button
+                            type="button"
+                            class=move || {
+                                if search.query.get().is_empty() {
+                                    "hidden"
+                                } else {
+                                    "absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
+                                }
+                            }
+                            aria-label=t_string!(i18n, search.clear)
+                            on:click=move |_| search.set_query.set(String::new())
+                        >
+                            "×"
+                        </button>
+                    </div>
+
+                    <div class="max-h-72 overflow-y-auto space-y-2">
+                        {move || {
+                            let groups = suggestions.get();
+                            let selected = selected_index.get();
+                            let non_empty_indices: Vec<usize> = groups
+                                .iter()
+                                .enumerate()
+                                .filter(|(_, group)| !group.suggestions.is_empty())
+                                .map(|(index, _)| index)
+                                .collect();
+
+                            if groups.iter().all(|group| group.suggestions.is_empty()) {
+                                view! {
+                                    <p class="text-base-content/50 text-sm">{t_string!(i18n, search.no_suggestions)}</p>
+                                }
+                                    .into_any()
+                            } else {
+                                let mut global_index = 0usize;
+                                view! {
+                                    <div class="space-y-2">
+                                        {groups
+                                            .into_iter()
+                                            .enumerate()
+                                            .filter(|(_, group)| !group.suggestions.is_empty())
+                                            .map(|(group_index, group)| {
+                                                let is_last = non_empty_indices.last().is_some_and(|last| *last == group_index);
+                                                let group_view = group.suggestions.into_iter().map(|suggestion| {
+                                                    let is_selected = selected == Some(global_index);
+                                                    let text = suggestion.text.clone();
+                                                    let label = match suggestion.kind {
+                                                        SuggestionKind::Sort => suggestion.text.clone(),
+                                                        SuggestionKind::Author => format!("@author:{}", suggestion.text),
+                                                        SuggestionKind::Filter => format!("#{}", suggestion.text),
+                                                        SuggestionKind::Plain => suggestion.text.clone(),
+                                                    };
+                                                    let badge = match suggestion.kind {
+                                                        SuggestionKind::Sort => "sort",
+                                                        SuggestionKind::Author => "author",
+                                                        SuggestionKind::Filter => "filter",
+                                                        SuggestionKind::Plain => "search",
+                                                    };
+                                                    let kind = suggestion.kind;
+                                                    let item_class = if is_selected {
+                                                        "flex items-center justify-between w-full px-3 py-2 bg-primary text-primary-content rounded"
+                                                    } else {
+                                                        "flex items-center justify-between w-full px-3 py-2 hover:bg-base-300 rounded"
+                                                    };
+                                                    let index = global_index;
+                                                    global_index += 1;
+                                                    view! {
+                                                        <button
+                                                            type="button"
+                                                            class=item_class
+                                                            on:click=move |_| insert_suggestion(text.clone(), kind)
+                                                            on:mouseenter=move |_| set_selected_index.set(Some(index))
+                                                        >
+                                                            <span class="truncate">{label}</span>
+                                                            <span class="badge badge-xs badge-ghost ml-2">{badge}</span>
+                                                        </button>
+                                                    }
+                                                }).collect_view();
+
+                                                view! {
+                                                    <div class="space-y-1">
+                                                        <span class="text-xs font-semibold text-base-content/50 uppercase tracking-wider px-1">{group.title}</span>
+                                                        {group_view}
+                                                        {move || {
+                                                            if is_last {
+                                                                None
+                                                            } else {
+                                                                Some(view! {
+                                                                    <hr class="border-base-content/10 my-2" />
+                                                                })
+                                                            }
+                                                        }}
+                                                    </div>
+                                                }
+                                            })
+                                            .collect_view()}
+                                    </div>
+                                }
+                                    .into_any()
+                            }
+                        }}
+                    </div>
                 </div>
             </Modal>
         </header>

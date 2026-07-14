@@ -11,7 +11,9 @@
     "search": {
         "open": "Open search",
         "title": "Search",
-        "stub_message": "Search is not implemented yet."
+        "placeholder": "Search projects, tags, platforms, authors...",
+        "clear": "Clear search",
+        "no_suggestions": "No suggestions available."
     },
     "footer": {
         "company_name": "XODIUM™",

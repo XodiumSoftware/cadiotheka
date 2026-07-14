@@ -1,5 +1,5 @@
 use crate::components::{Footer, Header, ProjectsSection};
-use crate::context::LayoutContext;
+use crate::context::{LayoutContext, SearchContext};
 use crate::i18n::{I18nContextProvider, t, use_i18n};
 use crate::utils::window_event_listener;
 use leptos::prelude::*;
@@ -18,6 +18,7 @@ pub fn App() -> impl IntoView {
 fn InnerApp() -> impl IntoView {
     let i18n = use_i18n();
     LayoutContext::provide_with_default(false);
+    SearchContext::provide_with_default();
 
     Effect::new(move |_| {
         let layout = LayoutContext::use_context();
