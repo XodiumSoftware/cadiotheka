@@ -1,4 +1,5 @@
 use leptos::wasm_bindgen::JsCast;
+use leptos::wasm_bindgen::JsValue;
 use leptos::wasm_bindgen::closure::Closure;
 
 /// Add a listener to the browser `window` and automatically remove it when
@@ -21,14 +22,21 @@ where
     // `on_cleanup`; once detached, the JS function becomes unreachable and is
     // collected, freeing the associated Rust closure.
     let function: js_sys::Function = closure.as_ref().unchecked_ref::<js_sys::Function>().clone();
-    window
-        .add_event_listener_with_callback(event, &function)
-        .ok()?;
+    if let Err(err) = window.add_event_listener_with_callback(event, &function) {
+        leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(
+            "Failed to add window '{event}' event listener: {err:?}"
+        )));
+        return None;
+    }
     std::mem::forget(closure);
 
     leptos::prelude::on_cleanup(move || {
-        if let Some(window) = leptos::web_sys::window() {
-            let _ = window.remove_event_listener_with_callback(event, &function);
+        if let Some(window) = leptos::web_sys::window()
+            && let Err(err) = window.remove_event_listener_with_callback(event, &function)
+        {
+            leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(
+                "Failed to remove window '{event}' event listener: {err:?}"
+            )));
         }
     });
 
