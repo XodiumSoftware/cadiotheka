@@ -1,5 +1,8 @@
 {
     "skip_to_content": "Skip to main content",
+    "header": {
+        "logo_wordmark": "Cadiotheka"
+    },
     "nav": {
         "github": "Github",
         "sponsor": "Sponsor"
