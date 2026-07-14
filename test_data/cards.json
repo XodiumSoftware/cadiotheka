@@ -4,8 +4,21 @@
       "title": "Mountain Bike",
       "author": "TrailBlazer",
       "description": "A rugged mountain bike model ready for off-road adventures.",
-      "tags": ["3d_model", "vehicle", "fabrication", "engineering", "diy"],
-      "supported_platforms": ["blender", "freecad", "fusion_360", "step", "mesh"],
+      "extended_desc": "A rugged mountain bike model ready for off-road adventures.\n\n**Highlights:**\n- Detailed frame, fork, and wheel assembly\n- Suitable for rendering, animation, or fabrication prep\n- Includes STEP and mesh exports for broad compatibility",
+      "tags": [
+        "3d_model",
+        "vehicle",
+        "fabrication",
+        "engineering",
+        "diy"
+      ],
+      "supported_platforms": [
+        "blender",
+        "freecad",
+        "fusion_360",
+        "step",
+        "mesh"
+      ],
       "downloads": 1200,
       "favorites": 84,
       "timestamp": "2026-07-07T14:30:00Z",
@@ -15,8 +28,15 @@
       "title": "Modern Chair",
       "author": "FurniStudio",
       "description": "Minimalist chair design with clean curves and ergonomic proportions.",
-      "tags": ["furniture", "interior"],
-      "supported_platforms": ["sketchup", "blender"],
+      "extended_desc": "Minimalist chair design with clean curves and ergonomic proportions.\n\nThis model focuses on *ergonomic seating geometry* and a refined silhouette that fits modern interiors. The surfaces are clean, making it a great base for upholstery experiments or CNC plans.",
+      "tags": [
+        "furniture",
+        "interior"
+      ],
+      "supported_platforms": [
+        "sketchup",
+        "blender"
+      ],
       "downloads": 856,
       "favorites": 42,
       "timestamp": "2026-07-02T09:15:00Z",
@@ -26,8 +46,21 @@
       "title": "Robot Arm",
       "author": "MechLab",
       "description": "Industrial 6-axis robot arm assembly for automation projects.",
-      "tags": ["robotics", "engineering", "fabrication", "electronics", "tooling"],
-      "supported_platforms": ["freecad", "fusion_360", "step", "solidworks", "onshape"],
+      "extended_desc": "Industrial 6-axis robot arm assembly for automation projects.\n\nThe assembly includes base, shoulder, elbow, and wrist joints with realistic motion envelopes. It is intended for **simulation, educational demos, and conceptual factory layouts** rather than production deployment.",
+      "tags": [
+        "robotics",
+        "engineering",
+        "fabrication",
+        "electronics",
+        "tooling"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "fusion_360",
+        "step",
+        "solidworks",
+        "onshape"
+      ],
       "downloads": 3400,
       "favorites": 215,
       "timestamp": "2026-07-09T11:00:00Z",
@@ -37,8 +70,14 @@
       "title": "Desk Lamp",
       "author": "Lumina",
       "description": "Adjustable articulated desk lamp with a classic workshop look.",
-      "tags": ["lighting", "decor"],
-      "supported_platforms": ["blender"],
+      "extended_desc": "Adjustable articulated desk lamp with a classic workshop look.\n\nThe lamp features a hinged arm and swivel head so you can pose it naturally in renders. Use it to add *warm, functional detail* to workshop or studio scenes.",
+      "tags": [
+        "lighting",
+        "decor"
+      ],
+      "supported_platforms": [
+        "blender"
+      ],
       "downloads": 432,
       "favorites": 19,
       "timestamp": "2026-06-09T18:45:00Z",
@@ -48,8 +87,15 @@
       "title": "Drone Frame",
       "author": "AeroDesign",
       "description": "Lightweight quadcopter frame optimized for long flight times.",
-      "tags": ["aerospace", "diy"],
-      "supported_platforms": ["freecad", "kicad"],
+      "extended_desc": "Lightweight quadcopter frame optimized for long flight times.\n\nThe frame is designed around a *central battery bay* and minimalist arms to reduce weight. It works well for aerodynamic studies, hobby builds, or as a starting point for custom electronics integration.",
+      "tags": [
+        "aerospace",
+        "diy"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "kicad"
+      ],
       "downloads": 2100,
       "favorites": 136,
       "timestamp": "2026-07-04T22:20:00Z",
@@ -59,8 +105,15 @@
       "title": "CNC Router Table",
       "author": "MakerWorks",
       "description": "Compact desktop CNC router table for wood and aluminum.",
-      "tags": ["fabrication", "tooling"],
-      "supported_platforms": ["freecad", "step"],
+      "extended_desc": "Compact desktop CNC router table for wood and aluminum.\n\nThe frame is rigid enough for light aluminum passes yet compact for benchtop use. Consider pairing it with a custom spoilboard and dust shoe for a complete hobby setup.",
+      "tags": [
+        "fabrication",
+        "tooling"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "step"
+      ],
       "downloads": 780,
       "favorites": 63,
       "timestamp": "2026-07-08T07:20:00Z",
@@ -70,8 +123,15 @@
       "title": "Parametric Shelf",
       "author": "ShelfGen",
       "description": "Adjustable wall shelf driven by width and height parameters.",
-      "tags": ["parametric", "furniture"],
-      "supported_platforms": ["freecad", "fusion_360"],
+      "extended_desc": "Adjustable wall shelf driven by width and height parameters.\n\nThis parametric shelf lets you change *width, depth, and bracket spacing* to match your space. It is a practical introduction to constraint-driven modeling for furniture projects.",
+      "tags": [
+        "parametric",
+        "furniture"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "fusion_360"
+      ],
       "downloads": 1540,
       "favorites": 98,
       "timestamp": "2026-07-06T16:45:00Z",
@@ -81,8 +141,15 @@
       "title": "Racing Wheel",
       "author": "SimGear",
       "description": "Sim racing steering wheel with button box cutouts.",
-      "tags": ["vehicle", "electronics"],
-      "supported_platforms": ["fusion_360", "kicad"],
+      "extended_desc": "Sim racing steering wheel with button box cutouts.\n\nThe wheel rim and button plate are modeled for *DIY sim rigs*. Cutouts are sized for common arcade buttons and rotary encoders, so you can move from CAD to controller fairly quickly.",
+      "tags": [
+        "vehicle",
+        "electronics"
+      ],
+      "supported_platforms": [
+        "fusion_360",
+        "kicad"
+      ],
       "downloads": 930,
       "favorites": 71,
       "timestamp": "2026-07-05T13:10:00Z",
@@ -92,8 +159,15 @@
       "title": "Brutalist Vase",
       "author": "FormLab",
       "description": "Angular concrete-cast vase inspired by brutalist architecture.",
-      "tags": ["art", "decor"],
-      "supported_platforms": ["blender", "mesh"],
+      "extended_desc": "Angular concrete-cast vase inspired by brutalist architecture.\n\nBold planes and raw texture give this vase a *monumental presence* despite its small scale. It prints or casts cleanly and works as a standalone decor piece or a study in form and shadow.",
+      "tags": [
+        "art",
+        "decor"
+      ],
+      "supported_platforms": [
+        "blender",
+        "mesh"
+      ],
       "downloads": 640,
       "favorites": 55,
       "timestamp": "2026-07-03T10:00:00Z",
@@ -103,8 +177,21 @@
       "title": "Arduino Enclosure",
       "author": "CircuitCase",
       "description": "Snap-fit enclosure for standard Arduino Uno boards.",
-      "tags": ["electronics", "diy", "fabrication", "tooling", "engineering"],
-      "supported_platforms": ["freecad", "tinkercad", "kicad", "step", "mesh"],
+      "extended_desc": "Snap-fit enclosure for standard Arduino Uno boards.\n\nThe lid snaps on without screws and leaves the USB and power headers accessible. It is a reliable starting point for **portable sensor boxes, teaching kits, and quick prototypes**.",
+      "tags": [
+        "electronics",
+        "diy",
+        "fabrication",
+        "tooling",
+        "engineering"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "tinkercad",
+        "kicad",
+        "step",
+        "mesh"
+      ],
       "downloads": 4100,
       "favorites": 312,
       "timestamp": "2026-07-09T09:30:00Z",
@@ -114,8 +201,15 @@
       "title": "Gothic Cathedral Window",
       "author": "StoneMason",
       "description": "Ornate Gothic window tracery for architectural visualization.",
-      "tags": ["architecture", "art"],
-      "supported_platforms": ["blender", "sketchup"],
+      "extended_desc": "Ornate Gothic window tracery for architectural visualization.\n\nThe tracery captures the pointed arches and stone mullions typical of Gothic design. Use it to add *authentic detail* to historic buildings, fantasy environments, or cathedral interiors.",
+      "tags": [
+        "architecture",
+        "art"
+      ],
+      "supported_platforms": [
+        "blender",
+        "sketchup"
+      ],
       "downloads": 520,
       "favorites": 47,
       "timestamp": "2026-06-28T14:15:00Z",
@@ -125,8 +219,15 @@
       "title": "Gearbox Assembly",
       "author": "GearHead",
       "description": "Two-stage reduction gearbox with involute spur gears.",
-      "tags": ["engineering", "3d_model"],
-      "supported_platforms": ["solidworks", "step"],
+      "extended_desc": "Two-stage reduction gearbox with involute spur gears.\n\nEach gear is modeled with involute tooth profiles suitable for motion studies. The assembly is a useful reference for learning about **gear ratios, bearing placement, and shaft alignment**.",
+      "tags": [
+        "engineering",
+        "3d_model"
+      ],
+      "supported_platforms": [
+        "solidworks",
+        "step"
+      ],
       "downloads": 1120,
       "favorites": 89,
       "timestamp": "2026-07-01T08:50:00Z",
@@ -136,8 +237,15 @@
       "title": "Low-Poly Tree Pack",
       "author": "PolyNature",
       "description": "Twelve stylized trees for game environments.",
-      "tags": ["game_asset", "art"],
-      "supported_platforms": ["blender", "mesh"],
+      "extended_desc": "Twelve stylized trees for game environments.\n\nThe pack includes a variety of *canopy shapes and trunk styles* to populate scenes quickly. Models are low-poly and unwrap-friendly, making them ideal for mobile or stylized desktop games.",
+      "tags": [
+        "game_asset",
+        "art"
+      ],
+      "supported_platforms": [
+        "blender",
+        "mesh"
+      ],
       "downloads": 8900,
       "favorites": 654,
       "timestamp": "2026-07-09T12:00:00Z",
@@ -147,8 +255,15 @@
       "title": "Foldable Phone Stand",
       "author": "PocketProp",
       "description": "Flat-pack phone stand that folds without fasteners.",
-      "tags": ["furniture", "diy"],
-      "supported_platforms": ["freecad", "tinkercad"],
+      "extended_desc": "Flat-pack phone stand that folds without fasteners.\n\nThe stand ships as a single flat piece and locks into shape by flexing tabs. It is a satisfying **first laser-cutter or 3D-print project** for beginners.",
+      "tags": [
+        "furniture",
+        "diy"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "tinkercad"
+      ],
       "downloads": 5600,
       "favorites": 423,
       "timestamp": "2026-07-07T19:40:00Z",
@@ -158,8 +273,15 @@
       "title": "Mars Rover Replica",
       "author": "RedPlanet",
       "description": "Detailed scale model of a six-wheeled rover chassis.",
-      "tags": ["aerospace", "robotics"],
-      "supported_platforms": ["fusion_360", "blender"],
+      "extended_desc": "Detailed scale model of a six-wheeled rover chassis.\n\nThe chassis features a rocker-bogie suspension layout inspired by planetary rovers. It is perfect for *robotics competitions, educational demonstrations, or sci-fi display builds*.",
+      "tags": [
+        "aerospace",
+        "robotics"
+      ],
+      "supported_platforms": [
+        "fusion_360",
+        "blender"
+      ],
       "downloads": 2300,
       "favorites": 178,
       "timestamp": "2026-07-02T11:25:00Z",
@@ -169,8 +291,15 @@
       "title": "Kitchen Hook Rail",
       "author": "OrganizeIt",
       "description": "Wall-mounted rail with adjustable utensil hooks.",
-      "tags": ["furniture", "interior"],
-      "supported_platforms": ["freecad", "step"],
+      "extended_desc": "Wall-mounted rail with adjustable utensil hooks.\n\nThe rail system keeps kitchen tools within reach while freeing drawer space. Hooks slide along the rail, so you can *reconfigure the layout* as your collection changes.",
+      "tags": [
+        "furniture",
+        "interior"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "step"
+      ],
       "downloads": 670,
       "favorites": 51,
       "timestamp": "2026-06-30T15:55:00Z",
@@ -180,8 +309,15 @@
       "title": "Retro Arcade Cabinet",
       "author": "PixelCade",
       "description": "Quarter-scale arcade cabinet with joystick cutouts.",
-      "tags": ["game_asset", "electronics"],
-      "supported_platforms": ["blender", "kicad"],
+      "extended_desc": "Quarter-scale arcade cabinet with joystick cutouts.\n\nThis nostalgic cabinet captures the look of classic upright arcade machines in a compact form. Add a tiny screen and joystick to turn it into a **fun desk accessory or game scene prop**.",
+      "tags": [
+        "game_asset",
+        "electronics"
+      ],
+      "supported_platforms": [
+        "blender",
+        "kicad"
+      ],
       "downloads": 1450,
       "favorites": 112,
       "timestamp": "2026-07-08T21:00:00Z",
@@ -191,8 +327,15 @@
       "title": "Wind Turbine Blade",
       "author": "GreenEnergy",
       "description": "Parametric wind turbine blade profile for small generators.",
-      "tags": ["engineering", "parametric"],
-      "supported_platforms": ["fusion_360", "step"],
+      "extended_desc": "Parametric wind turbine blade profile for small generators.\n\nThe blade profile can be adjusted for *diameter, pitch, and chord length* to match your generator. It is intended for small-scale renewable energy experiments and classroom demonstrations.",
+      "tags": [
+        "engineering",
+        "parametric"
+      ],
+      "supported_platforms": [
+        "fusion_360",
+        "step"
+      ],
       "downloads": 880,
       "favorites": 74,
       "timestamp": "2026-07-04T06:10:00Z",
@@ -202,8 +345,15 @@
       "title": "Modular Drawer Organizer",
       "author": "TidyBox",
       "description": "Interlocking trays that adapt to drawer widths.",
-      "tags": ["furniture", "parametric"],
-      "supported_platforms": ["freecad", "tinkercad"],
+      "extended_desc": "Interlocking trays that adapt to drawer widths.\n\nThe trays connect with simple dovetail joints that slide together without glue. Mix and match lengths to build a **custom organizer for any drawer or workbench shelf**.",
+      "tags": [
+        "furniture",
+        "parametric"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "tinkercad"
+      ],
       "downloads": 3200,
       "favorites": 256,
       "timestamp": "2026-07-06T03:30:00Z",
@@ -213,8 +363,15 @@
       "title": "Human Skull Study",
       "author": "Anatomy3D",
       "description": "Anatomically referenced skull model for study and art.",
-      "tags": ["art", "educational"],
-      "supported_platforms": ["blender", "mesh"],
+      "extended_desc": "Anatomically referenced skull model for study and art.\n\nThe skull is proportioned for *anatomy study, figure drawing reference, and medical visualization*. It balances accuracy with clean topology, so it also sculpts and renders well.",
+      "tags": [
+        "art",
+        "educational"
+      ],
+      "supported_platforms": [
+        "blender",
+        "mesh"
+      ],
       "downloads": 2100,
       "favorites": 167,
       "timestamp": "2026-06-25T18:20:00Z",
@@ -224,8 +381,15 @@
       "title": "Solar Panel Mount",
       "author": "OffGrid",
       "description": "Adjustable roof mount for 100W solar panels.",
-      "tags": ["engineering", "diy"],
-      "supported_platforms": ["freecad", "step"],
+      "extended_desc": "Adjustable roof mount for 100W solar panels.\n\nThe mount allows tilt adjustment for seasonal sun angles and uses common hardware. Review local wind and snow loads before fabricating, since this model is **educational, not engineered for installation**.",
+      "tags": [
+        "engineering",
+        "diy"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "step"
+      ],
       "downloads": 740,
       "favorites": 58,
       "timestamp": "2026-07-05T17:45:00Z",
@@ -235,8 +399,15 @@
       "title": "Mechanical Keyboard Case",
       "author": "KeyCrafter",
       "description": "Minimalist 65% keyboard case with gasket mounting.",
-      "tags": ["electronics", "tooling"],
-      "supported_platforms": ["fusion_360", "kicad"],
+      "extended_desc": "Minimalist 65% keyboard case with gasket mounting.\n\nThe case uses a gasket strip mount to soften the typing feel and simplify assembly. It is a popular starting point for *custom mechanical keyboard builds* using standard 65% PCBs.",
+      "tags": [
+        "electronics",
+        "tooling"
+      ],
+      "supported_platforms": [
+        "fusion_360",
+        "kicad"
+      ],
       "downloads": 4600,
       "favorites": 389,
       "timestamp": "2026-07-09T15:15:00Z",
@@ -246,8 +417,15 @@
       "title": "Victorian Street Lamp",
       "author": "Gaslight",
       "description": "Ornate cast-iron street lamp for historic scenes.",
-      "tags": ["lighting", "architecture"],
-      "supported_platforms": ["blender", "sketchup"],
+      "extended_desc": "Ornate cast-iron street lamp for historic scenes.\n\nThe lamp features decorative brackets and a fluted post typical of 19th-century design. It adds *instant atmosphere* to period street scenes, parks, and architectural visualizations.",
+      "tags": [
+        "lighting",
+        "architecture"
+      ],
+      "supported_platforms": [
+        "blender",
+        "sketchup"
+      ],
       "downloads": 590,
       "favorites": 44,
       "timestamp": "2026-06-22T12:30:00Z",
@@ -257,8 +435,15 @@
       "title": "Pneumatic Cylinder",
       "author": "AirPower",
       "description": "Double-acting pneumatic cylinder with mounting brackets.",
-      "tags": ["engineering", "3d_model"],
-      "supported_platforms": ["solidworks", "step"],
+      "extended_desc": "Double-acting pneumatic cylinder with mounting brackets.\n\nThe cylinder assembly includes clevis mounts and port fittings for motion simulations. Use it to teach **pneumatic actuation concepts** or to detail industrial machine models.",
+      "tags": [
+        "engineering",
+        "3d_model"
+      ],
+      "supported_platforms": [
+        "solidworks",
+        "step"
+      ],
       "downloads": 980,
       "favorites": 82,
       "timestamp": "2026-07-03T05:00:00Z",
@@ -268,8 +453,15 @@
       "title": "Tiny House Frame",
       "author": "CompactLiving",
       "description": "Structural frame for a 24-foot tiny house on wheels.",
-      "tags": ["architecture", "fabrication"],
-      "supported_platforms": ["sketchup", "freecad"],
+      "extended_desc": "Structural frame for a 24-foot tiny house on wheels.\n\nThe frame is laid out with trailer mounting points and floor joist pockets. It is meant as a *conceptual planning model* and should be reviewed by a qualified designer before actual construction.",
+      "tags": [
+        "architecture",
+        "fabrication"
+      ],
+      "supported_platforms": [
+        "sketchup",
+        "freecad"
+      ],
       "downloads": 1300,
       "favorites": 105,
       "timestamp": "2026-07-01T20:10:00Z",
@@ -279,8 +471,15 @@
       "title": "Rocket Engine Nozzle",
       "author": "LaunchPad",
       "description": "Bell-shaped nozzle for educational propulsion demos.",
-      "tags": ["aerospace", "educational"],
-      "supported_platforms": ["fusion_360", "blender"],
+      "extended_desc": "Bell-shaped nozzle for educational propulsion demos.\n\nThe bell contour follows a simplified Rao profile for subsonic and supersonic flow discussions. This is a **visual teaching aid**, not a flight-rated component.",
+      "tags": [
+        "aerospace",
+        "educational"
+      ],
+      "supported_platforms": [
+        "fusion_360",
+        "blender"
+      ],
       "downloads": 1700,
       "favorites": 143,
       "timestamp": "2026-07-08T14:00:00Z",
@@ -290,8 +489,15 @@
       "title": "Cable Chain",
       "author": "WireManager",
       "description": "Printable energy chain for cable management on moving gantries.",
-      "tags": ["tooling", "fabrication"],
-      "supported_platforms": ["freecad", "step"],
+      "extended_desc": "Printable energy chain for cable management on moving gantries.\n\nThe links snap together to form a flexible cable carrier for 3D printers, CNC machines, or camera sliders. Print a short run to test *bend radius and retention* before scaling up.",
+      "tags": [
+        "tooling",
+        "fabrication"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "step"
+      ],
       "downloads": 2800,
       "favorites": 231,
       "timestamp": "2026-07-07T04:25:00Z",
@@ -301,8 +507,15 @@
       "title": "Meditation Fountain",
       "author": "ZenFlow",
       "description": "Small indoor water fountain with quiet pump housing.",
-      "tags": ["decor", "art"],
-      "supported_platforms": ["blender", "tinkercad"],
+      "extended_desc": "Small indoor water fountain with quiet pump housing.\n\nThe design isolates the pump in a hidden chamber to reduce noise and splashing. It brings a *calming presence* to desks, meditation corners, or small interior scenes.",
+      "tags": [
+        "decor",
+        "art"
+      ],
+      "supported_platforms": [
+        "blender",
+        "tinkercad"
+      ],
       "downloads": 430,
       "favorites": 37,
       "timestamp": "2026-06-20T09:50:00Z",
@@ -312,8 +525,15 @@
       "title": "Exoskeleton Hand",
       "author": "BioMech",
       "description": "Wearable hand exoskeleton for rehabilitation research.",
-      "tags": ["robotics", "medical"],
-      "supported_platforms": ["solidworks", "fusion_360"],
+      "extended_desc": "Wearable hand exoskeleton for rehabilitation research.\n\nThe exoskeleton is sized for adult hands and leaves the palm open for natural grasping. It is strictly a **research and visualization concept**, not a certified medical device.",
+      "tags": [
+        "robotics",
+        "medical"
+      ],
+      "supported_platforms": [
+        "solidworks",
+        "fusion_360"
+      ],
       "downloads": 1250,
       "favorites": 99,
       "timestamp": "2026-07-06T11:35:00Z",
@@ -323,8 +543,15 @@
       "title": "Board Game Insert",
       "author": "TableTopOrg",
       "description": "Organizer trays for a popular strategy board game.",
-      "tags": ["game_asset", "interior"],
-      "supported_platforms": ["tinkercad", "freecad"],
+      "extended_desc": "Organizer trays for a popular strategy board game.\n\nThe trays keep cards, tokens, and player pieces sorted between sessions. They are sized for *standard storage boxes* and can be adapted to other games with similar components.",
+      "tags": [
+        "game_asset",
+        "interior"
+      ],
+      "supported_platforms": [
+        "tinkercad",
+        "freecad"
+      ],
       "downloads": 3400,
       "favorites": 278,
       "timestamp": "2026-07-09T07:55:00Z",
@@ -334,8 +561,15 @@
       "title": "Concrete Planter",
       "author": "UrbanGarden",
       "description": "Geometric planter mold for cast concrete.",
-      "tags": ["decor", "diy"],
-      "supported_platforms": ["blender", "freecad"],
+      "extended_desc": "Geometric planter mold for cast concrete.\n\nThe mold splits cleanly to release the cast without undercuts. Use it to make *modern concrete planters* for succulents, herbs, or interior styling.",
+      "tags": [
+        "decor",
+        "diy"
+      ],
+      "supported_platforms": [
+        "blender",
+        "freecad"
+      ],
       "downloads": 1900,
       "favorites": 154,
       "timestamp": "2026-07-02T16:00:00Z",
@@ -345,8 +579,15 @@
       "title": "Servo Motor Bracket",
       "author": "BotBits",
       "description": "Universal bracket for standard hobby servo motors.",
-      "tags": ["robotics", "tooling"],
-      "supported_platforms": ["freecad", "tinkercad"],
+      "extended_desc": "Universal bracket for standard hobby servo motors.\n\nThe bracket fits common 9g and standard servo footprints and includes mounting ears. It is ideal for *robotics arms, walking mechanisms, and automated displays*.",
+      "tags": [
+        "robotics",
+        "tooling"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "tinkercad"
+      ],
       "downloads": 2100,
       "favorites": 173,
       "timestamp": "2026-07-05T02:40:00Z",
@@ -356,8 +597,15 @@
       "title": "Art Deco Clock",
       "author": "TickTock",
       "description": "Desktop clock with Art Deco dial and case details.",
-      "tags": ["art", "decor"],
-      "supported_platforms": ["blender", "fusion_360"],
+      "extended_desc": "Desktop clock with Art Deco dial and case details.\n\nThe case combines geometric step forms with an elegant dial layout. It makes a *striking desk piece* and a good introduction to decorative product modeling.",
+      "tags": [
+        "art",
+        "decor"
+      ],
+      "supported_platforms": [
+        "blender",
+        "fusion_360"
+      ],
       "downloads": 760,
       "favorites": 61,
       "timestamp": "2026-06-29T13:20:00Z",
@@ -367,8 +615,15 @@
       "title": "PCB Holder",
       "author": "SolderStation",
       "description": "Adjustable printed circuit board holder for soldering.",
-      "tags": ["electronics", "tooling"],
-      "supported_platforms": ["freecad", "kicad"],
+      "extended_desc": "Adjustable printed circuit board holder for soldering.\n\nThe holder clamps PCBs at a comfortable angle and leaves both hands free for soldering. It is a **must-have bench tool** for electronics repair and prototyping.",
+      "tags": [
+        "electronics",
+        "tooling"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "kicad"
+      ],
       "downloads": 1500,
       "favorites": 121,
       "timestamp": "2026-07-04T10:45:00Z",
@@ -378,8 +633,15 @@
       "title": "Hexagonal Tile",
       "author": "Tessellate",
       "description": "Interlocking hex floor tile with grip texture.",
-      "tags": ["architecture", "decor"],
-      "supported_platforms": ["blender", "sketchup"],
+      "extended_desc": "Interlocking hex floor tile with grip texture.\n\nThe hexagonal pattern tiles seamlessly and adds subtle surface grip. Use it for *architectural floors, outdoor patios, or game environment ground planes*.",
+      "tags": [
+        "architecture",
+        "decor"
+      ],
+      "supported_platforms": [
+        "blender",
+        "sketchup"
+      ],
       "downloads": 620,
       "favorites": 49,
       "timestamp": "2026-06-27T07:30:00Z",
@@ -389,8 +651,15 @@
       "title": "Hydraulic Press Die",
       "author": "ForgeTools",
       "description": "Die set for pressing simple sheet metal forms.",
-      "tags": ["fabrication", "tooling"],
-      "supported_platforms": ["solidworks", "step"],
+      "extended_desc": "Die set for pressing simple sheet metal forms.\n\nThe punch and die are aligned with guide posts for repeatable forming. This is a **conceptual tooling set** and should be validated by a machinist before use.",
+      "tags": [
+        "fabrication",
+        "tooling"
+      ],
+      "supported_platforms": [
+        "solidworks",
+        "step"
+      ],
       "downloads": 890,
       "favorites": 76,
       "timestamp": "2026-07-03T14:55:00Z",
@@ -400,8 +669,15 @@
       "title": "Space Station Module",
       "author": "OrbitOutpost",
       "description": "Modular sci-fi habitat module with docking ports.",
-      "tags": ["aerospace", "game_asset"],
-      "supported_platforms": ["blender", "fusion_360"],
+      "extended_desc": "Modular sci-fi habitat module with docking ports.\n\nThe module can be tiled end-to-end to build stations, outposts, or spacecraft. Docking ports and surface paneling give it a *cohesive futuristic look* for games and renders.",
+      "tags": [
+        "aerospace",
+        "game_asset"
+      ],
+      "supported_platforms": [
+        "blender",
+        "fusion_360"
+      ],
       "downloads": 2600,
       "favorites": 218,
       "timestamp": "2026-07-08T09:10:00Z",
@@ -411,8 +687,15 @@
       "title": "Electric Guitar Body",
       "author": "LuthierCAD",
       "description": "Classic solid-body guitar shape with neck pocket.",
-      "tags": ["art", "tooling"],
-      "supported_platforms": ["fusion_360", "blender"],
+      "extended_desc": "Classic solid-body guitar shape with neck pocket.\n\nThe body includes a neck pocket, pickup cavities, and control routs to kickstart an instrument build. It is a *starting template* for luthiers and guitar enthusiasts.",
+      "tags": [
+        "art",
+        "tooling"
+      ],
+      "supported_platforms": [
+        "fusion_360",
+        "blender"
+      ],
       "downloads": 1100,
       "favorites": 95,
       "timestamp": "2026-07-01T12:05:00Z",
@@ -422,8 +705,15 @@
       "title": "Warehouse Pallet Rack",
       "author": "Logistics3D",
       "description": "Industrial pallet racking unit for warehouse layouts.",
-      "tags": ["architecture", "3d_model"],
-      "supported_platforms": ["sketchup", "freecad"],
+      "extended_desc": "Industrial pallet racking unit for warehouse layouts.\n\nThe racking unit follows common warehouse dimensions and can be duplicated into full aisles. It is useful for *layout planning, logistics visualizations, and game environments*.",
+      "tags": [
+        "architecture",
+        "3d_model"
+      ],
+      "supported_platforms": [
+        "sketchup",
+        "freecad"
+      ],
       "downloads": 530,
       "favorites": 41,
       "timestamp": "2026-06-24T10:15:00Z",
@@ -433,8 +723,15 @@
       "title": "Steam Engine Cylinder",
       "author": "VintageWorks",
       "description": "Oscillating steam engine cylinder for model builders.",
-      "tags": ["engineering", "educational"],
-      "supported_platforms": ["solidworks", "fusion_360"],
+      "extended_desc": "Oscillating steam engine cylinder for model builders.\n\nThe cylinder and port block are modeled for classic oscillating steam engine layouts. It is a **great weekend machining project** for model-engine enthusiasts.",
+      "tags": [
+        "engineering",
+        "educational"
+      ],
+      "supported_platforms": [
+        "solidworks",
+        "fusion_360"
+      ],
       "downloads": 940,
       "favorites": 80,
       "timestamp": "2026-07-06T18:30:00Z",
@@ -444,8 +741,15 @@
       "title": "Dungeons Props Pack",
       "author": "QuestAssets",
       "description": "Crates, barrels, and torches for tabletop RPG scenes.",
-      "tags": ["game_asset", "art"],
-      "supported_platforms": ["blender", "mesh"],
+      "extended_desc": "Crates, barrels, and torches for tabletop RPG scenes.\n\nThe prop pack covers essential dungeon-crawling clutter in a unified style. Scatter them across a grid to *quickly build atmosphere* for virtual or printed tabletop sessions.",
+      "tags": [
+        "game_asset",
+        "art"
+      ],
+      "supported_platforms": [
+        "blender",
+        "mesh"
+      ],
       "downloads": 7200,
       "favorites": 612,
       "timestamp": "2026-07-09T18:45:00Z",
@@ -455,8 +759,15 @@
       "title": "Bicycle Chain Guard",
       "author": "CycleSafe",
       "description": "Protective chain guard for city bicycles.",
-      "tags": ["vehicle", "fabrication"],
-      "supported_platforms": ["freecad", "step"],
+      "extended_desc": "Protective chain guard for city bicycles.\n\nThe guard covers the chainring and top run of chain to keep clothing clean. It mounts with standard braze-ons and is a *practical upgrade for commuter bikes*.",
+      "tags": [
+        "vehicle",
+        "fabrication"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "step"
+      ],
       "downloads": 680,
       "favorites": 54,
       "timestamp": "2026-07-05T08:00:00Z",
@@ -466,8 +777,15 @@
       "title": "Smart Mirror Frame",
       "author": "ReflectTech",
       "description": "Frame housing for a wall-mounted smart mirror build.",
-      "tags": ["electronics", "interior"],
-      "supported_platforms": ["fusion_360", "kicad"],
+      "extended_desc": "Frame housing for a wall-mounted smart mirror build.\n\nThe housing wraps a display, controller, and two-way mirror into one clean unit. Cable routing channels keep wiring tidy, and the parametric depth lets it fit *various screen sizes*.",
+      "tags": [
+        "electronics",
+        "interior"
+      ],
+      "supported_platforms": [
+        "fusion_360",
+        "kicad"
+      ],
       "downloads": 1800,
       "favorites": 147,
       "timestamp": "2026-07-07T22:50:00Z",
@@ -477,8 +795,15 @@
       "title": "Japanese Garden Lantern",
       "author": "ZenGarden",
       "description": "Traditional stone lantern for garden visualization.",
-      "tags": ["art", "architecture"],
-      "supported_platforms": ["blender", "sketchup"],
+      "extended_desc": "Traditional stone lantern for garden visualization.\n\nThe lantern captures the stacked stone blocks and fire box of a *tōrō*. It brings a peaceful, traditional accent to Japanese garden renders and miniature scenes.",
+      "tags": [
+        "art",
+        "architecture"
+      ],
+      "supported_platforms": [
+        "blender",
+        "sketchup"
+      ],
       "downloads": 570,
       "favorites": 48,
       "timestamp": "2026-06-21T15:40:00Z",
@@ -488,8 +813,15 @@
       "title": "Quadcopter Propeller",
       "author": "PropForge",
       "description": "Parametric drone propeller with pitch adjustment.",
-      "tags": ["aerospace", "parametric"],
-      "supported_platforms": ["fusion_360", "blender"],
+      "extended_desc": "Parametric drone propeller with pitch adjustment.\n\nThe propeller can be tuned for *diameter, pitch, and hub bore* to match different motors. It is useful for airflow visualization, drone design studies, or game vehicle props.",
+      "tags": [
+        "aerospace",
+        "parametric"
+      ],
+      "supported_platforms": [
+        "fusion_360",
+        "blender"
+      ],
       "downloads": 1300,
       "favorites": 108,
       "timestamp": "2026-07-03T19:25:00Z",
@@ -499,8 +831,15 @@
       "title": "Workbench Pegboard",
       "author": "ShopOrganizer",
       "description": "Modular pegboard holders for common hand tools.",
-      "tags": ["tooling", "diy"],
-      "supported_platforms": ["freecad", "tinkercad"],
+      "extended_desc": "Modular pegboard holders for common hand tools.\n\nThe holders lock into standard perforated board and can be mixed to match your tool collection. Print a set to *reclaim bench space* and keep frequently used tools visible.",
+      "tags": [
+        "tooling",
+        "diy"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "tinkercad"
+      ],
       "downloads": 2900,
       "favorites": 244,
       "timestamp": "2026-07-08T06:15:00Z",
@@ -510,8 +849,15 @@
       "title": "Heart Valve Model",
       "author": "BioModel",
       "description": "Simplified anatomical heart valve for educational demos.",
-      "tags": ["educational", "art"],
-      "supported_platforms": ["blender", "mesh"],
+      "extended_desc": "Simplified anatomical heart valve for educational demos.\n\nThe model shows the general leaflets and annulus shape of an atrioventricular valve. It is intended for **biology lessons, patient communication, and anatomy visualization**, not surgical planning.",
+      "tags": [
+        "educational",
+        "art"
+      ],
+      "supported_platforms": [
+        "blender",
+        "mesh"
+      ],
       "downloads": 840,
       "favorites": 72,
       "timestamp": "2026-06-26T11:00:00Z",
@@ -521,8 +867,15 @@
       "title": "Autonomous Rover Kit",
       "author": "RoverLab",
       "description": "Beginner-friendly rover chassis with sensor mounts.",
-      "tags": ["robotics", "educational"],
-      "supported_platforms": ["freecad", "kicad"],
+      "extended_desc": "Beginner-friendly rover chassis with sensor mounts.\n\nThe chassis has flat mounting pads for ultrasonic sensors, line followers, and microcontrollers. It is designed as a *stepping stone into robotics programming* and simple navigation experiments.",
+      "tags": [
+        "robotics",
+        "educational"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "kicad"
+      ],
       "downloads": 2500,
       "favorites": 203,
       "timestamp": "2026-07-09T04:00:00Z",
@@ -532,8 +885,15 @@
       "title": "Crystal Chandelier",
       "author": "LuxLight",
       "description": "Ornate crystal chandelier for interior renders.",
-      "tags": ["lighting", "decor"],
-      "supported_platforms": ["blender", "fusion_360"],
+      "extended_desc": "Ornate crystal chandelier for interior renders.\n\nThe chandelier features branching arms, candle-style lights, and hanging crystal accents. It adds *elegant sparkle* to ballroom, dining, or luxury interior scenes.",
+      "tags": [
+        "lighting",
+        "decor"
+      ],
+      "supported_platforms": [
+        "blender",
+        "fusion_360"
+      ],
       "downloads": 710,
       "favorites": 60,
       "timestamp": "2026-06-23T20:20:00Z",
@@ -543,8 +903,15 @@
       "title": "Motorcycle Helmet",
       "author": "RiderGear",
       "description": "Aerodynamic full-face helmet concept model.",
-      "tags": ["vehicle", "art"],
-      "supported_platforms": ["blender", "fusion_360"],
+      "extended_desc": "Aerodynamic full-face helmet concept model.\n\nThe helmet blends sportbike aerodynamics with a smooth, sculptural form. Use it for *vehicle concept art, safety design studies, or racing-themed renders*.",
+      "tags": [
+        "vehicle",
+        "art"
+      ],
+      "supported_platforms": [
+        "blender",
+        "fusion_360"
+      ],
       "downloads": 1600,
       "favorites": 134,
       "timestamp": "2026-07-02T08:35:00Z",
@@ -554,8 +921,15 @@
       "title": "Floating Shelf Bracket",
       "author": "HiddenMount",
       "description": "Concealed bracket for wall-mounted floating shelves.",
-      "tags": ["furniture", "tooling"],
-      "supported_platforms": ["freecad", "step"],
+      "extended_desc": "Concealed bracket for wall-mounted floating shelves.\n\nThe bracket hides inside the shelf while supporting weight through a rigid wall plate. It creates the *clean, floating look* popular in modern shelving without visible hardware.",
+      "tags": [
+        "furniture",
+        "tooling"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "step"
+      ],
       "downloads": 3700,
       "favorites": 305,
       "timestamp": "2026-07-06T14:45:00Z",
@@ -565,8 +939,15 @@
       "title": "Sci-Fi Cargo Crate",
       "author": "StarFreight",
       "description": "Weathered sci-fi shipping crate with lid detail.",
-      "tags": ["game_asset", "decor"],
-      "supported_platforms": ["blender", "mesh"],
+      "extended_desc": "Weathered sci-fi shipping crate with lid detail.\n\nThe crate includes panel seams, reinforcing ribs, and a hinged lid for scene interaction. Its utilitarian look fits *cargo bays, freighters, and post-apocalyptic storage scenes*.",
+      "tags": [
+        "game_asset",
+        "decor"
+      ],
+      "supported_platforms": [
+        "blender",
+        "mesh"
+      ],
       "downloads": 4100,
       "favorites": 356,
       "timestamp": "2026-07-08T17:30:00Z",
@@ -576,8 +957,15 @@
       "title": "Parametric Bookend",
       "author": "ShelfStyle",
       "description": "Adjustable bookend profile with customizable text.",
-      "tags": ["parametric", "furniture"],
-      "supported_platforms": ["freecad", "tinkercad"],
+      "extended_desc": "Adjustable bookend profile with customizable text.\n\nThe bookend uses a parametric profile that can be stretched or embossed with a custom label. It is a small but satisfying project for *personalizing a desk or shelf*.",
+      "tags": [
+        "parametric",
+        "furniture"
+      ],
+      "supported_platforms": [
+        "freecad",
+        "tinkercad"
+      ],
       "downloads": 950,
       "favorites": 81,
       "timestamp": "2026-07-04T12:10:00Z",
@@ -587,8 +975,15 @@
       "title": "Hovercraft Skirt",
       "author": "AirCushion",
       "description": "Segmented skirt geometry for small hovercraft models.",
-      "tags": ["vehicle", "aerospace"],
-      "supported_platforms": ["fusion_360", "blender"],
+      "extended_desc": "Segmented skirt geometry for small hovercraft models.\n\nThe segmented skirt traps lift air while allowing the craft to ride over small obstacles. It is a *fun entry point* into ground-effect vehicle design and aerodynamics experiments.",
+      "tags": [
+        "vehicle",
+        "aerospace"
+      ],
+      "supported_platforms": [
+        "fusion_360",
+        "blender"
+      ],
       "downloads": 470,
       "favorites": 39,
       "timestamp": "2026-06-19T16:55:00Z",

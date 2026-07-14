@@ -187,6 +187,7 @@ mod tests {
             title: title.to_owned(),
             author: author.to_owned(),
             description: description.to_owned(),
+            extended_desc: format!("Extended markdown summary for {}.", title),
             tags: tags.to_vec(),
             supported_platforms: platforms.to_vec(),
             downloads,

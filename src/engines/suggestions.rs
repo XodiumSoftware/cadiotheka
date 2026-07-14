@@ -186,6 +186,7 @@ mod tests {
             title: "Sample Gear".to_owned(),
             author: "TestAuthor".to_owned(),
             description: "A sample gear.".to_owned(),
+            extended_desc: "A sample gear with *extended* markdown description.".to_owned(),
             tags: vec![Tag::Parametric, Tag::Model3d],
             supported_platforms: vec![Platform::Blender, Platform::FreeCAD],
             downloads: 100,

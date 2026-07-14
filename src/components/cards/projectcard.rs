@@ -13,6 +13,7 @@ pub struct ProjectCardProperties {
     pub title: String,
     pub author: String,
     pub description: String,
+    pub extended_desc: String,
     pub tags: Vec<Tag>,
     pub supported_platforms: Vec<Platform>,
     pub downloads: u64,
@@ -33,10 +34,16 @@ pub fn project_card_properties_from_card_data(card: CardData) -> ProjectCardProp
     } else {
         card.description
     };
+    let extended_desc = if card.extended_desc.trim().is_empty() {
+        description.clone()
+    } else {
+        card.extended_desc
+    };
     ProjectCardProperties {
         title: card.title,
         author: card.author,
         description,
+        extended_desc,
         tags: card.tags,
         supported_platforms: card.supported_platforms,
         downloads: card.downloads,
@@ -290,6 +297,7 @@ mod tests {
             title: "Gear".to_owned(),
             author: "Author".to_owned(),
             description: "A gear.".to_owned(),
+            extended_desc: "A gear with an **extended** markdown description.".to_owned(),
             tags: vec![Tag::Model3d],
             supported_platforms: vec![Platform::Blender],
             downloads: 1234,

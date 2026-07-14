@@ -18,6 +18,7 @@ pub mod components {
 
     pub mod ui {
         pub mod cornerframe;
+        pub mod markdown;
         pub mod modals {
             pub mod projectmodal;
             pub mod searchmodal;
@@ -35,6 +36,7 @@ pub mod components {
     pub use effects::sectionfade::FadeOverlay;
 
     pub use ui::cornerframe::CornerFrame;
+    pub use ui::markdown::MarkdownView;
     pub use ui::modals::projectmodal::ProjectModal;
     pub use ui::modals::searchmodal::SearchModal;
     pub use ui::overflowrow::OverflowRow;

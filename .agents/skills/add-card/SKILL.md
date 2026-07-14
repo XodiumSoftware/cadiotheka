@@ -17,7 +17,8 @@ Use this skill when the user wants to add a new card entry to `test_data/cards.j
 2. Ask the user for the card details if not provided:
    - title
    - author
-   - description
+   - description (short summary shown on the card)
+   - extended_desc (markdown description shown in the project detail modal; default to the short `description` if not given)
    - tags (must be valid `Tag` variants)
    - supported_platforms (must be valid `Platform` variants)
    - downloads and favorites (default to 0 if not given)
@@ -26,7 +27,7 @@ Use this skill when the user wants to add a new card entry to `test_data/cards.j
 
 3. Validate each tag and platform name against the `serde(rename = ...)` values in the enums. If a name is invalid, suggest the closest valid alternative or ask the user for guidance.
 
-4. Append the new card to the `cards` array in `test_data/cards.json`. Preserve formatting and keep the JSON valid.
+4. Append the new card to the `cards` array in `test_data/cards.json`. Place `extended_desc` immediately after `description`. Preserve formatting and keep the JSON valid.
 
 5. Run `cargo test` and `cargo clippy --target wasm32-unknown-unknown` to ensure the fixture still deserializes correctly.
 

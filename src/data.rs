@@ -18,6 +18,9 @@ pub struct CardData {
     pub author: String,
     /// Short description of the content.
     pub description: String,
+    /// Extended markdown description shown in the project detail modal.
+    #[serde(default)]
+    pub extended_desc: String,
     /// Categorized tags for the content.
     pub tags: Vec<Tag>,
     /// Supported platforms for the content.

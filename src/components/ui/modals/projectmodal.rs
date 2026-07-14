@@ -1,14 +1,12 @@
 use crate::components::cards::projectcard::{
-    ClockIcon, DownloadIcon, HeartIcon, ProjectCardProperties, placeholder_color,
-    placeholder_letter,
+    ProjectCardProperties, placeholder_color, placeholder_letter,
 };
-use crate::components::ui::cornerframe::CornerFrame;
+use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::modals::searchmodal::SearchModal;
 use crate::components::ui::overflowrow::{OverflowItem, OverflowRow};
 use crate::context::ProjectModalContext;
 use crate::data::IconUrl;
 use crate::i18n::{t_string, use_i18n};
-use crate::utils::{format_number, format_number_full, format_time_ago, format_time_full};
 use leptos::prelude::*;
 
 /// Modal dialog that displays detailed information about a selected project.
@@ -45,6 +43,7 @@ fn ProjectModalContent(
     #[prop(into)] card: ProjectCardProperties,
     #[prop(into)] on_close: Callback<()>,
 ) -> impl IntoView {
+    let _ = on_close;
     let i18n = use_i18n();
     let letter = placeholder_letter(&card.title);
     let bg = placeholder_color(&card.title);
@@ -52,10 +51,7 @@ fn ProjectModalContent(
     let icon_alt = format!("{} icon", card.title);
     let title = card.title.clone();
     let author = card.author.clone();
-    let description = card.description.clone();
-    let downloads = card.downloads;
-    let favorites = card.favorites;
-    let timestamp = card.timestamp;
+    let extended_desc = card.extended_desc.clone();
     let tags = card.tags.clone();
     let platforms = card.supported_platforms.clone();
 
@@ -92,92 +88,54 @@ fn ProjectModalContent(
                         <span class="font-semibold text-base-content ml-1" title={author.clone()}>{author.clone()}</span>
                     </p>
                 </div>
-                <button
-                    type="button"
-                    class="btn btn-ghost btn-xs btn-circle flex-shrink-0"
-                    aria-label=t_string!(i18n, project_modal.close)
-                    on:click=move |_| on_close.run(())
-                >
-                    "×"
-                </button>
+                <div class="flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">
+                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_esc)}</kbd>
+                    <span>{t_string!(i18n, project_modal.hint_dismiss)}</span>
+                </div>
             </div>
 
             <hr class="border-base-content/10" />
 
             <div class="overflow-y-auto flex-1 min-h-0 py-2 space-y-4">
-                <div class="flex flex-wrap items-center gap-2">
-                    {tags.is_empty().then(|| view! {
-                        <OverflowRow
-                            items={tags
-                                .iter()
-                                .map(|tag| OverflowItem::new(tag.label(), tag.color()))
-                                .collect::<Vec<_>>()}
-                            max_visible=usize::MAX
-                            badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
-                        />
-                    }
-                        .into_any())}
-                    {(!tags.is_empty() && !platforms.is_empty()).then(|| view! {
-                        <span class="w-px h-5 bg-base-content/20 self-center" aria-hidden="true" />
-                    }
-                        .into_any())}
-                    {platforms.is_empty().then(|| view! {
-                        <OverflowRow
-                            items={platforms
-                                .iter()
-                                .map(|platform| OverflowItem::new(platform.label(), platform.color()))
-                                .collect::<Vec<_>>()}
-                            max_visible=usize::MAX
-                            badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
-                        />
-                    }
-                        .into_any())}
-                </div>
+                {(!tags.is_empty() || !platforms.is_empty()).then(|| view! {
+                    <div class="flex flex-wrap items-center gap-2">
+                        {(!tags.is_empty()).then(|| view! {
+                            <OverflowRow
+                                items={tags
+                                    .iter()
+                                    .map(|tag| OverflowItem::new(tag.label(), tag.color()))
+                                    .collect::<Vec<_>>()}
+                                max_visible=usize::MAX
+                                badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
+                            />
+                        }
+                            .into_any())}
+                        {(!tags.is_empty() && !platforms.is_empty()).then(|| view! {
+                            <span class="w-px h-5 bg-base-content/20 self-center" aria-hidden="true" />
+                        }
+                            .into_any())}
+                        {(!platforms.is_empty()).then(|| view! {
+                            <OverflowRow
+                                items={platforms
+                                    .iter()
+                                    .map(|platform| OverflowItem::new(platform.label(), platform.color()))
+                                    .collect::<Vec<_>>()}
+                                max_visible=usize::MAX
+                                badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
+                            />
+                        }
+                            .into_any())}
+                    </div>
+                }
+                    .into_any())}
 
                 <div>
                     <h3 class="text-sm font-semibold text-base-content mb-1">{t_string!(i18n, project_modal.description)}</h3>
-                    <p class="text-base-content/80 text-sm leading-relaxed">{description}</p>
-                </div>
-
-                <div class="grid grid-cols-3 gap-3">
-                    <CornerFrame style="square" class="p-3 bg-base-200/50">
-                        <div class="flex flex-col items-center text-center">
-                            <span class="text-base-content/50 mb-1"><DownloadIcon /></span>
-                            <span class="text-lg font-bold text-base-content" title={move || format!("{} downloads", format_number_full(downloads))}>
-                                {move || format_number(downloads)}
-                            </span>
-                            <span class="text-xs text-base-content/50">{t_string!(i18n, project_modal.downloads)}</span>
-                        </div>
-                    </CornerFrame>
-                    <CornerFrame style="square" class="p-3 bg-base-200/50">
-                        <div class="flex flex-col items-center text-center">
-                            <span class="text-base-content/50 mb-1"><HeartIcon /></span>
-                            <span class="text-lg font-bold text-base-content" title={move || format!("{} favorites", format_number_full(favorites))}>
-                                {move || format_number(favorites)}
-                            </span>
-                            <span class="text-xs text-base-content/50">{t_string!(i18n, project_modal.favorites)}</span>
-                        </div>
-                    </CornerFrame>
-                    <CornerFrame style="square" class="p-3 bg-base-200/50">
-                        <div class="flex flex-col items-center text-center">
-                            <span class="text-base-content/50 mb-1"><ClockIcon /></span>
-                            <span class="text-lg font-bold text-base-content" title={move || format!("Updated {}", format_time_full(timestamp))}>
-                                {move || format_time_ago(timestamp)}
-                            </span>
-                            <span class="text-xs text-base-content/50">{t_string!(i18n, project_modal.updated)}</span>
-                        </div>
-                    </CornerFrame>
+                    <MarkdownView source=extended_desc />
                 </div>
             </div>
 
             <hr class="border-base-content/10" />
-
-            <div class="flex items-center justify-end gap-4 text-xs text-base-content/50 px-1 py-2">
-                <div class="flex items-center gap-1.5">
-                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_esc)}</kbd>
-                    <span>{t_string!(i18n, project_modal.hint_dismiss)}</span>
-                </div>
-            </div>
         </div>
     }
 }
