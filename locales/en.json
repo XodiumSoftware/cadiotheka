@@ -1,0 +1,22 @@
+{
+    "skip_to_content": "Skip to main content",
+    "header": {
+        "logo_wordmark": "Cadiotheka"
+    },
+    "projects": {
+        "empty": "No projects found.",
+        "wide_mode": "Wide",
+        "narrow_mode": "Narrow"
+    },
+    "search": {
+        "open": "Open search",
+        "title": "Search",
+        "placeholder": "Search projects, tags, platforms, authors...",
+        "clear": "Clear search",
+        "no_suggestions": "No suggestions available."
+    },
+    "footer": {
+        "company_name": "XODIUM™",
+        "tagline": ". Open-Source (CAD) Software Company."
+    }
+}

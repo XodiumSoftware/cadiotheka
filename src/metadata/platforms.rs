@@ -56,20 +56,20 @@ impl Platform {
         }
     }
 
-    /// Returns the display color for this platform.
-    pub const fn color(&self) -> egui::Color32 {
+    /// Returns a Tailwind-compatible CSS color class for this platform.
+    pub const fn color(&self) -> &'static str {
         match self {
-            Self::Blender => egui::Color32::from_rgb(232, 119, 37),
-            Self::FreeCAD => egui::Color32::from_rgb(59, 130, 246),
-            Self::SketchUp => egui::Color32::from_rgb(239, 68, 68),
-            Self::Fusion360 => egui::Color32::from_rgb(234, 179, 8),
-            Self::KiCad => egui::Color32::from_rgb(34, 197, 94),
-            Self::AutoCAD => egui::Color32::from_rgb(153, 27, 27),
-            Self::SolidWorks => egui::Color32::from_rgb(220, 38, 38),
-            Self::Onshape => egui::Color32::from_rgb(108, 117, 125),
-            Self::Tinkercad => egui::Color32::from_rgb(6, 182, 212),
-            Self::Step => egui::Color32::from_rgb(128, 128, 128),
-            Self::Mesh => egui::Color32::from_rgb(192, 192, 192),
+            Self::Blender => "text-orange-500",
+            Self::FreeCAD => "text-blue-500",
+            Self::SketchUp => "text-red-500",
+            Self::Fusion360 => "text-yellow-500",
+            Self::KiCad => "text-green-500",
+            Self::AutoCAD => "text-red-800",
+            Self::SolidWorks => "text-red-600",
+            Self::Onshape => "text-gray-500",
+            Self::Tinkercad => "text-cyan-500",
+            Self::Step => "text-gray-400",
+            Self::Mesh => "text-gray-300",
         }
     }
 
@@ -94,5 +94,34 @@ impl Platform {
 impl std::fmt::Display for Platform {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.label())
+    }
+}
+
+/// Convenience accessor for a platform's user-facing label.
+pub fn platform_label(platform: &Platform) -> &'static str {
+    platform.label()
+}
+
+/// Convenience accessor for a platform's Tailwind color class.
+pub fn platform_color(platform: &Platform) -> &'static str {
+    platform.color()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn platform_label_roundtrips() {
+        assert_eq!(Platform::Blender.label(), "Blender");
+        assert_eq!(Platform::Fusion360.label(), "Fusion 360");
+    }
+
+    #[test]
+    fn platform_serialization_uses_rename() {
+        let json = serde_json::to_string(&Platform::FreeCAD).unwrap();
+        assert_eq!(json, "\"freecad\"");
+        let platform: Platform = serde_json::from_str("\"freecad\"").unwrap();
+        assert_eq!(platform, Platform::FreeCAD);
     }
 }

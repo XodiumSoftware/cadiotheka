@@ -1,6 +1,6 @@
 //! Autocomplete suggestion generation for the Cadiotheka search engine.
 
-use crate::components::card::CardData;
+use crate::data::CardData;
 use crate::engines::query::{SortBy, SortOrder};
 use std::collections::HashSet;
 
@@ -122,9 +122,9 @@ fn default_sort_suggestions() -> Vec<Suggestion> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::card::CardData;
-    use crate::platforms::Platform;
-    use crate::tags::Tag;
+    use crate::data::CardData;
+    use crate::metadata::platforms::Platform;
+    use crate::metadata::tags::Tag;
     use time::macros::datetime;
 
     fn sample_card() -> CardData {

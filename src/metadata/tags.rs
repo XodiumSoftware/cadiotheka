@@ -96,30 +96,30 @@ impl Tag {
         }
     }
 
-    /// Returns the CSS-style color class or theme key associated with this tag.
+    /// Returns a Tailwind-compatible CSS color class for this tag.
     pub const fn color(&self) -> &'static str {
         match self {
-            Self::Model3d => "blue",
-            Self::Drawing2d => "cyan",
-            Self::Parametric => "purple",
-            Self::Fabrication => "orange",
-            Self::Robotics => "red",
-            Self::Furniture => "brown",
-            Self::Vehicle => "green",
-            Self::Architecture => "gray",
-            Self::Electronics => "yellow",
-            Self::Tooling => "silver",
-            Self::Lighting => "amber",
-            Self::Diy => "orange",
-            Self::Interior => "rose",
-            Self::Engineering => "steel",
-            Self::Aerospace => "sky",
-            Self::Decor => "rose",
-            Self::Medical => "mint",
-            Self::GameAsset => "pink",
-            Self::Art => "magenta",
-            Self::Educational => "teal",
-            Self::WorkInProgress => "lime",
+            Self::Model3d => "bg-blue-500",
+            Self::Drawing2d => "bg-cyan-500",
+            Self::Parametric => "bg-purple-500",
+            Self::Fabrication => "bg-orange-500",
+            Self::Robotics => "bg-red-500",
+            Self::Furniture => "bg-amber-700",
+            Self::Vehicle => "bg-green-500",
+            Self::Architecture => "bg-gray-500",
+            Self::Electronics => "bg-yellow-500",
+            Self::Tooling => "bg-slate-400",
+            Self::Lighting => "bg-amber-500",
+            Self::Diy => "bg-orange-500",
+            Self::Interior => "bg-rose-500",
+            Self::Engineering => "bg-slate-500",
+            Self::Aerospace => "bg-sky-500",
+            Self::Decor => "bg-rose-400",
+            Self::Medical => "bg-emerald-300",
+            Self::GameAsset => "bg-pink-500",
+            Self::Art => "bg-fuchsia-500",
+            Self::Educational => "bg-teal-500",
+            Self::WorkInProgress => "bg-lime-500",
         }
     }
 
@@ -154,5 +154,34 @@ impl Tag {
 impl std::fmt::Display for Tag {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.label())
+    }
+}
+
+/// Convenience accessor for a tag's user-facing label.
+pub fn tag_label(tag: &Tag) -> &'static str {
+    tag.label()
+}
+
+/// Convenience accessor for a tag's Tailwind color class.
+pub fn tag_color(tag: &Tag) -> &'static str {
+    tag.color()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tag_label_roundtrips() {
+        assert_eq!(Tag::Model3d.label(), "3D Model");
+        assert_eq!(Tag::WorkInProgress.label(), "WIP");
+    }
+
+    #[test]
+    fn tag_serialization_uses_rename() {
+        let json = serde_json::to_string(&Tag::Model3d).unwrap();
+        assert_eq!(json, "\"3d_model\"");
+        let tag: Tag = serde_json::from_str("\"3d_model\"").unwrap();
+        assert_eq!(tag, Tag::Model3d);
     }
 }

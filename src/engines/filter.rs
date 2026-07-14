@@ -1,9 +1,9 @@
 //! Fuzzy matching and card filtering for the Cadiotheka search engine.
 
-use crate::components::card::CardData;
+use crate::data::CardData;
 use crate::engines::query::{ParsedQuery, SortBy, SortOrder, parse_query};
 use crate::engines::suggestions::{Suggestion, from_cards};
-use crate::tags::Tag;
+use crate::metadata::tags::Tag;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 
@@ -20,6 +20,14 @@ impl SearchEngine {
             cards,
             matcher: SkimMatcherV2::default(),
         }
+    }
+
+    /// Returns owned copies of cards matching the parsed query.
+    ///
+    /// Useful when results need to escape the borrow scope of the engine,
+    /// such as in reactive Leptos memos.
+    pub fn search_owned(&self, parsed: &ParsedQuery) -> Vec<CardData> {
+        self.search(parsed).into_iter().cloned().collect()
     }
 
     /// Returns references to cards matching the parsed query, ranked or sorted
@@ -107,7 +115,7 @@ impl SearchEngine {
     /// The label is tokenized on whitespace and non-alphanumeric characters,
     /// then each token is compared case-insensitively using substring
     /// matching. This lets `#model` match `3D Model` while still supporting
-    /// prefixes like `#blend` → `Blender`.
+    /// prefixes like `#blend` -> `Blender`.
     fn label_matches(label: &str, needle: &str) -> bool {
         let needle = needle.to_lowercase();
         label
@@ -159,11 +167,11 @@ impl SearchEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::card::CardData;
+    use crate::data::CardData;
     use crate::engines::query::parse_query;
     use crate::engines::suggestions::SuggestionKind;
-    use crate::platforms::Platform;
-    use crate::tags::Tag;
+    use crate::metadata::platforms::Platform;
+    use crate::metadata::tags::Tag;
     use time::macros::datetime;
 
     fn card(
@@ -195,7 +203,7 @@ mod tests {
                 "ZenFlow",
                 "A fully parametric screw model.",
                 &[Tag::Parametric, Tag::Model3d],
-                &[Platform::Blender, Platform::FreeCAD],
+                &[Platform::Blender, Platform::FreeCAD, Platform::Fusion360],
                 1_200,
                 80,
             ),
