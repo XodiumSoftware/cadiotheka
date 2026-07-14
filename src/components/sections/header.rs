@@ -421,9 +421,19 @@ pub fn Header() -> impl IntoView {
                     <div class="relative">
                         <input
                             type="text"
-                            class="input w-full pr-10 bg-transparent !border-0 !outline-none !ring-0 focus:!outline-none focus:!ring-0"
+                            class="input w-full pr-20 bg-transparent !border-0 !outline-none !ring-0 focus:!outline-none focus:!ring-0"
                             placeholder=t_string!(i18n, search.placeholder)
                             prop:value=move || search.query.get()
+                            role="combobox"
+                            aria-expanded=move || {
+                                let groups = suggestions.get();
+                                groups.iter().any(|group| !group.suggestions.is_empty())
+                            }
+                            aria-controls="search-suggestions"
+                            aria-autocomplete="list"
+                            aria-activedescendant=move || {
+                                selected_index.get().map(|idx| format!("search-suggestion-{idx}"))
+                            }
                             on:input=move |ev| {
                                 search.set_query.set(event_target_value(&ev));
                                 set_selected_index.set(None);
@@ -438,13 +448,24 @@ pub fn Header() -> impl IntoView {
                                 if search.query.get().is_empty() {
                                     "hidden"
                                 } else {
-                                    "absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
+                                    "absolute right-10 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
                                 }
                             }
                             aria-label=t_string!(i18n, search.clear)
                             on:click=move |_| search.set_query.set(String::new())
                         >
                             "×"
+                        </button>
+                        <button
+                            type="button"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
+                            aria-label=t_string!(i18n, search.close)
+                            on:click=move |_| {
+                                search.set_query.set(String::new());
+                                set_search_open.set(false);
+                            }
+                        >
+                            "✕"
                         </button>
                     </div>
 
@@ -464,13 +485,18 @@ pub fn Header() -> impl IntoView {
                                 let mut global_index = 0usize;
                                 let group_count = groups.iter().filter(|g| !g.suggestions.is_empty()).count();
                                 view! {
-                                    <div class="py-2">
+                                    <div
+                                        id="search-suggestions"
+                                        role="listbox"
+                                        class="py-2"
+                                    >
                                         {groups
                                             .into_iter()
                                             .filter(|group| !group.suggestions.is_empty())
                                             .enumerate()
                                             .map(|(index, group)| {
                                                 let is_last = index + 1 == group_count;
+                                                let group_label = group.title.trim_end_matches(':').to_owned();
                                                 let group_view = group.suggestions.into_iter().map(|suggestion| {
                                                     let is_selected = selected == Some(global_index);
                                                     let text = suggestion.text.clone();
@@ -492,6 +518,8 @@ pub fn Header() -> impl IntoView {
                                                     view! {
                                                         <button
                                                             type="button"
+                                                            role="option"
+                                                            aria-selected=is_selected
                                                             class=item_class
                                                             id=id
                                                             on:click=move |_| insert_suggestion(text.clone(), kind)
@@ -503,8 +531,12 @@ pub fn Header() -> impl IntoView {
                                                 }).collect_view();
 
                                                 view! {
-                                                    <div class="space-y-0">
-                                                        <div class="px-3 pt-3 pb-1 text-xs font-semibold text-base-content/40 uppercase tracking-wider">{group.title.trim_end_matches(':')}</div>
+                                                    <div
+                                                        role="group"
+                                                        aria-label=group_label
+                                                        class="space-y-0"
+                                                    >
+                                                        <div class="px-3 pt-3 pb-1 text-xs font-semibold text-base-content/40 uppercase tracking-wider" role="presentation">{group.title.trim_end_matches(':')}</div>
                                                         {group_view}
                                                         {move || {
                                                             if is_last {
