@@ -4,31 +4,6 @@ use leptos::task::spawn_local;
 use leptos::web_sys;
 use std::time::Duration;
 
-struct SocialLink {
-    href: &'static str,
-    label: &'static str,
-    is_external: bool,
-    icon_path: &'static str,
-    hover_color: &'static str,
-}
-
-const SOCIAL_LINKS: &[SocialLink] = &[
-    SocialLink {
-        href: "https://github.com/XodiumSoftware/cadiotheka",
-        label: "Github",
-        is_external: true,
-        icon_path: "/icons/github.svg",
-        hover_color: "group-hover:bg-primary",
-    },
-    SocialLink {
-        href: "https://buymeacoffee.com/illyrius",
-        label: "Sponsor",
-        is_external: true,
-        icon_path: "/icons/sponsor.svg",
-        hover_color: "group-hover:bg-pink-500",
-    },
-];
-
 #[component]
 pub fn Header() -> impl IntoView {
     let (is_scrolled, set_is_scrolled) = signal(false);
@@ -59,8 +34,7 @@ pub fn Header() -> impl IntoView {
             }
         >
             <nav class="navbar max-w-7xl mx-auto">
-                // Left side
-                <div class="navbar-start gap-8">
+                <div class="navbar-start">
                     <a
                         href="#"
                         class=move || {
@@ -118,41 +92,6 @@ pub fn Header() -> impl IntoView {
                             </defs>
                         </svg>
                     </a>
-                </div>
-                // Right side
-                <div class="navbar-end">
-                    <ul class="menu menu-horizontal gap-2">
-                        {SOCIAL_LINKS
-                            .iter()
-                            .map(|link| {
-                                view! {
-                                    <li>
-                                        <a
-                                            class="group hover:bg-transparent lift rounded-none"
-                                            href=link.href
-                                            aria-label=link.label
-                                            title=link.label
-                                            target=if link.is_external { "_blank" } else { "" }
-                                            rel=if link.is_external {
-                                                "noopener noreferrer"
-                                            } else {
-                                                ""
-                                            }
-                                        >
-                                            <span
-                                                class=format!(
-                                                    "nav-icon w-6 h-6 block bg-base-content {} transition-colors",
-                                                    link.hover_color,
-                                                )
-                                                style=format!("--mask-url: url('{}')", link.icon_path)
-                                                aria-hidden="true"
-                                            />
-                                        </a>
-                                    </li>
-                                }
-                            })
-                            .collect::<Vec<_>>()}
-                    </ul>
                 </div>
             </nav>
         </header>
