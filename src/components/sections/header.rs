@@ -149,16 +149,32 @@ pub fn Header() -> impl IntoView {
             .collect::<Vec<Suggestion>>()
     };
 
-    // Alt+C clears the search query.
+    // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Escape closes it.
     Effect::new(move |_| {
-        let search = search;
         window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
+            if ev.alt_key() && ev.key().eq_ignore_ascii_case("s") {
+                ev.prevent_default();
+                set_search_open.set(true);
+                set_selected_index.set(None);
+                set_keyboard_index.set(None);
+                return;
+            }
+
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("c") {
                 ev.prevent_default();
                 search.set_query.set(String::new());
                 set_selected_index.set(None);
                 set_keyboard_index.set(None);
                 input_ref.get().map(|input| input.focus().ok());
+                return;
+            }
+
+            if search_open.get() && ev.key().as_str() == "Escape" {
+                ev.prevent_default();
+                search.set_query.set(String::new());
+                set_search_open.set(false);
+                set_selected_index.set(None);
+                set_keyboard_index.set(None);
             }
         });
     });
@@ -170,19 +186,6 @@ pub fn Header() -> impl IntoView {
                 .map(|w| w.scroll_y().unwrap_or(0.0) > 0.0)
                 .unwrap_or(false);
             set_is_scrolled.set(scrolled);
-        });
-    });
-
-    // Alt+S opens the search modal and focuses the input
-    Effect::new(move |_| {
-        let set_search_open = set_search_open;
-        window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
-            if ev.alt_key() && ev.key().eq_ignore_ascii_case("s") {
-                ev.prevent_default();
-                set_search_open.set(true);
-                set_selected_index.set(None);
-                set_keyboard_index.set(None);
-            }
         });
     });
 
@@ -198,20 +201,6 @@ pub fn Header() -> impl IntoView {
                 }
             });
         }
-    });
-
-    // Global Escape closes the search modal and resets the query.
-    Effect::new(move |_| {
-        let search = search;
-        window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
-            if search_open.get() && ev.key().as_str() == "Escape" {
-                ev.prevent_default();
-                search.set_query.set(String::new());
-                set_search_open.set(false);
-                set_selected_index.set(None);
-                set_keyboard_index.set(None);
-            }
-        });
     });
 
     // Scroll the keyboard-selected suggestion into view whenever it changes.
