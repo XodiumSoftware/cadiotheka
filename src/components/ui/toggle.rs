@@ -82,7 +82,7 @@ pub fn ToggleSliderWithSlashLabel(
             {shortcut_hint.map(|hint| {
                 view! {
                     <span class="mx-1 text-base-content/50">"or"</span>
-                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-base-content bg-base-200 border border-base-content/30 rounded shadow-kbd">{hint}</kbd>
+                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{hint}</kbd>
                 }
             })}
         </label>

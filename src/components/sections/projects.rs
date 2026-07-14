@@ -1,5 +1,6 @@
 use crate::components::cards::projectcard::ProjectCard;
 use crate::components::effects::sectionfade::FadeOverlay;
+use crate::components::ui::cornerframe::CornerFrame;
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
 use crate::context::{LayoutContext, SearchContext};
 use crate::data::{CardData, load_cards};
@@ -61,7 +62,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                             >
                                                 <span>"Clear Search"</span>
                                                 <span class="w-1"></span>
-                                                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-base-content bg-base-200 border border-base-content/30 rounded shadow-kbd">"alt + c"</kbd>
+                                                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"alt + c"</kbd>
                                             </button>
                                         })
                                     }
@@ -70,6 +71,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                         }
                             .into_any()
                     } else {
+                        let query_active = !query.is_empty();
                         view! {
                             <div
                                 class=move || {
@@ -80,6 +82,26 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                     }
                                 }
                             >
+                                {move || {
+                                    if query_active {
+                                        Some(view! {
+                                            <button
+                                                type="button"
+                                                class="group flex flex-col items-center justify-center h-full w-full bg-white hover:border-primary hover:text-primary border-2 border-base-content/80 p-2 text-left"
+                                                on:click=move |_| search.set_query.set(String::new())
+                                            >
+                                                <CornerFrame style="square" class="h-full w-full flex flex-col items-center justify-center">
+                                                    <span class="font-bold text-lg text-black">"Click to Clear Search"</span>
+                                                    <span class="text-sm text-black/60 mt-1">
+                                                        <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-black bg-black/10 border border-black/30 rounded shadow-kbd">"Alt + C"</kbd>
+                                                    </span>
+                                                </CornerFrame>
+                                            </button>
+                                        })
+                                    } else {
+                                        None
+                                    }
+                                }}
                                 {cards
                                     .into_iter()
                                     .map(|project: CardData| {

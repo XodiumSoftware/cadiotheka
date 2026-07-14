@@ -6,6 +6,7 @@ use crate::i18n::{t_string, use_i18n};
 use crate::utils::window_event_listener;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys;
 use std::time::Duration;
 
@@ -120,6 +121,7 @@ pub fn Header() -> impl IntoView {
     let (search_open, set_search_open) = signal(false);
     let input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (selected_index, set_selected_index) = signal::<Option<usize>>(None);
+    let (keyboard_index, set_keyboard_index) = signal::<Option<usize>>(None);
 
     let cards = load_cards();
     let engine = SearchEngine::new(cards);
@@ -135,6 +137,7 @@ pub fn Header() -> impl IntoView {
         let new_query = apply_suggestion(&current, &text, kind);
         search.set_query.set(new_query + " ");
         set_selected_index.set(None);
+        set_keyboard_index.set(None);
         input_ref.get().map(|input| input.focus().ok());
     };
 
@@ -154,6 +157,7 @@ pub fn Header() -> impl IntoView {
                 ev.prevent_default();
                 search.set_query.set(String::new());
                 set_selected_index.set(None);
+                set_keyboard_index.set(None);
                 input_ref.get().map(|input| input.focus().ok());
             }
         });
@@ -172,15 +176,28 @@ pub fn Header() -> impl IntoView {
     // Alt+S opens the search modal and focuses the input
     Effect::new(move |_| {
         let set_search_open = set_search_open;
-        let input_ref = input_ref;
         window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("s") {
                 ev.prevent_default();
                 set_search_open.set(true);
                 set_selected_index.set(None);
-                input_ref.get().map(|input| input.focus().ok());
+                set_keyboard_index.set(None);
             }
         });
+    });
+
+    // Focus the search input whenever the modal opens.
+    Effect::new(move |_| {
+        if search_open.get() {
+            let input_ref = input_ref;
+            spawn_local(async move {
+                gloo_timers::future::sleep(Duration::from_millis(50)).await;
+                if let Some(input) = input_ref.get() {
+                    let _ = input.focus();
+                    let _ = input.select();
+                }
+            });
+        }
     });
 
     // Global Escape closes the search modal and resets the query.
@@ -192,14 +209,29 @@ pub fn Header() -> impl IntoView {
                 search.set_query.set(String::new());
                 set_search_open.set(false);
                 set_selected_index.set(None);
+                set_keyboard_index.set(None);
             }
         });
     });
 
-    let trigger_logo_animation = move || {
-        if is_logo_active.get() {
-            return;
+    // Scroll the keyboard-selected suggestion into view whenever it changes.
+    Effect::new(move |_| {
+        if let Some(idx) = keyboard_index.get() {
+            let id = format!("search-suggestion-{idx}");
+            spawn_local(async move {
+                gloo_timers::future::sleep(Duration::from_millis(10)).await;
+                if let Some(element) = web_sys::window()
+                    .and_then(|w| w.document())
+                    .and_then(|d| d.get_element_by_id(&id))
+                    .and_then(|el| el.dyn_into::<web_sys::HtmlElement>().ok())
+                {
+                    element.scroll_into_view_with_bool(false);
+                }
+            });
         }
+    });
+
+    let trigger_logo_animation = move || {
         set_letters_visible.set(false);
         set_is_logo_active.set(true);
         spawn_local(async move {
@@ -221,23 +253,23 @@ pub fn Header() -> impl IntoView {
         match ev.key().as_str() {
             "ArrowDown" => {
                 ev.prevent_default();
-                set_selected_index.update(|idx| {
-                    *idx = Some(
-                        idx.unwrap_or(usize::MAX)
-                            .saturating_add(1)
-                            .min(flat.len() - 1),
-                    );
-                });
+                let new_idx = selected_index
+                    .get_untracked()
+                    .unwrap_or(usize::MAX)
+                    .saturating_add(1)
+                    .min(flat.len() - 1);
+                set_selected_index.set(Some(new_idx));
+                set_keyboard_index.set(Some(new_idx));
             }
             "ArrowUp" => {
                 ev.prevent_default();
-                set_selected_index.update(|idx| {
-                    *idx = Some(
-                        idx.unwrap_or(flat.len())
-                            .saturating_sub(1)
-                            .min(flat.len() - 1),
-                    );
-                });
+                let new_idx = selected_index
+                    .get_untracked()
+                    .unwrap_or(flat.len())
+                    .saturating_sub(1)
+                    .min(flat.len() - 1);
+                set_selected_index.set(Some(new_idx));
+                set_keyboard_index.set(Some(new_idx));
             }
             "Enter" => {
                 if let Some(idx) = selected_index.get()
@@ -247,6 +279,9 @@ pub fn Header() -> impl IntoView {
                     let text = suggestion.text.clone();
                     let kind = suggestion.kind;
                     insert_suggestion(text, kind);
+                } else {
+                    ev.prevent_default();
+                    set_search_open.set(false);
                 }
             }
             _ => {}
@@ -385,12 +420,13 @@ pub fn Header() -> impl IntoView {
                     <div class="relative">
                         <input
                             type="text"
-                            class="input input-bordered w-full pr-10"
+                            class="input w-full pr-10 bg-transparent border-0 focus:outline-none focus:ring-0"
                             placeholder=t_string!(i18n, search.placeholder)
                             prop:value=move || search.query.get()
                             on:input=move |ev| {
                                 search.set_query.set(event_target_value(&ev));
                                 set_selected_index.set(None);
+                                set_keyboard_index.set(None);
                             }
                             on:keydown=handle_keydown
                             node_ref=input_ref
@@ -451,10 +487,12 @@ pub fn Header() -> impl IntoView {
                                                     };
                                                     let index = global_index;
                                                     global_index += 1;
+                                                    let id = format!("search-suggestion-{index}");
                                                     view! {
                                                         <button
                                                             type="button"
                                                             class=item_class
+                                                            id=id
                                                             on:click=move |_| insert_suggestion(text.clone(), kind)
                                                             on:mouseenter=move |_| set_selected_index.set(Some(index))
                                                         >
@@ -491,14 +529,14 @@ pub fn Header() -> impl IntoView {
 
                     <div class="flex items-center justify-end gap-4 text-xs text-base-content/50 px-3 py-2">
                         <div class="flex items-center gap-1.5">
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-base-content bg-base-200 border border-base-content/30 rounded shadow-kbd">"esc"</kbd>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"esc"</kbd>
                             <span>"to dismiss"</span>
                         </div>
 
                         <span class="text-base-content/30" aria-hidden="true">"|"</span>
 
                         <div class="flex items-center gap-1.5">
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-base-content bg-base-200 border border-base-content/30 rounded shadow-kbd">"return"</kbd>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"return"</kbd>
                             <span>"to select"</span>
                         </div>
                     </div>
