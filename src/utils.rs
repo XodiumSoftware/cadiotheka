@@ -198,9 +198,69 @@ mod tests {
     }
 
     #[test]
+    fn format_number_compact_boundary_cases() {
+        assert_eq!(format_number(100), "100");
+        assert_eq!(format_number(999_499), "999.5k");
+        assert_eq!(format_number(999_499_999), "999.5M");
+        assert_eq!(format_number(999_499_999_999), "999.5B");
+    }
+
+    #[test]
+    fn format_number_full_handles_single_digits_and_large_numbers() {
+        assert_eq!(format_number_full(1), "1");
+        assert_eq!(format_number_full(12), "12");
+        assert_eq!(format_number_full(123), "123");
+        assert_eq!(format_number_full(1_000_000_000_000), "1.000.000.000.000");
+    }
+
+    #[test]
+    fn format_duration_ago_boundary_units() {
+        assert_eq!(
+            format_duration_ago(time::Duration::seconds(0)),
+            "0 seconds ago"
+        );
+        assert_eq!(
+            format_duration_ago(time::Duration::seconds(59)),
+            "59 seconds ago"
+        );
+        assert_eq!(
+            format_duration_ago(time::Duration::minutes(1)),
+            "1 minute ago"
+        );
+        assert_eq!(format_duration_ago(time::Duration::hours(1)), "1 hour ago");
+        assert_eq!(format_duration_ago(time::Duration::days(1)), "1 day ago");
+        assert_eq!(format_duration_ago(time::Duration::weeks(1)), "1 week ago");
+        assert_eq!(format_duration_ago(time::Duration::days(30)), "1 month ago");
+        assert_eq!(format_duration_ago(time::Duration::days(365)), "1 year ago");
+    }
+
+    #[test]
+    fn language_color_case_sensitive_and_variants() {
+        assert_eq!(language_color("Java"), "bg-[#b07219]");
+        assert_eq!(language_color("java"), "bg-[#b07219]");
+        assert_eq!(language_color("Kotlin"), "bg-[#A97BFF]");
+        assert_eq!(language_color("Go"), "bg-[#00ADD8]");
+        assert_eq!(language_color(""), "bg-base-content/50");
+    }
+
+    #[test]
+    fn clean_sha_only_strips_trailing_dirty() {
+        assert_eq!(clean_sha("abc123-dirty-foo"), "abc123-dirty-foo");
+        assert_eq!(clean_sha(""), "");
+        assert_eq!(clean_sha("-dirty"), "");
+        assert_eq!(clean_sha("abc123-dirty-dirty"), "abc123-dirty");
+    }
+
+    #[test]
     fn format_time_full_known_timestamp() {
         let timestamp = time::OffsetDateTime::from_unix_timestamp(0).unwrap();
         assert_eq!(format_time_full(timestamp), "01/01/1970 at 00:00");
+    }
+
+    #[test]
+    fn format_time_full_rounds_down_minutes() {
+        let timestamp = time::OffsetDateTime::from_unix_timestamp(90).unwrap();
+        assert_eq!(format_time_full(timestamp), "01/01/1970 at 00:01");
     }
 
     #[test]
