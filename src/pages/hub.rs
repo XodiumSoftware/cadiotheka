@@ -93,7 +93,6 @@ impl Hub {
             self.render_search_modal(ui, search_bar, search_open);
         }
 
-        ui.add_space(24.0);
         let parsed = SearchEngine::parse_query(&search_bar.query);
         let cards = self.engine.search(&parsed);
         let card_data: Vec<CardData> = cards.into_iter().cloned().collect();
