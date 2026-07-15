@@ -1,3 +1,4 @@
+use crate::utils::api_url;
 use serde::{Deserialize, Serialize};
 
 /// Account role for a registered user.
@@ -65,7 +66,10 @@ impl AccountData {
 /// On failure it logs to the browser console and returns an empty vector so
 /// the UI can keep running with a graceful fallback.
 pub async fn fetch_accounts() -> Vec<AccountData> {
-    match gloo_net::http::Request::get("/api/accounts").send().await {
+    match gloo_net::http::Request::get(&api_url("/accounts"))
+        .send()
+        .await
+    {
         Ok(response) if response.ok() => response
             .json::<Vec<AccountData>>()
             .await

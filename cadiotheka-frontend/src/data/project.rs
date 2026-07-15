@@ -1,5 +1,6 @@
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
+use crate::utils::api_url;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// A URL pointing to a project's icon asset.
@@ -123,7 +124,10 @@ pub struct ProjectData {
 /// On failure it logs to the browser console and returns an empty vector so
 /// the UI can keep running with a graceful fallback.
 pub async fn fetch_projects() -> Vec<ProjectData> {
-    match gloo_net::http::Request::get("/api/projects").send().await {
+    match gloo_net::http::Request::get(&api_url("/projects"))
+        .send()
+        .await
+    {
         Ok(response) if response.ok() => {
             let text = response.text().await.unwrap_or_default();
             match serde_json::from_str::<Vec<ProjectData>>(&text) {
