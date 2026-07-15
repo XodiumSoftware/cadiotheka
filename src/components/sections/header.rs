@@ -102,6 +102,8 @@ pub fn Header() -> impl IntoView {
     let (is_logo_active, set_is_logo_active) = signal(false);
     let (letters_visible, set_letters_visible) = signal(true);
     let (search_open, set_search_open) = signal(false);
+    let (account_menu_open, set_account_menu_open) = signal(false);
+    let account_menu_ref: NodeRef<leptos::html::Div> = NodeRef::new();
     let input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (selected_index, set_selected_index) = signal::<Option<usize>>(None);
     let (keyboard_index, set_keyboard_index) = signal::<Option<usize>>(None);
@@ -160,7 +162,32 @@ pub fn Header() -> impl IntoView {
                 set_selected_index.set(None);
                 set_keyboard_index.set(None);
             }
+
+            if account_menu_open.get() && ev.key().as_str() == "Escape" {
+                ev.prevent_default();
+                set_account_menu_open.set(false);
+            }
         });
+    });
+
+    // Close the account menu when clicking outside of it.
+    Effect::new(move |_| {
+        let menu = account_menu_ref.get();
+        let listener = window_event_listener::<web_sys::MouseEvent, _>("click", move |ev| {
+            let target = ev.target();
+            let menu = menu.clone();
+            let should_close = target
+                .and_then(|t| t.dyn_into::<web_sys::Node>().ok())
+                .map(|target_node| {
+                    menu.map(|menu| !menu.contains(Some(&target_node)))
+                        .unwrap_or(true)
+                })
+                .unwrap_or(true);
+            if should_close {
+                set_account_menu_open.set(false);
+            }
+        });
+        let _ = listener;
     });
 
     // Scroll listener for backdrop blur. Registered once; removed on unmount.
@@ -357,7 +384,7 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </div>
 
-                <div class="navbar-end flex items-center gap-3">
+                <div class="navbar-end flex items-center gap-3" node_ref=account_menu_ref>
                     <button
                         type="button"
                         class="btn btn-primary hover:btn-warning btn-lift"
@@ -380,22 +407,70 @@ pub fn Header() -> impl IntoView {
                         </svg>
                         <kbd class="inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">{t_string!(i18n, search.shortcut_open)}</kbd>
                     </button>
-                    <button
-                        type="button"
-                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden"
-                        aria-label=t_string!(i18n, account.menu)
-                    >
-                        {
-                            let avatar_name = "Cadiotheka".to_string();
-                            let avatar_letter = placeholder_letter(&avatar_name);
-                            let avatar_bg = placeholder_color(&avatar_name);
-                            view! {
-                                <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
-                                    {avatar_letter}
-                                </div>
+                    <div class="relative">
+                        <button
+                            type="button"
+                            class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden"
+                            aria-label=t_string!(i18n, account.menu)
+                            aria-expanded=move || account_menu_open.get().to_string()
+                            aria-haspopup="menu"
+                            on:click=move |_| set_account_menu_open.update(|open| *open = !*open)
+                        >
+                            {
+                                let avatar_name = "Cadiotheka".to_string();
+                                let avatar_letter = placeholder_letter(&avatar_name);
+                                let avatar_bg = placeholder_color(&avatar_name);
+                                view! {
+                                    <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
+                                        {avatar_letter}
+                                    </div>
+                                }
                             }
-                        }
-                    </button>
+                        </button>
+                        {move || {
+                            if account_menu_open.get() {
+                                Some(view! {
+                                    <ul
+                                        class="absolute right-0 top-full mt-2 w-48 bg-base-100 border-2 border-base-content/80 shadow-lg z-50 py-1"
+                                        role="menu"
+                                    >
+                                        <li role="none">
+                                            <button
+                                                type="button"
+                                                class="w-full text-left px-4 py-2 hover:bg-base-content/10"
+                                                role="menuitem"
+                                                on:click=move |_| set_account_menu_open.set(false)
+                                            >
+                                                {t_string!(i18n, account.profile)}
+                                            </button>
+                                        </li>
+                                        <li role="none">
+                                            <button
+                                                type="button"
+                                                class="w-full text-left px-4 py-2 hover:bg-base-content/10"
+                                                role="menuitem"
+                                                on:click=move |_| set_account_menu_open.set(false)
+                                            >
+                                                {t_string!(i18n, account.settings)}
+                                            </button>
+                                        </li>
+                                        <li role="none">
+                                            <button
+                                                type="button"
+                                                class="w-full text-left px-4 py-2 hover:bg-base-content/10 text-error"
+                                                role="menuitem"
+                                                on:click=move |_| set_account_menu_open.set(false)
+                                            >
+                                                {t_string!(i18n, account.logout)}
+                                            </button>
+                                        </li>
+                                    </ul>
+                                })
+                            } else {
+                                None
+                            }
+                        }}
+                    </div>
                 </div>
             </nav>
 

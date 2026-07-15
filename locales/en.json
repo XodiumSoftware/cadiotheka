@@ -27,7 +27,10 @@
         "hint_select": "to select"
     },
     "account": {
-        "menu": "Open account menu"
+        "menu": "Open account menu",
+        "profile": "Profile",
+        "settings": "Settings",
+        "logout": "Log out"
     },
     "project_modal": {
         "by": "by",
