@@ -15,7 +15,7 @@ pub struct IconUrl(pub String);
 mod tag_json_string {
     use super::*;
 
-    pub fn serialize<S: Serializer>(value: &Vec<Tag>, serializer: S) -> Result<S::Ok, S::Error> {
+    pub fn serialize<S: Serializer>(value: &[Tag], serializer: S) -> Result<S::Ok, S::Error> {
         let strings: Vec<String> = value
             .iter()
             .map(|v| {
@@ -54,7 +54,7 @@ mod platform_json_string {
     use super::*;
 
     pub fn serialize<S: Serializer>(
-        value: &Vec<Platform>,
+        value: &[Platform],
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let strings: Vec<String> = value
