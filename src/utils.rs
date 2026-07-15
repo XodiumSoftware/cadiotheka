@@ -48,6 +48,38 @@ pub fn clean_sha(sha: &str) -> &str {
     sha.strip_suffix("-dirty").unwrap_or(sha)
 }
 
+/// Returns the uppercase first letter of a string, or `?` if empty.
+pub fn placeholder_letter(title: &str) -> String {
+    title
+        .chars()
+        .next()
+        .unwrap_or('?')
+        .to_uppercase()
+        .to_string()
+}
+
+/// Returns a deterministic Tailwind background color class from a string.
+pub fn placeholder_color(title: &str) -> &'static str {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let palette: [&'static str; 8] = [
+        "bg-red-500",
+        "bg-orange-500",
+        "bg-yellow-500",
+        "bg-green-500",
+        "bg-cyan-500",
+        "bg-blue-500",
+        "bg-purple-500",
+        "bg-pink-500",
+    ];
+
+    let mut hasher = DefaultHasher::new();
+    title.hash(&mut hasher);
+    let hash = hasher.finish();
+    palette[(hash as usize) % palette.len()]
+}
+
 /// Formats a non-negative integer with SI suffixes for compact display.
 pub fn format_number(value: u64) -> String {
     match value {
@@ -240,6 +272,20 @@ mod tests {
         assert_eq!(format_duration_ago(time::Duration::weeks(1)), "1 week ago");
         assert_eq!(format_duration_ago(time::Duration::days(30)), "1 month ago");
         assert_eq!(format_duration_ago(time::Duration::days(365)), "1 year ago");
+    }
+
+    #[test]
+    fn test_placeholder_letter() {
+        assert_eq!(placeholder_letter("Blender"), "B");
+        assert_eq!(placeholder_letter("freecad"), "F");
+        assert_eq!(placeholder_letter(""), "?");
+    }
+
+    #[test]
+    fn test_placeholder_color_is_deterministic() {
+        let a = placeholder_color("abc");
+        let b = placeholder_color("abc");
+        assert_eq!(a, b);
     }
 
     #[test]

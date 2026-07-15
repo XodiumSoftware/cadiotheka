@@ -5,7 +5,10 @@ use crate::data::{CardData, IconUrl};
 use crate::i18n::use_i18n;
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
-use crate::utils::{format_number, format_number_full, format_time_ago, format_time_full};
+use crate::utils::{
+    format_number, format_number_full, format_time_ago, format_time_full, placeholder_color,
+    placeholder_letter,
+};
 use leptos::prelude::*;
 
 #[derive(Clone)]
@@ -115,36 +118,6 @@ pub fn ClockIcon() -> impl IntoView {
     }
 }
 
-pub fn placeholder_letter(title: &str) -> String {
-    title
-        .chars()
-        .next()
-        .unwrap_or('?')
-        .to_uppercase()
-        .to_string()
-}
-
-pub fn placeholder_color(title: &str) -> &'static str {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-
-    let palette: [&'static str; 8] = [
-        "bg-red-500",
-        "bg-orange-500",
-        "bg-yellow-500",
-        "bg-green-500",
-        "bg-cyan-500",
-        "bg-blue-500",
-        "bg-purple-500",
-        "bg-pink-500",
-    ];
-
-    let mut hasher = DefaultHasher::new();
-    title.hash(&mut hasher);
-    let hash = hasher.finish();
-    palette[(hash as usize) % palette.len()]
-}
-
 #[component]
 pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
     let _i18n = use_i18n();
@@ -191,8 +164,7 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                                 }
                                     .into_any(),
                                 None => view! {
-                                    <div
-                                        class={format!("flex-shrink-0 w-10 h-10 rounded flex items-center justify-center text-white font-bold {}", bg)}
+                                    <div class=format!("flex-shrink-0 w-10 h-10 rounded flex items-center justify-center text-white font-bold {}", bg)
                                         aria-hidden="true"
                                     >
                                         {letter.clone()}
@@ -276,20 +248,6 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
 mod tests {
     use super::*;
     use crate::data::IconUrl;
-
-    #[test]
-    fn test_placeholder_letter() {
-        assert_eq!(placeholder_letter("Blender"), "B");
-        assert_eq!(placeholder_letter("freecad"), "F");
-        assert_eq!(placeholder_letter(""), "?");
-    }
-
-    #[test]
-    fn test_placeholder_color_is_deterministic() {
-        let a = placeholder_color("abc");
-        let b = placeholder_color("abc");
-        assert_eq!(a, b);
-    }
 
     #[test]
     fn test_project_card_properties_from_card_data() {

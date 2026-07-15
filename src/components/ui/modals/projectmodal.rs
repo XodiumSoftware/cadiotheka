@@ -1,12 +1,11 @@
-use crate::components::cards::projectcard::{
-    ProjectCardProperties, placeholder_color, placeholder_letter,
-};
+use crate::components::cards::projectcard::ProjectCardProperties;
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::modals::searchmodal::SearchModal;
 use crate::components::ui::overflowrow::{OverflowItem, OverflowRow};
 use crate::context::ProjectModalContext;
 use crate::data::IconUrl;
 use crate::i18n::{t_string, use_i18n};
+use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 
 /// Modal dialog that displays detailed information about a selected project.

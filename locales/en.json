@@ -26,6 +26,9 @@
         "hint_dismiss": "to dismiss",
         "hint_select": "to select"
     },
+    "account": {
+        "menu": "Open account menu"
+    },
     "project_modal": {
         "by": "by",
         "description": "Description",

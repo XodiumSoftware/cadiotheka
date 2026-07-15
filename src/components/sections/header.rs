@@ -3,7 +3,7 @@ use crate::context::{LayoutContext, SearchContext};
 use crate::data::load_cards;
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
 use crate::i18n::{t_string, use_i18n};
-use crate::utils::window_event_listener;
+use crate::utils::{placeholder_color, placeholder_letter, window_event_listener};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos::wasm_bindgen::JsCast;
@@ -357,7 +357,7 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </div>
 
-                <div class="navbar-end">
+                <div class="navbar-end flex items-center gap-3">
                     <button
                         type="button"
                         class="btn btn-primary hover:btn-warning btn-lift"
@@ -379,6 +379,22 @@ pub fn Header() -> impl IntoView {
                             <path d="m21 21-4.3-4.3" />
                         </svg>
                         <kbd class="inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">{t_string!(i18n, search.shortcut_open)}</kbd>
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden"
+                        aria-label=t_string!(i18n, account.menu)
+                    >
+                        {
+                            let avatar_name = "Cadiotheka".to_string();
+                            let avatar_letter = placeholder_letter(&avatar_name);
+                            let avatar_bg = placeholder_color(&avatar_name);
+                            view! {
+                                <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
+                                    {avatar_letter}
+                                </div>
+                            }
+                        }
                     </button>
                 </div>
             </nav>
