@@ -1,34 +1,14 @@
-[package]
-name = "cadiotheka"
+[workspace]
+members = ["cadiotheka-frontend", "cadiotheka-backend"]
+resolver = "2"
+
+[workspace.package]
 version = "0.0.0"
 edition = "2024"
+license = "AGPL-3.0"
 
-[dependencies]
-leptos = { version = "0.8.17", features = ["csr"] }
-leptos_i18n = { version = "0.6.2", default-features = false, features = ["csr"] }
-gloo-timers = { version = "0.4.0", features = ["futures"] }
-time = { version = "0.3", features = ["serde", "wasm-bindgen", "macros", "formatting", "parsing"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1"
-fuzzy-matcher = "0.3.7"
-js-sys = "0.3"
-pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
-web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "Node", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry"] }
-console_error_panic_hook = "0.1.7"
-
-[build-dependencies]
-leptos_i18n_build = "0.6.2"
-
-[dev-dependencies]
-wasm-bindgen-test = "0.3"
-
-[lints.rust]
+[workspace.lints.rust]
 unsafe_code = "forbid"
-
-[package.metadata.cargo-machete]
-# leptos_i18n is used at compile time by leptos_i18n_build and referenced
-# through generated code, which cargo-machete cannot detect.
-ignored = ["leptos_i18n"]
 
 [profile.release]
 opt-level = "z"

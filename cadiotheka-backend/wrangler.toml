@@ -1,0 +1,8 @@
+name = "cadiotheka-backend"
+main = "build/worker/shim.mjs"
+compatibility_date = "2026-07-15"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cadiotheka-db"
+database_id = "replace-with-your-database-id"
