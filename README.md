@@ -91,10 +91,14 @@ npx wrangler dev
 
 The backend API is available at <http://localhost:8787/api/accounts> by default.
 
-To seed the local D1 database with fixture accounts:
+To seed the local D1 database with fixture accounts and projects:
 
 ```bash
+cd cadiotheka-backend
+npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql --local
+npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql --local
 npx wrangler d1 execute cadiotheka-db --file=scripts/seed_accounts.sql --local
+npx wrangler d1 execute cadiotheka-db --file=scripts/seed_projects.sql --local
 ```
 
 ### Tests & Linting

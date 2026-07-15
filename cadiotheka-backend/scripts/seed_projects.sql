@@ -1,0 +1,166 @@
+INSERT INTO projects (id, title, author, author_id, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url) VALUES
+('71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2', 'Mountain Bike', 'TrailBlazer', '8af81bd9-b70a-4d64-89e9-83bbc4e0297d', 'A rugged mountain bike model ready for off-road adventures.', 'A rugged mountain bike model ready for off-road adventures.
+
+**Highlights:**
+- Detailed frame, fork, and wheel assembly
+- Suitable for rendering, animation, or fabrication prep
+- Includes STEP and mesh exports for broad compatibility', '["3d_model", "vehicle", "fabrication", "engineering", "diy"]', '["blender", "freecad", "fusion_360", "step", "mesh"]', 1200, 84, '2026-07-07T14:30:00Z', NULL),
+('70b7bd89-5af5-4eba-9055-e2b0d9096ed1', 'Modern Chair', 'FurniStudio', '82489665-cc2b-4514-b622-9d08af405da0', 'Minimalist chair design with clean curves and ergonomic proportions.', 'Minimalist chair design with clean curves and ergonomic proportions.
+
+This model focuses on *ergonomic seating geometry* and a refined silhouette that fits modern interiors. The surfaces are clean, making it a great base for upholstery experiments or CNC plans.', '["furniture", "interior"]', '["sketchup", "blender"]', 856, 42, '2026-07-02T09:15:00Z', NULL),
+('076fbcc6-8bad-4b48-b764-86fe032e15d3', 'Robot Arm', 'MechLab', '67a996d7-61a3-42e7-8141-d178bce46647', 'Industrial 6-axis robot arm assembly for automation projects.', 'Industrial 6-axis robot arm assembly for automation projects.
+
+The assembly includes base, shoulder, elbow, and wrist joints with realistic motion envelopes. It is intended for **simulation, educational demos, and conceptual factory layouts** rather than production deployment.', '["robotics", "engineering", "fabrication", "electronics", "tooling"]', '["freecad", "fusion_360", "step", "solidworks", "onshape"]', 3400, 215, '2026-07-09T11:00:00Z', NULL),
+('02360e6d-d826-4b3f-90e8-9eb5bde200c6', 'Desk Lamp', 'Lumina', '9b17545b-f925-4463-9d69-f34fa8a6d844', 'Adjustable articulated desk lamp with a classic workshop look.', 'Adjustable articulated desk lamp with a classic workshop look.
+
+The lamp features a hinged arm and swivel head so you can pose it naturally in renders. Use it to add *warm, functional detail* to workshop or studio scenes.', '["lighting", "decor"]', '["blender"]', 432, 19, '2026-06-09T18:45:00Z', NULL),
+('966159bf-0cde-4cdf-8109-fc0c6b2b3ac9', 'Drone Frame', 'AeroDesign', 'ee61c1db-d4b8-4565-8127-45be5731b4e3', 'Lightweight quadcopter frame optimized for long flight times.', 'Lightweight quadcopter frame optimized for long flight times.
+
+The frame is designed around a *central battery bay* and minimalist arms to reduce weight. It works well for aerodynamic studies, hobby builds, or as a starting point for custom electronics integration.', '["aerospace", "diy"]', '["freecad", "kicad"]', 2100, 136, '2026-07-04T22:20:00Z', NULL),
+('1832d95c-0f37-46d8-abde-f55a1d67d6a3', 'CNC Router Table', 'MakerWorks', '293921f0-5897-4dea-877b-c0c869b7ebb0', 'Compact desktop CNC router table for wood and aluminum.', 'Compact desktop CNC router table for wood and aluminum.
+
+The frame is rigid enough for light aluminum passes yet compact for benchtop use. Consider pairing it with a custom spoilboard and dust shoe for a complete hobby setup.', '["fabrication", "tooling"]', '["freecad", "step"]', 780, 63, '2026-07-08T07:20:00Z', NULL),
+('2638884e-3589-4b9f-b6b7-3a45300641b4', 'Parametric Shelf', 'ShelfGen', '83ce9581-ac3c-4e16-a5ee-41504427f8ab', 'Adjustable wall shelf driven by width and height parameters.', 'Adjustable wall shelf driven by width and height parameters.
+
+This parametric shelf lets you change *width, depth, and bracket spacing* to match your space. It is a practical introduction to constraint-driven modeling for furniture projects.', '["parametric", "furniture"]', '["freecad", "fusion_360"]', 1540, 98, '2026-07-06T16:45:00Z', NULL),
+('069b9a87-3d77-4728-b426-4e1a860b41c3', 'Racing Wheel', 'SimGear', '8d5ed8b1-6a72-4b6b-80d4-a667cdf8e3cb', 'Sim racing steering wheel with button box cutouts.', 'Sim racing steering wheel with button box cutouts.
+
+The wheel rim and button plate are modeled for *DIY sim rigs*. Cutouts are sized for common arcade buttons and rotary encoders, so you can move from CAD to controller fairly quickly.', '["vehicle", "electronics"]', '["fusion_360", "kicad"]', 930, 71, '2026-07-05T13:10:00Z', NULL),
+('863e9cb5-c8c4-494d-a656-66a962873703', 'Brutalist Vase', 'FormLab', 'f9b9bf96-8d3e-43c4-9f3b-003f713c4b58', 'Angular concrete-cast vase inspired by brutalist architecture.', 'Angular concrete-cast vase inspired by brutalist architecture.
+
+Bold planes and raw texture give this vase a *monumental presence* despite its small scale. It prints or casts cleanly and works as a standalone decor piece or a study in form and shadow.', '["art", "decor"]', '["blender", "mesh"]', 640, 55, '2026-07-03T10:00:00Z', NULL),
+('0087b7c4-af30-4cf9-b931-e94dc0e6133d', 'Arduino Enclosure', 'CircuitCase', 'dad30f43-8540-4943-a6d3-1eac9595a9a6', 'Snap-fit enclosure for standard Arduino Uno boards.', 'Snap-fit enclosure for standard Arduino Uno boards.
+
+The lid snaps on without screws and leaves the USB and power headers accessible. It is a reliable starting point for **portable sensor boxes, teaching kits, and quick prototypes**.', '["electronics", "diy", "fabrication", "tooling", "engineering"]', '["freecad", "tinkercad", "kicad", "step", "mesh"]', 4100, 312, '2026-07-09T09:30:00Z', NULL),
+('ea34b1bd-475d-4c45-b4d0-e238f7c029fe', 'Gothic Cathedral Window', 'StoneMason', '8315dc07-fdcd-4052-a6ba-cf03838e4bc9', 'Ornate Gothic window tracery for architectural visualization.', 'Ornate Gothic window tracery for architectural visualization.
+
+The tracery captures the pointed arches and stone mullions typical of Gothic design. Use it to add *authentic detail* to historic buildings, fantasy environments, or cathedral interiors.', '["architecture", "art"]', '["blender", "sketchup"]', 520, 47, '2026-06-28T14:15:00Z', NULL),
+('dfee89f7-101f-4ee4-8389-b494ecada7e3', 'Gearbox Assembly', 'GearHead', 'fe3f59ca-a423-4d18-afe6-8a0f26ffc5c0', 'Two-stage reduction gearbox with involute spur gears.', 'Two-stage reduction gearbox with involute spur gears.
+
+Each gear is modeled with involute tooth profiles suitable for motion studies. The assembly is a useful reference for learning about **gear ratios, bearing placement, and shaft alignment**.', '["engineering", "3d_model"]', '["solidworks", "step"]', 1120, 89, '2026-07-01T08:50:00Z', NULL),
+('9346e339-b291-4ea0-8015-84e2a6a10a3c', 'Low-Poly Tree Pack', 'PolyNature', '7c63ad8a-dbb7-423d-9aea-65c0df018618', 'Twelve stylized trees for game environments.', 'Twelve stylized trees for game environments.
+
+The pack includes a variety of *canopy shapes and trunk styles* to populate scenes quickly. Models are low-poly and unwrap-friendly, making them ideal for mobile or stylized desktop games.', '["game_asset", "art"]', '["blender", "mesh"]', 8900, 654, '2026-07-09T12:00:00Z', NULL),
+('39a03485-de30-49d1-9212-bbf6145476ac', 'Foldable Phone Stand', 'PocketProp', '386d7dd5-d19e-46bb-9f2b-0ab5123561a7', 'Flat-pack phone stand that folds without fasteners.', 'Flat-pack phone stand that folds without fasteners.
+
+The stand ships as a single flat piece and locks into shape by flexing tabs. It is a satisfying **first laser-cutter or 3D-print project** for beginners.', '["furniture", "diy"]', '["freecad", "tinkercad"]', 5600, 423, '2026-07-07T19:40:00Z', NULL),
+('8cc04bca-1db9-4d72-b55f-a23ae7f0b3a0', 'Mars Rover Replica', 'RedPlanet', 'd2636200-6eb6-4132-bef9-c78dc44b1907', 'Detailed scale model of a six-wheeled rover chassis.', 'Detailed scale model of a six-wheeled rover chassis.
+
+The chassis features a rocker-bogie suspension layout inspired by planetary rovers. It is perfect for *robotics competitions, educational demonstrations, or sci-fi display builds*.', '["aerospace", "robotics"]', '["fusion_360", "blender"]', 2300, 178, '2026-07-02T11:25:00Z', NULL),
+('efb7329c-291d-4b65-8d02-b449bfa2c035', 'Kitchen Hook Rail', 'OrganizeIt', 'c37cd847-2f36-4c78-a824-5e1a81ad3564', 'Wall-mounted rail with adjustable utensil hooks.', 'Wall-mounted rail with adjustable utensil hooks.
+
+The rail system keeps kitchen tools within reach while freeing drawer space. Hooks slide along the rail, so you can *reconfigure the layout* as your collection changes.', '["furniture", "interior"]', '["freecad", "step"]', 670, 51, '2026-06-30T15:55:00Z', NULL),
+('b4559e74-1ed3-425f-8d18-5f72704ec6d0', 'Retro Arcade Cabinet', 'PixelCade', 'e5955237-c43f-4d02-b060-a37db23679f2', 'Quarter-scale arcade cabinet with joystick cutouts.', 'Quarter-scale arcade cabinet with joystick cutouts.
+
+This nostalgic cabinet captures the look of classic upright arcade machines in a compact form. Add a tiny screen and joystick to turn it into a **fun desk accessory or game scene prop**.', '["game_asset", "electronics"]', '["blender", "kicad"]', 1450, 112, '2026-07-08T21:00:00Z', NULL),
+('4d218cf6-3d81-4062-b46d-c4e3aa0e8abf', 'Wind Turbine Blade', 'GreenEnergy', 'cdcebb8e-9e4a-4be7-81da-4e93dc18fa60', 'Parametric wind turbine blade profile for small generators.', 'Parametric wind turbine blade profile for small generators.
+
+The blade profile can be adjusted for *diameter, pitch, and chord length* to match your generator. It is intended for small-scale renewable energy experiments and classroom demonstrations.', '["engineering", "parametric"]', '["fusion_360", "step"]', 880, 74, '2026-07-04T06:10:00Z', NULL),
+('742dd0bf-2ff5-4773-89e6-2b011adbf8a2', 'Modular Drawer Organizer', 'TidyBox', '90a7aa5d-c213-481d-9736-37a6011b3ef7', 'Interlocking trays that adapt to drawer widths.', 'Interlocking trays that adapt to drawer widths.
+
+The trays connect with simple dovetail joints that slide together without glue. Mix and match lengths to build a **custom organizer for any drawer or workbench shelf**.', '["furniture", "parametric"]', '["freecad", "tinkercad"]', 3200, 256, '2026-07-06T03:30:00Z', NULL),
+('6347d339-d659-4ba8-95ce-420b86f8abd7', 'Human Skull Study', 'Anatomy3D', '88452557-d39a-4a68-8d3e-71e1f7751a01', 'Anatomically referenced skull model for study and art.', 'Anatomically referenced skull model for study and art.
+
+The skull is proportioned for *anatomy study, figure drawing reference, and medical visualization*. It balances accuracy with clean topology, so it also sculpts and renders well.', '["art", "educational"]', '["blender", "mesh"]', 2100, 167, '2026-06-25T18:20:00Z', NULL),
+('b260616e-cae6-472f-820f-dd3aa153483e', 'Solar Panel Mount', 'OffGrid', 'be528018-9067-4a66-9137-6bc4f8a39aa3', 'Adjustable roof mount for 100W solar panels.', 'Adjustable roof mount for 100W solar panels.
+
+The mount allows tilt adjustment for seasonal sun angles and uses common hardware. Review local wind and snow loads before fabricating, since this model is **educational, not engineered for installation**.', '["engineering", "diy"]', '["freecad", "step"]', 740, 58, '2026-07-05T17:45:00Z', NULL),
+('0ad7401b-808d-43ab-b7fe-46defc0a8b2c', 'Mechanical Keyboard Case', 'KeyCrafter', '62bfbe96-5683-478d-988c-43dbd4f036d8', 'Minimalist 65% keyboard case with gasket mounting.', 'Minimalist 65% keyboard case with gasket mounting.
+
+The case uses a gasket strip mount to soften the typing feel and simplify assembly. It is a popular starting point for *custom mechanical keyboard builds* using standard 65% PCBs.', '["electronics", "tooling"]', '["fusion_360", "kicad"]', 4600, 389, '2026-07-09T15:15:00Z', NULL),
+('7ebc1681-688e-4918-842a-b3e16408343c', 'Victorian Street Lamp', 'Gaslight', '495d03d4-2c85-4ec3-8ec9-e9feea4806a0', 'Ornate cast-iron street lamp for historic scenes.', 'Ornate cast-iron street lamp for historic scenes.
+
+The lamp features decorative brackets and a fluted post typical of 19th-century design. It adds *instant atmosphere* to period street scenes, parks, and architectural visualizations.', '["lighting", "architecture"]', '["blender", "sketchup"]', 590, 44, '2026-06-22T12:30:00Z', NULL),
+('e641851d-8a91-4248-9b73-e9a115782311', 'Pneumatic Cylinder', 'AirPower', 'cae5a685-7c1e-403f-81cc-2d83cc629b08', 'Double-acting pneumatic cylinder with mounting brackets.', 'Double-acting pneumatic cylinder with mounting brackets.
+
+The cylinder assembly includes clevis mounts and port fittings for motion simulations. Use it to teach **pneumatic actuation concepts** or to detail industrial machine models.', '["engineering", "3d_model"]', '["solidworks", "step"]', 980, 82, '2026-07-03T05:00:00Z', NULL),
+('72aac697-8a29-448e-a410-ece522a67e5b', 'Tiny House Frame', 'CompactLiving', 'e20ab600-cdbe-48d0-8f80-1ab594d87d1b', 'Structural frame for a 24-foot tiny house on wheels.', 'Structural frame for a 24-foot tiny house on wheels.
+
+The frame is laid out with trailer mounting points and floor joist pockets. It is meant as a *conceptual planning model* and should be reviewed by a qualified designer before actual construction.', '["architecture", "fabrication"]', '["sketchup", "freecad"]', 1300, 105, '2026-07-01T20:10:00Z', NULL),
+('72505897-4b00-4045-81d5-4a08abc7d2d8', 'Rocket Engine Nozzle', 'LaunchPad', '3c957689-0c27-42e5-bdf8-44a217342d84', 'Bell-shaped nozzle for educational propulsion demos.', 'Bell-shaped nozzle for educational propulsion demos.
+
+The bell contour follows a simplified Rao profile for subsonic and supersonic flow discussions. This is a **visual teaching aid**, not a flight-rated component.', '["aerospace", "educational"]', '["fusion_360", "blender"]', 1700, 143, '2026-07-08T14:00:00Z', NULL),
+('4f6b8ea8-af8f-4fd8-afb4-2843dd26f0d1', 'Cable Chain', 'WireManager', 'e63335ae-d5a4-454c-850e-c8a97ede9390', 'Printable energy chain for cable management on moving gantries.', 'Printable energy chain for cable management on moving gantries.
+
+The links snap together to form a flexible cable carrier for 3D printers, CNC machines, or camera sliders. Print a short run to test *bend radius and retention* before scaling up.', '["tooling", "fabrication"]', '["freecad", "step"]', 2800, 231, '2026-07-07T04:25:00Z', NULL),
+('0e026802-c610-4a03-bd1b-dd5b2a04ffbb', 'Meditation Fountain', 'ZenFlow', 'd4b43310-e6bd-4029-bdad-923b49816f69', 'Small indoor water fountain with quiet pump housing.', 'Small indoor water fountain with quiet pump housing.
+
+The design isolates the pump in a hidden chamber to reduce noise and splashing. It brings a *calming presence* to desks, meditation corners, or small interior scenes.', '["decor", "art"]', '["blender", "tinkercad"]', 430, 37, '2026-06-20T09:50:00Z', NULL),
+('8502ba93-2dbe-4e54-8a36-4093c8c767a4', 'Exoskeleton Hand', 'BioMech', '8a1e1fad-c4d4-4294-bb94-03667be7173e', 'Wearable hand exoskeleton for rehabilitation research.', 'Wearable hand exoskeleton for rehabilitation research.
+
+The exoskeleton is sized for adult hands and leaves the palm open for natural grasping. It is strictly a **research and visualization concept**, not a certified medical device.', '["robotics", "medical"]', '["solidworks", "fusion_360"]', 1250, 99, '2026-07-06T11:35:00Z', NULL),
+('18ba9b5b-dd99-4821-a3a6-0b2e798fbdd6', 'Board Game Insert', 'TableTopOrg', 'd7484bb1-f156-458d-a047-2a8d070b0260', 'Organizer trays for a popular strategy board game.', 'Organizer trays for a popular strategy board game.
+
+The trays keep cards, tokens, and player pieces sorted between sessions. They are sized for *standard storage boxes* and can be adapted to other games with similar components.', '["game_asset", "interior"]', '["tinkercad", "freecad"]', 3400, 278, '2026-07-09T07:55:00Z', NULL),
+('a3540aa0-322f-4132-9133-8f5fa4874ed5', 'Concrete Planter', 'UrbanGarden', 'f2efbffa-3aaf-4141-a358-7bb85591a593', 'Geometric planter mold for cast concrete.', 'Geometric planter mold for cast concrete.
+
+The mold splits cleanly to release the cast without undercuts. Use it to make *modern concrete planters* for succulents, herbs, or interior styling.', '["decor", "diy"]', '["blender", "freecad"]', 1900, 154, '2026-07-02T16:00:00Z', NULL),
+('4ae5726c-4004-4689-96ba-e4ba67937b26', 'Servo Motor Bracket', 'BotBits', 'c5977ec4-3f16-4e3f-9305-cba93796ece1', 'Universal bracket for standard hobby servo motors.', 'Universal bracket for standard hobby servo motors.
+
+The bracket fits common 9g and standard servo footprints and includes mounting ears. It is ideal for *robotics arms, walking mechanisms, and automated displays*.', '["robotics", "tooling"]', '["freecad", "tinkercad"]', 2100, 173, '2026-07-05T02:40:00Z', NULL),
+('57412ae9-74b0-4aac-8d23-5d5ea8d7bab9', 'Art Deco Clock', 'TickTock', '91ecd6d1-72f8-4a3c-a877-1747e805d10d', 'Desktop clock with Art Deco dial and case details.', 'Desktop clock with Art Deco dial and case details.
+
+The case combines geometric step forms with an elegant dial layout. It makes a *striking desk piece* and a good introduction to decorative product modeling.', '["art", "decor"]', '["blender", "fusion_360"]', 760, 61, '2026-06-29T13:20:00Z', NULL),
+('60247e8a-9e44-473d-b7b2-458bfc19a22f', 'PCB Holder', 'SolderStation', '51318579-784a-4828-bafc-fb9a6b634e3e', 'Adjustable printed circuit board holder for soldering.', 'Adjustable printed circuit board holder for soldering.
+
+The holder clamps PCBs at a comfortable angle and leaves both hands free for soldering. It is a **must-have bench tool** for electronics repair and prototyping.', '["electronics", "tooling"]', '["freecad", "kicad"]', 1500, 121, '2026-07-04T10:45:00Z', NULL),
+('889233ed-3944-4b19-a7e3-9e1218883d74', 'Hexagonal Tile', 'Tessellate', '63a82359-ef13-4f28-9d2e-7e0f412b9656', 'Interlocking hex floor tile with grip texture.', 'Interlocking hex floor tile with grip texture.
+
+The hexagonal pattern tiles seamlessly and adds subtle surface grip. Use it for *architectural floors, outdoor patios, or game environment ground planes*.', '["architecture", "decor"]', '["blender", "sketchup"]', 620, 49, '2026-06-27T07:30:00Z', NULL),
+('ebba3a65-bc91-4698-a29c-6288328336a7', 'Hydraulic Press Die', 'ForgeTools', '70c32a2c-6efb-4090-ae91-48c4aa0cc851', 'Die set for pressing simple sheet metal forms.', 'Die set for pressing simple sheet metal forms.
+
+The punch and die are aligned with guide posts for repeatable forming. This is a **conceptual tooling set** and should be validated by a machinist before use.', '["fabrication", "tooling"]', '["solidworks", "step"]', 890, 76, '2026-07-03T14:55:00Z', NULL),
+('b641ce75-f7a5-4b7d-a4c1-8795e297835e', 'Space Station Module', 'OrbitOutpost', '2ec0aca6-7290-44ee-b9ed-6a968a0edf76', 'Modular sci-fi habitat module with docking ports.', 'Modular sci-fi habitat module with docking ports.
+
+The module can be tiled end-to-end to build stations, outposts, or spacecraft. Docking ports and surface paneling give it a *cohesive futuristic look* for games and renders.', '["aerospace", "game_asset"]', '["blender", "fusion_360"]', 2600, 218, '2026-07-08T09:10:00Z', NULL),
+('db9041d0-5a3e-4868-bc50-654a3157a201', 'Electric Guitar Body', 'LuthierCAD', '7a2395d8-0536-4635-bdfc-c38586d05825', 'Classic solid-body guitar shape with neck pocket.', 'Classic solid-body guitar shape with neck pocket.
+
+The body includes a neck pocket, pickup cavities, and control routs to kickstart an instrument build. It is a *starting template* for luthiers and guitar enthusiasts.', '["art", "tooling"]', '["fusion_360", "blender"]', 1100, 95, '2026-07-01T12:05:00Z', NULL),
+('f928f33b-eb82-4311-a421-f2849f6917f9', 'Warehouse Pallet Rack', 'Logistics3D', '761cc2cb-1bc8-437b-a776-b1337657a1f8', 'Industrial pallet racking unit for warehouse layouts.', 'Industrial pallet racking unit for warehouse layouts.
+
+The racking unit follows common warehouse dimensions and can be duplicated into full aisles. It is useful for *layout planning, logistics visualizations, and game environments*.', '["architecture", "3d_model"]', '["sketchup", "freecad"]', 530, 41, '2026-06-24T10:15:00Z', NULL),
+('7510c89c-0db4-4a78-9afb-846f3b467faa', 'Steam Engine Cylinder', 'VintageWorks', '3b15bb8c-6545-4933-a1fc-6aff2ad5bf23', 'Oscillating steam engine cylinder for model builders.', 'Oscillating steam engine cylinder for model builders.
+
+The cylinder and port block are modeled for classic oscillating steam engine layouts. It is a **great weekend machining project** for model-engine enthusiasts.', '["engineering", "educational"]', '["solidworks", "fusion_360"]', 940, 80, '2026-07-06T18:30:00Z', NULL),
+('ea0e4902-8752-4569-bb66-90ad9b4b010c', 'Dungeons Props Pack', 'QuestAssets', '819952aa-0959-4c7f-9a40-084616ff3f21', 'Crates, barrels, and torches for tabletop RPG scenes.', 'Crates, barrels, and torches for tabletop RPG scenes.
+
+The prop pack covers essential dungeon-crawling clutter in a unified style. Scatter them across a grid to *quickly build atmosphere* for virtual or printed tabletop sessions.', '["game_asset", "art"]', '["blender", "mesh"]', 7200, 612, '2026-07-09T18:45:00Z', NULL),
+('5a3d0ebc-cd51-474e-98ca-e6bf5ca0fcc1', 'Bicycle Chain Guard', 'CycleSafe', 'a17dc77d-7699-4b9d-a093-ea83c2f4e325', 'Protective chain guard for city bicycles.', 'Protective chain guard for city bicycles.
+
+The guard covers the chainring and top run of chain to keep clothing clean. It mounts with standard braze-ons and is a *practical upgrade for commuter bikes*.', '["vehicle", "fabrication"]', '["freecad", "step"]', 680, 54, '2026-07-05T08:00:00Z', NULL),
+('39621980-5523-4a5d-a812-e77cd027a337', 'Smart Mirror Frame', 'ReflectTech', '153c0fd3-ebb8-410a-bd54-c638867d7ce2', 'Frame housing for a wall-mounted smart mirror build.', 'Frame housing for a wall-mounted smart mirror build.
+
+The housing wraps a display, controller, and two-way mirror into one clean unit. Cable routing channels keep wiring tidy, and the parametric depth lets it fit *various screen sizes*.', '["electronics", "interior"]', '["fusion_360", "kicad"]', 1800, 147, '2026-07-07T22:50:00Z', NULL),
+('ea6b9afa-b097-4936-9d13-d9f859795c92', 'Japanese Garden Lantern', 'ZenGarden', '4d663155-b15a-42b1-be3d-5cd5c1562bdf', 'Traditional stone lantern for garden visualization.', 'Traditional stone lantern for garden visualization.
+
+The lantern captures the stacked stone blocks and fire box of a *tōrō*. It brings a peaceful, traditional accent to Japanese garden renders and miniature scenes.', '["art", "architecture"]', '["blender", "sketchup"]', 570, 48, '2026-06-21T15:40:00Z', NULL),
+('e5007377-1f98-4b09-b1c1-d4399fec201c', 'Quadcopter Propeller', 'PropForge', '80a1a393-c938-4c4b-889e-21cb1cdd17ce', 'Parametric drone propeller with pitch adjustment.', 'Parametric drone propeller with pitch adjustment.
+
+The propeller can be tuned for *diameter, pitch, and hub bore* to match different motors. It is useful for airflow visualization, drone design studies, or game vehicle props.', '["aerospace", "parametric"]', '["fusion_360", "blender"]', 1300, 108, '2026-07-03T19:25:00Z', NULL),
+('968c5141-bcf9-4a66-be70-b3731a2d7c87', 'Workbench Pegboard', 'ShopOrganizer', '4f1ded03-41cf-4318-a02c-83efbbf85834', 'Modular pegboard holders for common hand tools.', 'Modular pegboard holders for common hand tools.
+
+The holders lock into standard perforated board and can be mixed to match your tool collection. Print a set to *reclaim bench space* and keep frequently used tools visible.', '["tooling", "diy"]', '["freecad", "tinkercad"]', 2900, 244, '2026-07-08T06:15:00Z', NULL),
+('99f5ed05-a782-4e90-8ff0-4eaa0b0d249d', 'Heart Valve Model', 'BioModel', '83308545-8e99-4bcb-b638-2680cc5f859f', 'Simplified anatomical heart valve for educational demos.', 'Simplified anatomical heart valve for educational demos.
+
+The model shows the general leaflets and annulus shape of an atrioventricular valve. It is intended for **biology lessons, patient communication, and anatomy visualization**, not surgical planning.', '["educational", "art"]', '["blender", "mesh"]', 840, 72, '2026-06-26T11:00:00Z', NULL),
+('3b5feb5e-2110-43c2-8e2b-561b6d80574c', 'Autonomous Rover Kit', 'RoverLab', '066df3c9-128a-4773-bc30-690a58fb4e5e', 'Beginner-friendly rover chassis with sensor mounts.', 'Beginner-friendly rover chassis with sensor mounts.
+
+The chassis has flat mounting pads for ultrasonic sensors, line followers, and microcontrollers. It is designed as a *stepping stone into robotics programming* and simple navigation experiments.', '["robotics", "educational"]', '["freecad", "kicad"]', 2500, 203, '2026-07-09T04:00:00Z', NULL),
+('44b0500a-d6c3-4191-b3e8-8026dc735d68', 'Crystal Chandelier', 'LuxLight', '10edc90b-a050-4113-9765-862a7594e783', 'Ornate crystal chandelier for interior renders.', 'Ornate crystal chandelier for interior renders.
+
+The chandelier features branching arms, candle-style lights, and hanging crystal accents. It adds *elegant sparkle* to ballroom, dining, or luxury interior scenes.', '["lighting", "decor"]', '["blender", "fusion_360"]', 710, 60, '2026-06-23T20:20:00Z', NULL),
+('1c794adb-0c35-4e10-ba99-4f5ae60554a3', 'Motorcycle Helmet', 'RiderGear', '0b3545b4-c3ad-4818-ae5c-19e5a4329c82', 'Aerodynamic full-face helmet concept model.', 'Aerodynamic full-face helmet concept model.
+
+The helmet blends sportbike aerodynamics with a smooth, sculptural form. Use it for *vehicle concept art, safety design studies, or racing-themed renders*.', '["vehicle", "art"]', '["blender", "fusion_360"]', 1600, 134, '2026-07-02T08:35:00Z', NULL),
+('0c0cbfdc-5872-46de-a74f-efdb3e95299f', 'Floating Shelf Bracket', 'HiddenMount', '9bd0fd32-661c-4bb1-b641-aed870d3d07a', 'Concealed bracket for wall-mounted floating shelves.', 'Concealed bracket for wall-mounted floating shelves.
+
+The bracket hides inside the shelf while supporting weight through a rigid wall plate. It creates the *clean, floating look* popular in modern shelving without visible hardware.', '["furniture", "tooling"]', '["freecad", "step"]', 3700, 305, '2026-07-06T14:45:00Z', NULL),
+('3e06bea9-5219-4acd-a0a3-7be945809dba', 'Sci-Fi Cargo Crate', 'StarFreight', 'd1c3d9dc-b50a-4703-b92b-220fa7a389e9', 'Weathered sci-fi shipping crate with lid detail.', 'Weathered sci-fi shipping crate with lid detail.
+
+The crate includes panel seams, reinforcing ribs, and a hinged lid for scene interaction. Its utilitarian look fits *cargo bays, freighters, and post-apocalyptic storage scenes*.', '["game_asset", "decor"]', '["blender", "mesh"]', 4100, 356, '2026-07-08T17:30:00Z', NULL),
+('4f318260-afc0-4dc7-a3e8-b802c4b636f7', 'Parametric Bookend', 'ShelfStyle', '7387b79a-bfe9-4fcb-9236-5477edadf387', 'Adjustable bookend profile with customizable text.', 'Adjustable bookend profile with customizable text.
+
+The bookend uses a parametric profile that can be stretched or embossed with a custom label. It is a small but satisfying project for *personalizing a desk or shelf*.', '["parametric", "furniture"]', '["freecad", "tinkercad"]', 950, 81, '2026-07-04T12:10:00Z', NULL),
+('df5098e0-f60b-44f3-97eb-ee1c8aba048f', 'Hovercraft Skirt', 'AirCushion', '88ae4380-a660-4e6e-a2bc-4aa658e80528', 'Segmented skirt geometry for small hovercraft models.', 'Segmented skirt geometry for small hovercraft models.
+
+The segmented skirt traps lift air while allowing the craft to ride over small obstacles. It is a *fun entry point* into ground-effect vehicle design and aerodynamics experiments.', '["vehicle", "aerospace"]', '["fusion_360", "blender"]', 470, 39, '2026-06-19T16:55:00Z', NULL));

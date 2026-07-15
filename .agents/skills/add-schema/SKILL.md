@@ -17,7 +17,7 @@ Use this skill when the user wants to add a new D1 database schema file under `c
    - `INTEGER` for booleans/flags with a `DEFAULT` value.
    - Foreign keys that reference existing tables (currently `accounts(id)`).
    - Inline comments only where the intent is non-obvious.
-4. Update `README.md` and `GUIDE.md` under the backend deployment sections so the example `npx wrangler d1 execute` command references the new schema file (or shows multiple files being applied in order).
+4. Update `README.md` and `GUIDE.md` under the backend deployment/seed sections so the example `npx wrangler d1 execute` commands reference the new schema file (or show multiple files being applied in order).
 5. Do **not** modify existing schema files unless the user explicitly asks for a migration or alter statement.
 6. Do **not** run wrangler or touch `wrangler.toml`.
 

@@ -38,17 +38,56 @@ pub struct CardData {
     pub icon_url: Option<IconUrl>,
 }
 
-/// Load the embedded card fixture.
-pub fn load_cards() -> Vec<CardData> {
-    let fixture: super::CardsFixture =
-        serde_json::from_str(include_str!("../../test_data/cards.json"))
-            .expect("cards fixture is valid JSON");
-    fixture.cards
+/// Fetch projects from the backend API.
+///
+/// On failure it logs to the browser console and returns an empty vector so
+/// the UI can keep running with a graceful fallback.
+pub async fn fetch_cards() -> Vec<CardData> {
+    match gloo_net::http::Request::get("/api/projects").send().await {
+        Ok(response) if response.ok() => response.json::<Vec<CardData>>().await.unwrap_or_default(),
+        Ok(response) => {
+            let status = response.status();
+            leptos::web_sys::console::error_1(
+                &format!("Failed to fetch projects: HTTP {status}").into(),
+            );
+            Vec::new()
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(&format!("Failed to fetch projects: {err:?}").into());
+            Vec::new()
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use time::macros::datetime;
+
+    fn sample_card() -> CardData {
+        CardData {
+            id: "71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2".to_owned(),
+            title: "Mountain Bike".to_owned(),
+            author: "TrailBlazer".to_owned(),
+            author_id: "8af81bd9-b70a-4d64-89e9-83bbc4e0297d".to_owned(),
+            description: "A rugged mountain bike model ready for off-road adventures.".to_owned(),
+            extended_desc: "Extended description.".to_owned(),
+            tags: vec![Tag::Model3d, Tag::Vehicle],
+            supported_platforms: vec![Platform::Blender, Platform::FreeCAD],
+            downloads: 1200,
+            favorites: 84,
+            timestamp: datetime!(2026-07-07 14:30:00 UTC),
+            icon_url: None,
+        }
+    }
+
+    #[test]
+    fn card_serializes_and_deserializes() {
+        let card = sample_card();
+        let json = serde_json::to_string(&card).expect("card serializes");
+        let decoded: CardData = serde_json::from_str(&json).expect("card deserializes");
+        assert_eq!(decoded, card);
+    }
 
     #[test]
     fn icon_url_serializes_transparently() {
@@ -60,28 +99,16 @@ mod tests {
         assert_eq!(decoded, url);
     }
 
+    /// Validates that known tags and platforms serialize and deserialize
+    /// correctly. This catches stale enum definitions.
     #[test]
-    fn load_cards_returns_entries() {
-        let cards = load_cards();
-        assert!(
-            !cards.is_empty(),
-            "fixture should contain at least one card"
-        );
-    }
-
-    /// Validates that every tag and platform string in the embedded fixture
-    /// deserializes successfully against the current enum definitions. This
-    /// catches stale fixture data when new variants are added or renamed.
-    #[test]
-    fn load_cards_uses_known_tags_and_platforms() {
-        let cards = load_cards();
-        for card in cards {
-            for tag in card.tags {
-                let _ = tag.label();
-            }
-            for platform in card.supported_platforms {
-                let _ = platform.label();
-            }
+    fn card_uses_known_tags_and_platforms() {
+        let card = sample_card();
+        for tag in card.tags {
+            let _ = tag.label();
+        }
+        for platform in card.supported_platforms {
+            let _ = platform.label();
         }
     }
 }

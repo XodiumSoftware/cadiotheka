@@ -51,6 +51,7 @@ pub mod contexts {
     pub mod current_user;
     pub mod layout;
     pub mod profile_modal;
+    pub mod project_list;
     pub mod project_modal;
     pub mod search;
 
@@ -58,6 +59,7 @@ pub mod contexts {
     pub use current_user::CurrentUserContext;
     pub use layout::LayoutContext;
     pub use profile_modal::ProfileModalContext;
+    pub use project_list::ProjectListContext;
     pub use project_modal::ProjectModalContext;
     pub use search::SearchContext;
 }
@@ -68,8 +70,7 @@ pub mod data {
     pub mod fixture;
 
     pub use account::{AccountData, AccountRole, fetch_accounts};
-    pub use card::{CardData, IconUrl, load_cards};
-    pub use fixture::CardsFixture;
+    pub use card::{CardData, IconUrl, fetch_cards};
 }
 
 pub mod engines;

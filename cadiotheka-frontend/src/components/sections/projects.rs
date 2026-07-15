@@ -2,8 +2,8 @@ use crate::components::cards::project_card::ProjectCard;
 use crate::components::effects::section_fade::FadeOverlay;
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
-use crate::contexts::{LayoutContext, SearchContext};
-use crate::data::{CardData, load_cards};
+use crate::contexts::{LayoutContext, ProjectListContext, SearchContext};
+use crate::data::CardData;
 use crate::engines::SearchEngine;
 use crate::i18n::{t, t_string, use_i18n};
 use leptos::prelude::*;
@@ -13,8 +13,12 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     let i18n = use_i18n();
     let layout = LayoutContext::use_context();
     let search = SearchContext::use_context();
-    let all_cards = load_cards();
-    let engine = StoredValue::new(SearchEngine::new(all_cards));
+    let cards_ctx = ProjectListContext::use_context();
+    let engine = StoredValue::new(SearchEngine::new(Vec::new()));
+
+    Effect::new(move |_| {
+        engine.set_value(SearchEngine::new(cards_ctx.cards.get()));
+    });
 
     let filtered = Memo::new(move |_| {
         let query = search.query.get();

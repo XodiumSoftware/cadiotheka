@@ -111,12 +111,14 @@ The local API is available at <http://localhost:8787/api/accounts> by default.
 
 ## Seed the Database
 
-Apply the schema and seed the local D1 database with fixture accounts:
+Apply the schemas and seed the local D1 database with fixture accounts and projects:
 
 ```bash
 cd cadiotheka-backend
 npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql --local
+npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql --local
 npx wrangler d1 execute cadiotheka-db --file=scripts/seed_accounts.sql --local
+npx wrangler d1 execute cadiotheka-db --file=scripts/seed_projects.sql --local
 ```
 
 To seed a production database, omit the `--local` flag after updating `wrangler.toml` with the real `database_id`.
