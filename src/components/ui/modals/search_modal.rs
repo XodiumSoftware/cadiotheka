@@ -1,4 +1,4 @@
-use crate::components::ui::cornerframe::CornerFrame;
+use crate::components::ui::corner_frame::CornerFrame;
 use crate::utils::window_event_listener;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;

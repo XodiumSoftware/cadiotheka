@@ -1,5 +1,5 @@
-use crate::components::ui::modals::searchmodal::SearchModal;
-use crate::context::{LayoutContext, SearchContext};
+use crate::components::ui::modals::search_modal::SearchModal;
+use crate::contexts::{CurrentUserContext, LayoutContext, ProfileModalContext, SearchContext};
 use crate::data::load_cards;
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
 use crate::i18n::{t_string, use_i18n};
@@ -110,6 +110,7 @@ pub fn Header() -> impl IntoView {
 
     let cards = load_cards();
     let engine = StoredValue::new(SearchEngine::new(cards));
+    let current_user = CurrentUserContext::use_context();
 
     let suggestions = Memo::new(move |_| {
         let query = search.query.get();
@@ -416,16 +417,16 @@ pub fn Header() -> impl IntoView {
                             aria-haspopup="menu"
                             on:click=move |_| set_account_menu_open.update(|open| *open = !*open)
                         >
-                            {
-                                let avatar_name = "Cadiotheka".to_string();
-                                let avatar_letter = placeholder_letter(&avatar_name);
-                                let avatar_bg = placeholder_color(&avatar_name);
+                            {move || {
+                                let account = current_user.account.get();
+                                let avatar_letter = placeholder_letter(&account.username);
+                                let avatar_bg = placeholder_color(&account.username);
                                 view! {
                                     <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
                                         {avatar_letter}
                                     </div>
                                 }
-                            }
+                            }}
                         </button>
                         {move || {
                             if account_menu_open.get() {
@@ -439,7 +440,11 @@ pub fn Header() -> impl IntoView {
                                                 type="button"
                                                 class="w-full text-left px-4 py-2 hover:bg-base-content/10"
                                                 role="menuitem"
-                                                on:click=move |_| set_account_menu_open.set(false)
+                                                on:click=move |_| {
+                                                    set_account_menu_open.set(false);
+                                                    let account = current_user.account.get();
+                                                    ProfileModalContext::use_context().open(account);
+                                                }
                                             >
                                                 {t_string!(i18n, account.profile)}
                                             </button>

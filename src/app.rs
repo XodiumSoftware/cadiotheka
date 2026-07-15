@@ -1,5 +1,7 @@
-use crate::components::{Footer, Header, ProjectModal, ProjectsSection};
-use crate::context::{LayoutContext, ProjectModalContext, SearchContext};
+use crate::components::{Footer, Header, ProfileModal, ProjectModal, ProjectsSection};
+use crate::contexts::{
+    CurrentUserContext, LayoutContext, ProfileModalContext, ProjectModalContext, SearchContext,
+};
 use crate::i18n::{I18nContextProvider, t, use_i18n};
 use crate::utils::window_event_listener;
 use leptos::prelude::*;
@@ -20,6 +22,8 @@ fn InnerApp() -> impl IntoView {
     LayoutContext::provide_with_default(false);
     SearchContext::provide_with_default();
     ProjectModalContext::provide_with_default();
+    ProfileModalContext::provide_with_default();
+    CurrentUserContext::provide_with_default();
 
     Effect::new(move |_| {
         let layout = LayoutContext::use_context();
@@ -48,6 +52,7 @@ fn InnerApp() -> impl IntoView {
             <Header />
 
             <ProjectModal />
+            <ProfileModal />
 
             <main id="main-content" tabindex="-1" class="flex-1 flex flex-col">
                 <ProjectsSection class="flex-1" />

@@ -9,21 +9,22 @@ pub mod components {
     }
 
     pub mod cards {
-        pub mod projectcard;
+        pub mod project_card;
     }
 
     pub mod effects {
-        pub mod sectionfade;
+        pub mod section_fade;
     }
 
     pub mod ui {
-        pub mod cornerframe;
+        pub mod corner_frame;
         pub mod markdown;
         pub mod modals {
-            pub mod projectmodal;
-            pub mod searchmodal;
+            pub mod profile_modal;
+            pub mod project_modal;
+            pub mod search_modal;
         }
-        pub mod overflowrow;
+        pub mod overflow_row;
         pub mod toggle;
     }
 
@@ -31,20 +32,21 @@ pub mod components {
     pub use sections::header::Header;
     pub use sections::projects::ProjectsSection;
 
-    pub use cards::projectcard::{ProjectCard, ProjectCardProperties, from_card_data};
+    pub use cards::project_card::{ProjectCard, ProjectCardProperties, from_card_data};
 
-    pub use effects::sectionfade::FadeOverlay;
+    pub use effects::section_fade::FadeOverlay;
 
-    pub use ui::cornerframe::CornerFrame;
+    pub use ui::corner_frame::CornerFrame;
     pub use ui::markdown::MarkdownView;
-    pub use ui::modals::projectmodal::ProjectModal;
-    pub use ui::modals::searchmodal::SearchModal;
-    pub use ui::overflowrow::OverflowRow;
+    pub use ui::modals::profile_modal::ProfileModal;
+    pub use ui::modals::project_modal::ProjectModal;
+    pub use ui::modals::search_modal::SearchModal;
+    pub use ui::overflow_row::OverflowRow;
     pub use ui::toggle::ToggleSlider;
     pub use ui::toggle::ToggleSliderWithSlashLabel;
 }
 
-pub mod context;
+pub mod contexts;
 
 pub mod data {
     pub mod account;
@@ -73,7 +75,7 @@ include!(concat!(env!("OUT_DIR"), "/i18n/mod.rs"));
 
 pub use app::*;
 pub use components::*;
-pub use context::*;
+pub use contexts::*;
 pub use data::*;
 pub use engines::*;
 pub use i18n::*;

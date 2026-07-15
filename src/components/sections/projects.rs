@@ -1,8 +1,8 @@
-use crate::components::cards::projectcard::ProjectCard;
-use crate::components::effects::sectionfade::FadeOverlay;
-use crate::components::ui::cornerframe::CornerFrame;
+use crate::components::cards::project_card::ProjectCard;
+use crate::components::effects::section_fade::FadeOverlay;
+use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
-use crate::context::{LayoutContext, SearchContext};
+use crate::contexts::{LayoutContext, SearchContext};
 use crate::data::{CardData, load_cards};
 use crate::engines::SearchEngine;
 use crate::i18n::{t, t_string, use_i18n};

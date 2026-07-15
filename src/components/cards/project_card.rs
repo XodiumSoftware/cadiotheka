@@ -1,6 +1,6 @@
-use crate::components::ui::cornerframe::CornerFrame;
-use crate::components::ui::overflowrow::{OverflowItem, OverflowRow};
-use crate::context::ProjectModalContext;
+use crate::components::ui::corner_frame::CornerFrame;
+use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
+use crate::contexts::ProjectModalContext;
 use crate::data::{CardData, IconUrl};
 use crate::i18n::{t_string, use_i18n};
 use crate::metadata::platforms::Platform;

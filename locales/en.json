@@ -30,7 +30,12 @@
         "menu": "Open account menu",
         "profile": "Profile",
         "settings": "Settings",
-        "logout": "Log out"
+        "logout": "Log out",
+        "role_creator": "Creator",
+        "role_admin": "Admin",
+        "email_label": "Email:",
+        "joined_label": "Joined:",
+        "close": "Close"
     },
     "project_card": {
         "open_details": "Open details for {{ title }} by {{ author }}",

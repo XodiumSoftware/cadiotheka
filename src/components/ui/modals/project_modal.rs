@@ -1,8 +1,8 @@
-use crate::components::cards::projectcard::ProjectCardProperties;
+use crate::components::cards::project_card::ProjectCardProperties;
 use crate::components::ui::markdown::MarkdownView;
-use crate::components::ui::modals::searchmodal::SearchModal;
-use crate::components::ui::overflowrow::{OverflowItem, OverflowRow};
-use crate::context::ProjectModalContext;
+use crate::components::ui::modals::search_modal::SearchModal;
+use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
+use crate::contexts::ProjectModalContext;
 use crate::data::IconUrl;
 use crate::i18n::{t_string, use_i18n};
 use crate::utils::{placeholder_color, placeholder_letter};
