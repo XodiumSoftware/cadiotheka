@@ -1,11 +1,70 @@
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// A URL pointing to a project's icon asset.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct IconUrl(pub String);
+
+/// Serde adapter for tags stored as a JSON-text column.
+///
+/// D1 stores tags as TEXT containing a JSON array, so the frontend first parses
+/// that JSON string into a list of strings and then deserializes each string
+/// into a strongly-typed [`Tag`] via `serde(rename)`.
+mod tag_json_string {
+    use super::*;
+
+    pub fn serialize<S: Serializer>(value: &Vec<Tag>, serializer: S) -> Result<S::Ok, S::Error> {
+        let strings: Vec<String> = value
+            .iter()
+            .map(|v| serde_json::to_string(v).map_err(serde::ser::Error::custom))
+            .collect::<Result<_, _>>()?;
+        serializer
+            .serialize_str(&serde_json::to_string(&strings).map_err(serde::ser::Error::custom)?)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<Tag>, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        let strings: Vec<String> = serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
+        strings
+            .into_iter()
+            .map(|item| serde_json::from_str::<Tag>(&item).map_err(serde::de::Error::custom))
+            .collect::<Result<_, _>>()
+    }
+}
+
+/// Serde adapter for platforms stored as a JSON-text column.
+///
+/// D1 stores platforms as TEXT containing a JSON array, so the frontend first
+/// parses that JSON string into a list of strings and then deserializes each
+/// string into a strongly-typed [`Platform`] via `serde(rename)`.
+mod platform_json_string {
+    use super::*;
+
+    pub fn serialize<S: Serializer>(
+        value: &Vec<Platform>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        let strings: Vec<String> = value
+            .iter()
+            .map(|v| serde_json::to_string(v).map_err(serde::ser::Error::custom))
+            .collect::<Result<_, _>>()?;
+        serializer
+            .serialize_str(&serde_json::to_string(&strings).map_err(serde::ser::Error::custom)?)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Vec<Platform>, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        let strings: Vec<String> = serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
+        strings
+            .into_iter()
+            .map(|item| serde_json::from_str::<Platform>(&item).map_err(serde::de::Error::custom))
+            .collect::<Result<_, _>>()
+    }
+}
 
 /// Data displayed on a project card.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -24,8 +83,10 @@ pub struct ProjectData {
     #[serde(default)]
     pub extended_desc: String,
     /// Categorized tags for the content.
+    #[serde(with = "tag_json_string")]
     pub tags: Vec<Tag>,
     /// Supported platforms for the content.
+    #[serde(with = "platform_json_string")]
     pub supported_platforms: Vec<Platform>,
     /// Download count.
     pub downloads: u64,
