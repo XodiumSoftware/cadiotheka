@@ -21,9 +21,9 @@
 *.pdb
 
 # Build output
-/dist
+**/dist
 
 # DaisyUI (fetched at build time)
-/public/.daisyui-version
-/public/daisyui-theme.mjs
-/public/daisyui.mjs
+**/public/.daisyui-version
+**/public/daisyui-theme.mjs
+**/public/daisyui.mjs
