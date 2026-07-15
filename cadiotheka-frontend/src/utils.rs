@@ -157,13 +157,13 @@ fn now_utc() -> time::OffsetDateTime {
 /// Base URL for backend API requests.
 ///
 /// In release builds the frontend is served from `cadiotheka.com` and talks to
-/// `api.cadiotheka.com`. In debug builds Trunk proxies `/api/` to the local
+/// `api.cadiotheka.com/api`. In debug builds Trunk proxies `/api/` to the local
 /// backend, so a relative path is used.
 pub const fn api_base_url() -> &'static str {
     if cfg!(debug_assertions) {
         "/api"
     } else {
-        "https://api.cadiotheka.com"
+        "https://api.cadiotheka.com/api"
     }
 }
 
