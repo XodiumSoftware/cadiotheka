@@ -1,7 +1,7 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::contexts::{AccountsContext, ProfileModalContext, ProjectModalContext};
-use crate::data::{CardData, IconUrl};
+use crate::data::{IconUrl, ProjectData};
 use crate::i18n::{t_string, use_i18n};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
@@ -27,40 +27,40 @@ pub struct ProjectCardProperties {
     pub icon_url: Option<IconUrl>,
 }
 
-impl From<CardData> for ProjectCardProperties {
-    fn from(card: CardData) -> Self {
-        project_card_properties_from_card_data(card)
+impl From<ProjectData> for ProjectCardProperties {
+    fn from(project: ProjectData) -> Self {
+        project_card_properties_from_project_data(project)
     }
 }
 
-pub fn project_card_properties_from_card_data(card: CardData) -> ProjectCardProperties {
-    let description = if card.description.trim().is_empty() {
+pub fn project_card_properties_from_project_data(project: ProjectData) -> ProjectCardProperties {
+    let description = if project.description.trim().is_empty() {
         "(No description)".to_string()
     } else {
-        card.description
+        project.description
     };
-    let extended_desc = if card.extended_desc.trim().is_empty() {
+    let extended_desc = if project.extended_desc.trim().is_empty() {
         description.clone()
     } else {
-        card.extended_desc
+        project.extended_desc
     };
     ProjectCardProperties {
-        id: card.id,
-        title: card.title,
-        author: card.author,
-        author_id: card.author_id,
+        id: project.id,
+        title: project.title,
+        author: project.author,
+        author_id: project.author_id,
         description,
         extended_desc,
-        tags: card.tags,
-        supported_platforms: card.supported_platforms,
-        downloads: card.downloads,
-        favorites: card.favorites,
-        timestamp: card.timestamp,
-        icon_url: card.icon_url,
+        tags: project.tags,
+        supported_platforms: project.supported_platforms,
+        downloads: project.downloads,
+        favorites: project.favorites,
+        timestamp: project.timestamp,
+        icon_url: project.icon_url,
     }
 }
 
-pub use project_card_properties_from_card_data as from_card_data;
+pub use project_card_properties_from_project_data as from_project_data;
 
 #[component]
 pub fn DownloadIcon() -> impl IntoView {
@@ -284,8 +284,8 @@ mod tests {
     use crate::data::IconUrl;
 
     #[test]
-    fn test_project_card_properties_from_card_data() {
-        let card = CardData {
+    fn test_project_card_properties_from_project_data() {
+        let project = ProjectData {
             id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890".to_owned(),
             title: "Gear".to_owned(),
             author: "Author".to_owned(),
@@ -299,7 +299,7 @@ mod tests {
             timestamp: time::macros::datetime!(2024-01-01 00:00:00 UTC),
             icon_url: Some(IconUrl("https://example.com/gear.svg".to_owned())),
         };
-        let props: ProjectCardProperties = card.into();
+        let props: ProjectCardProperties = project.into();
         assert_eq!(props.title, "Gear");
         assert_eq!(props.author, "Author");
         assert_eq!(props.tags.len(), 1);

@@ -32,7 +32,7 @@ pub mod components {
     pub use sections::header::Header;
     pub use sections::projects::ProjectsSection;
 
-    pub use cards::project_card::{ProjectCard, ProjectCardProperties, from_card_data};
+    pub use cards::project_card::{ProjectCard, ProjectCardProperties, from_project_data};
 
     pub use effects::section_fade::FadeOverlay;
 
@@ -51,26 +51,25 @@ pub mod contexts {
     pub mod current_user;
     pub mod layout;
     pub mod profile_modal;
-    pub mod project_list;
     pub mod project_modal;
+    pub mod projects;
     pub mod search;
 
     pub use accounts::AccountsContext;
     pub use current_user::CurrentUserContext;
     pub use layout::LayoutContext;
     pub use profile_modal::ProfileModalContext;
-    pub use project_list::ProjectListContext;
     pub use project_modal::ProjectModalContext;
+    pub use projects::ProjectsContext;
     pub use search::SearchContext;
 }
 
 pub mod data {
     pub mod account;
-    pub mod card;
-    pub mod fixture;
+    pub mod project;
 
     pub use account::{AccountData, AccountRole, fetch_accounts};
-    pub use card::{CardData, IconUrl, fetch_cards};
+    pub use project::{IconUrl, ProjectData, fetch_projects};
 }
 
 pub mod engines;

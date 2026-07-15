@@ -1,6 +1,6 @@
 use crate::components::ui::modals::search_modal::SearchModal;
 use crate::contexts::{
-    CurrentUserContext, LayoutContext, ProfileModalContext, ProjectListContext, SearchContext,
+    CurrentUserContext, LayoutContext, ProfileModalContext, ProjectsContext, SearchContext,
 };
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
 use crate::i18n::{t_string, use_i18n};
@@ -110,11 +110,11 @@ pub fn Header() -> impl IntoView {
     let (keyboard_index, set_keyboard_index) = signal::<Option<usize>>(None);
 
     let current_user = CurrentUserContext::use_context();
-    let cards_ctx = ProjectListContext::use_context();
+    let projects_ctx = ProjectsContext::use_context();
     let engine = StoredValue::new(SearchEngine::new(Vec::new()));
 
     Effect::new(move |_| {
-        engine.set_value(SearchEngine::new(cards_ctx.cards.get()));
+        engine.set_value(SearchEngine::new(projects_ctx.projects.get()));
     });
 
     let suggestions = Memo::new(move |_| {

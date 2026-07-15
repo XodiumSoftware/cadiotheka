@@ -2,17 +2,17 @@ use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use serde::{Deserialize, Serialize};
 
-/// A URL pointing to a card's icon asset.
+/// A URL pointing to a project's icon asset.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct IconUrl(pub String);
 
-/// Data displayed on a content card.
+/// Data displayed on a project card.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct CardData {
-    /// Unique card identifier.
+pub struct ProjectData {
+    /// Unique project identifier.
     pub id: String,
-    /// Card title.
+    /// Project title.
     pub title: String,
     /// Author or creator name.
     pub author: String,
@@ -31,7 +31,7 @@ pub struct CardData {
     pub downloads: u64,
     /// Favorite count.
     pub favorites: u64,
-    /// Official timestamp for when the card was published or updated.
+    /// Official timestamp for when the project was published or updated.
     #[serde(with = "time::serde::rfc3339")]
     pub timestamp: time::OffsetDateTime,
     /// Optional icon URL (when absent, a colored placeholder is generated).
@@ -42,9 +42,12 @@ pub struct CardData {
 ///
 /// On failure it logs to the browser console and returns an empty vector so
 /// the UI can keep running with a graceful fallback.
-pub async fn fetch_cards() -> Vec<CardData> {
+pub async fn fetch_projects() -> Vec<ProjectData> {
     match gloo_net::http::Request::get("/api/projects").send().await {
-        Ok(response) if response.ok() => response.json::<Vec<CardData>>().await.unwrap_or_default(),
+        Ok(response) if response.ok() => response
+            .json::<Vec<ProjectData>>()
+            .await
+            .unwrap_or_default(),
         Ok(response) => {
             let status = response.status();
             leptos::web_sys::console::error_1(
@@ -64,8 +67,8 @@ mod tests {
     use super::*;
     use time::macros::datetime;
 
-    fn sample_card() -> CardData {
-        CardData {
+    fn sample_project() -> ProjectData {
+        ProjectData {
             id: "71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2".to_owned(),
             title: "Mountain Bike".to_owned(),
             author: "TrailBlazer".to_owned(),
@@ -82,11 +85,11 @@ mod tests {
     }
 
     #[test]
-    fn card_serializes_and_deserializes() {
-        let card = sample_card();
-        let json = serde_json::to_string(&card).expect("card serializes");
-        let decoded: CardData = serde_json::from_str(&json).expect("card deserializes");
-        assert_eq!(decoded, card);
+    fn project_serializes_and_deserializes() {
+        let project = sample_project();
+        let json = serde_json::to_string(&project).expect("project serializes");
+        let decoded: ProjectData = serde_json::from_str(&json).expect("project deserializes");
+        assert_eq!(decoded, project);
     }
 
     #[test]
@@ -102,12 +105,12 @@ mod tests {
     /// Validates that known tags and platforms serialize and deserialize
     /// correctly. This catches stale enum definitions.
     #[test]
-    fn card_uses_known_tags_and_platforms() {
-        let card = sample_card();
-        for tag in card.tags {
+    fn project_uses_known_tags_and_platforms() {
+        let project = sample_project();
+        for tag in project.tags {
             let _ = tag.label();
         }
-        for platform in card.supported_platforms {
+        for platform in project.supported_platforms {
             let _ = platform.label();
         }
     }

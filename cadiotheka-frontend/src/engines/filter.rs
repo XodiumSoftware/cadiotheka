@@ -1,6 +1,6 @@
 //! Fuzzy matching and card filtering for the Cadiotheka search engine.
 
-use crate::data::CardData;
+use crate::data::ProjectData;
 use crate::engines::query::{ParsedQuery, SortBy, SortOrder, active_needle, parse_query};
 use crate::engines::suggestions::{Suggestion, from_cards};
 use crate::metadata::tags::Tag;
@@ -9,36 +9,36 @@ use fuzzy_matcher::skim::SkimMatcherV2;
 
 /// Search engine that owns the loaded cards and answers search queries.
 pub struct SearchEngine {
-    cards: Vec<CardData>,
+    cards: Vec<ProjectData>,
     matcher: SkimMatcherV2,
 }
 
 impl SearchEngine {
-    /// Creates a new search engine from a list of cards.
-    pub fn new(cards: Vec<CardData>) -> Self {
+    /// Creates a new search engine from a list of projects.
+    pub fn new(cards: Vec<ProjectData>) -> Self {
         Self {
             cards,
             matcher: SkimMatcherV2::default(),
         }
     }
 
-    /// Returns owned copies of cards matching the parsed query.
+    /// Returns owned copies of projects matching the parsed query.
     ///
     /// Useful when results need to escape the borrow scope of the engine,
     /// such as in reactive Leptos memos.
-    pub fn search_owned(&self, parsed: &ParsedQuery) -> Vec<CardData> {
+    pub fn search_owned(&self, parsed: &ParsedQuery) -> Vec<ProjectData> {
         self.search(parsed).into_iter().cloned().collect()
     }
 
-    /// Returns references to cards matching the parsed query, ranked or sorted
+    /// Returns references to projects matching the parsed query, ranked or sorted
     /// as requested.
     ///
-    /// Returning `&CardData` avoids cloning the owned card data on every
+    /// Returning `&ProjectData` avoids cloning the owned project data on every
     /// search, which matters as the catalog grows.
-    pub fn search<'a>(&'a self, parsed: &ParsedQuery) -> Vec<&'a CardData> {
+    pub fn search<'a>(&'a self, parsed: &ParsedQuery) -> Vec<&'a ProjectData> {
         let query = parsed.filter.to_vec().join(" ").to_lowercase();
 
-        let mut scored: Vec<(i64, &CardData)> = self
+        let mut scored: Vec<(i64, &ProjectData)> = self
             .cards
             .iter()
             .filter_map(|card| {
@@ -71,10 +71,10 @@ impl SearchEngine {
         scored.into_iter().map(|(_, card)| card).collect()
     }
 
-    /// Returns a fuzzy match score for a card, or `None` if it does not match.
+    /// Returns a fuzzy match score for a project, or `None` if it does not match.
     fn score(
         &self,
-        card: &CardData,
+        card: &ProjectData,
         query: &str,
         filters: &[&str],
         author: Option<&str>,
@@ -142,8 +142,8 @@ impl SearchEngine {
         parse_query(query)
     }
 
-    /// Combines all searchable card fields into a single lowercase string.
-    fn searchable_text(card: &CardData) -> String {
+    /// Combines all searchable project fields into a single lowercase string.
+    fn searchable_text(card: &ProjectData) -> String {
         let tags = card
             .tags
             .iter()
@@ -167,7 +167,7 @@ impl SearchEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::data::CardData;
+    use crate::data::ProjectData;
     use crate::engines::query::parse_query;
     use crate::engines::suggestions::SuggestionKind;
     use crate::metadata::platforms::Platform;
@@ -182,8 +182,8 @@ mod tests {
         platforms: &[Platform],
         downloads: u64,
         favorites: u64,
-    ) -> CardData {
-        CardData {
+    ) -> ProjectData {
+        ProjectData {
             id: format!(
                 "{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}",
                 title.len() + 0x1000,

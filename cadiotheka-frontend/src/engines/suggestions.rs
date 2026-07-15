@@ -1,6 +1,6 @@
 //! Autocomplete suggestion generation for the Cadiotheka search engine.
 
-use crate::data::CardData;
+use crate::data::ProjectData;
 use crate::engines::query::{SortBy, SortOrder};
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -62,12 +62,12 @@ impl Suggestion {
     }
 }
 
-/// Generates clickable suggestions from a list of cards.
+/// Generates clickable suggestions from a list of projects.
 ///
 /// Suggestions are ranked by fuzzy relevance to `needle` and filtered out when
 /// they do not match a non-empty needle. Sort directives are only included when
 /// `include_sort` is `true`, which is typically when the user has typed `@`.
-pub fn from_cards(cards: &[CardData], include_sort: bool, needle: &str) -> Vec<Suggestion> {
+pub fn from_cards(cards: &[ProjectData], include_sort: bool, needle: &str) -> Vec<Suggestion> {
     let matcher = SkimMatcherV2::default();
     let needle_lower = needle.to_lowercase();
     let needle_empty = needle_lower.is_empty();
@@ -176,13 +176,13 @@ fn default_sort_suggestions() -> Vec<Suggestion> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::data::CardData;
+    use crate::data::ProjectData;
     use crate::metadata::platforms::Platform;
     use crate::metadata::tags::Tag;
     use time::macros::datetime;
 
-    fn sample_card() -> CardData {
-        CardData {
+    fn sample_card() -> ProjectData {
+        ProjectData {
             id: "c3d4e5f6-a7b8-9012-cdef-123456789012".to_owned(),
             title: "Sample Gear".to_owned(),
             author: "TestAuthor".to_owned(),
