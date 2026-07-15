@@ -1,10 +1,20 @@
-name: Xodium CI/CD
+name: Frontend CI/CD
 
 on:
   push:
     branches: [main, dev]
+    paths:
+      - "cadiotheka-frontend/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/frontend.yml"
   pull_request:
     branches: [main, dev]
+    paths:
+      - "cadiotheka-frontend/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/frontend.yml"
   workflow_dispatch:
 
 permissions:
@@ -17,6 +27,10 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    working-directory: cadiotheka-frontend
 
 jobs:
   lint:
@@ -59,7 +73,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-frontend-${{ hashFiles('**/Cargo.lock') }}
 
       - id: cache_trunk
         name: Cache Trunk
@@ -116,11 +130,11 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-frontend-${{ hashFiles('**/Cargo.lock') }}
 
       - id: run_tests
         name: Run tests
-        run: cargo test
+        run: cargo test --lib
         shell: bash
 
   build:
@@ -163,7 +177,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-frontend-${{ hashFiles('**/Cargo.lock') }}
 
       - id: cache_trunk
         name: Cache Trunk
@@ -186,7 +200,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: dist
-          path: dist/
+          path: cadiotheka-frontend/dist/
 
   deploy:
     name: Deploy
