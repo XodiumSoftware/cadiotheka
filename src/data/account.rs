@@ -28,6 +28,9 @@ pub struct AccountData {
     pub bio: String,
     /// Optional avatar URL.
     pub avatar_url: Option<String>,
+    /// IDs of projects owned by this account.
+    #[serde(default)]
+    pub project_ids: Vec<String>,
     /// Timestamp when the account was created.
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: time::OffsetDateTime,

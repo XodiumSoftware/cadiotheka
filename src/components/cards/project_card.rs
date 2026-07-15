@@ -13,8 +13,10 @@ use leptos::prelude::*;
 
 #[derive(Clone)]
 pub struct ProjectCardProperties {
+    pub id: String,
     pub title: String,
     pub author: String,
+    pub author_id: String,
     pub description: String,
     pub extended_desc: String,
     pub tags: Vec<Tag>,
@@ -43,8 +45,10 @@ pub fn project_card_properties_from_card_data(card: CardData) -> ProjectCardProp
         card.extended_desc
     };
     ProjectCardProperties {
+        id: card.id,
         title: card.title,
         author: card.author,
+        author_id: card.author_id,
         description,
         extended_desc,
         tags: card.tags,
@@ -133,18 +137,19 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
         ProjectModalContext::use_context().open(props_for_modal.clone());
     };
     let card_title = props.title.clone();
-    let card_author = props.author.clone();
+    let card_author_id = props.author_id.clone();
     let accounts = StoredValue::new(load_accounts());
     let open_author_profile = {
-        let card_author = card_author.clone();
+        let card_author_id = card_author_id.clone();
         move |_| {
             accounts.with_value(|accounts| {
-                if let Some(account) = accounts.iter().find(|a| a.username == card_author) {
+                if let Some(account) = accounts.iter().find(|a| a.id == card_author_id) {
                     ProfileModalContext::use_context().open(account.clone());
                 }
             });
         }
     };
+    let card_author = props.author.clone();
     let icon_alt = t_string!(i18n, project_card.icon_alt, title = card_title.clone());
     let aria_label = t_string!(
         i18n,
@@ -278,8 +283,10 @@ mod tests {
     #[test]
     fn test_project_card_properties_from_card_data() {
         let card = CardData {
+            id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890".to_owned(),
             title: "Gear".to_owned(),
             author: "Author".to_owned(),
+            author_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901".to_owned(),
             description: "A gear.".to_owned(),
             extended_desc: "A gear with an **extended** markdown description.".to_owned(),
             tags: vec![Tag::Model3d],

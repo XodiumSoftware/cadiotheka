@@ -10,10 +10,14 @@ pub struct IconUrl(pub String);
 /// Data displayed on a content card.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct CardData {
+    /// Unique card identifier.
+    pub id: String,
     /// Card title.
     pub title: String,
     /// Author or creator name.
     pub author: String,
+    /// Author account identifier.
+    pub author_id: String,
     /// Short description of the content.
     pub description: String,
     /// Extended markdown description shown in the project detail modal.

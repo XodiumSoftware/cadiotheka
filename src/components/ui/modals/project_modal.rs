@@ -49,13 +49,14 @@ fn ProjectModalContent(
     let icon_alt = t_string!(i18n, project_card.icon_alt, title = card.title.clone());
     let title = card.title.clone();
     let author = card.author.clone();
+    let author_id = card.author_id.clone();
     let accounts = StoredValue::new(load_accounts());
     let open_author_profile = {
-        let author = author.clone();
+        let author_id = author_id.clone();
         move |_| {
             on_close.run(());
             accounts.with_value(|accounts| {
-                if let Some(account) = accounts.iter().find(|a| a.username == author) {
+                if let Some(account) = accounts.iter().find(|a| a.id == author_id) {
                     ProfileModalContext::use_context().open(account.clone());
                 }
             });

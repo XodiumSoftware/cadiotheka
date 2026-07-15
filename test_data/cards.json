@@ -22,7 +22,9 @@
       "downloads": 1200,
       "favorites": 84,
       "timestamp": "2026-07-07T14:30:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2",
+      "author_id": "8af81bd9-b70a-4d64-89e9-83bbc4e0297d"
     },
     {
       "title": "Modern Chair",
@@ -40,7 +42,9 @@
       "downloads": 856,
       "favorites": 42,
       "timestamp": "2026-07-02T09:15:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "70b7bd89-5af5-4eba-9055-e2b0d9096ed1",
+      "author_id": "82489665-cc2b-4514-b622-9d08af405da0"
     },
     {
       "title": "Robot Arm",
@@ -64,7 +68,9 @@
       "downloads": 3400,
       "favorites": 215,
       "timestamp": "2026-07-09T11:00:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "076fbcc6-8bad-4b48-b764-86fe032e15d3",
+      "author_id": "67a996d7-61a3-42e7-8141-d178bce46647"
     },
     {
       "title": "Desk Lamp",
@@ -81,7 +87,9 @@
       "downloads": 432,
       "favorites": 19,
       "timestamp": "2026-06-09T18:45:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "02360e6d-d826-4b3f-90e8-9eb5bde200c6",
+      "author_id": "9b17545b-f925-4463-9d69-f34fa8a6d844"
     },
     {
       "title": "Drone Frame",
@@ -99,7 +107,9 @@
       "downloads": 2100,
       "favorites": 136,
       "timestamp": "2026-07-04T22:20:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "966159bf-0cde-4cdf-8109-fc0c6b2b3ac9",
+      "author_id": "ee61c1db-d4b8-4565-8127-45be5731b4e3"
     },
     {
       "title": "CNC Router Table",
@@ -117,7 +127,9 @@
       "downloads": 780,
       "favorites": 63,
       "timestamp": "2026-07-08T07:20:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "1832d95c-0f37-46d8-abde-f55a1d67d6a3",
+      "author_id": "293921f0-5897-4dea-877b-c0c869b7ebb0"
     },
     {
       "title": "Parametric Shelf",
@@ -135,7 +147,9 @@
       "downloads": 1540,
       "favorites": 98,
       "timestamp": "2026-07-06T16:45:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "2638884e-3589-4b9f-b6b7-3a45300641b4",
+      "author_id": "83ce9581-ac3c-4e16-a5ee-41504427f8ab"
     },
     {
       "title": "Racing Wheel",
@@ -153,7 +167,9 @@
       "downloads": 930,
       "favorites": 71,
       "timestamp": "2026-07-05T13:10:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "069b9a87-3d77-4728-b426-4e1a860b41c3",
+      "author_id": "8d5ed8b1-6a72-4b6b-80d4-a667cdf8e3cb"
     },
     {
       "title": "Brutalist Vase",
@@ -171,7 +187,9 @@
       "downloads": 640,
       "favorites": 55,
       "timestamp": "2026-07-03T10:00:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "863e9cb5-c8c4-494d-a656-66a962873703",
+      "author_id": "f9b9bf96-8d3e-43c4-9f3b-003f713c4b58"
     },
     {
       "title": "Arduino Enclosure",
@@ -195,7 +213,9 @@
       "downloads": 4100,
       "favorites": 312,
       "timestamp": "2026-07-09T09:30:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "0087b7c4-af30-4cf9-b931-e94dc0e6133d",
+      "author_id": "dad30f43-8540-4943-a6d3-1eac9595a9a6"
     },
     {
       "title": "Gothic Cathedral Window",
@@ -213,7 +233,9 @@
       "downloads": 520,
       "favorites": 47,
       "timestamp": "2026-06-28T14:15:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "ea34b1bd-475d-4c45-b4d0-e238f7c029fe",
+      "author_id": "8315dc07-fdcd-4052-a6ba-cf03838e4bc9"
     },
     {
       "title": "Gearbox Assembly",
@@ -231,7 +253,9 @@
       "downloads": 1120,
       "favorites": 89,
       "timestamp": "2026-07-01T08:50:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "dfee89f7-101f-4ee4-8389-b494ecada7e3",
+      "author_id": "fe3f59ca-a423-4d18-afe6-8a0f26ffc5c0"
     },
     {
       "title": "Low-Poly Tree Pack",
@@ -249,7 +273,9 @@
       "downloads": 8900,
       "favorites": 654,
       "timestamp": "2026-07-09T12:00:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "9346e339-b291-4ea0-8015-84e2a6a10a3c",
+      "author_id": "7c63ad8a-dbb7-423d-9aea-65c0df018618"
     },
     {
       "title": "Foldable Phone Stand",
@@ -267,7 +293,9 @@
       "downloads": 5600,
       "favorites": 423,
       "timestamp": "2026-07-07T19:40:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "39a03485-de30-49d1-9212-bbf6145476ac",
+      "author_id": "386d7dd5-d19e-46bb-9f2b-0ab5123561a7"
     },
     {
       "title": "Mars Rover Replica",
@@ -285,7 +313,9 @@
       "downloads": 2300,
       "favorites": 178,
       "timestamp": "2026-07-02T11:25:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "8cc04bca-1db9-4d72-b55f-a23ae7f0b3a0",
+      "author_id": "d2636200-6eb6-4132-bef9-c78dc44b1907"
     },
     {
       "title": "Kitchen Hook Rail",
@@ -303,7 +333,9 @@
       "downloads": 670,
       "favorites": 51,
       "timestamp": "2026-06-30T15:55:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "efb7329c-291d-4b65-8d02-b449bfa2c035",
+      "author_id": "c37cd847-2f36-4c78-a824-5e1a81ad3564"
     },
     {
       "title": "Retro Arcade Cabinet",
@@ -321,7 +353,9 @@
       "downloads": 1450,
       "favorites": 112,
       "timestamp": "2026-07-08T21:00:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "b4559e74-1ed3-425f-8d18-5f72704ec6d0",
+      "author_id": "e5955237-c43f-4d02-b060-a37db23679f2"
     },
     {
       "title": "Wind Turbine Blade",
@@ -339,7 +373,9 @@
       "downloads": 880,
       "favorites": 74,
       "timestamp": "2026-07-04T06:10:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "4d218cf6-3d81-4062-b46d-c4e3aa0e8abf",
+      "author_id": "cdcebb8e-9e4a-4be7-81da-4e93dc18fa60"
     },
     {
       "title": "Modular Drawer Organizer",
@@ -357,7 +393,9 @@
       "downloads": 3200,
       "favorites": 256,
       "timestamp": "2026-07-06T03:30:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "742dd0bf-2ff5-4773-89e6-2b011adbf8a2",
+      "author_id": "90a7aa5d-c213-481d-9736-37a6011b3ef7"
     },
     {
       "title": "Human Skull Study",
@@ -375,7 +413,9 @@
       "downloads": 2100,
       "favorites": 167,
       "timestamp": "2026-06-25T18:20:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "6347d339-d659-4ba8-95ce-420b86f8abd7",
+      "author_id": "88452557-d39a-4a68-8d3e-71e1f7751a01"
     },
     {
       "title": "Solar Panel Mount",
@@ -393,7 +433,9 @@
       "downloads": 740,
       "favorites": 58,
       "timestamp": "2026-07-05T17:45:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "b260616e-cae6-472f-820f-dd3aa153483e",
+      "author_id": "be528018-9067-4a66-9137-6bc4f8a39aa3"
     },
     {
       "title": "Mechanical Keyboard Case",
@@ -411,7 +453,9 @@
       "downloads": 4600,
       "favorites": 389,
       "timestamp": "2026-07-09T15:15:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "0ad7401b-808d-43ab-b7fe-46defc0a8b2c",
+      "author_id": "62bfbe96-5683-478d-988c-43dbd4f036d8"
     },
     {
       "title": "Victorian Street Lamp",
@@ -429,7 +473,9 @@
       "downloads": 590,
       "favorites": 44,
       "timestamp": "2026-06-22T12:30:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "7ebc1681-688e-4918-842a-b3e16408343c",
+      "author_id": "495d03d4-2c85-4ec3-8ec9-e9feea4806a0"
     },
     {
       "title": "Pneumatic Cylinder",
@@ -447,7 +493,9 @@
       "downloads": 980,
       "favorites": 82,
       "timestamp": "2026-07-03T05:00:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "e641851d-8a91-4248-9b73-e9a115782311",
+      "author_id": "cae5a685-7c1e-403f-81cc-2d83cc629b08"
     },
     {
       "title": "Tiny House Frame",
@@ -465,7 +513,9 @@
       "downloads": 1300,
       "favorites": 105,
       "timestamp": "2026-07-01T20:10:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "72aac697-8a29-448e-a410-ece522a67e5b",
+      "author_id": "e20ab600-cdbe-48d0-8f80-1ab594d87d1b"
     },
     {
       "title": "Rocket Engine Nozzle",
@@ -483,7 +533,9 @@
       "downloads": 1700,
       "favorites": 143,
       "timestamp": "2026-07-08T14:00:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "72505897-4b00-4045-81d5-4a08abc7d2d8",
+      "author_id": "3c957689-0c27-42e5-bdf8-44a217342d84"
     },
     {
       "title": "Cable Chain",
@@ -501,7 +553,9 @@
       "downloads": 2800,
       "favorites": 231,
       "timestamp": "2026-07-07T04:25:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "4f6b8ea8-af8f-4fd8-afb4-2843dd26f0d1",
+      "author_id": "e63335ae-d5a4-454c-850e-c8a97ede9390"
     },
     {
       "title": "Meditation Fountain",
@@ -519,7 +573,9 @@
       "downloads": 430,
       "favorites": 37,
       "timestamp": "2026-06-20T09:50:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "0e026802-c610-4a03-bd1b-dd5b2a04ffbb",
+      "author_id": "d4b43310-e6bd-4029-bdad-923b49816f69"
     },
     {
       "title": "Exoskeleton Hand",
@@ -537,7 +593,9 @@
       "downloads": 1250,
       "favorites": 99,
       "timestamp": "2026-07-06T11:35:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "8502ba93-2dbe-4e54-8a36-4093c8c767a4",
+      "author_id": "8a1e1fad-c4d4-4294-bb94-03667be7173e"
     },
     {
       "title": "Board Game Insert",
@@ -555,7 +613,9 @@
       "downloads": 3400,
       "favorites": 278,
       "timestamp": "2026-07-09T07:55:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "18ba9b5b-dd99-4821-a3a6-0b2e798fbdd6",
+      "author_id": "d7484bb1-f156-458d-a047-2a8d070b0260"
     },
     {
       "title": "Concrete Planter",
@@ -573,7 +633,9 @@
       "downloads": 1900,
       "favorites": 154,
       "timestamp": "2026-07-02T16:00:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "a3540aa0-322f-4132-9133-8f5fa4874ed5",
+      "author_id": "f2efbffa-3aaf-4141-a358-7bb85591a593"
     },
     {
       "title": "Servo Motor Bracket",
@@ -591,7 +653,9 @@
       "downloads": 2100,
       "favorites": 173,
       "timestamp": "2026-07-05T02:40:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "4ae5726c-4004-4689-96ba-e4ba67937b26",
+      "author_id": "c5977ec4-3f16-4e3f-9305-cba93796ece1"
     },
     {
       "title": "Art Deco Clock",
@@ -609,7 +673,9 @@
       "downloads": 760,
       "favorites": 61,
       "timestamp": "2026-06-29T13:20:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "57412ae9-74b0-4aac-8d23-5d5ea8d7bab9",
+      "author_id": "91ecd6d1-72f8-4a3c-a877-1747e805d10d"
     },
     {
       "title": "PCB Holder",
@@ -627,7 +693,9 @@
       "downloads": 1500,
       "favorites": 121,
       "timestamp": "2026-07-04T10:45:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "60247e8a-9e44-473d-b7b2-458bfc19a22f",
+      "author_id": "51318579-784a-4828-bafc-fb9a6b634e3e"
     },
     {
       "title": "Hexagonal Tile",
@@ -645,7 +713,9 @@
       "downloads": 620,
       "favorites": 49,
       "timestamp": "2026-06-27T07:30:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "889233ed-3944-4b19-a7e3-9e1218883d74",
+      "author_id": "63a82359-ef13-4f28-9d2e-7e0f412b9656"
     },
     {
       "title": "Hydraulic Press Die",
@@ -663,7 +733,9 @@
       "downloads": 890,
       "favorites": 76,
       "timestamp": "2026-07-03T14:55:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "ebba3a65-bc91-4698-a29c-6288328336a7",
+      "author_id": "70c32a2c-6efb-4090-ae91-48c4aa0cc851"
     },
     {
       "title": "Space Station Module",
@@ -681,7 +753,9 @@
       "downloads": 2600,
       "favorites": 218,
       "timestamp": "2026-07-08T09:10:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "b641ce75-f7a5-4b7d-a4c1-8795e297835e",
+      "author_id": "2ec0aca6-7290-44ee-b9ed-6a968a0edf76"
     },
     {
       "title": "Electric Guitar Body",
@@ -699,7 +773,9 @@
       "downloads": 1100,
       "favorites": 95,
       "timestamp": "2026-07-01T12:05:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "db9041d0-5a3e-4868-bc50-654a3157a201",
+      "author_id": "7a2395d8-0536-4635-bdfc-c38586d05825"
     },
     {
       "title": "Warehouse Pallet Rack",
@@ -717,7 +793,9 @@
       "downloads": 530,
       "favorites": 41,
       "timestamp": "2026-06-24T10:15:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "f928f33b-eb82-4311-a421-f2849f6917f9",
+      "author_id": "761cc2cb-1bc8-437b-a776-b1337657a1f8"
     },
     {
       "title": "Steam Engine Cylinder",
@@ -735,7 +813,9 @@
       "downloads": 940,
       "favorites": 80,
       "timestamp": "2026-07-06T18:30:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "7510c89c-0db4-4a78-9afb-846f3b467faa",
+      "author_id": "3b15bb8c-6545-4933-a1fc-6aff2ad5bf23"
     },
     {
       "title": "Dungeons Props Pack",
@@ -753,7 +833,9 @@
       "downloads": 7200,
       "favorites": 612,
       "timestamp": "2026-07-09T18:45:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "ea0e4902-8752-4569-bb66-90ad9b4b010c",
+      "author_id": "819952aa-0959-4c7f-9a40-084616ff3f21"
     },
     {
       "title": "Bicycle Chain Guard",
@@ -771,7 +853,9 @@
       "downloads": 680,
       "favorites": 54,
       "timestamp": "2026-07-05T08:00:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "5a3d0ebc-cd51-474e-98ca-e6bf5ca0fcc1",
+      "author_id": "a17dc77d-7699-4b9d-a093-ea83c2f4e325"
     },
     {
       "title": "Smart Mirror Frame",
@@ -789,13 +873,15 @@
       "downloads": 1800,
       "favorites": 147,
       "timestamp": "2026-07-07T22:50:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "39621980-5523-4a5d-a812-e77cd027a337",
+      "author_id": "153c0fd3-ebb8-410a-bd54-c638867d7ce2"
     },
     {
       "title": "Japanese Garden Lantern",
       "author": "ZenGarden",
       "description": "Traditional stone lantern for garden visualization.",
-      "extended_desc": "Traditional stone lantern for garden visualization.\n\nThe lantern captures the stacked stone blocks and fire box of a *tōrō*. It brings a peaceful, traditional accent to Japanese garden renders and miniature scenes.",
+      "extended_desc": "Traditional stone lantern for garden visualization.\n\nThe lantern captures the stacked stone blocks and fire box of a *t\u014dr\u014d*. It brings a peaceful, traditional accent to Japanese garden renders and miniature scenes.",
       "tags": [
         "art",
         "architecture"
@@ -807,7 +893,9 @@
       "downloads": 570,
       "favorites": 48,
       "timestamp": "2026-06-21T15:40:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "ea6b9afa-b097-4936-9d13-d9f859795c92",
+      "author_id": "4d663155-b15a-42b1-be3d-5cd5c1562bdf"
     },
     {
       "title": "Quadcopter Propeller",
@@ -825,7 +913,9 @@
       "downloads": 1300,
       "favorites": 108,
       "timestamp": "2026-07-03T19:25:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "e5007377-1f98-4b09-b1c1-d4399fec201c",
+      "author_id": "80a1a393-c938-4c4b-889e-21cb1cdd17ce"
     },
     {
       "title": "Workbench Pegboard",
@@ -843,7 +933,9 @@
       "downloads": 2900,
       "favorites": 244,
       "timestamp": "2026-07-08T06:15:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "968c5141-bcf9-4a66-be70-b3731a2d7c87",
+      "author_id": "4f1ded03-41cf-4318-a02c-83efbbf85834"
     },
     {
       "title": "Heart Valve Model",
@@ -861,7 +953,9 @@
       "downloads": 840,
       "favorites": 72,
       "timestamp": "2026-06-26T11:00:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "99f5ed05-a782-4e90-8ff0-4eaa0b0d249d",
+      "author_id": "83308545-8e99-4bcb-b638-2680cc5f859f"
     },
     {
       "title": "Autonomous Rover Kit",
@@ -879,7 +973,9 @@
       "downloads": 2500,
       "favorites": 203,
       "timestamp": "2026-07-09T04:00:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "3b5feb5e-2110-43c2-8e2b-561b6d80574c",
+      "author_id": "066df3c9-128a-4773-bc30-690a58fb4e5e"
     },
     {
       "title": "Crystal Chandelier",
@@ -897,7 +993,9 @@
       "downloads": 710,
       "favorites": 60,
       "timestamp": "2026-06-23T20:20:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "44b0500a-d6c3-4191-b3e8-8026dc735d68",
+      "author_id": "10edc90b-a050-4113-9765-862a7594e783"
     },
     {
       "title": "Motorcycle Helmet",
@@ -915,7 +1013,9 @@
       "downloads": 1600,
       "favorites": 134,
       "timestamp": "2026-07-02T08:35:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "1c794adb-0c35-4e10-ba99-4f5ae60554a3",
+      "author_id": "0b3545b4-c3ad-4818-ae5c-19e5a4329c82"
     },
     {
       "title": "Floating Shelf Bracket",
@@ -933,7 +1033,9 @@
       "downloads": 3700,
       "favorites": 305,
       "timestamp": "2026-07-06T14:45:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "0c0cbfdc-5872-46de-a74f-efdb3e95299f",
+      "author_id": "9bd0fd32-661c-4bb1-b641-aed870d3d07a"
     },
     {
       "title": "Sci-Fi Cargo Crate",
@@ -951,7 +1053,9 @@
       "downloads": 4100,
       "favorites": 356,
       "timestamp": "2026-07-08T17:30:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "3e06bea9-5219-4acd-a0a3-7be945809dba",
+      "author_id": "d1c3d9dc-b50a-4703-b92b-220fa7a389e9"
     },
     {
       "title": "Parametric Bookend",
@@ -969,7 +1073,9 @@
       "downloads": 950,
       "favorites": 81,
       "timestamp": "2026-07-04T12:10:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "4f318260-afc0-4dc7-a3e8-b802c4b636f7",
+      "author_id": "7387b79a-bfe9-4fcb-9236-5477edadf387"
     },
     {
       "title": "Hovercraft Skirt",
@@ -987,7 +1093,9 @@
       "downloads": 470,
       "favorites": 39,
       "timestamp": "2026-06-19T16:55:00Z",
-      "icon_url": null
+      "icon_url": null,
+      "id": "df5098e0-f60b-44f3-97eb-ee1c8aba048f",
+      "author_id": "88ae4380-a660-4e6e-a2bc-4aa658e80528"
     }
   ]
 }

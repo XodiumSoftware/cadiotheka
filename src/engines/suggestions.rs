@@ -183,8 +183,10 @@ mod tests {
 
     fn sample_card() -> CardData {
         CardData {
+            id: "c3d4e5f6-a7b8-9012-cdef-123456789012".to_owned(),
             title: "Sample Gear".to_owned(),
             author: "TestAuthor".to_owned(),
+            author_id: "d4e5f6a7-b8c9-0123-def1-234567890123".to_owned(),
             description: "A sample gear.".to_owned(),
             extended_desc: "A sample gear with *extended* markdown description.".to_owned(),
             tags: vec![Tag::Parametric, Tag::Model3d],

@@ -184,8 +184,24 @@ mod tests {
         favorites: u64,
     ) -> CardData {
         CardData {
+            id: format!(
+                "{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}",
+                title.len() + 0x1000,
+                author.len() + 0x2000,
+                downloads as usize % 0x1000,
+                favorites as usize % 0x10000,
+                (downloads + favorites) % 0x1_0000_0000_0000
+            ),
             title: title.to_owned(),
             author: author.to_owned(),
+            author_id: format!(
+                "{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}",
+                author.len() + 0x6000,
+                0,
+                0,
+                0,
+                0
+            ),
             description: description.to_owned(),
             extended_desc: format!("Extended markdown summary for {}.", title),
             tags: tags.to_vec(),
