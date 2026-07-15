@@ -1,6 +1,8 @@
 use crate::components::ui::cornerframe::CornerFrame;
+use crate::utils::window_event_listener;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
+use leptos::web_sys;
 
 /// A reusable modal dialog with a search-modal visual style.
 #[component]
@@ -12,6 +14,21 @@ pub fn SearchModal(
 ) -> impl IntoView {
     let children_view = children();
     let backdrop_ref: NodeRef<leptos::html::Div> = NodeRef::new();
+
+    // Close the modal when the user presses Escape.
+    Effect::new(move |_| {
+        if open.get() {
+            window_event_listener::<web_sys::KeyboardEvent, _>("keydown", {
+                let on_close = on_close;
+                move |ev| {
+                    if ev.key().eq_ignore_ascii_case("escape") {
+                        ev.prevent_default();
+                        on_close.run(());
+                    }
+                }
+            });
+        }
+    });
 
     Effect::new(move |_| {
         if let Some(body) = leptos::web_sys::window()
