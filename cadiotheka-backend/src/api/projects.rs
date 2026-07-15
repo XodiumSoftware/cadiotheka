@@ -14,7 +14,9 @@ pub struct Project {
     pub author_id: String,
     pub description: String,
     pub extended_desc: String,
+    #[serde(with = "json_string")]
     pub tags: Vec<String>,
+    #[serde(with = "json_string")]
     pub supported_platforms: Vec<String>,
     pub downloads: u64,
     pub favorites: u64,
@@ -31,12 +33,33 @@ pub struct ProjectPayload {
     pub author_id: String,
     pub description: String,
     pub extended_desc: String,
+    #[serde(with = "json_string")]
     pub tags: Vec<String>,
+    #[serde(with = "json_string")]
     pub supported_platforms: Vec<String>,
     pub downloads: u64,
     pub favorites: u64,
     pub timestamp: String,
     pub icon_url: Option<String>,
+}
+
+/// Serde adapter that stores a `Vec<String>` as a single JSON string column.
+///
+/// D1 stores tags and platforms as TEXT containing a JSON array, so we serialize
+/// to a JSON string on the way in and parse that JSON string on the way out.
+mod json_string {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S: Serializer>(value: &Vec<String>, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Vec<String>, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        serde_json::from_str(&s).map_err(serde::de::Error::custom)
+    }
 }
 
 /// Returns the D1 database binding configured for this worker.
