@@ -2,8 +2,8 @@ use crate::components::cards::project_card::ProjectCardProperties;
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::modals::search_modal::SearchModal;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
-use crate::contexts::ProjectModalContext;
-use crate::data::IconUrl;
+use crate::contexts::{ProfileModalContext, ProjectModalContext};
+use crate::data::{IconUrl, load_accounts};
 use crate::i18n::{t_string, use_i18n};
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
@@ -42,7 +42,6 @@ fn ProjectModalContent(
     #[prop(into)] card: ProjectCardProperties,
     #[prop(into)] on_close: Callback<()>,
 ) -> impl IntoView {
-    let _ = on_close;
     let i18n = use_i18n();
     let letter = placeholder_letter(&card.title);
     let bg = placeholder_color(&card.title);
@@ -50,6 +49,18 @@ fn ProjectModalContent(
     let icon_alt = t_string!(i18n, project_card.icon_alt, title = card.title.clone());
     let title = card.title.clone();
     let author = card.author.clone();
+    let accounts = StoredValue::new(load_accounts());
+    let open_author_profile = {
+        let author = author.clone();
+        move |_| {
+            on_close.run(());
+            accounts.with_value(|accounts| {
+                if let Some(account) = accounts.iter().find(|a| a.username == author) {
+                    ProfileModalContext::use_context().open(account.clone());
+                }
+            });
+        }
+    };
     let extended_desc = card.extended_desc.clone();
     let tags = card.tags.clone();
     let platforms = card.supported_platforms.clone();
@@ -84,7 +95,14 @@ fn ProjectModalContent(
                     </h2>
                     <p class="text-base-content/70 text-sm">
                         {t_string!(i18n, project_modal.by)}
-                        <span class="font-semibold text-base-content ml-1" title={author.clone()}>{author.clone()}</span>
+                        <button
+                            type="button"
+                            class="font-semibold text-base-content ml-1 hover:text-primary hover:underline"
+                            title={author.clone()}
+                            on:click=open_author_profile
+                        >
+                            {author.clone()}
+                        </button>
                     </p>
                 </div>
                 <div class="flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">

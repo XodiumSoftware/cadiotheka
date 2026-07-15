@@ -1,7 +1,7 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
-use crate::contexts::ProjectModalContext;
-use crate::data::{CardData, IconUrl};
+use crate::contexts::{ProfileModalContext, ProjectModalContext};
+use crate::data::{CardData, IconUrl, load_accounts};
 use crate::i18n::{t_string, use_i18n};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
@@ -134,6 +134,17 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
     };
     let card_title = props.title.clone();
     let card_author = props.author.clone();
+    let accounts = StoredValue::new(load_accounts());
+    let open_author_profile = {
+        let card_author = card_author.clone();
+        move |_| {
+            accounts.with_value(|accounts| {
+                if let Some(account) = accounts.iter().find(|a| a.username == card_author) {
+                    ProfileModalContext::use_context().open(account.clone());
+                }
+            });
+        }
+    };
     let icon_alt = t_string!(i18n, project_card.icon_alt, title = card_title.clone());
     let aria_label = t_string!(
         i18n,
@@ -183,9 +194,17 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                                 <h2 class="card-title text-primary text-base leading-tight">
                                     <span class="truncate" title={card_title.clone()}>{card_title.clone()}</span>
                                     <span class="text-base-content/60 font-normal">{" by "}</span>
-                                    <span class="text-base-content font-semibold truncate" title={card_author.clone()}>
+                                    <button
+                                        type="button"
+                                        class="text-base-content font-semibold truncate hover:text-primary hover:underline"
+                                        title={card_author.clone()}
+                                        on:click=move |ev| {
+                                            ev.stop_propagation();
+                                            open_author_profile(());
+                                        }
+                                    >
                                         {card_author.clone()}
-                                    </span>
+                                    </button>
                                 </h2>
 
                                 <div class="flex flex-nowrap items-center gap-1 overflow-hidden">

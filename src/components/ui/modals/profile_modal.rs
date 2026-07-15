@@ -53,16 +53,18 @@ fn ProfileModalContent(
                     {letter}
                 </div>
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
-                    <h2 class="text-xl font-bold text-primary leading-tight truncate">
-                        {display_name.clone()}
-                    </h2>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-bold text-primary leading-tight truncate">
+                            {display_name.clone()}
+                        </h2>
+                        <span class="badge badge-xs badge-outline rounded-none border-base-content/20 text-base-content/70 self-center">
+                            {role_label}
+                        </span>
+                    </div>
                     <p class="text-base-content/70 text-sm">
                         {"@"}
                         {username.clone()}
                     </p>
-                    <span class="badge badge-xs badge-outline rounded-none border-base-content/20 text-base-content/70 mt-1 self-start">
-                        {role_label}
-                    </span>
                 </div>
                 <div class="flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">
                     <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_esc)}</kbd>
