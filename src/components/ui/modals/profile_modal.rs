@@ -64,8 +64,12 @@ fn ProfileModalContent(
                         {role_label}
                     </span>
                 </div>
+                <div class="flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">
+                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_esc)}</kbd>
+                    <span>{t_string!(i18n, project_modal.hint_dismiss)}</span>
+                </div>
             </div>
-            <hr class="border-base-content/10 my-4" />
+            <hr class="border-base-content/10" />
             <div class="space-y-2 text-sm text-base-content/80">
                 <p>
                     <span class="font-semibold text-base-content">{t_string!(i18n, account.email_label)}</span>
@@ -82,16 +86,6 @@ fn ProfileModalContent(
                         <p class="text-base-content/70 mt-2">{bio}</p>
                     })
                 }}
-            </div>
-            <hr class="border-base-content/10 my-4" />
-            <div class="flex items-center justify-end">
-                <button
-                    type="button"
-                    class="btn btn-primary btn-lift"
-                    on:click=move |_| on_close.run(())
-                >
-                    {t_string!(i18n, account.close)}
-                </button>
             </div>
         </div>
     }
