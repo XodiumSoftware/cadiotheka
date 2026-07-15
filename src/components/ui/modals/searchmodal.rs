@@ -15,19 +15,21 @@ pub fn SearchModal(
     let children_view = children();
     let backdrop_ref: NodeRef<leptos::html::Div> = NodeRef::new();
 
-    // Close the modal when the user presses Escape.
+    // Close the modal when the user presses Escape. The listener is only
+    // registered while the modal is open and removed immediately when it closes.
     Effect::new(move |_| {
-        if open.get() {
-            window_event_listener::<web_sys::KeyboardEvent, _>("keydown", {
-                let on_close = on_close;
-                move |ev| {
-                    if ev.key().eq_ignore_ascii_case("escape") {
-                        ev.prevent_default();
-                        on_close.run(());
-                    }
-                }
-            });
+        if !open.get() {
+            return;
         }
+        window_event_listener::<web_sys::KeyboardEvent, _>("keydown", {
+            let on_close = on_close;
+            move |ev| {
+                if ev.key().eq_ignore_ascii_case("escape") {
+                    ev.prevent_default();
+                    on_close.run(());
+                }
+            }
+        });
     });
 
     Effect::new(move |_| {

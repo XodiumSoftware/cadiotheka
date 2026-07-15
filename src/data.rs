@@ -72,4 +72,20 @@ mod tests {
             "fixture should contain at least one card"
         );
     }
+
+    /// Validates that every tag and platform string in the embedded fixture
+    /// deserializes successfully against the current enum definitions. This
+    /// catches stale fixture data when new variants are added or renamed.
+    #[test]
+    fn load_cards_uses_known_tags_and_platforms() {
+        let cards = load_cards();
+        for card in cards {
+            for tag in card.tags {
+                let _ = tag.label();
+            }
+            for platform in card.supported_platforms {
+                let _ = platform.label();
+            }
+        }
+    }
 }

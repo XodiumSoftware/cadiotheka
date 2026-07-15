@@ -107,11 +107,11 @@ pub fn Header() -> impl IntoView {
     let (keyboard_index, set_keyboard_index) = signal::<Option<usize>>(None);
 
     let cards = load_cards();
-    let engine = SearchEngine::new(cards);
+    let engine = StoredValue::new(SearchEngine::new(cards));
 
     let suggestions = Memo::new(move |_| {
         let query = search.query.get();
-        let all = engine.suggestions(&query);
+        let all = engine.with_value(|engine| engine.suggestions(&query));
         group_and_filter_suggestions(&all)
     });
 
@@ -133,6 +133,7 @@ pub fn Header() -> impl IntoView {
     };
 
     // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Escape closes it.
+    // These listeners are registered once and removed when the header unmounts.
     Effect::new(move |_| {
         window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("s") {
@@ -162,7 +163,7 @@ pub fn Header() -> impl IntoView {
         });
     });
 
-    // Scroll listener for backdrop blur
+    // Scroll listener for backdrop blur. Registered once; removed on unmount.
     Effect::new(move |_| {
         window_event_listener::<web_sys::Event, _>("scroll", move |_ev| {
             let scrolled = web_sys::window()
