@@ -1,3 +1,6 @@
+/// Name of the D1 binding configured in `wrangler.toml`.
+pub(crate) const DB_BINDING: &str = "DB";
+
 mod api {
     pub mod accounts;
 }
