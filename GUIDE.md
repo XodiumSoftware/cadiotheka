@@ -3,11 +3,14 @@
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [Build for the Web](#build-for-the-web)
-- [Run Locally](#run-locally)
+- [Project Layout](#project-layout)
+- [Build the Frontend](#build-the-frontend)
+- [Run Frontend Locally](#run-frontend-locally)
+- [Run Backend Locally](#run-backend-locally)
 - [Run Tests](#run-tests)
 - [Run Linting](#run-linting)
 - [Build for Release](#build-for-release)
+- [Deploy the Backend](#deploy-the-backend)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -40,12 +43,21 @@ cargo --version
 trunk --version
 ```
 
-## Build for the Web
+## Project Layout
+
+This repository is a Cargo workspace with two members:
+
+- `cadiotheka-frontend/` — Leptos CSR browser app compiled to `wasm32-unknown-unknown`.
+- `cadiotheka-backend/` — Cloudflare Pages Functions Rust backend using D1.
+
+Most day-to-day development commands are run from inside one of those crates.
+
+## Build the Frontend
 
 1. Clone the repository:
    ```bash
    git clone https://github.com/XodiumSoftware/cadiotheka.git
-   cd cadiotheka
+   cd cadiotheka/cadiotheka-frontend
    ```
 
 2. Build and bundle the web app with Trunk:
@@ -58,13 +70,14 @@ trunk --version
    trunk build --release
    ```
 
-The output is placed in `dist/`.
+The output is placed in `cadiotheka-frontend/dist/`.
 
-## Run Locally
+## Run Frontend Locally
 
 Start a development server with Trunk:
 
 ```bash
+cd cadiotheka-frontend
 trunk serve --port 8080
 ```
 
@@ -73,31 +86,67 @@ disables the service worker cache so you always see the latest build.
 
 Trunk rebuilds automatically when you edit the project.
 
+## Run Backend Locally
+
+Run the Cloudflare Pages Functions backend with Wrangler:
+
+```bash
+cd cadiotheka-backend
+npx wrangler dev
+```
+
+The local API is available at <http://localhost:8787/api/accounts> by default.
+
 ## Build for Release
 
 ```bash
+cd cadiotheka-frontend
 trunk build --release
 ```
 
-The release site is placed in `dist/`. Upload that folder to any static host
-such as GitHub Pages.
+The release site is placed in `cadiotheka-frontend/dist/`. Upload that folder to
+your static host (e.g. Cloudflare Pages alongside the backend).
 
 ## Run Tests
+
+Run the full workspace test suite:
 
 ```bash
 cargo test
 ```
 
-## Run Linting
+To run only the frontend tests:
 
 ```bash
-cargo clippy --target wasm32-unknown-unknown
+cargo test -p cadiotheka-frontend
+```
+
+To run only the backend tests:
+
+```bash
+cargo test -p cadiotheka-backend
+```
+
+## Run Linting
+
+Lint the frontend with the WASM target:
+
+```bash
+cd cadiotheka-frontend
+cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
+```
+
+Lint the backend:
+
+```bash
+cd cadiotheka-backend
+cargo clippy --all-targets --all-features -- -D warnings
 ```
 
 To also run tests and checks together:
 
 ```bash
-cargo test && cargo clippy --target wasm32-unknown-unknown
+cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
 ```
 
 ## Troubleshooting
@@ -123,7 +172,32 @@ cargo test && cargo clippy --target wasm32-unknown-unknown
 ### Clippy warnings
 
 - Address all warnings; the project aims for a clean `cargo clippy` run.
-- For forbidden unsafe code, do not use `unsafe` blocks. This is enforced via `[lints.rust]` in `Cargo.toml`.
+- For forbidden unsafe code, do not use `unsafe` blocks. This is enforced via `[lints.rust]` in each crate's `Cargo.toml`.
+
+### Backend local dev issues
+
+- Ensure `npx wrangler dev` is run from `cadiotheka-backend/`.
+- The D1 database ID in `wrangler.toml` must match the database you created for production; local dev uses a local D1 binding automatically.
+
+## Deploy the Backend
+
+1. Create a D1 database:
+   ```bash
+   cd cadiotheka-backend
+   npx wrangler d1 create cadiotheka-db
+   ```
+
+2. Update `wrangler.toml` with the database ID from step 1.
+
+3. Apply the schema:
+   ```bash
+   npx wrangler d1 execute cadiotheka-db --file=schema.sql
+   ```
+
+4. Build and deploy:
+   ```bash
+   npx wrangler deploy
+   ```
 
 ---
 

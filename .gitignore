@@ -27,3 +27,9 @@
 **/public/.daisyui-version
 **/public/daisyui-theme.mjs
 **/public/daisyui.mjs
+
+# Wrangler / Cloudflare backend
+/build
+/node_modules
+.wrangler
+.dev.vars
