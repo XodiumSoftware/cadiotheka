@@ -16,7 +16,8 @@ pub struct Account {
     pub bio: String,
     pub avatar_url: Option<String>,
     pub created_at: String,
-    pub verified: bool,
+    /// D1 stores booleans as integers, so this field is an `i32` instead of a `bool`.
+    pub verified: i32,
 }
 
 /// Payload used to create or update an account.
@@ -30,7 +31,7 @@ pub struct AccountPayload {
     pub bio: String,
     pub avatar_url: Option<String>,
     pub created_at: String,
-    pub verified: bool,
+    pub verified: i32,
 }
 
 /// Returns the D1 database binding configured for this worker.
@@ -71,7 +72,7 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
             payload.bio.into(),
             payload.avatar_url.into(),
             payload.created_at.into(),
-            (payload.verified as i32).into(),
+            payload.verified.into(),
         ])?
         .run()
         .await?;
@@ -96,7 +97,7 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
             payload.bio.into(),
             payload.avatar_url.into(),
             payload.created_at.into(),
-            (payload.verified as i32).into(),
+            payload.verified.into(),
             id.into(),
         ])?
         .run()

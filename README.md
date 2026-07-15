@@ -71,14 +71,22 @@ Then open <http://localhost:8080/index.html#dev> in a browser.
 
 ### Backend
 
-Run the Cloudflare Pages Functions backend locally with Wrangler:
+The backend is a Cloudflare Pages Functions Rust worker. First build the WASM bundle, then run Wrangler:
 
 ```bash
 cd cadiotheka-backend
+cargo install worker-build --version 0.7.5 --force
+worker-build
 npx wrangler dev
 ```
 
 The backend API is available at <http://localhost:8787/api/accounts> by default.
+
+To seed the local D1 database with fixture accounts:
+
+```bash
+npx wrangler d1 execute cadiotheka-db --file=scripts/seed_accounts.sql --local
+```
 
 ### Tests & Linting
 

@@ -88,14 +88,39 @@ Trunk rebuilds automatically when you edit the project.
 
 ## Run Backend Locally
 
-Run the Cloudflare Pages Functions backend with Wrangler:
+The backend is a Cloudflare Pages Functions Rust worker. First build the WASM bundle, then run Wrangler:
 
 ```bash
 cd cadiotheka-backend
+cargo install worker-build --version 0.7.5 --force
+worker-build
 npx wrangler dev
 ```
 
 The local API is available at <http://localhost:8787/api/accounts> by default.
+
+## Seed the Database
+
+Apply the schema and seed the local D1 database with fixture accounts:
+
+```bash
+cd cadiotheka-backend
+npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql --local
+npx wrangler d1 execute cadiotheka-db --file=scripts/seed_accounts.sql --local
+```
+
+To seed a production database, omit the `--local` flag after updating `wrangler.toml` with the real `database_id`.
+
+## Build the Backend
+
+Build the WASM bundle that Wrangler serves:
+
+```bash
+cd cadiotheka-backend
+worker-build
+```
+
+The generated worker shim is placed in `cadiotheka-backend/build/`.
 
 ## Build for Release
 
