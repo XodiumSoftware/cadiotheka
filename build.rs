@@ -1,4 +1,4 @@
-use leptos_i18n_build::{Config, TranslationsInfos};
+use leptos_i18n_build::{Config, ParseOptions, TranslationsInfos};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -6,7 +6,9 @@ fn main() {
     // Generate i18n module from locales/
     let i18n_mod_directory =
         PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR should be set")).join("i18n");
-    let cfg = Config::new("en").expect("default locale 'en' should be valid");
+    let cfg = Config::new("en")
+        .expect("default locale 'en' should be valid")
+        .parse_options(ParseOptions::default().interpolate_display(true));
     let translations_infos =
         TranslationsInfos::parse(cfg).expect("locales should parse successfully");
     translations_infos.emit_diagnostics();

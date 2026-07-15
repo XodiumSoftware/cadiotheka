@@ -2,7 +2,7 @@ use crate::components::ui::cornerframe::CornerFrame;
 use crate::components::ui::overflowrow::{OverflowItem, OverflowRow};
 use crate::context::ProjectModalContext;
 use crate::data::{CardData, IconUrl};
-use crate::i18n::use_i18n;
+use crate::i18n::{t_string, use_i18n};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use crate::utils::{
@@ -120,11 +120,10 @@ pub fn ClockIcon() -> impl IntoView {
 
 #[component]
 pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
-    let _i18n = use_i18n();
+    let i18n = use_i18n();
     let letter = placeholder_letter(&props.title);
     let bg = placeholder_color(&props.title);
     let icon_url = props.icon_url.as_ref().map(|IconUrl(url)| url.clone());
-    let title = props.title.clone();
     let downloads = props.downloads;
     let favorites = props.favorites;
     let timestamp = props.timestamp;
@@ -133,9 +132,15 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
     let open_modal = move |_| {
         ProjectModalContext::use_context().open(props_for_modal.clone());
     };
-    let aria_label = format!("Open details for {} by {}", props.title, props.author);
     let card_title = props.title.clone();
     let card_author = props.author.clone();
+    let icon_alt = t_string!(i18n, project_card.icon_alt, title = card_title.clone());
+    let aria_label = t_string!(
+        i18n,
+        project_card.open_details,
+        title = card_title.clone(),
+        author = card_author.clone()
+    );
     let tags = props.tags.clone();
     let platforms = props.supported_platforms.clone();
 
@@ -153,24 +158,26 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                 <div class="card bg-ghost h-full rounded-none">
                     <div class="card-body p-4">
                         <div class="flex items-start gap-3">
-                            {move || match icon_url.clone() {
-                                Some(url) => view! {
-                                    <img
-                                        src={url}
-                                        alt={format!("{} icon", title.clone())}
-                                        class="flex-shrink-0 w-10 h-10 rounded object-cover"
-                                        loading="lazy"
-                                    />
+                            {move || {
+                                match icon_url.clone() {
+                                    Some(url) => view! {
+                                        <img
+                                            src={url}
+                                            alt=icon_alt.clone()
+                                            class="flex-shrink-0 w-10 h-10 rounded object-cover"
+                                            loading="lazy"
+                                        />
+                                    }
+                                        .into_any(),
+                                    None => view! {
+                                        <div class=format!("flex-shrink-0 w-10 h-10 rounded flex items-center justify-center text-white font-bold {}", bg)
+                                            aria-hidden="true"
+                                        >
+                                            {letter.clone()}
+                                        </div>
+                                    }
+                                        .into_any(),
                                 }
-                                    .into_any(),
-                                None => view! {
-                                    <div class=format!("flex-shrink-0 w-10 h-10 rounded flex items-center justify-center text-white font-bold {}", bg)
-                                        aria-hidden="true"
-                                    >
-                                        {letter.clone()}
-                                    </div>
-                                }
-                                    .into_any(),
                             }}
                             <div class="min-w-0 flex-1 flex flex-col gap-2">
                                 <h2 class="card-title text-primary text-base leading-tight">
@@ -217,21 +224,21 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                         <div class="flex items-center gap-4 text-base-content/60 text-sm">
                             <span
                                 class="flex items-center gap-1"
-                                title={move || format!("{} downloads", format_number_full(downloads))}
+                                title={move || t_string!(i18n, project_card.downloads_title, count = format_number_full(downloads))}
                             >
                                 <DownloadIcon />
                                 {move || format_number(downloads)}
                             </span>
                             <span
                                 class="flex items-center gap-1"
-                                title={move || format!("{} favorites", format_number_full(favorites))}
+                                title={move || t_string!(i18n, project_card.favorites_title, count = format_number_full(favorites))}
                             >
                                 <HeartIcon />
                                 {move || format_number(favorites)}
                             </span>
                             <span
                                 class="flex items-center gap-1"
-                                title={move || format!("Updated {}", format_time_full(timestamp))}
+                                title={move || t_string!(i18n, project_card.updated_title, time = format_time_full(timestamp))}
                             >
                                 <ClockIcon />
                                 {move || format_time_ago(timestamp)}

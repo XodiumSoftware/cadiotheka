@@ -47,7 +47,7 @@ fn ProjectModalContent(
     let letter = placeholder_letter(&card.title);
     let bg = placeholder_color(&card.title);
     let icon_url = card.icon_url.as_ref().map(|IconUrl(url)| url.clone());
-    let icon_alt = format!("{} icon", card.title);
+    let icon_alt = t_string!(i18n, project_card.icon_alt, title = card.title.clone());
     let title = card.title.clone();
     let author = card.author.clone();
     let extended_desc = card.extended_desc.clone();

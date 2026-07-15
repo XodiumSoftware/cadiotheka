@@ -32,6 +32,13 @@
         "settings": "Settings",
         "logout": "Log out"
     },
+    "project_card": {
+        "open_details": "Open details for {{ title }} by {{ author }}",
+        "icon_alt": "{{ title }} icon",
+        "downloads_title": "{{ count }} downloads",
+        "favorites_title": "{{ count }} favorites",
+        "updated_title": "Updated {{ time }}"
+    },
     "project_modal": {
         "by": "by",
         "description": "Description",
