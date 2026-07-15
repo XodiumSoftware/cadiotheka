@@ -87,10 +87,10 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                         Some(view! {
                                             <button
                                                 type="button"
-                                                class="group flex flex-col items-center justify-center h-full w-full bg-white hover:border-primary hover:text-primary border-2 border-base-content/80 p-2 text-left"
+                                                class="group btn-lift flex flex-col items-center justify-center h-full w-full bg-white hover:border-primary hover:text-primary border-2 border-base-content/80 p-2 text-left"
                                                 on:click=move |_| search.set_query.set(String::new())
                                             >
-                                                <CornerFrame style="square" class="h-full w-full flex flex-col items-center justify-center">
+                                                <CornerFrame style="square" black=true class="h-full w-full flex flex-col items-center justify-center">
                                                     <span class="font-bold text-lg text-black">{t_string!(i18n, search.clear_card_title)}</span>
                                                     <span class="text-sm text-black/60 mt-1">
                                                         <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-black bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.shortcut_clear)}</kbd>
