@@ -33,13 +33,15 @@
 
 ## About
 
-Cadiotheka is an open hub for CAD creators. It collects, organizes, and provides resources, tooling, and references to support people working with computer-aided design. The hub runs as a browser application built with [leptos](https://github.com/leptos-rs/leptos) and compiled to WebAssembly.
+Cadiotheka is an open hub for CAD creators. It collects, organizes, and provides resources, tooling, and references to support people working with computer-aided design. The hub runs as a browser application built with [leptos](https://github.com/leptos-rs/leptos) and compiled to WebAssembly, backed by a Cloudflare Pages Functions Rust backend that uses a D1 database.
 
 ## Requirements
 
 - [Rust](https://www.rust-lang.org/) — latest stable toolchain
-- `wasm32-unknown-unknown` target
-- [Trunk](https://trunkrs.dev/)
+- `wasm32-unknown-unknown` target (for the frontend)
+- [Trunk](https://trunkrs.dev/) (for the frontend)
+- [Node.js](https://nodejs.org/) and `npx` (for the backend)
+- A [Cloudflare](https://cloudflare.com/) account with D1 access (for backend deployment)
 
 Install the target and Trunk with:
 
@@ -52,36 +54,99 @@ cargo install --locked trunk
 
 ## Running Locally
 
-Cadiotheka runs in the browser as a WebAssembly application. Start a local
-server with Trunk:
+Cadiotheka is a Cargo workspace with two members: `cadiotheka-frontend` and `cadiotheka-backend`.
+
+### Frontend
+
+Start a local Trunk dev server:
 
 ```bash
 git clone https://github.com/XodiumSoftware/cadiotheka.git
 cd cadiotheka
+cd cadiotheka-backend
+npx wrangler dev
+```
+
+In a second terminal, start the frontend:
+
+```bash
+cd cadiotheka-frontend
 trunk serve --port 8080
 ```
 
 Then open <http://localhost:8080/index.html#dev> in a browser.
 
-Run the unit tests:
+Trunk proxies `/api/*` requests to the backend dev server on `http://127.0.0.1:8787`.
+
+### Backend
+
+The backend is a Cloudflare Pages Functions Rust worker. First build the WASM bundle, then run Wrangler:
+
+```bash
+cd cadiotheka-backend
+cargo install worker-build --version 0.7.5 --force
+worker-build
+npx wrangler dev
+```
+
+The backend API is available at <http://localhost:8787/api/accounts> by default.
+
+To seed the local D1 database with fixture accounts and projects:
+
+```bash
+cd cadiotheka-backend
+npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql --local
+npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql --local
+npx wrangler d1 execute cadiotheka-db --file=scripts/seed_accounts.sql --local
+npx wrangler d1 execute cadiotheka-db --file=scripts/seed_projects.sql --local
+```
+
+### Tests & Linting
+
+Run the full workspace test suite:
 
 ```bash
 cargo test
 ```
 
-Lint with the WASM target:
+Lint each crate:
 
 ```bash
+cd cadiotheka-frontend
 cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
+cd ../cadiotheka-backend
+cargo clippy --all-targets --all-features -- -D warnings
 ```
+
+### Frontend Build
 
 For a release build:
 
 ```bash
+cd cadiotheka-frontend
 trunk build --release
 ```
 
-The static site is placed in `dist/`.
+The static site is placed in `cadiotheka-frontend/dist/`.
+
+## Backend Deployment
+
+1. Create a D1 database:
+   ```bash
+   npx wrangler d1 create cadiotheka-db
+   ```
+
+2. Update `cadiotheka-backend/wrangler.toml` with the database ID from step 1.
+
+3. Apply the schema:
+   ```bash
+   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/schemas/accounts.sql
+   ```
+
+4. Build and deploy:
+   ```bash
+   npx wrangler deploy
+   ```
 
 <p align="right"><a href="#readme-top">▲</a></p>
 

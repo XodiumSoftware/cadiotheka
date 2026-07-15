@@ -1,0 +1,215 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "cadiotheka-backend/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "cadiotheka-backend/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    working-directory: cadiotheka-backend
+
+jobs:
+  lint:
+    name: Lint
+    if: |
+      !contains(github.event.head_commit.message, '[ci-skip]') &&
+      !contains(github.event.pull_request.title, '[ci-skip]')
+    runs-on: ubuntu-latest
+    environment:
+      name: "${{ github.ref_name }}"
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
+    steps:
+      - id: checkout
+        name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - id: setup_rust
+        name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@d197c158264056996cfba74a9c2d93886346edc3
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - id: install_wasm_target
+        name: Install WASM Target
+        run: rustup target add wasm32-unknown-unknown
+        shell: bash
+
+      - id: run_sccache_cache
+        name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad
+
+      - id: cache_dependencies
+        name: Cache dependencies
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-backend-${{ hashFiles('**/Cargo.lock') }}
+
+      - id: run_lint
+        name: Run Lint
+        run: |
+          cargo clippy --all-targets --all-features -- -D warnings
+          cargo fmt --all -- --check
+        shell: bash
+
+      - id: install_cargo_binstall
+        name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@dc19f1e48450eefe5a29b8da6c6b00a87d730b37
+
+      - id: run_cargo_machete
+        name: Run cargo-machete
+        run: |
+          cargo binstall cargo-machete --no-confirm --force
+          cargo machete
+
+  test:
+    name: Test
+    if: |
+      !contains(github.event.head_commit.message, '[ci-skip]') &&
+      !contains(github.event.pull_request.title, '[ci-skip]')
+    needs: [lint]
+    runs-on: ubuntu-latest
+    steps:
+      - id: checkout
+        name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - id: setup_rust
+        name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@d197c158264056996cfba74a9c2d93886346edc3
+        with:
+          toolchain: stable
+
+      - id: install_wasm_target
+        name: Install WASM Target
+        run: rustup target add wasm32-unknown-unknown
+        shell: bash
+
+      - id: cache_dependencies
+        name: Cache dependencies
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-backend-${{ hashFiles('**/Cargo.lock') }}
+
+      - id: run_tests
+        name: Compile tests
+        run: cargo test --no-run
+        shell: bash
+
+  build:
+    name: Build
+    if: |
+      !contains(github.event.head_commit.message, '[ci-skip]') &&
+      !contains(github.event.pull_request.title, '[ci-skip]')
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
+    steps:
+      - id: checkout
+        name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - id: setup_rust
+        name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@d197c158264056996cfba74a9c2d93886346edc3
+        with:
+          toolchain: stable
+
+      - id: install_wasm_target
+        name: Install WASM Target
+        run: rustup target add wasm32-unknown-unknown
+        shell: bash
+
+      - id: run_sccache_cache
+        name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad
+
+      - id: cache_dependencies
+        name: Cache dependencies
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-backend-${{ hashFiles('**/Cargo.lock') }}
+
+      - id: install_worker_build
+        name: Install worker-build
+        run: cargo install worker-build --force
+        shell: bash
+
+      - id: build_worker
+        name: Build Worker
+        run: worker-build
+
+      - name: Upload worker artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: worker
+          path: cadiotheka-backend/build/
+
+  deploy:
+    name: Deploy
+    if: |
+      !contains(github.event.head_commit.message, '[ci-skip]') &&
+      !contains(github.event.pull_request.title, '[ci-skip]')
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: "${{ github.ref_name }}"
+    steps:
+      - id: checkout
+        name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Download worker artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: worker
+          path: cadiotheka-backend/build
+
+      - id: deploy
+        name: Deploy Worker
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cadiotheka-backend
+          command: deploy

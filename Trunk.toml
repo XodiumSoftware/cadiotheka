@@ -1,5 +1,0 @@
-[tools]
-tailwindcss = "2.8.3"
-
-[build.wasm-opt]
-level = "z"

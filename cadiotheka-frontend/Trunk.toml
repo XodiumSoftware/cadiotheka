@@ -1,0 +1,11 @@
+[tools]
+tailwindcss = "2.8.3"
+
+[serve]
+# Proxy API requests to the local backend dev server.
+[[proxy]]
+rewrite = "/api/"
+backend = "http://127.0.0.1:8787/api/"
+
+[build.wasm-opt]
+level = "z"

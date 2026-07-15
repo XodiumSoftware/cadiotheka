@@ -3,7 +3,9 @@
 ## Project at a Glance
 
 - **Name:** Cadiotheka
-- **Type:** Rust hub application (browser-only WebAssembly via `leptos`)
+- **Type:** Rust workspace with two members:
+  - `cadiotheka-frontend` — browser-only WebAssembly Leptos CSR app.
+  - `cadiotheka-backend` — Cloudflare Pages Functions Rust worker with D1 database.
 - **Language:** Rust (edition 2024)
 - **Build Tool:** Cargo + [Trunk](https://trunkrs.dev/)
 - **Target:** `wasm32-unknown-unknown`
@@ -22,50 +24,83 @@
 ## Quick Commands
 
 ```bash
-# Lint the project (use WASM target for release-equivalent checks)
-cargo clippy --target wasm32-unknown-unknown
+# Lint the frontend
+cd cadiotheka-frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
+
+# Lint the backend
+cd cadiotheka-backend && cargo clippy --all-targets --all-features -- -D warnings
 
 # Run the test suite
 cargo test
 
-# Serve the web app locally
-trunk serve --port 8080
+# Serve the web app locally (backend must be running on port 8787)
+cd cadiotheka-backend && npx wrangler dev
+cd cadiotheka-frontend && trunk serve --port 8080
 
 # Build for the web (WASM)
-trunk build
+cd cadiotheka-frontend && trunk build
 
 # Build for release
-trunk build --release
+cd cadiotheka-frontend && trunk build --release
+
+# Build the backend WASM bundle for Wrangler
+cd cadiotheka-backend && worker-build
 ```
+
+## Testing
+
+- Use `cargo test` to run the full workspace test suite.
+- Run frontend tests with `cargo test -p cadiotheka-frontend --lib`.
+- Run backend tests with `cargo test -p cadiotheka-backend`.
+- Add tests for new modules and edge cases where applicable.
+
+## Data Sources
+
+- The backend owns the canonical data in D1.
+- Fixture data lives as SQL seed scripts in `cadiotheka-backend/scripts/` (e.g. `seed_accounts.sql`, `seed_projects.sql`).
+- The frontend does **not** embed JSON fixtures; it fetches accounts from `/api/accounts` and projects from `/api/projects`.
+- Schemas live in `cadiotheka-backend/schemas/` (one entity per file, e.g. `accounts.sql`, `projects.sql`).
 
 ## Project Structure
 
 ```
-Cadiotheka/
-├── Cargo.toml          # Rust package configuration
-├── Trunk.toml          # Trunk web bundler configuration
-├── index.html          # Trunk page shell (root)
-├── src/                # Source directory
-│   ├── main.rs         # Native entry point and web Trunk entry point
-│   ├── lib.rs          # Public export of CadiothekaApp
-│   ├── app.rs          # CadiothekaApp state and UI
-│   └── i18n.rs         # Centralized user-facing strings
-├── assets/             # Static web assets
-│   ├── favicon.svg
-│   ├── manifest.json
-│   └── sw.js           # Service worker for offline/PWA support
-├── .github/            # GitHub Actions workflows
-└── docs/               # Documentation
+cadiotheka/
+├── Cargo.toml                         # Workspace configuration
+├── cadiotheka-frontend/
+│   ├── Cargo.toml
+│   ├── Trunk.toml                     # Trunk dev server + API proxy
+│   ├── index.html
+│   └── src/                           # Leptos app source
+│       ├── main.rs
+│       ├── lib.rs                     # Explicit module registration, no mod.rs files
+│       ├── app.rs
+│       ├── data/                      # AccountData, CardData, fetch functions
+│       ├── contexts/                  # Leptos reactive contexts (no mod.rs)
+│       ├── components/                # UI components
+│       ├── engines/                   # Search/suggestion logic
+│       ├── metadata/                  # Tag and platform enums
+│       └── utils.rs
+├── cadiotheka-backend/
+│   ├── Cargo.toml
+│   ├── wrangler.toml                  # D1 binding, worker entry
+│   ├── schemas/                       # D1 schema files
+│   ├── scripts/                       # Seed SQL scripts
+│   └── src/
+│       ├── lib.rs                     # Router, DB_BINDING constant
+│       └── api/                       # Route handlers (accounts.rs, projects.rs, ...)
+├── .github/workflows/                 # CI/CD
+└── docs/                              # Documentation
 ```
 
 ## Architecture
 
 ### Entry Points
 
-1. **`src/main.rs`** — Web entry point. Uses `leptos::mount_to_body` when compiled for `wasm32` via Trunk.
-2. **`src/lib.rs`** — Public re-export of the `App` component.
-3. **`src/app.rs`** — `App` state and [`leptos::IntoView`] UI implementation.
-4. **`src/i18n.rs`** — Centralized user-facing strings (leptos_i18n integration).
+1. **`cadiotheka-frontend/src/main.rs`** — Web entry point. Uses `leptos::mount_to_body` when compiled for `wasm32` via Trunk.
+2. **`cadiotheka-frontend/src/lib.rs`** — Public re-export of the `App` component and explicit module registration.
+3. **`cadiotheka-frontend/src/app.rs`** — `App` state and [`leptos::IntoView`] UI implementation.
+4. **`cadiotheka-backend/src/lib.rs`** — Cloudflare Worker entry point with `#[event(fetch)]` and route definitions.
+5. **`cadiotheka-backend/src/api/*.rs`** — Route handlers grouped by entity.
 
 ## Key Conventions
 
@@ -74,8 +109,13 @@ Cadiotheka/
 - Address all `cargo clippy` warnings.
 - Use clear module boundaries as the project grows.
 - Prefer immutable data and explicit error handling (`Result`, `Option`).
-- Register modules and re-exports in `src/lib.rs` explicitly; do not use `mod.rs` files.
-- Use `snake_case` for all Rust source filenames. Compound module names should be split with underscores (e.g. `project_card.rs`, `search_modal.rs`, `corner_frame.rs`), not concatenated.
+- **Register modules and re-exports in `src/lib.rs` explicitly; do not use `mod.rs` files.**
+- Use `snake_case` for all Rust source filenames. Compound module names should be split with underscores (e.g. `project_card.rs`, `search_modal.rs`, `corner_frame.rs`, `project_list.rs`), not concatenated.
+- When adding crate dependencies, look up the latest version on [crates.io](https://crates.io) rather than guessing or reusing an old version from another crate in the workspace.
+- Backend route handlers live under `cadiotheka-backend/src/api/` and are wired in `cadiotheka-backend/src/lib.rs`.
+- Backend `DB_BINDING` is a single `pub(crate) const` in `cadiotheka-backend/src/lib.rs` reused by API modules.
+- Tags and platforms are stored as JSON arrays in D1 and deserialize into the frontend enums via `serde(rename)`.
+- `verified` columns are stored as SQLite integers (`0`/`1`), not booleans, because D1 returns them as numbers.
 
 ## Testing
 
