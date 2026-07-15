@@ -118,14 +118,9 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - id: install_wasm_pack
-        name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-        shell: bash
-
       - id: run_tests
-        name: Run WASM tests
-        run: wasm-pack test --headless --chrome
+        name: Run tests
+        run: cargo test
         shell: bash
 
   build:
