@@ -119,7 +119,7 @@ The static site is placed in `cadiotheka-frontend/dist/`.
 
 3. Apply the schema:
    ```bash
-   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/schema.sql
+   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/schemas/accounts.sql
    ```
 
 4. Build and deploy:

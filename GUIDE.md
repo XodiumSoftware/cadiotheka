@@ -191,7 +191,7 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
 
 3. Apply the schema:
    ```bash
-   npx wrangler d1 execute cadiotheka-db --file=schema.sql
+   npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql
    ```
 
 4. Build and deploy:
