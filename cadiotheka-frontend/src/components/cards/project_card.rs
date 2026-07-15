@@ -1,7 +1,7 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
-use crate::contexts::{ProfileModalContext, ProjectModalContext};
-use crate::data::{CardData, IconUrl, load_accounts};
+use crate::contexts::{AccountsContext, ProfileModalContext, ProjectModalContext};
+use crate::data::{CardData, IconUrl};
 use crate::i18n::{t_string, use_i18n};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
@@ -138,15 +138,18 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
     };
     let card_title = props.title.clone();
     let card_author_id = props.author_id.clone();
-    let accounts = StoredValue::new(load_accounts());
+    let accounts = AccountsContext::use_context();
     let open_author_profile = {
         let card_author_id = card_author_id.clone();
         move |_| {
-            accounts.with_value(|accounts| {
-                if let Some(account) = accounts.iter().find(|a| a.id == card_author_id) {
-                    ProfileModalContext::use_context().open(account.clone());
-                }
-            });
+            let account = accounts
+                .accounts
+                .get()
+                .into_iter()
+                .find(|a| a.id == card_author_id);
+            if let Some(account) = account {
+                ProfileModalContext::use_context().open(account);
+            }
         }
     };
     let card_author = props.author.clone();

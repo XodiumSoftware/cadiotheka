@@ -2,8 +2,8 @@ use crate::components::cards::project_card::ProjectCardProperties;
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::modals::search_modal::SearchModal;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
-use crate::contexts::{ProfileModalContext, ProjectModalContext};
-use crate::data::{IconUrl, load_accounts};
+use crate::contexts::{AccountsContext, ProfileModalContext, ProjectModalContext};
+use crate::data::IconUrl;
 use crate::i18n::{t_string, use_i18n};
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
@@ -50,16 +50,19 @@ fn ProjectModalContent(
     let title = card.title.clone();
     let author = card.author.clone();
     let author_id = card.author_id.clone();
-    let accounts = StoredValue::new(load_accounts());
+    let accounts = AccountsContext::use_context();
     let open_author_profile = {
         let author_id = author_id.clone();
         move |_| {
             on_close.run(());
-            accounts.with_value(|accounts| {
-                if let Some(account) = accounts.iter().find(|a| a.id == author_id) {
-                    ProfileModalContext::use_context().open(account.clone());
-                }
-            });
+            let account = accounts
+                .accounts
+                .get()
+                .into_iter()
+                .find(|a| a.id == author_id);
+            if let Some(account) = account {
+                ProfileModalContext::use_context().open(account);
+            }
         }
     };
     let extended_desc = card.extended_desc.clone();

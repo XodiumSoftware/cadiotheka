@@ -74,7 +74,17 @@ The output is placed in `cadiotheka-frontend/dist/`.
 
 ## Run Frontend Locally
 
-Start a development server with Trunk:
+The frontend needs the backend dev server running on port `8787`. Trunk will
+proxy `/api/*` requests there automatically.
+
+Start the backend first:
+
+```bash
+cd cadiotheka-backend
+npx wrangler dev
+```
+
+In a second terminal, start Trunk:
 
 ```bash
 cd cadiotheka-frontend

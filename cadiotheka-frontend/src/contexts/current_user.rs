@@ -1,9 +1,11 @@
-use crate::data::{AccountData, load_accounts};
+use crate::contexts::AccountsContext;
+use crate::data::AccountData;
 use leptos::prelude::*;
 
 /// Provides and reads the currently logged-in user.
 ///
-/// For development this defaults to the first account in the fixture.
+/// For development this defaults to the first account returned by the backend.
+/// Until the account list has loaded, the context holds a placeholder account.
 #[derive(Clone, Copy)]
 pub struct CurrentUserContext {
     pub account: Signal<AccountData>,
@@ -11,19 +13,26 @@ pub struct CurrentUserContext {
 }
 
 impl CurrentUserContext {
-    /// Provide a default current-user context.
-    ///
-    /// Panics if the accounts fixture is empty.
+    /// Provide a current-user context that starts as a placeholder and updates
+    /// to the first fetched account once `/api/accounts` returns.
     pub fn provide_with_default() {
-        let accounts = load_accounts();
-        let initial = accounts
-            .into_iter()
-            .next()
-            .expect("accounts fixture should contain at least one account");
-        let (account, set_account) = signal(initial);
+        let (account, set_account) = signal(AccountData::placeholder());
         provide_context(Self {
             account: account.into(),
             set_account,
+        });
+
+        leptos::task::spawn_local(async move {
+            // Wait until accounts have been fetched, then pick the first one.
+            // A real login system would replace this with the logged-in user.
+            loop {
+                let accounts = AccountsContext::use_context().accounts.get();
+                if !accounts.is_empty() {
+                    set_account.set(accounts[0].clone());
+                    break;
+                }
+                gloo_timers::future::sleep(std::time::Duration::from_millis(50)).await;
+            }
         });
     }
 

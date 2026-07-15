@@ -63,11 +63,20 @@ Start a local Trunk dev server:
 ```bash
 git clone https://github.com/XodiumSoftware/cadiotheka.git
 cd cadiotheka
+cd cadiotheka-backend
+npx wrangler dev
+```
+
+In a second terminal, start the frontend:
+
+```bash
 cd cadiotheka-frontend
 trunk serve --port 8080
 ```
 
 Then open <http://localhost:8080/index.html#dev> in a browser.
+
+Trunk proxies `/api/*` requests to the backend dev server on `http://127.0.0.1:8787`.
 
 ### Backend
 

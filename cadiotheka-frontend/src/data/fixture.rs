@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use super::account::AccountData;
 use super::card::CardData;
 
 /// Top-level fixture container for content cards.
@@ -8,11 +7,4 @@ use super::card::CardData;
 pub struct CardsFixture {
     /// All cards in the fixture.
     pub cards: Vec<CardData>,
-}
-
-/// Top-level fixture container for user accounts.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct AccountsFixture {
-    /// All accounts in the fixture.
-    pub accounts: Vec<AccountData>,
 }

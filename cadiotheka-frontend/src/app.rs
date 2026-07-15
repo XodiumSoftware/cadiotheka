@@ -1,6 +1,7 @@
 use crate::components::{Footer, Header, ProfileModal, ProjectModal, ProjectsSection};
 use crate::contexts::{
-    CurrentUserContext, LayoutContext, ProfileModalContext, ProjectModalContext, SearchContext,
+    AccountsContext, CurrentUserContext, LayoutContext, ProfileModalContext, ProjectModalContext,
+    SearchContext,
 };
 use crate::i18n::{I18nContextProvider, t, use_i18n};
 use crate::utils::window_event_listener;
@@ -20,6 +21,7 @@ pub fn App() -> impl IntoView {
 fn InnerApp() -> impl IntoView {
     let i18n = use_i18n();
     LayoutContext::provide_with_default(false);
+    AccountsContext::provide();
     SearchContext::provide_with_default();
     ProjectModalContext::provide_with_default();
     ProfileModalContext::provide_with_default();

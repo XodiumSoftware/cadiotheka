@@ -46,16 +46,30 @@ pub mod components {
     pub use ui::toggle::ToggleSliderWithSlashLabel;
 }
 
-pub mod contexts;
+pub mod contexts {
+    pub mod accounts;
+    pub mod current_user;
+    pub mod layout;
+    pub mod profile_modal;
+    pub mod project_modal;
+    pub mod search;
+
+    pub use accounts::AccountsContext;
+    pub use current_user::CurrentUserContext;
+    pub use layout::LayoutContext;
+    pub use profile_modal::ProfileModalContext;
+    pub use project_modal::ProjectModalContext;
+    pub use search::SearchContext;
+}
 
 pub mod data {
     pub mod account;
     pub mod card;
     pub mod fixture;
 
-    pub use account::{AccountData, AccountRole, load_accounts};
+    pub use account::{AccountData, AccountRole, fetch_accounts};
     pub use card::{CardData, IconUrl, load_cards};
-    pub use fixture::{AccountsFixture, CardsFixture};
+    pub use fixture::CardsFixture;
 }
 
 pub mod engines;

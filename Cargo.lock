@@ -161,6 +161,7 @@ version = "0.0.0"
 dependencies = [
  "console_error_panic_hook",
  "fuzzy-matcher",
+ "gloo-net",
  "gloo-timers",
  "js-sys",
  "leptos",
