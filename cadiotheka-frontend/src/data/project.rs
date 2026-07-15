@@ -53,10 +53,7 @@ mod tag_json_string {
 mod platform_json_string {
     use super::*;
 
-    pub fn serialize<S: Serializer>(
-        value: &[Platform],
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    pub fn serialize<S: Serializer>(value: &[Platform], serializer: S) -> Result<S::Ok, S::Error> {
         let strings: Vec<String> = value
             .iter()
             .map(|v| {

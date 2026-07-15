@@ -56,6 +56,11 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
+      - id: install_wasm_target
+        name: Install WASM Target
+        run: rustup target add wasm32-unknown-unknown
+        shell: bash
+
       - id: run_sccache_cache
         name: Run sccache-cache
         uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad
@@ -104,6 +109,11 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@d197c158264056996cfba74a9c2d93886346edc3
         with:
           toolchain: stable
+
+      - id: install_wasm_target
+        name: Install WASM Target
+        run: rustup target add wasm32-unknown-unknown
+        shell: bash
 
       - id: cache_dependencies
         name: Cache dependencies
