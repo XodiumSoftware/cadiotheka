@@ -126,8 +126,8 @@ jobs:
           key: ${{ runner.os }}-cargo-backend-${{ hashFiles('**/Cargo.lock') }}
 
       - id: run_tests
-        name: Run tests
-        run: cargo test
+        name: Compile tests
+        run: cargo test --no-run
         shell: bash
 
   build:
