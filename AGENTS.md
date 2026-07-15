@@ -74,6 +74,7 @@ Cadiotheka/
 - Address all `cargo clippy` warnings.
 - Use clear module boundaries as the project grows.
 - Prefer immutable data and explicit error handling (`Result`, `Option`).
+- Register modules and re-exports in `src/lib.rs` explicitly; do not use `mod.rs` files.
 
 ## Testing
 

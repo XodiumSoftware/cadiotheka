@@ -1,5 +1,3 @@
-//! Static data fixtures for Cadiotheka.
-
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use serde::{Deserialize, Serialize};
@@ -36,17 +34,11 @@ pub struct CardData {
     pub icon_url: Option<IconUrl>,
 }
 
-/// Top-level fixture container.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct Fixture {
-    /// All cards in the fixture.
-    pub cards: Vec<CardData>,
-}
-
 /// Load the embedded card fixture.
 pub fn load_cards() -> Vec<CardData> {
-    let fixture: Fixture = serde_json::from_str(include_str!("../test_data/cards.json"))
-        .expect("cards fixture is valid JSON");
+    let fixture: super::CardsFixture =
+        serde_json::from_str(include_str!("../../test_data/cards.json"))
+            .expect("cards fixture is valid JSON");
     fixture.cards
 }
 

@@ -46,7 +46,15 @@ pub mod components {
 
 pub mod context;
 
-pub mod data;
+pub mod data {
+    pub mod account;
+    pub mod card;
+    pub mod fixture;
+
+    pub use account::{AccountData, AccountRole, load_accounts};
+    pub use card::{CardData, IconUrl, load_cards};
+    pub use fixture::{AccountsFixture, CardsFixture};
+}
 
 pub mod engines;
 
