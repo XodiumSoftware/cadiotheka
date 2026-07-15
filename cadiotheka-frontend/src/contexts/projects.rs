@@ -9,7 +9,7 @@ pub struct ProjectsContext {
 }
 
 impl ProjectsContext {
-    /// Provide an empty project list and kick off a fetch from `/api/projects`.
+    /// Provide an empty project list and kick off a fetch from `/data/projects`.
     pub fn provide() {
         let (projects, set_projects) = signal(Vec::new());
         provide_context(Self {

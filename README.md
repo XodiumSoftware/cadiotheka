@@ -76,7 +76,7 @@ trunk serve --port 8080
 
 Then open <http://localhost:8080/index.html#dev> in a browser.
 
-Trunk proxies `/api/*` requests to the backend dev server on `http://127.0.0.1:8787`.
+Trunk proxies `/data/*` requests to the backend dev server on `http://127.0.0.1:8787`.
 
 ### Backend
 
@@ -89,7 +89,7 @@ worker-build
 npx wrangler dev
 ```
 
-The backend API is available at <http://localhost:8787/api/accounts> by default.
+The backend API is available at <http://localhost:8787/data/accounts> by default.
 
 To seed the local D1 database with fixture accounts and projects:
 

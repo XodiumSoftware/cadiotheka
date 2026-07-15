@@ -14,7 +14,7 @@ pub struct CurrentUserContext {
 
 impl CurrentUserContext {
     /// Provide a current-user context that starts as a placeholder and updates
-    /// to the first fetched account once `/api/accounts` returns.
+    /// to the first fetched account once `/data/accounts` returns.
     pub fn provide_with_default() {
         let (account, set_account) = signal(AccountData::placeholder());
         provide_context(Self {

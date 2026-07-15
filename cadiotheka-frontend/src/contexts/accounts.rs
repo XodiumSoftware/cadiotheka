@@ -9,7 +9,7 @@ pub struct AccountsContext {
 }
 
 impl AccountsContext {
-    /// Provide an empty account list and kick off a fetch from `/api/accounts`.
+    /// Provide an empty account list and kick off a fetch from `/data/accounts`.
     pub fn provide() {
         let (accounts, set_accounts) = signal(Vec::new());
         provide_context(Self {

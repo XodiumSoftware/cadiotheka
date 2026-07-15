@@ -75,7 +75,7 @@ The output is placed in `cadiotheka-frontend/dist/`.
 ## Run Frontend Locally
 
 The frontend needs the backend dev server running on port `8787`. Trunk will
-proxy `/api/*` requests there automatically.
+proxy `/data/*` requests there automatically.
 
 Start the backend first:
 
@@ -107,7 +107,7 @@ worker-build
 npx wrangler dev
 ```
 
-The local API is available at <http://localhost:8787/api/accounts> by default.
+The local API is available at <http://localhost:8787/data/accounts> by default.
 
 ## Seed the Database
 
