@@ -19,15 +19,15 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let router = Router::new();
 
     router
-        .get("/api/accounts", |_, ctx| async move {
+        .get_async("/api/accounts", |_, ctx| async move {
             let db = ctx.env.d1("DB")?;
             let statement = db.prepare("SELECT id, username, display_name, email, role, bio, avatar_url, created_at, verified FROM accounts");
             let result = statement.all().await?;
             let accounts: Vec<Account> = result.results::<Account>()?;
             Response::from_json(&accounts)
         })
-        .get("/api/accounts/:id", |_, ctx| async move {
-            let id = ctx.param("id").unwrap_or_default();
+        .get_async("/api/accounts/:id", |_, ctx| async move {
+            let id = ctx.param("id").cloned().unwrap_or_default();
             let db = ctx.env.d1("DB")?;
             let statement = db.prepare("SELECT id, username, display_name, email, role, bio, avatar_url, created_at, verified FROM accounts WHERE id = ?1");
             let result = statement.bind(&[id.into()])?.all().await?;

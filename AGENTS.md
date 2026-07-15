@@ -76,6 +76,7 @@ Cadiotheka/
 - Prefer immutable data and explicit error handling (`Result`, `Option`).
 - Register modules and re-exports in `src/lib.rs` explicitly; do not use `mod.rs` files.
 - Use `snake_case` for all Rust source filenames. Compound module names should be split with underscores (e.g. `project_card.rs`, `search_modal.rs`, `corner_frame.rs`), not concatenated.
+- When adding crate dependencies, look up the latest version on [crates.io](https://crates.io) rather than guessing or reusing an old version from another crate in the workspace.
 
 ## Testing
 
