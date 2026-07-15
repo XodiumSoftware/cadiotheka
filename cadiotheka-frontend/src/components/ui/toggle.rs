@@ -49,9 +49,9 @@ pub fn ToggleSlider(
 pub fn ToggleSliderWithSlashLabel(
     #[prop(into)] checked: Signal<bool>,
     #[prop(into)] on_change: Callback<bool>,
-    #[prop(into)] label_left: &'static str,
-    #[prop(into)] label_right: &'static str,
-    #[prop(optional)] shortcut_hint: Option<&'static str>,
+    #[prop(into)] label_left: Signal<String>,
+    #[prop(into)] label_right: Signal<String>,
+    #[prop(optional)] shortcut_hint: Option<Signal<String>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let input_id = "layout-toggle-slash";
@@ -62,9 +62,9 @@ pub fn ToggleSliderWithSlashLabel(
             class="inline-flex items-center cursor-pointer select-none gap-2"
         >
             <span class="text-sm font-medium text-base-content/60">
-                <span class=move || if checked.get() { "text-base-content/40" } else { "text-base-content" }>{label_left}</span>
+                <span class=move || if checked.get() { "text-base-content/40" } else { "text-base-content" }>{move || label_left.get()}</span>
                 <span class="mx-0.5">/</span>
-                <span class=move || if checked.get() { "text-base-content" } else { "text-base-content/40" }>{label_right}</span>
+                <span class=move || if checked.get() { "text-base-content" } else { "text-base-content/40" }>{move || label_right.get()}</span>
             </span>
 
             <input
@@ -83,8 +83,8 @@ pub fn ToggleSliderWithSlashLabel(
 
             {shortcut_hint.map(|hint| {
                 view! {
-                    <span class="mx-1 text-base-content/50">{t_string!(i18n, search.hint_or)}</span>
-                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{hint}</kbd>
+                    <span class="mx-1 text-base-content/50">{move || t_string!(i18n, search.hint_or)}</span>
+                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || hint.get()}</kbd>
                 }
             })}
         </label>

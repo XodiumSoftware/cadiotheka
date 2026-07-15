@@ -23,9 +23,9 @@ pub fn Footer() -> impl IntoView {
                         <p class="font-bold whitespace-nowrap max-md:text-[clamp(0.5rem,3.1cqw,1rem)] inline">
                             {format!("© {current_year} ")}
                             <a href="/" class="link link-hover link-primary">
-                                {t_string!(i18n, footer.company_name)}
+                                {move || t_string!(i18n, footer.company_name)}
                             </a>
-                            {t_string!(i18n, footer.tagline)}
+                            {move || t_string!(i18n, footer.tagline)}
                         </p>
                         {commit_url.map(|url| view! {
                             <a

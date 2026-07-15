@@ -22,11 +22,12 @@ impl CurrentUserContext {
             set_account,
         });
 
+        let accounts = AccountsContext::use_context().accounts;
         leptos::task::spawn_local(async move {
             // Wait until accounts have been fetched, then pick the first one.
             // A real login system would replace this with the logged-in user.
             loop {
-                let accounts = AccountsContext::use_context().accounts.get();
+                let accounts = accounts.get_untracked();
                 if !accounts.is_empty() {
                     set_account.set(accounts[0].clone());
                     break;

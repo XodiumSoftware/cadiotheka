@@ -111,15 +111,12 @@ pub fn Header() -> impl IntoView {
 
     let current_user = CurrentUserContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
-    let engine = StoredValue::new(SearchEngine::new(Vec::new()));
-
-    Effect::new(move |_| {
-        engine.set_value(SearchEngine::new(projects_ctx.projects.get()));
-    });
 
     let suggestions = Memo::new(move |_| {
         let query = search.query.get();
-        let all = engine.with_value(|engine| engine.suggestions(&query));
+        let projects = projects_ctx.projects.get();
+        let engine = SearchEngine::new(projects);
+        let all = engine.suggestions(&query);
         group_and_filter_suggestions(&all)
     });
 
@@ -161,7 +158,7 @@ pub fn Header() -> impl IntoView {
                 return;
             }
 
-            if search_open.get() && ev.key().as_str() == "Escape" {
+            if search_open.get_untracked() && ev.key().as_str() == "Escape" {
                 ev.prevent_default();
                 search.set_query.set(String::new());
                 set_search_open.set(false);
@@ -169,7 +166,7 @@ pub fn Header() -> impl IntoView {
                 set_keyboard_index.set(None);
             }
 
-            if account_menu_open.get() && ev.key().as_str() == "Escape" {
+            if account_menu_open.get_untracked() && ev.key().as_str() == "Escape" {
                 ev.prevent_default();
                 set_account_menu_open.set(false);
             }
@@ -248,8 +245,6 @@ pub fn Header() -> impl IntoView {
         });
     };
 
-    let logo_wordmark = t_string!(i18n, header.logo_wordmark);
-
     let handle_keydown = move |ev: leptos::web_sys::KeyboardEvent| {
         let flat = flattened_suggestions();
         if flat.is_empty() {
@@ -276,7 +271,7 @@ pub fn Header() -> impl IntoView {
                 set_keyboard_index.set(Some(new_idx));
             }
             "Enter" => {
-                if let Some(idx) = selected_index.get()
+                if let Some(idx) = selected_index.get_untracked()
                     && let Some(suggestion) = flat.get(idx)
                 {
                     ev.prevent_default();
@@ -291,8 +286,10 @@ pub fn Header() -> impl IntoView {
             _ => {}
         }
     };
+    let logo_wordmark = move || t_string!(i18n, header.logo_wordmark);
 
-    let letter_elements = logo_wordmark
+    let letter_elements = move || {
+        logo_wordmark()
         .chars()
         .enumerate()
         .map(|(idx, ch)| {
@@ -313,7 +310,8 @@ pub fn Header() -> impl IntoView {
                 </span>
             }
         })
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+    };
 
     view! {
         <header
@@ -385,7 +383,7 @@ pub fn Header() -> impl IntoView {
                             </svg>
                         </span>
                         <span class="text-2xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors overflow-hidden whitespace-nowrap">
-                            {letter_elements.into_iter().collect_view()}
+                            {move || letter_elements().into_iter().collect_view()}
                         </span>
                     </a>
                 </div>
@@ -395,7 +393,7 @@ pub fn Header() -> impl IntoView {
                         type="button"
                         class="btn btn-primary hover:btn-warning btn-lift"
                         on:click=move |_| set_search_open.set(true)
-                        aria-label=t_string!(i18n, search.open)
+                        aria-label=move || t_string!(i18n, search.open)
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -411,13 +409,13 @@ pub fn Header() -> impl IntoView {
                             <circle cx="11" cy="11" r="8" />
                             <path d="m21 21-4.3-4.3" />
                         </svg>
-                        <kbd class="inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">{t_string!(i18n, search.shortcut_open)}</kbd>
+                        <kbd class="inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">{move || t_string!(i18n, search.shortcut_open)}</kbd>
                     </button>
                     <div class="relative">
                         <button
                             type="button"
                             class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden"
-                            aria-label=t_string!(i18n, account.menu)
+                            aria-label=move || t_string!(i18n, account.menu)
                             aria-expanded=move || account_menu_open.get().to_string()
                             aria-haspopup="menu"
                             on:click=move |_| set_account_menu_open.update(|open| *open = !*open)
@@ -451,7 +449,7 @@ pub fn Header() -> impl IntoView {
                                                     ProfileModalContext::use_context().open(account);
                                                 }
                                             >
-                                                {t_string!(i18n, account.profile)}
+                                                {move || t_string!(i18n, account.profile)}
                                             </button>
                                         </li>
                                         <li role="none">
@@ -461,7 +459,7 @@ pub fn Header() -> impl IntoView {
                                                 role="menuitem"
                                                 on:click=move |_| set_account_menu_open.set(false)
                                             >
-                                                {t_string!(i18n, account.settings)}
+                                                {move || t_string!(i18n, account.settings)}
                                             </button>
                                         </li>
                                         <li role="none">
@@ -471,7 +469,7 @@ pub fn Header() -> impl IntoView {
                                                 role="menuitem"
                                                 on:click=move |_| set_account_menu_open.set(false)
                                             >
-                                                {t_string!(i18n, account.logout)}
+                                                {move || t_string!(i18n, account.logout)}
                                             </button>
                                         </li>
                                     </ul>
@@ -493,7 +491,7 @@ pub fn Header() -> impl IntoView {
                         <input
                             type="text"
                             class="input w-full pr-20 bg-transparent !border-0 !outline-none !ring-0 focus:!outline-none focus:!ring-0"
-                            placeholder=t_string!(i18n, search.placeholder)
+                            placeholder=move || t_string!(i18n, search.placeholder)
                             prop:value=move || search.query.get()
                             role="combobox"
                             aria-expanded=move || {
@@ -522,7 +520,7 @@ pub fn Header() -> impl IntoView {
                                     "absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
                                 }
                             }
-                            aria-label=t_string!(i18n, search.clear)
+                            aria-label=move || t_string!(i18n, search.clear)
                             on:click=move |_| search.set_query.set(String::new())
                         >
                             "×"
@@ -549,7 +547,7 @@ pub fn Header() -> impl IntoView {
 
                             if groups.iter().all(|group| group.suggestions.is_empty()) {
                                 view! {
-                                    <p class="text-base-content/50 text-sm px-3 py-2" aria-live="polite" aria-atomic="true">{t_string!(i18n, search.no_suggestions)}</p>
+                                    <p class="text-base-content/50 text-sm px-3 py-2" aria-live="polite" aria-atomic="true">{move || t_string!(i18n, search.no_suggestions)}</p>
                                 }
                                     .into_any()
                             } else {
@@ -633,15 +631,15 @@ pub fn Header() -> impl IntoView {
 
                     <div class="flex items-center justify-end gap-4 text-xs text-base-content/50 px-3 py-2">
                         <div class="flex items-center gap-1.5">
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_esc)}</kbd>
-                            <span>{t_string!(i18n, search.hint_dismiss)}</span>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.keyboard_esc)}</kbd>
+                            <span>{move || t_string!(i18n, search.hint_dismiss)}</span>
                         </div>
 
                         <span class="text-base-content/30" aria-hidden="true">"|"</span>
 
                         <div class="flex items-center gap-1.5">
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_return)}</kbd>
-                            <span>{t_string!(i18n, search.hint_select)}</span>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.keyboard_return)}</kbd>
+                            <span>{move || t_string!(i18n, search.hint_select)}</span>
                         </div>
                     </div>
                 </div>

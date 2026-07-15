@@ -153,13 +153,24 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
         }
     };
     let card_author = props.author.clone();
-    let icon_alt = t_string!(i18n, project_card.icon_alt, title = card_title.clone());
-    let aria_label = t_string!(
-        i18n,
-        project_card.open_details,
-        title = card_title.clone(),
-        author = card_author.clone()
-    );
+    let card_title_for_icon_alt = card_title.clone();
+    let icon_alt = Signal::derive(move || {
+        t_string!(
+            i18n,
+            project_card.icon_alt,
+            title = card_title_for_icon_alt.clone()
+        )
+    });
+    let card_title_for_aria = card_title.clone();
+    let card_author_for_aria = card_author.clone();
+    let aria_label = Signal::derive(move || {
+        t_string!(
+            i18n,
+            project_card.open_details,
+            title = card_title_for_aria.clone(),
+            author = card_author_for_aria.clone()
+        )
+    });
     let tags = props.tags.clone();
     let platforms = props.supported_platforms.clone();
 
@@ -182,7 +193,7 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                                     Some(url) => view! {
                                         <img
                                             src={url}
-                                            alt=icon_alt.clone()
+                                            alt=icon_alt
                                             class="flex-shrink-0 w-10 h-10 rounded object-cover"
                                             loading="lazy"
                                         />

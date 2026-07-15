@@ -19,6 +19,7 @@ impl ProjectsContext {
 
         leptos::task::spawn_local(async move {
             let fetched = fetch_projects().await;
+            leptos::web_sys::console::log_1(&format!("Projects fetched: {}", fetched.len()).into());
             set_projects.set(fetched);
         });
     }

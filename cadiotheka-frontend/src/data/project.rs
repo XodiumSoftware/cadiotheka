@@ -18,7 +18,15 @@ mod tag_json_string {
     pub fn serialize<S: Serializer>(value: &Vec<Tag>, serializer: S) -> Result<S::Ok, S::Error> {
         let strings: Vec<String> = value
             .iter()
-            .map(|v| serde_json::to_string(v).map_err(serde::ser::Error::custom))
+            .map(|v| {
+                // Emit the raw enum rename value, not a quoted JSON string.
+                serde_json::to_value(v)
+                    .map_err(serde::ser::Error::custom)
+                    .and_then(|val| match val {
+                        serde_json::Value::String(s) => Ok(s),
+                        _ => Err(serde::ser::Error::custom("expected string tag")),
+                    })
+            })
             .collect::<Result<_, _>>()?;
         serializer
             .serialize_str(&serde_json::to_string(&strings).map_err(serde::ser::Error::custom)?)
@@ -29,7 +37,10 @@ mod tag_json_string {
         let strings: Vec<String> = serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
         strings
             .into_iter()
-            .map(|item| serde_json::from_str::<Tag>(&item).map_err(serde::de::Error::custom))
+            .map(|item| {
+                serde_json::from_value::<Tag>(serde_json::Value::String(item))
+                    .map_err(serde::de::Error::custom)
+            })
             .collect::<Result<_, _>>()
     }
 }
@@ -48,7 +59,15 @@ mod platform_json_string {
     ) -> Result<S::Ok, S::Error> {
         let strings: Vec<String> = value
             .iter()
-            .map(|v| serde_json::to_string(v).map_err(serde::ser::Error::custom))
+            .map(|v| {
+                // Emit the raw enum rename value, not a quoted JSON string.
+                serde_json::to_value(v)
+                    .map_err(serde::ser::Error::custom)
+                    .and_then(|val| match val {
+                        serde_json::Value::String(s) => Ok(s),
+                        _ => Err(serde::ser::Error::custom("expected string platform")),
+                    })
+            })
             .collect::<Result<_, _>>()?;
         serializer
             .serialize_str(&serde_json::to_string(&strings).map_err(serde::ser::Error::custom)?)
@@ -61,7 +80,10 @@ mod platform_json_string {
         let strings: Vec<String> = serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
         strings
             .into_iter()
-            .map(|item| serde_json::from_str::<Platform>(&item).map_err(serde::de::Error::custom))
+            .map(|item| {
+                serde_json::from_value::<Platform>(serde_json::Value::String(item))
+                    .map_err(serde::de::Error::custom)
+            })
             .collect::<Result<_, _>>()
     }
 }
@@ -105,10 +127,18 @@ pub struct ProjectData {
 /// the UI can keep running with a graceful fallback.
 pub async fn fetch_projects() -> Vec<ProjectData> {
     match gloo_net::http::Request::get("/api/projects").send().await {
-        Ok(response) if response.ok() => response
-            .json::<Vec<ProjectData>>()
-            .await
-            .unwrap_or_default(),
+        Ok(response) if response.ok() => {
+            let text = response.text().await.unwrap_or_default();
+            match serde_json::from_str::<Vec<ProjectData>>(&text) {
+                Ok(data) => data,
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to parse projects JSON: {err:?}\n{text}").into(),
+                    );
+                    Vec::new()
+                }
+            }
+        }
         Ok(response) => {
             let status = response.status();
             leptos::web_sys::console::error_1(
@@ -143,6 +173,16 @@ mod tests {
             timestamp: datetime!(2026-07-07 14:30:00 UTC),
             icon_url: None,
         }
+    }
+
+    #[test]
+    fn project_deserializes_backend_json_string_columns() {
+        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","description":"A rugged mountain bike model ready for off-road adventures.","extended_desc":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","supported_platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":84,"timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let projects: Vec<ProjectData> = serde_json::from_str(json).expect("backend JSON parses");
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].title, "Mountain Bike");
+        assert_eq!(projects[0].tags.len(), 5);
+        assert_eq!(projects[0].supported_platforms.len(), 5);
     }
 
     #[test]

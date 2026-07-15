@@ -14,16 +14,12 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     let layout = LayoutContext::use_context();
     let search = SearchContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
-    let engine = StoredValue::new(SearchEngine::new(Vec::new()));
-
-    Effect::new(move |_| {
-        engine.set_value(SearchEngine::new(projects_ctx.projects.get()));
-    });
 
     let filtered = Memo::new(move |_| {
         let query = search.query.get();
+        let projects = projects_ctx.projects.get();
         let parsed = SearchEngine::parse_query(&query);
-        engine.with_value(|engine| engine.search_owned(&parsed))
+        SearchEngine::new(projects).search_owned(&parsed)
     });
 
     view! {
@@ -42,9 +38,9 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                     <ToggleSliderWithSlashLabel
                         checked=layout.wide
                         on_change=move |value| layout.set_wide.set(value)
-                        label_left=t_string!(i18n, projects.narrow_mode)
-                        label_right=t_string!(i18n, projects.wide_mode)
-                        shortcut_hint=t_string!(i18n, projects.shortcut_wide)
+                        label_left=Signal::derive(move || t_string!(i18n, projects.narrow_mode).to_string())
+                        label_right=Signal::derive(move || t_string!(i18n, projects.wide_mode).to_string())
+                        shortcut_hint=Signal::derive(move || t_string!(i18n, projects.shortcut_wide).to_string())
                     />
                 </div>
                 {move || {
@@ -64,9 +60,9 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                 class="btn btn-outline btn-outline-ghost btn-hover-warning btn-lift gap-1.5"
                                                 on:click=move |_| search.set_query.set(String::new())
                                             >
-                                                <span>{t_string!(i18n, search.clear_button)}</span>
+                                                <span>{move || t_string!(i18n, search.clear_button)}</span>
                                                     <span class="w-1"></span>
-                                                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.shortcut_clear)}</kbd>
+                                                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.shortcut_clear)}</kbd>
                                             </button>
                                         })
                                     }
@@ -95,9 +91,9 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                 on:click=move |_| search.set_query.set(String::new())
                                             >
                                                 <CornerFrame style="square" black=true class="h-full w-full flex flex-col items-center justify-center">
-                                                    <span class="font-bold text-lg text-black">{t_string!(i18n, search.clear_card_title)}</span>
+                                                    <span class="font-bold text-lg text-black">{move || t_string!(i18n, search.clear_card_title)}</span>
                                                     <span class="text-sm text-black/60 mt-1">
-                                                        <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-black bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.shortcut_clear)}</kbd>
+                                                        <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-black bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.shortcut_clear)}</kbd>
                                                     </span>
                                                 </CornerFrame>
                                             </button>
