@@ -7,5 +7,9 @@ tailwindcss = "2.8.3"
 rewrite = "/data/"
 backend = "http://127.0.0.1:8787/data/"
 
+[[proxy]]
+rewrite = "/auth/"
+backend = "http://127.0.0.1:8787/auth/"
+
 [build.wasm-opt]
 level = "z"

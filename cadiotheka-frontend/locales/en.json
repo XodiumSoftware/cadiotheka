@@ -6,6 +6,7 @@
     "projects": {
         "empty": "No projects found.",
         "loading": "Loading projects...",
+        "add": "Add project",
         "wide_mode": "Wide",
         "narrow_mode": "Narrow",
         "shortcut_wide": "Alt + W"
@@ -37,6 +38,14 @@
         "email_label": "Email:",
         "joined_label": "Joined:",
         "close": "Close"
+    },
+    "login": {
+        "action": "Log in",
+        "title": "Log in to Cadiotheka",
+        "description": "Sign in with your existing account to create and manage projects.",
+        "with_github": "Continue with GitHub",
+        "with_google": "Continue with Google",
+        "privacy_note": "We only request public profile and email information."
     },
     "project_card": {
         "open_details": "Open details for {{ title }} by {{ author }}",

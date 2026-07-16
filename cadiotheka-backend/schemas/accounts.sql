@@ -7,5 +7,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     bio TEXT NOT NULL DEFAULT '',
     avatar_url TEXT,
     created_at TEXT NOT NULL,
-    verified INTEGER NOT NULL DEFAULT 0
+    verified INTEGER NOT NULL DEFAULT 0,
+    provider TEXT NOT NULL,
+    provider_id TEXT NOT NULL UNIQUE
 );

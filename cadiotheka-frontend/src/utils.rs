@@ -177,6 +177,19 @@ pub fn api_url(path: &str) -> String {
     }
 }
 
+/// Returns the full URL for an auth endpoint.
+///
+/// Auth is served from the same origin as the frontend because session cookies
+/// must be readable by the frontend's domain.
+pub fn auth_url(path: &str) -> String {
+    let base = "/auth";
+    if path.starts_with('/') {
+        format!("{base}{path}")
+    } else {
+        format!("{base}/{path}")
+    }
+}
+
 /// Return a Tailwind color class for a programming language name.
 ///
 /// Unknown languages fall back to a neutral base-content badge.

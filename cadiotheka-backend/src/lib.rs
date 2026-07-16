@@ -6,6 +6,7 @@ const ALLOWED_ORIGINS: &[&str] = &["https://cadiotheka.com", "https://www.cadiot
 
 mod api {
     pub mod accounts;
+    pub mod auth;
     pub mod projects;
 }
 
@@ -73,6 +74,12 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .get_async("/data/projects/:id", api::projects::read_project)
         .put_async("/data/projects/:id", api::projects::update_project)
         .delete_async("/data/projects/:id", api::projects::delete_project)
+        .get_async("/auth/github", api::auth::github_login)
+        .get_async("/auth/github/callback", api::auth::github_callback)
+        .get_async("/auth/google", api::auth::google_login)
+        .get_async("/auth/google/callback", api::auth::google_callback)
+        .get_async("/auth/me", api::auth::me)
+        .get_async("/auth/logout", api::auth::logout)
         .run(req, env)
         .await;
 

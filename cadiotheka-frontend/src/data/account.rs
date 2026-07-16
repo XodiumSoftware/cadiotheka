@@ -41,6 +41,12 @@ pub struct AccountData {
     /// an `i32` (0 = false, 1 = true).
     #[serde(default)]
     pub verified: i32,
+    /// OAuth provider used to create this account (e.g. "github", "google").
+    #[serde(default)]
+    pub provider: String,
+    /// Provider-scoped unique identifier for this account.
+    #[serde(default)]
+    pub provider_id: String,
 }
 
 impl AccountData {
@@ -57,6 +63,8 @@ impl AccountData {
             project_ids: Vec::new(),
             created_at: time::OffsetDateTime::UNIX_EPOCH,
             verified: 0,
+            provider: String::new(),
+            provider_id: String::new(),
         }
     }
 }
@@ -105,6 +113,8 @@ mod tests {
             project_ids: vec!["71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2".to_owned()],
             created_at: datetime!(2025-03-10 12:00:00 UTC),
             verified: 1,
+            provider: "seed".to_owned(),
+            provider_id: "seed_8af81bd9-b70a-4d64-89e9-83bbc4e0297d".to_owned(),
         }
     }
 
