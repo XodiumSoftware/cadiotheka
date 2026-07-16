@@ -1,7 +1,7 @@
-use crate::components::{Footer, Header, ProfileModal, ProjectModal, ProjectsSection};
+use crate::components::{Footer, Header, LoginModal, ProfileModal, ProjectModal, ProjectsSection};
 use crate::contexts::{
-    AccountsContext, CurrentUserContext, LayoutContext, ProfileModalContext, ProjectModalContext,
-    ProjectsContext, SearchContext,
+    AccountsContext, CurrentUserContext, LayoutContext, LoginModalContext, ProfileModalContext,
+    ProjectModalContext, ProjectsContext, SearchContext,
 };
 use crate::i18n::{I18nContextProvider, t, use_i18n};
 use crate::utils::window_event_listener;
@@ -26,10 +26,13 @@ fn InnerApp() -> impl IntoView {
     SearchContext::provide_with_default();
     ProjectModalContext::provide_with_default();
     ProfileModalContext::provide_with_default();
-    CurrentUserContext::provide_with_default();
+    LoginModalContext::provide_with_default();
+    CurrentUserContext::provide();
+
+    let layout = LayoutContext::use_context();
 
     Effect::new(move |_| {
-        let layout = LayoutContext::use_context();
+        let layout = layout;
         window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("w") {
                 let wide_enough = web_sys::window()
@@ -38,7 +41,7 @@ fn InnerApp() -> impl IntoView {
                     .is_some_and(|width| width >= 1920.0);
                 if wide_enough {
                     ev.prevent_default();
-                    layout.set_wide.set(!layout.wide.get());
+                    layout.set_wide.set(!layout.wide.get_untracked());
                 }
             }
         });
@@ -56,6 +59,7 @@ fn InnerApp() -> impl IntoView {
 
             <ProjectModal />
             <ProfileModal />
+            <LoginModal />
 
             <main id="main-content" tabindex="-1" class="flex-1 flex flex-col">
                 <ProjectsSection class="flex-1" />

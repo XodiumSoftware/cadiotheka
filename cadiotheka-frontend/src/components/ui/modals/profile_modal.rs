@@ -39,7 +39,7 @@ fn ProfileModalContent(
     let display_name = account.display_name.clone();
     let username = account.username.clone();
     let bio = account.bio.clone();
-    let role_label = match account.role {
+    let role_label = move || match account.role {
         crate::data::AccountRole::Creator => t_string!(i18n, account.role_creator),
         crate::data::AccountRole::Admin => t_string!(i18n, account.role_admin),
     };
@@ -67,18 +67,18 @@ fn ProfileModalContent(
                     </p>
                 </div>
                 <div class="flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">
-                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_esc)}</kbd>
-                    <span>{t_string!(i18n, project_modal.hint_dismiss)}</span>
+                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.keyboard_esc)}</kbd>
+                    <span>{move || t_string!(i18n, project_modal.hint_dismiss)}</span>
                 </div>
             </div>
             <hr class="border-base-content/10" />
             <div class="space-y-2 text-sm text-base-content/80">
                 <p>
-                    <span class="font-semibold text-base-content">{t_string!(i18n, account.email_label)}</span>
+                    <span class="font-semibold text-base-content">{move || t_string!(i18n, account.email_label)}</span>
                     <span class="ml-1">{account.email.clone()}</span>
                 </p>
                 <p>
-                    <span class="font-semibold text-base-content">{t_string!(i18n, account.joined_label)}</span>
+                    <span class="font-semibold text-base-content">{move || t_string!(i18n, account.joined_label)}</span>
                     <span class="ml-1">{account.created_at.to_string()}</span>
                 </p>
                 {if bio.is_empty() {

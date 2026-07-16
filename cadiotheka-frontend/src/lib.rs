@@ -20,6 +20,7 @@ pub mod components {
         pub mod corner_frame;
         pub mod markdown;
         pub mod modals {
+            pub mod login_modal;
             pub mod profile_modal;
             pub mod project_modal;
             pub mod search_modal;
@@ -38,6 +39,7 @@ pub mod components {
 
     pub use ui::corner_frame::CornerFrame;
     pub use ui::markdown::MarkdownView;
+    pub use ui::modals::login_modal::LoginModal;
     pub use ui::modals::profile_modal::ProfileModal;
     pub use ui::modals::project_modal::ProjectModal;
     pub use ui::modals::search_modal::SearchModal;
@@ -50,6 +52,7 @@ pub mod contexts {
     pub mod accounts;
     pub mod current_user;
     pub mod layout;
+    pub mod login_modal;
     pub mod profile_modal;
     pub mod project_modal;
     pub mod projects;
@@ -58,6 +61,7 @@ pub mod contexts {
     pub use accounts::AccountsContext;
     pub use current_user::CurrentUserContext;
     pub use layout::LayoutContext;
+    pub use login_modal::LoginModalContext;
     pub use profile_modal::ProfileModalContext;
     pub use project_modal::ProjectModalContext;
     pub use projects::ProjectsContext;

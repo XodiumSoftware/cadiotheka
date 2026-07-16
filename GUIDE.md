@@ -102,7 +102,7 @@ The backend is a Cloudflare Pages Functions Rust worker. First build the WASM bu
 
 ```bash
 cd cadiotheka-backend
-cargo install worker-build --version 0.7.5 --force
+cargo install worker-build
 worker-build
 npx wrangler dev
 ```
@@ -115,10 +115,10 @@ Apply the schemas and seed the local D1 database with fixture accounts and proje
 
 ```bash
 cd cadiotheka-backend
-npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql --local
-npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql --local
-npx wrangler d1 execute cadiotheka-db --file=scripts/seed_accounts.sql --local
-npx wrangler d1 execute cadiotheka-db --file=scripts/seed_projects.sql --local
+npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
+npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
+npx wrangler d1 execute cadiotheka --file=scripts/seed_accounts.sql --local
+npx wrangler d1 execute cadiotheka --file=scripts/seed_projects.sql --local
 ```
 
 To seed a production database, omit the `--local` flag after updating `wrangler.toml` with the real `database_id`.

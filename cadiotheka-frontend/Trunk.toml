@@ -5,7 +5,15 @@ tailwindcss = "2.8.3"
 # Proxy API requests to the local backend dev server.
 [[proxy]]
 rewrite = "/data/"
-backend = "http://127.0.0.1:8787/data/"
+backend = "http://localhost:8787/data/"
+
+[[proxy]]
+rewrite = "/login/"
+backend = "http://localhost:8787/login/"
+
+[[proxy]]
+rewrite = "/auth/"
+backend = "http://localhost:8787/auth/"
 
 [build.wasm-opt]
 level = "z"

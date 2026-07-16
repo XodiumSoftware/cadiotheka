@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use worker::*;
 
 use crate::DB_BINDING;
+use crate::api::accounts::Account;
+use crate::api::session::require_account;
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
 
@@ -83,9 +85,14 @@ pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Respon
     }
 }
 
-/// Creates a new project from the request body.
+/// Creates a new project from the request body, attributing it to the
+/// authenticated user.
 pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let payload: ProjectPayload = req.json().await?;
+    let account = require_account(&req, &ctx).await?;
+    let mut payload: ProjectPayload = req.json().await?;
+    payload.author_id = account.id;
+    payload.author = account.display_name;
+
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
     let platforms =
         serde_json::to_string(&payload.supported_platforms).unwrap_or_else(|_| "[]".to_string());
@@ -116,8 +123,18 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
 /// Replaces an existing project, identified by the `:id` path parameter.
 pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let account = require_account(&req, &ctx).await?;
     let id = ctx.param("id").cloned().unwrap_or_default();
-    let payload: ProjectPayload = req.json().await?;
+    let project = fetch_project(&ctx, &id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    if !can_edit_project(&account, &project) {
+        return Response::error("Forbidden", 403);
+    }
+
+    let mut payload: ProjectPayload = req.json().await?;
+    payload.author_id = project.author_id;
+    payload.author = project.author;
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
     let platforms =
         serde_json::to_string(&payload.supported_platforms).unwrap_or_else(|_| "[]".to_string());
@@ -148,14 +165,27 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 }
 
 /// Deletes the project identified by the `:id` path parameter.
-pub async fn delete_project(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let account = require_account(&req, &ctx).await?;
     let id = ctx.param("id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    if !can_edit_project(&account, &project) {
+        return Response::error("Forbidden", 403);
+    }
+
     db(&ctx)?
         .prepare("DELETE FROM projects WHERE id = ?1")
         .bind(&[id.into()])?
         .run()
         .await?;
     Response::empty()
+}
+
+/// Whether the given account may edit or delete the project.
+fn can_edit_project(account: &Account, project: &Project) -> bool {
+    account.role == "admin" || account.id == project.author_id
 }
 
 /// Fetches a single project by id, returning `None` when no row matches.
@@ -167,4 +197,63 @@ async fn fetch_project(ctx: &RouteContext<()>, id: &str) -> Result<Option<Projec
         .await?;
     let mut projects: Vec<Project> = result.results::<Project>()?;
     Ok(projects.pop())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_account(role: &str) -> Account {
+        Account {
+            id: "acc-1".into(),
+            username: "creator".into(),
+            display_name: "Creator".into(),
+            email: "creator@example.com".into(),
+            role: role.into(),
+            bio: "".into(),
+            avatar_url: None,
+            created_at: "2025-01-01T00:00:00Z".into(),
+            verified: 1,
+            provider: "seed".into(),
+            provider_id: "seed_acc-1".into(),
+        }
+    }
+
+    fn sample_project(author_id: &str) -> Project {
+        Project {
+            id: "proj-1".into(),
+            title: "Sample".into(),
+            author: "Author".into(),
+            author_id: author_id.into(),
+            description: "".into(),
+            extended_desc: "".into(),
+            tags: vec![],
+            supported_platforms: vec![],
+            downloads: 0,
+            favorites: 0,
+            timestamp: "2025-01-01T00:00:00Z".into(),
+            icon_url: None,
+        }
+    }
+
+    #[test]
+    fn owner_can_edit_project() {
+        let account = sample_account("creator");
+        let project = sample_project(&account.id);
+        assert!(can_edit_project(&account, &project));
+    }
+
+    #[test]
+    fn non_owner_cannot_edit_project() {
+        let account = sample_account("creator");
+        let project = sample_project("other");
+        assert!(!can_edit_project(&account, &project));
+    }
+
+    #[test]
+    fn admin_can_edit_any_project() {
+        let account = sample_account("admin");
+        let project = sample_project("other");
+        assert!(can_edit_project(&account, &project));
+    }
 }

@@ -4,23 +4,45 @@ pub(crate) const DB_BINDING: &str = "DB";
 /// Origins allowed to call the API from a browser.
 const ALLOWED_ORIGINS: &[&str] = &["https://cadiotheka.com", "https://www.cadiotheka.com"];
 
+mod utils;
+
 mod api {
     pub mod accounts;
+    pub mod auth;
     pub mod projects;
+    pub mod session;
 }
 
 use worker::*;
 
 /// Adds CORS headers to a response so the frontend (served from a different
 /// origin) can read the JSON body.
+///
+/// Some response types (notably redirects created with `Response::redirect`)
+/// have immutable headers. In that case the original response is returned
+/// unchanged.
 fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Response> {
-    let headers = resp.headers_mut();
-    headers.set("Access-Control-Allow-Origin", origin)?;
-    headers.set(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS",
-    )?;
-    headers.set("Access-Control-Allow-Headers", "Content-Type")?;
+    {
+        let headers = resp.headers_mut();
+        if headers.set("Access-Control-Allow-Origin", origin).is_err() {
+            return Ok(resp);
+        }
+        if headers
+            .set(
+                "Access-Control-Allow-Methods",
+                "GET, POST, PUT, DELETE, OPTIONS",
+            )
+            .is_err()
+        {
+            return Ok(resp);
+        }
+        if headers
+            .set("Access-Control-Allow-Headers", "Content-Type")
+            .is_err()
+        {
+            return Ok(resp);
+        }
+    }
     Ok(resp)
 }
 
@@ -62,6 +84,9 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         return cors_preflight(&origin);
     }
 
+    let path = req.path();
+    let is_data_route = path.starts_with("/data/");
+
     let result = router
         .get_async("/data/accounts", api::accounts::list_accounts)
         .post_async("/data/accounts", api::accounts::create_account)
@@ -73,16 +98,35 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .get_async("/data/projects/:id", api::projects::read_project)
         .put_async("/data/projects/:id", api::projects::update_project)
         .delete_async("/data/projects/:id", api::projects::delete_project)
+        .get_async("/login/github", api::auth::github_login)
+        .get_async("/auth/github/callback", api::auth::github_callback)
+        .get_async("/login/google", api::auth::google_login)
+        .get_async("/auth/google/callback", api::auth::google_callback)
+        .get_async("/auth/me", api::session::me)
+        .get_async("/auth/logout", api::session::logout)
         .run(req, env)
         .await;
 
     match result {
-        Ok(resp) => add_cors_headers(resp, &origin),
+        Ok(resp) => {
+            // Auth routes that return JSON (login URL endpoints) need CORS headers
+            // so the frontend dev proxy can read the response. Redirects and data
+            // routes are handled separately.
+            let is_redirect = (300..400).contains(&resp.status_code());
+            if is_data_route || (!is_redirect && path.starts_with("/auth/")) {
+                add_cors_headers(resp, &origin)
+            } else {
+                Ok(resp)
+            }
+        }
         Err(err) => {
-            let mut resp = Response::error(err.to_string(), 500)?;
-            let headers = resp.headers_mut();
-            headers.set("Access-Control-Allow-Origin", &origin)?;
-            Ok(resp)
+            let headers = Headers::new();
+            headers.set("Content-Type", "text/plain")?;
+            let _ = headers.set("Access-Control-Allow-Origin", &origin);
+            Ok(ResponseBuilder::new()
+                .with_status(500)
+                .with_headers(headers)
+                .body(ResponseBody::Body(err.to_string().into())))
         }
     }
 }

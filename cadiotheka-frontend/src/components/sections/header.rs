@@ -1,10 +1,11 @@
 use crate::components::ui::modals::search_modal::SearchModal;
 use crate::contexts::{
-    CurrentUserContext, LayoutContext, ProfileModalContext, ProjectsContext, SearchContext,
+    CurrentUserContext, LayoutContext, LoginModalContext, ProfileModalContext, ProjectsContext,
+    SearchContext,
 };
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
 use crate::i18n::{t_string, use_i18n};
-use crate::utils::{placeholder_color, placeholder_letter, window_event_listener};
+use crate::utils::{auth_url, placeholder_color, placeholder_letter, window_event_listener};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos::wasm_bindgen::JsCast;
@@ -109,7 +110,6 @@ pub fn Header() -> impl IntoView {
     let (selected_index, set_selected_index) = signal::<Option<usize>>(None);
     let (keyboard_index, set_keyboard_index) = signal::<Option<usize>>(None);
 
-    let current_user = CurrentUserContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
 
     let suggestions = Memo::new(move |_| {
@@ -137,9 +137,14 @@ pub fn Header() -> impl IntoView {
             .collect::<Vec<Suggestion>>()
     };
 
-    // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Escape closes it.
-    // These listeners are registered once and removed when the header unmounts.
+    let current_user_ctx = CurrentUserContext::use_context();
+    let login_modal_ctx = LoginModalContext::use_context();
+
+    // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Alt+L opens the
+    // login modal when not authenticated, and Escape closes open menus.
     Effect::new(move |_| {
+        let current_user = current_user_ctx;
+        let login_modal = login_modal_ctx;
         window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("s") {
                 ev.prevent_default();
@@ -155,6 +160,14 @@ pub fn Header() -> impl IntoView {
                 set_selected_index.set(None);
                 set_keyboard_index.set(None);
                 input_ref.get().map(|input| input.focus().ok());
+                return;
+            }
+
+            if ev.alt_key() && ev.key().eq_ignore_ascii_case("l") {
+                ev.prevent_default();
+                if current_user.account.get_untracked().is_none() {
+                    login_modal.open();
+                }
                 return;
             }
 
@@ -411,74 +424,150 @@ pub fn Header() -> impl IntoView {
                         </svg>
                         <kbd class="inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">{move || t_string!(i18n, search.shortcut_open)}</kbd>
                     </button>
-                    <div class="relative">
-                        <button
-                            type="button"
-                            class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden"
-                            aria-label=move || t_string!(i18n, account.menu)
-                            aria-expanded=move || account_menu_open.get().to_string()
-                            aria-haspopup="menu"
-                            on:click=move |_| set_account_menu_open.update(|open| *open = !*open)
-                        >
-                            {move || {
-                                let account = current_user.account.get();
-                                let avatar_letter = placeholder_letter(&account.username);
-                                let avatar_bg = placeholder_color(&account.username);
-                                view! {
-                                    <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
-                                        {avatar_letter}
-                                    </div>
+                    {move || {
+                        let current_user = CurrentUserContext::use_context();
+                        if current_user.is_loading.get() || current_user.account.get().is_none() {
+                            return None;
+                        }
+                        Some(view! {
+                            <button
+                                type="button"
+                                class="btn btn-primary btn-lift hidden sm:flex items-center gap-2"
+                                on:click=move |_| {
+                                    // TODO: open project creation UI once it exists.
+                                    leptos::web_sys::console::log_1(
+                                        &"Open project creation UI (not implemented)".into(),
+                                    );
                                 }
-                            }}
-                        </button>
-                        {move || {
-                            if account_menu_open.get() {
-                                Some(view! {
-                                    <ul
-                                        class="absolute right-0 top-full mt-2 w-48 bg-base-100 border-2 border-base-content/80 shadow-lg z-50 py-1"
-                                        role="menu"
-                                    >
-                                        <li role="none">
-                                            <button
-                                                type="button"
-                                                class="w-full text-left px-4 py-2 hover:bg-base-content/10"
-                                                role="menuitem"
-                                                on:click=move |_| {
-                                                    set_account_menu_open.set(false);
-                                                    let account = current_user.account.get();
-                                                    ProfileModalContext::use_context().open(account);
-                                                }
-                                            >
-                                                {move || t_string!(i18n, account.profile)}
-                                            </button>
-                                        </li>
-                                        <li role="none">
-                                            <button
-                                                type="button"
-                                                class="w-full text-left px-4 py-2 hover:bg-base-content/10"
-                                                role="menuitem"
-                                                on:click=move |_| set_account_menu_open.set(false)
-                                            >
-                                                {move || t_string!(i18n, account.settings)}
-                                            </button>
-                                        </li>
-                                        <li role="none">
-                                            <button
-                                                type="button"
-                                                class="w-full text-left px-4 py-2 hover:bg-base-content/10 text-error"
-                                                role="menuitem"
-                                                on:click=move |_| set_account_menu_open.set(false)
-                                            >
-                                                {move || t_string!(i18n, account.logout)}
-                                            </button>
-                                        </li>
-                                    </ul>
-                                })
-                            } else {
-                                None
+                            >
+                                <svg
+                                    class="w-4 h-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                                <span>{move || t_string!(i18n, projects.add)}</span>
+                            </button>
+                        })
+                    }}
+
+                    {move || {
+                        let current_user = CurrentUserContext::use_context();
+                        let login_modal = LoginModalContext::use_context();
+                        let maybe_account = current_user.account.get();
+                        if current_user.is_loading.get() {
+                            return view! {
+                                <span class="loading loading-spinner loading-sm text-primary" aria-hidden="true"></span>
                             }
-                        }}
-                    </div>
+                            .into_any();
+                        }
+                        match maybe_account {
+                            Some(account) => view! {
+                                <div class="relative">
+                                    <button
+                                        type="button"
+                                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden"
+                                        aria-label=move || t_string!(i18n, account.menu)
+                                        aria-expanded=move || account_menu_open.get().to_string()
+                                        aria-haspopup="menu"
+                                        on:click=move |_| set_account_menu_open.update(|open| *open = !*open)
+                                    >
+                                        {move || {
+                                            let avatar_letter = placeholder_letter(&account.username);
+                                            let avatar_bg = placeholder_color(&account.username);
+                                            view! {
+                                                <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
+                                                    {avatar_letter}
+                                                </div>
+                                            }
+                                        }}
+                                    </button>
+                                    {move || {
+                                        if account_menu_open.get() {
+                                            Some(view! {
+                                                <ul
+                                                    class="absolute right-0 top-full mt-2 w-48 bg-base-100 border-2 border-base-content/80 shadow-lg z-50 py-1"
+                                                    role="menu"
+                                                >
+                                                    <li role="none">
+                                                        <button
+                                                            type="button"
+                                                            class="w-full text-left px-4 py-2 hover:bg-base-content/10"
+                                                            role="menuitem"
+                                                            on:click=move |_| {
+                                                                set_account_menu_open.set(false);
+                                                                if let Some(account) = current_user.account.get() {
+                                                                    ProfileModalContext::use_context().open(account);
+                                                                }
+                                                            }
+                                                        >
+                                                            {move || t_string!(i18n, account.profile)}
+                                                        </button>
+                                                    </li>
+                                                    <li role="none">
+                                                        <button
+                                                            type="button"
+                                                            class="w-full text-left px-4 py-2 hover:bg-base-content/10"
+                                                            role="menuitem"
+                                                            on:click=move |_| set_account_menu_open.set(false)
+                                                        >
+                                                            {move || t_string!(i18n, account.settings)}
+                                                        </button>
+                                                    </li>
+                                                    <li role="none">
+                                                        <a
+                                                            href={auth_url("/logout")}
+                                                            class="block w-full text-left px-4 py-2 hover:bg-base-content/10 text-error"
+                                                            role="menuitem"
+                                                            on:click=move |_| set_account_menu_open.set(false)
+                                                        >
+                                                            {move || t_string!(i18n, account.logout)}
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            })
+                                        } else {
+                                            None
+                                        }
+                                    }}
+                                </div>
+                            }
+                            .into_any(),
+                            None => view! {
+                                <button
+                                    type="button"
+                                    class="btn btn-primary btn-lift flex items-center gap-2"
+                                    aria-label=move || t_string!(i18n, login.action)
+                                    on:click=move |_| login_modal.open()
+                                >
+                                    <svg
+                                        class="w-4 h-4"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                                        <polyline points="10 17 15 12 10 7" />
+                                        <line x1="15" y1="12" x2="3" y2="12" />
+                                    </svg>
+                                    <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans">
+                                        {move || t_string!(i18n, login.shortcut)}
+                                    </kbd>
+                                </button>
+                            }
+                            .into_any(),
+                        }
+                    }}
                 </div>
             </nav>
 

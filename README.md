@@ -138,12 +138,37 @@ The static site is placed in `cadiotheka-frontend/dist/`.
 
 2. Update `cadiotheka-backend/wrangler.toml` with the database ID from step 1.
 
-3. Apply the schema:
+3. Create a KV namespace for OAuth state and sessions:
    ```bash
-   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/schemas/accounts.sql
+   npx wrangler kv:namespace create AUTH_KV
    ```
 
-4. Build and deploy:
+   Then copy the resulting ID into `cadiotheka-backend/wrangler.toml` under `[[kv_namespaces]]`.
+
+4. Configure secrets for OAuth and session signing:
+   ```bash
+   npx wrangler secret put SESSION_SECRET
+   npx wrangler secret put GITHUB_CLIENT_ID
+   npx wrangler secret put GITHUB_CLIENT_SECRET
+   npx wrangler secret put GOOGLE_CLIENT_ID
+   npx wrangler secret put GOOGLE_CLIENT_SECRET
+   ```
+
+   - `SESSION_SECRET` can be any long random string.
+   - GitHub and Google credentials come from OAuth apps registered at:
+     - GitHub: `https://github.com/settings/developers`
+     - Google: `https://console.cloud.google.com/apis/credentials`
+   - Use callback URLs `https://cadiotheka.com/auth/github/callback` and `https://cadiotheka.com/auth/google/callback`.
+
+5. Apply the schema and seed data:
+   ```bash
+   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/schemas/accounts.sql
+   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/schemas/projects.sql
+   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/scripts/seed_accounts.sql
+   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/scripts/seed_projects.sql
+   ```
+
+6. Build and deploy:
    ```bash
    npx wrangler deploy
    ```
