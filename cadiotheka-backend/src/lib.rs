@@ -84,7 +84,15 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .await;
 
     match result {
-        Ok(resp) => add_cors_headers(resp, &origin),
+        Ok(resp) => {
+            // Redirect responses (3xx) have immutable headers, so we cannot
+            // attach CORS headers to them. The browser will follow the redirect
+            // and the final response will receive CORS headers if needed.
+            if (300..400).contains(&resp.status_code()) {
+                return Ok(resp);
+            }
+            add_cors_headers(resp, &origin)
+        }
         Err(err) => {
             let mut resp = Response::error(err.to_string(), 500)?;
             let headers = resp.headers_mut();

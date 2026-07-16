@@ -29,8 +29,10 @@ fn InnerApp() -> impl IntoView {
     LoginModalContext::provide_with_default();
     CurrentUserContext::provide();
 
+    let layout = LayoutContext::use_context();
+
     Effect::new(move |_| {
-        let layout = LayoutContext::use_context();
+        let layout = layout;
         window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("w") {
                 let wide_enough = web_sys::window()
@@ -39,7 +41,7 @@ fn InnerApp() -> impl IntoView {
                     .is_some_and(|width| width >= 1920.0);
                 if wide_enough {
                     ev.prevent_default();
-                    layout.set_wide.set(!layout.wide.get());
+                    layout.set_wide.set(!layout.wide.get_untracked());
                 }
             }
         });
