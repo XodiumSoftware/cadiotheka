@@ -1,6 +1,8 @@
 use crate::data::AccountData;
 use crate::utils::auth_url;
+use gloo_net::http::Request;
 use leptos::prelude::*;
+use web_sys::RequestCredentials;
 
 /// Provides and reads the currently logged-in user.
 ///
@@ -43,10 +45,20 @@ impl CurrentUserContext {
 ///
 /// Returns `None` when the user is not logged in or the request fails.
 async fn fetch_current_user() -> Option<AccountData> {
-    match gloo_net::http::Request::get(&auth_url("/me")).send().await {
-        Ok(response) if response.ok() => {
-            response.json::<MeResponse>().await.ok().map(|r| r.account)
-        }
+    match Request::get(&auth_url("/me"))
+        .credentials(RequestCredentials::Include)
+        .send()
+        .await
+    {
+        Ok(response) if response.ok() => match response.json::<MeResponse>().await {
+            Ok(parsed) => Some(parsed.account),
+            Err(err) => {
+                leptos::web_sys::console::error_1(
+                    &format!("Failed to parse /auth/me response: {err:?}").into(),
+                );
+                None
+            }
+        },
         Ok(response) if response.status() == 401 => None,
         Ok(response) => {
             let status = response.status();

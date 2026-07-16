@@ -182,17 +182,45 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
 
     let token = exchange_code(&ctx, provider, code, state.pkce_verifier, &req).await?;
     let account = fetch_or_create_account(&ctx, provider, &token).await?;
-    let cookie = create_session(&ctx, &account).await?;
+    let cookie = create_session(&ctx, &account, &req).await?;
 
-    let redirect_to = state.redirect_to;
+    let redirect_to = html_escape(&state.redirect_to);
+    let html = format!(
+        r#"<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv='refresh' content='0; url={redirect_to}'>
+    <title>Redirecting...</title>
+  </head>
+  <body>
+    <p>Redirecting to <a href='{redirect_to}'>Cadiotheka</a>...</p>
+    <script>window.location.replace('{redirect_to}');</script>
+  </body>
+</html>"#
+    );
+
     let headers = Headers::new();
-    headers.set("Location", &redirect_to)?;
+    headers.set("Content-Type", "text/html; charset=utf-8")?;
     headers.set("Set-Cookie", &cookie)?;
 
     Ok(ResponseBuilder::new()
-        .with_status(302)
+        .with_status(200)
         .with_headers(headers)
-        .empty())
+        .body(ResponseBody::Body(html.into())))
+}
+
+/// Minimal HTML escaping for single-quoted attributes.
+fn html_escape(text: &str) -> String {
+    text.chars()
+        .map(|ch| match ch {
+            '&' => "&amp;".to_string(),
+            '\'' => "&#39;".to_string(),
+            '<' => "&lt;".to_string(),
+            '>' => "&gt;".to_string(),
+            _ => ch.to_string(),
+        })
+        .collect()
 }
 
 async fn exchange_code(
@@ -219,6 +247,7 @@ async fn exchange_code(
 
     let headers = Headers::new();
     headers.set("Content-Type", "application/x-www-form-urlencoded")?;
+    headers.set("Accept", "application/json")?;
 
     let mut init = RequestInit::new();
     init.with_method(Method::Post)
@@ -232,11 +261,23 @@ async fn exchange_code(
     let text = response.text().await?;
 
     if response.status_code() != 200 {
-        return Err(rust_err(format!("token exchange failed: {text}")));
+        return Err(rust_err(format!(
+            "token exchange failed (HTTP {}): {text}",
+            response.status_code()
+        )));
+    }
+
+    if text.trim().is_empty() {
+        return Err(rust_err("token exchange returned an empty response"));
     }
 
     let token: StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType> =
-        serde_json::from_str(&text).map_err(rust_err)?;
+        serde_json::from_str(&text).map_err(|e| {
+            rust_err(format!(
+                "token exchange returned invalid JSON ({}): {e}",
+                text.chars().take(200).collect::<String>()
+            ))
+        })?;
 
     Ok(token.access_token().secret().clone())
 }

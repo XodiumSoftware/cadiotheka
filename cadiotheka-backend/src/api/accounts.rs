@@ -3,6 +3,7 @@ use worker::*;
 
 use crate::DB_BINDING;
 use crate::api::session::require_account;
+use crate::utils::now_utc;
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT id, username, display_name, email, role, bio, avatar_url, created_at, verified, provider, provider_id FROM accounts";
 
@@ -100,7 +101,7 @@ pub async fn create_oauth_account(
     avatar_url: Option<String>,
 ) -> Result<Account> {
     let id = uuid::Uuid::new_v4().to_string();
-    let created_at = time::OffsetDateTime::now_utc()
+    let created_at = now_utc()
         .format(&time::format_description::well_known::Rfc3339)
         .map_err(|e| worker::Error::RustError(format!("failed to format timestamp: {e}")))?;
     let username = unique_username(ctx, preferred_username).await?;
