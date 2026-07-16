@@ -1,10 +1,28 @@
 use crate::contexts::LoginModalContext;
 use crate::i18n::{t_string, use_i18n};
 use crate::utils::{auth_url, window_event_listener};
+use gloo_net::http::Request;
 use leptos::prelude::*;
 use leptos::web_sys;
 
 use super::search_modal::SearchModal;
+
+#[derive(Debug, serde::Deserialize)]
+struct AuthUrlResponse {
+    url: String,
+}
+
+/// Starts the OAuth flow for the given provider by fetching the provider URL
+/// from the backend and navigating the browser there.
+async fn start_oauth(provider: &str) {
+    let url = auth_url(provider);
+    if let Ok(resp) = Request::get(&url).send().await
+        && let Ok(parsed) = resp.json::<AuthUrlResponse>().await
+        && let Some(window) = leptos::web_sys::window()
+    {
+        let _ = window.location().set_href(&parsed.url);
+    }
+}
 
 /// Modal dialog that offers OAuth login choices.
 #[component]
@@ -13,27 +31,20 @@ pub fn LoginModal() -> impl IntoView {
     let modal = LoginModalContext::use_context();
     let on_close = move |_| modal.close();
 
-    let navigate_to = move |url: String| {
-        if let Some(window) = leptos::web_sys::window() {
-            let _ = window.location().set_href(&url);
-        }
-    };
-
     // Keyboard shortcuts: Alt+1 triggers GitHub login, Alt+2 triggers Google
     // login, but only while the modal is open.
     Effect::new(move |_| {
         let modal = modal;
-        let navigate_to = navigate_to;
         window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if !ev.alt_key() || !modal.open.get_untracked() {
                 return;
             }
             if ev.key() == "1" {
                 ev.prevent_default();
-                navigate_to(auth_url("/github"));
+                leptos::task::spawn_local(async move { start_oauth("/github").await });
             } else if ev.key() == "2" {
                 ev.prevent_default();
-                navigate_to(auth_url("/google"));
+                leptos::task::spawn_local(async move { start_oauth("/google").await });
             }
         });
     });
@@ -62,7 +73,7 @@ pub fn LoginModal() -> impl IntoView {
                     <button
                         type="button"
                         class="btn btn-outline btn-lift w-full justify-start gap-3"
-                        on:click=move |_| navigate_to(auth_url("/github"))
+                        on:click=move |_| leptos::task::spawn_local(async move { start_oauth("/github").await })
                     >
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
@@ -76,7 +87,7 @@ pub fn LoginModal() -> impl IntoView {
                     <button
                         type="button"
                         class="btn btn-outline btn-lift w-full justify-start gap-3"
-                        on:click=move |_| navigate_to(auth_url("/google"))
+                        on:click=move |_| leptos::task::spawn_local(async move { start_oauth("/google").await })
                     >
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

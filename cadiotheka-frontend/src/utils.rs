@@ -182,7 +182,7 @@ pub fn api_url(path: &str) -> String {
 /// Auth is served from the same origin as the frontend because session cookies
 /// must be readable by the frontend's domain.
 pub fn auth_url(path: &str) -> String {
-    let base = "/auth";
+    let base = "/login";
     if path.starts_with('/') {
         format!("{base}{path}")
     } else {

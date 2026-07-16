@@ -8,8 +8,8 @@ rewrite = "/data/"
 backend = "http://localhost:8787/data/"
 
 [[proxy]]
-rewrite = "/auth/"
-backend = "http://localhost:8787/auth/"
+rewrite = "/login/"
+backend = "http://localhost:8787/login/"
 
 [build.wasm-opt]
 level = "z"

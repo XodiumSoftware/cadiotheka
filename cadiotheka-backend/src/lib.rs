@@ -98,9 +98,9 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .get_async("/data/projects/:id", api::projects::read_project)
         .put_async("/data/projects/:id", api::projects::update_project)
         .delete_async("/data/projects/:id", api::projects::delete_project)
-        .get_async("/auth/github", api::auth::github_login)
+        .get_async("/login/github", api::auth::github_login)
         .get_async("/auth/github/callback", api::auth::github_callback)
-        .get_async("/auth/google", api::auth::google_login)
+        .get_async("/login/google", api::auth::google_login)
         .get_async("/auth/google/callback", api::auth::google_callback)
         .get_async("/auth/me", api::session::me)
         .get_async("/auth/logout", api::session::logout)
@@ -109,19 +109,24 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
     match result {
         Ok(resp) => {
-            // Auth routes are same-origin and use redirects with immutable
-            // headers, so only attach CORS headers to data API responses.
-            if is_data_route {
+            // Auth routes that return JSON (login URL endpoints) need CORS headers
+            // so the frontend dev proxy can read the response. Redirects and data
+            // routes are handled separately.
+            let is_redirect = (300..400).contains(&resp.status_code());
+            if is_data_route || (!is_redirect && path.starts_with("/auth/")) {
                 add_cors_headers(resp, &origin)
             } else {
                 Ok(resp)
             }
         }
         Err(err) => {
-            let mut resp = Response::error(err.to_string(), 500)?;
-            let headers = resp.headers_mut();
+            let headers = Headers::new();
+            headers.set("Content-Type", "text/plain")?;
             let _ = headers.set("Access-Control-Allow-Origin", &origin);
-            Ok(resp)
+            Ok(ResponseBuilder::new()
+                .with_status(500)
+                .with_headers(headers)
+                .body(ResponseBody::Body(err.to_string().into())))
         }
     }
 }

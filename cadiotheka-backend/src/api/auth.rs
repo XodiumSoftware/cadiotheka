@@ -73,18 +73,16 @@ fn oauth_client(ctx: &RouteContext<()>, provider: Provider) -> Result<BasicClien
 }
 
 pub async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    login_redirect(req, ctx, Provider::GitHub).await
+    let url = login_url(req, ctx, Provider::GitHub).await?;
+    Response::from_json(&serde_json::json!({ "url": url }))
 }
 
 pub async fn google_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    login_redirect(req, ctx, Provider::Google).await
+    let url = login_url(req, ctx, Provider::Google).await?;
+    Response::from_json(&serde_json::json!({ "url": url }))
 }
 
-async fn login_redirect(
-    req: Request,
-    ctx: RouteContext<()>,
-    provider: Provider,
-) -> Result<Response> {
+async fn login_url(req: Request, ctx: RouteContext<()>, provider: Provider) -> Result<String> {
     let client = oauth_client(&ctx, provider)?
         .set_auth_uri(AuthUrl::new(provider.auth_url().to_string()).map_err(rust_err)?);
 
@@ -123,13 +121,7 @@ async fn login_redirect(
         .execute()
         .await?;
 
-    let headers = Headers::new();
-    headers.set("Location", url.as_str())?;
-
-    Ok(ResponseBuilder::new()
-        .with_status(302)
-        .with_headers(headers)
-        .empty())
+    Ok(url.to_string())
 }
 
 pub async fn github_callback(req: Request, ctx: RouteContext<()>) -> Result<Response> {
@@ -224,8 +216,6 @@ async fn exchange_code(
     Ok(token.access_token().secret().clone())
 }
 
-/// Fetches the user's profile from the OAuth provider, finds or creates an
-/// account, and returns it.
 async fn fetch_or_create_account(
     ctx: &RouteContext<()>,
     provider: Provider,
