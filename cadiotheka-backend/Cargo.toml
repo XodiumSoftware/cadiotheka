@@ -25,3 +25,6 @@ oauth2 = { version = "5.0", default-features = false }
 
 [lints]
 workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["getrandom"]
