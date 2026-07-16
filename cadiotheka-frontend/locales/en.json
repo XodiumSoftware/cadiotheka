@@ -5,6 +5,7 @@
     },
     "projects": {
         "empty": "No projects found.",
+        "loading": "Loading projects...",
         "wide_mode": "Wide",
         "narrow_mode": "Narrow",
         "shortcut_wide": "Alt + W"

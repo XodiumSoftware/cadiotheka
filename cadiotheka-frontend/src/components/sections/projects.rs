@@ -44,6 +44,16 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                     />
                 </div>
                 {move || {
+                    if projects_ctx.is_loading.get() {
+                        return view! {
+                            <div class="flex flex-col items-center justify-center text-center h-full gap-4" role="status" aria-live="polite">
+                                <span class="loading loading-spinner loading-lg text-primary" aria-hidden="true"></span>
+                                <span class="text-base-content/70">{t!(i18n, projects.loading)}</span>
+                            </div>
+                        }
+                        .into_any();
+                    }
+
                     let cards = filtered.get();
                     let query = search.query.get();
                     if cards.is_empty() {
