@@ -15,7 +15,11 @@ struct AuthUrlResponse {
 /// Starts the OAuth flow for the given provider by fetching the provider URL
 /// from the backend and navigating the browser there.
 async fn start_oauth(provider: &str) {
-    let url = login_url(provider);
+    let redirect_to = leptos::web_sys::window()
+        .and_then(|w| w.location().href().ok())
+        .unwrap_or_else(|| "/".to_string());
+    let encoded = urlencoding::encode(&redirect_to);
+    let url = format!("{}?redirect_to={}", login_url(provider), encoded);
     if let Ok(resp) = Request::get(&url).send().await
         && let Ok(parsed) = resp.json::<AuthUrlResponse>().await
         && let Some(window) = leptos::web_sys::window()

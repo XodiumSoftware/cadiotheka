@@ -17,6 +17,7 @@ js-sys = "0.3"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "Node", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry"] }
 console_error_panic_hook = "0.1.7"
+urlencoding = "2.1"
 
 [build-dependencies]
 leptos_i18n_build = "0.6.2"

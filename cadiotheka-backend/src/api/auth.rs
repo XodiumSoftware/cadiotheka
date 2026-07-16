@@ -61,6 +61,7 @@ impl Provider {
 struct OAuthState {
     provider: Provider,
     pkce_verifier: String,
+    redirect_to: String,
 }
 
 fn oauth_client(ctx: &RouteContext<()>, provider: Provider) -> Result<BasicClient> {
@@ -73,16 +74,39 @@ fn oauth_client(ctx: &RouteContext<()>, provider: Provider) -> Result<BasicClien
 }
 
 pub async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let url = login_url(req, ctx, Provider::GitHub).await?;
+    let redirect_to = req
+        .url()
+        .ok()
+        .and_then(|url| {
+            url.query_pairs()
+                .find(|(key, _)| key == "redirect_to")
+                .map(|(_, value)| value.into_owned())
+        })
+        .unwrap_or_else(|| "/".to_string());
+    let url = login_url(req, ctx, Provider::GitHub, &redirect_to).await?;
     Response::from_json(&serde_json::json!({ "url": url }))
 }
 
 pub async fn google_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let url = login_url(req, ctx, Provider::Google).await?;
+    let redirect_to = req
+        .url()
+        .ok()
+        .and_then(|url| {
+            url.query_pairs()
+                .find(|(key, _)| key == "redirect_to")
+                .map(|(_, value)| value.into_owned())
+        })
+        .unwrap_or_else(|| "/".to_string());
+    let url = login_url(req, ctx, Provider::Google, &redirect_to).await?;
     Response::from_json(&serde_json::json!({ "url": url }))
 }
 
-async fn login_url(req: Request, ctx: RouteContext<()>, provider: Provider) -> Result<String> {
+async fn login_url(
+    req: Request,
+    ctx: RouteContext<()>,
+    provider: Provider,
+    redirect_to: &str,
+) -> Result<String> {
     let client = oauth_client(&ctx, provider)?
         .set_auth_uri(AuthUrl::new(provider.auth_url().to_string()).map_err(rust_err)?);
 
@@ -110,6 +134,7 @@ async fn login_url(req: Request, ctx: RouteContext<()>, provider: Provider) -> R
     let state = OAuthState {
         provider,
         pkce_verifier: verifier.secret().clone(),
+        redirect_to: redirect_to.to_string(),
     };
 
     kv(&ctx)?
@@ -159,9 +184,9 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
     let account = fetch_or_create_account(&ctx, provider, &token).await?;
     let cookie = create_session(&ctx, &account).await?;
 
-    let origin = public_origin(&req);
+    let redirect_to = state.redirect_to;
     let headers = Headers::new();
-    headers.set("Location", &origin)?;
+    headers.set("Location", &redirect_to)?;
     headers.set("Set-Cookie", &cookie)?;
 
     Ok(ResponseBuilder::new()
