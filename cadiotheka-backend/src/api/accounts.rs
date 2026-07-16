@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use worker::*;
 
 use crate::DB_BINDING;
-use crate::api::auth::require_account;
+use crate::api::session::require_account;
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT id, username, display_name, email, role, bio, avatar_url, created_at, verified, provider, provider_id FROM accounts";
 

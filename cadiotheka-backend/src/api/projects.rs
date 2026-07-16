@@ -3,7 +3,7 @@ use worker::*;
 
 use crate::DB_BINDING;
 use crate::api::accounts::Account;
-use crate::api::auth::require_account;
+use crate::api::session::require_account;
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
 

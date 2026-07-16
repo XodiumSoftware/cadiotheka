@@ -21,6 +21,7 @@ base64 = "0.22"
 time = { version = "0.3", features = ["formatting", "parsing", "serde"] }
 url = "2.5"
 hex = "0.4"
+oauth2 = { version = "5.0", default-features = false }
 
 [lints]
 workspace = true
