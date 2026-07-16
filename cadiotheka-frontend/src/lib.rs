@@ -98,4 +98,4 @@ pub use data::*;
 pub use engines::*;
 pub use i18n::*;
 pub use metadata::*;
-pub use utils::{api_base_url, api_url, *};
+pub use utils::{api_url, auth_url, login_url, *};

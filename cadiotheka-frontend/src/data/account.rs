@@ -74,23 +74,35 @@ impl AccountData {
 /// On failure it logs to the browser console and returns an empty vector so
 /// the UI can keep running with a graceful fallback.
 pub async fn fetch_accounts() -> Vec<AccountData> {
-    match gloo_net::http::Request::get(&api_url("/accounts"))
-        .send()
-        .await
-    {
-        Ok(response) if response.ok() => response
-            .json::<Vec<AccountData>>()
-            .await
-            .unwrap_or_default(),
+    let url = api_url("/accounts");
+    match gloo_net::http::Request::get(&url).send().await {
+        Ok(response) if response.ok() => {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            match serde_json::from_str::<Vec<AccountData>>(&text) {
+                Ok(data) => data,
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!(
+                            "Failed to parse accounts JSON from {url}: {err:?} (status={status}, body={text:?})"
+                        )
+                        .into(),
+                    );
+                    Vec::new()
+                }
+            }
+        }
         Ok(response) => {
             let status = response.status();
             leptos::web_sys::console::error_1(
-                &format!("Failed to fetch accounts: HTTP {status}").into(),
+                &format!("Failed to fetch accounts from {url}: HTTP {status}").into(),
             );
             Vec::new()
         }
         Err(err) => {
-            leptos::web_sys::console::error_1(&format!("Failed to fetch accounts: {err:?}").into());
+            leptos::web_sys::console::error_1(
+                &format!("Failed to fetch accounts from {url}: {err:?}").into(),
+            );
             Vec::new()
         }
     }

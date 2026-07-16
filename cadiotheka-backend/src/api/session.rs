@@ -65,10 +65,13 @@ fn is_https_origin(origin: &str) -> bool {
 }
 
 /// Builds a `Set-Cookie` header value for a session.
+///
+/// HTTPS uses `SameSite=None` so the cookie is sent to the API subdomain from
+/// the frontend origin. HTTP (local dev) uses `SameSite=Lax`.
 fn build_session_cookie(name: &str, encoded: &str, is_https: bool) -> String {
     if is_https {
         format!(
-            "{name}={encoded}; Max-Age={SESSION_TTL_SECONDS}; Path=/; HttpOnly; Secure; SameSite=Lax"
+            "{name}={encoded}; Max-Age={SESSION_TTL_SECONDS}; Path=/; HttpOnly; Secure; SameSite=None"
         )
     } else {
         format!("{name}={encoded}; Max-Age={SESSION_TTL_SECONDS}; Path=/; HttpOnly; SameSite=Lax")
@@ -78,7 +81,7 @@ fn build_session_cookie(name: &str, encoded: &str, is_https: bool) -> String {
 /// Builds a cookie-clearing `Set-Cookie` header value.
 fn build_clear_cookie(name: &str, is_https: bool) -> String {
     if is_https {
-        format!("{name}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax")
+        format!("{name}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=None")
     } else {
         format!("{name}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax")
     }
@@ -288,9 +291,10 @@ mod tests {
     }
 
     #[test]
-    fn session_cookie_is_secure_on_https() {
+    fn session_cookie_is_secure_and_cross_site_on_https() {
         let cookie = build_session_cookie("__Host-session", "abc", true);
         assert!(cookie.contains("Secure"));
+        assert!(cookie.contains("SameSite=None"));
         assert!(cookie.contains("__Host-session"));
     }
 
@@ -298,5 +302,6 @@ mod tests {
     fn session_cookie_is_not_secure_on_http() {
         let cookie = build_session_cookie("session", "abc", false);
         assert!(!cookie.contains("Secure"));
+        assert!(cookie.contains("SameSite=Lax"));
     }
 }

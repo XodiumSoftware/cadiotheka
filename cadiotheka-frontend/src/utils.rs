@@ -154,50 +154,42 @@ fn now_utc() -> time::OffsetDateTime {
         + time::Duration::nanoseconds(nanos.into())
 }
 
-/// Base URL for backend API requests.
+/// Backend API origin.
 ///
-/// In release builds the frontend is served from `cadiotheka.com` and talks to
-/// `api.cadiotheka.com/data`. In debug builds Trunk proxies `/data/` to the
-/// local backend, so a relative path is used.
-pub const fn api_base_url() -> &'static str {
+/// In release builds the frontend is served from `cadiotheka.com` and talks
+/// directly to `api.cadiotheka.com`. In debug builds Trunk proxies requests to
+/// the local backend, so an empty origin is used to keep URLs relative.
+const fn backend_origin() -> &'static str {
     if cfg!(debug_assertions) {
-        "/data"
+        ""
     } else {
-        "https://api.cadiotheka.com/data"
+        "https://api.cadiotheka.com"
     }
 }
 
-/// Returns the full URL for a backend API path.
+/// Builds a full backend URL from a route prefix and path.
+fn backend_url(prefix: &str, path: &str) -> String {
+    let base = format!("{}{prefix}", backend_origin());
+    if path.starts_with('/') {
+        format!("{base}{path}")
+    } else {
+        format!("{base}/{path}")
+    }
+}
+
+/// Returns the full URL for a backend API path (`/data/...`).
 pub fn api_url(path: &str) -> String {
-    let base = api_base_url();
-    if path.starts_with('/') {
-        format!("{base}{path}")
-    } else {
-        format!("{base}/{path}")
-    }
+    backend_url("/data", path)
 }
 
-/// Returns the full URL for an auth endpoint (session/profile/logout).
-///
-/// Auth is served from the same origin as the frontend because session cookies
-/// must be readable by the frontend's domain.
+/// Returns the full URL for an auth endpoint (`/auth/...`).
 pub fn auth_url(path: &str) -> String {
-    let base = "/auth";
-    if path.starts_with('/') {
-        format!("{base}{path}")
-    } else {
-        format!("{base}/{path}")
-    }
+    backend_url("/auth", path)
 }
 
-/// Returns the full URL for an OAuth login provider endpoint.
+/// Returns the full URL for an OAuth login provider endpoint (`/login/...`).
 pub fn login_url(provider: &str) -> String {
-    let base = "/login";
-    if provider.starts_with('/') {
-        format!("{base}{provider}")
-    } else {
-        format!("{base}/{provider}")
-    }
+    backend_url("/login", provider)
 }
 
 /// Return a Tailwind color class for a programming language name.

@@ -42,6 +42,12 @@ fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Response> {
         {
             return Ok(resp);
         }
+        if headers
+            .set("Access-Control-Allow-Credentials", "true")
+            .is_err()
+        {
+            return Ok(resp);
+        }
     }
     Ok(resp)
 }
@@ -56,6 +62,7 @@ fn cors_preflight(origin: &str) -> Result<Response> {
         "GET, POST, PUT, DELETE, OPTIONS",
     )?;
     headers.set("Access-Control-Allow-Headers", "Content-Type")?;
+    headers.set("Access-Control-Allow-Credentials", "true")?;
     Ok(resp)
 }
 

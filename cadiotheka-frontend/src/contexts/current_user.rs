@@ -45,31 +45,39 @@ impl CurrentUserContext {
 ///
 /// Returns `None` when the user is not logged in or the request fails.
 async fn fetch_current_user() -> Option<AccountData> {
-    match Request::get(&auth_url("/me"))
+    let url = auth_url("/me");
+    match Request::get(&url)
         .credentials(RequestCredentials::Include)
         .send()
         .await
     {
-        Ok(response) if response.ok() => match response.json::<MeResponse>().await {
-            Ok(parsed) => Some(parsed.account),
-            Err(err) => {
-                leptos::web_sys::console::error_1(
-                    &format!("Failed to parse /auth/me response: {err:?}").into(),
-                );
-                None
+        Ok(response) if response.ok() => {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            match serde_json::from_str::<MeResponse>(&body) {
+                Ok(parsed) => Some(parsed.account),
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!(
+                            "Failed to parse /auth/me response from {url}: {err:?} (status={status}, body={body:?})"
+                        )
+                        .into(),
+                    );
+                    None
+                }
             }
-        },
+        }
         Ok(response) if response.status() == 401 => None,
         Ok(response) => {
             let status = response.status();
             leptos::web_sys::console::error_1(
-                &format!("Failed to fetch current user: HTTP {status}").into(),
+                &format!("Failed to fetch current user from {url}: HTTP {status}").into(),
             );
             None
         }
         Err(err) => {
             leptos::web_sys::console::error_1(
-                &format!("Failed to fetch current user: {err:?}").into(),
+                &format!("Failed to fetch current user from {url}: {err:?}").into(),
             );
             None
         }

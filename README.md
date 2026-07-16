@@ -158,7 +158,8 @@ The static site is placed in `cadiotheka-frontend/dist/`.
    - GitHub and Google credentials come from OAuth apps registered at:
      - GitHub: `https://github.com/settings/developers`
      - Google: `https://console.cloud.google.com/apis/credentials`
-   - Use callback URLs `https://cadiotheka.com/auth/github/callback` and `https://cadiotheka.com/auth/google/callback`.
+   - Use callback URLs `https://api.cadiotheka.com/auth/github/callback` and `https://api.cadiotheka.com/auth/google/callback`.
+   - If your backend is served from the same origin as the frontend (e.g. via a Cloudflare Pages Function or a zone route), use `https://cadiotheka.com/auth/...` instead.
 
 5. Apply the schema and seed data:
    ```bash
