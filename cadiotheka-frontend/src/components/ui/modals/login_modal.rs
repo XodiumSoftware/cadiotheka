@@ -1,7 +1,8 @@
 use crate::contexts::LoginModalContext;
 use crate::i18n::{t_string, use_i18n};
-use crate::utils::auth_url;
+use crate::utils::{auth_url, window_event_listener};
 use leptos::prelude::*;
+use leptos::web_sys;
 
 use super::search_modal::SearchModal;
 
@@ -17,6 +18,25 @@ pub fn LoginModal() -> impl IntoView {
             let _ = window.location().set_href(&url);
         }
     };
+
+    // Keyboard shortcuts: Alt+1 triggers GitHub login, Alt+2 triggers Google
+    // login, but only while the modal is open.
+    Effect::new(move |_| {
+        let modal = modal;
+        let navigate_to = navigate_to;
+        window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
+            if !ev.alt_key() || !modal.open.get_untracked() {
+                return;
+            }
+            if ev.key() == "1" {
+                ev.prevent_default();
+                navigate_to(auth_url("/github"));
+            } else if ev.key() == "2" {
+                ev.prevent_default();
+                navigate_to(auth_url("/google"));
+            }
+        });
+    });
 
     view! {
         <SearchModal
@@ -48,6 +68,9 @@ pub fn LoginModal() -> impl IntoView {
                             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
                         </svg>
                         {move || t_string!(i18n, login.with_github)}
+                        <kbd class="ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
+                            {move || t_string!(i18n, login.github_shortcut)}
+                        </kbd>
                     </button>
 
                     <button
@@ -62,6 +85,9 @@ pub fn LoginModal() -> impl IntoView {
                             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
                         {move || t_string!(i18n, login.with_google)}
+                        <kbd class="ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
+                            {move || t_string!(i18n, login.google_shortcut)}
+                        </kbd>
                     </button>
                 </div>
 

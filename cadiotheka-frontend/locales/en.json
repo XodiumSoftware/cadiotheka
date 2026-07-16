@@ -46,7 +46,9 @@
         "with_github": "Continue with GitHub",
         "with_google": "Continue with Google",
         "privacy_note": "We only request public profile and email information.",
-        "shortcut": "Alt + L"
+        "shortcut": "Alt + L",
+        "github_shortcut": "Alt + 1",
+        "google_shortcut": "Alt + 2"
     },
     "project_card": {
         "open_details": "Open details for {{ title }} by {{ author }}",
