@@ -2,7 +2,7 @@ use worker::*;
 
 /// Returns a public origin for the request, preferring the `X-Forwarded-Host`
 /// and `X-Forwarded-Proto` headers used by Cloudflare, then falling back to
-/// the request's own URL origin.
+/// the request's own URL origin (including the port when present).
 ///
 /// This is used to build OAuth redirect URLs that must match the registered
 /// callback origin.
@@ -13,9 +13,14 @@ pub fn public_origin(req: &Request) -> String {
         .ok()
         .flatten()
         .or_else(|| {
-            req.url()
-                .ok()
-                .map(|url| url.host_str().unwrap_or("").to_string())
+            req.url().ok().map(|url| {
+                let mut host = url.host_str().unwrap_or("").to_string();
+                if let Some(port) = url.port() {
+                    host.push(':');
+                    host.push_str(&port.to_string());
+                }
+                host
+            })
         })
         .unwrap_or_default();
     let proto = headers

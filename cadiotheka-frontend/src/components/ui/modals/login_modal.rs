@@ -1,6 +1,6 @@
 use crate::contexts::LoginModalContext;
 use crate::i18n::{t_string, use_i18n};
-use crate::utils::{auth_url, window_event_listener};
+use crate::utils::{login_url, window_event_listener};
 use gloo_net::http::Request;
 use leptos::prelude::*;
 use leptos::web_sys;
@@ -15,7 +15,7 @@ struct AuthUrlResponse {
 /// Starts the OAuth flow for the given provider by fetching the provider URL
 /// from the backend and navigating the browser there.
 async fn start_oauth(provider: &str) {
-    let url = auth_url(provider);
+    let url = login_url(provider);
     if let Ok(resp) = Request::get(&url).send().await
         && let Ok(parsed) = resp.json::<AuthUrlResponse>().await
         && let Some(window) = leptos::web_sys::window()
