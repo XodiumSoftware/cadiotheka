@@ -137,9 +137,14 @@ pub fn Header() -> impl IntoView {
             .collect::<Vec<Suggestion>>()
     };
 
-    // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Escape closes it.
-    // These listeners are registered once and removed when the header unmounts.
+    let current_user_ctx = CurrentUserContext::use_context();
+    let login_modal_ctx = LoginModalContext::use_context();
+
+    // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Alt+L opens the
+    // login modal when not authenticated, and Escape closes open menus.
     Effect::new(move |_| {
+        let current_user = current_user_ctx;
+        let login_modal = login_modal_ctx;
         window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("s") {
                 ev.prevent_default();
@@ -155,6 +160,14 @@ pub fn Header() -> impl IntoView {
                 set_selected_index.set(None);
                 set_keyboard_index.set(None);
                 input_ref.get().map(|input| input.focus().ok());
+                return;
+            }
+
+            if ev.alt_key() && ev.key().eq_ignore_ascii_case("l") {
+                ev.prevent_default();
+                if current_user.account.get_untracked().is_none() {
+                    login_modal.open();
+                }
                 return;
             }
 
@@ -411,35 +424,38 @@ pub fn Header() -> impl IntoView {
                         </svg>
                         <kbd class="inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">{move || t_string!(i18n, search.shortcut_open)}</kbd>
                     </button>
-                    <button
-                        type="button"
-                        class="btn btn-primary btn-lift hidden sm:flex items-center gap-2"
-                        on:click=move |_| {
-                            let current_user = CurrentUserContext::use_context();
-                            let login_modal = LoginModalContext::use_context();
-                            if current_user.account.get().is_some() {
-                                // TODO: open project creation UI once it exists.
-                                leptos::web_sys::console::log_1(&"Open project creation UI (not implemented)".into(),
-                                );
-                            } else {
-                                login_modal.open();
-                            }
+                    {move || {
+                        let current_user = CurrentUserContext::use_context();
+                        if current_user.is_loading.get() || current_user.account.get().is_none() {
+                            return None;
                         }
-                    >
-                        <svg
-                            class="w-4 h-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
-                        >
-                            <path d="M12 5v14M5 12h14" />
-                        </svg>
-                        <span>{move || t_string!(i18n, projects.add)}</span>
-                    </button>
+                        Some(view! {
+                            <button
+                                type="button"
+                                class="btn btn-primary btn-lift hidden sm:flex items-center gap-2"
+                                on:click=move |_| {
+                                    // TODO: open project creation UI once it exists.
+                                    leptos::web_sys::console::log_1(
+                                        &"Open project creation UI (not implemented)".into(),
+                                    );
+                                }
+                            >
+                                <svg
+                                    class="w-4 h-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                                <span>{move || t_string!(i18n, projects.add)}</span>
+                            </button>
+                        })
+                    }}
 
                     {move || {
                         let current_user = CurrentUserContext::use_context();
@@ -526,10 +542,27 @@ pub fn Header() -> impl IntoView {
                             None => view! {
                                 <button
                                     type="button"
-                                    class="btn btn-primary btn-lift"
+                                    class="btn btn-primary btn-lift flex items-center gap-2"
+                                    aria-label=move || t_string!(i18n, login.action)
                                     on:click=move |_| login_modal.open()
                                 >
-                                    {move || t_string!(i18n, login.action)}
+                                    <svg
+                                        class="w-4 h-4"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                                        <polyline points="10 17 15 12 10 7" />
+                                        <line x1="15" y1="12" x2="3" y2="12" />
+                                    </svg>
+                                    <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans">
+                                        {move || t_string!(i18n, login.shortcut)}
+                                    </kbd>
                                 </button>
                             }
                             .into_any(),

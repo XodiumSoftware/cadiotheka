@@ -42,10 +42,11 @@
     "login": {
         "action": "Log in",
         "title": "Log in to Cadiotheka",
-        "description": "Sign in with your existing account to create and manage projects.",
+        "description": "Sign in with your GitHub or Google account to create and manage projects.",
         "with_github": "Continue with GitHub",
         "with_google": "Continue with Google",
-        "privacy_note": "We only request public profile and email information."
+        "privacy_note": "We only request public profile and email information.",
+        "shortcut": "Alt + L"
     },
     "project_card": {
         "open_details": "Open details for {{ title }} by {{ author }}",
