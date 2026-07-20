@@ -31,7 +31,6 @@
     "account": {
         "menu": "Open account menu",
         "profile": "Profile",
-        "settings": "Settings",
         "logout": "Log out",
         "role_creator": "Creator",
         "role_admin": "Admin",
