@@ -109,7 +109,7 @@ fn ProjectModalContent(
                         </button>
                     </p>
                 </div>
-                <div class="flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">
+                <div class="hidden sm:flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">
                     <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_esc)}</kbd>
                     <span>{t_string!(i18n, project_modal.hint_dismiss)}</span>
                 </div>

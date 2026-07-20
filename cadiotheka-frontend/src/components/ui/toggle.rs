@@ -83,8 +83,8 @@ pub fn ToggleSliderWithSlashLabel(
 
             {shortcut_hint.map(|hint| {
                 view! {
-                    <span class="mx-1 text-base-content/50">{move || t_string!(i18n, search.hint_or)}</span>
-                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || hint.get()}</kbd>
+                    <span class="mx-1 text-base-content/50 hidden sm:inline">{move || t_string!(i18n, search.hint_or)}</span>
+                    <kbd class="hidden sm:inline-flex px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || hint.get()}</kbd>
                 }
             })}
         </label>

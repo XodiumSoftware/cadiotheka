@@ -57,7 +57,7 @@ pub fn LoginModal() -> impl IntoView {
             <div class="space-y-6 flex flex-col min-h-0">
                 <div class="flex items-center justify-between">
                     <h2 class="text-xl font-bold text-primary">{move || t_string!(i18n, login.title)}</h2>
-                    <div class="flex items-center gap-1.5 text-xs text-base-content/50">
+                    <div class="hidden sm:flex items-center gap-1.5 text-xs text-base-content/50">
                         <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
                             {move || t_string!(i18n, search.keyboard_esc)}
                         </kbd>
@@ -79,7 +79,7 @@ pub fn LoginModal() -> impl IntoView {
                             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
                         </svg>
                         {move || t_string!(i18n, login.with_github)}
-                        <kbd class="ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
+                        <kbd class="hidden sm:inline-flex ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
                             {move || t_string!(i18n, login.github_shortcut)}
                         </kbd>
                     </button>
@@ -96,7 +96,7 @@ pub fn LoginModal() -> impl IntoView {
                             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
                         {move || t_string!(i18n, login.with_google)}
-                        <kbd class="ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
+                        <kbd class="hidden sm:inline-flex ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
                             {move || t_string!(i18n, login.google_shortcut)}
                         </kbd>
                     </button>

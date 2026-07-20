@@ -71,8 +71,8 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                 on:click=move |_| search.set_query.set(String::new())
                                             >
                                                 <span>{move || t_string!(i18n, search.clear_button)}</span>
-                                                    <span class="w-1"></span>
-                                                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.shortcut_clear)}</kbd>
+                                                    <span class="w-1 hidden sm:inline"></span>
+                                                    <kbd class="hidden sm:inline-flex px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.shortcut_clear)}</kbd>
                                             </button>
                                         })
                                     }
@@ -102,7 +102,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                             >
                                                 <CornerFrame style="square" black=true class="h-full w-full flex flex-col items-center justify-center">
                                                     <span class="font-bold text-lg text-black">{move || t_string!(i18n, search.clear_card_title)}</span>
-                                                    <span class="text-sm text-black/60 mt-1">
+                                                    <span class="text-sm text-black/60 mt-1 hidden sm:block">
                                                         <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-black bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.shortcut_clear)}</kbd>
                                                     </span>
                                                 </CornerFrame>
