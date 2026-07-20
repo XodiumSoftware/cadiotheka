@@ -524,6 +524,22 @@ pub fn Header() -> impl IntoView {
                                                         </button>
                                                     </li>
                                                     <li role="none">
+                                                        <button
+                                                            type="button"
+                                                            class="w-full text-left px-4 py-2 hover:bg-base-content/10"
+                                                            role="menuitem"
+                                                            on:click=move |_| {
+                                                                set_account_menu_open.set(false);
+                                                                if let Some(account) = current_user.account.get() {
+                                                                    let author_query = format!("@author:{}", account.username);
+                                                                    search.set_query.set(author_query);
+                                                                }
+                                                            }
+                                                        >
+                                                            {move || t_string!(i18n, account.my_projects)}
+                                                        </button>
+                                                    </li>
+                                                    <li role="none">
                                                         <a
                                                             href={encode_redirect_url(&auth_url("/logout"))}
                                                             class="block w-full text-left px-4 py-2 hover:bg-base-content/10 text-error"

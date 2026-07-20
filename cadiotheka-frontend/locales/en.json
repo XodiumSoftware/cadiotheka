@@ -32,6 +32,7 @@
     "account": {
         "menu": "Open account menu",
         "profile": "Profile",
+        "my_projects": "My projects",
         "logout": "Log out",
         "role_creator": "Creator",
         "role_admin": "Admin",
