@@ -472,7 +472,7 @@ pub fn Header() -> impl IntoView {
                                 <div class="relative">
                                     <button
                                         type="button"
-                                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden"
+                                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden hover:border-base-content/30"
                                         aria-label=move || t_string!(i18n, account.menu)
                                         aria-expanded=move || account_menu_open.get().to_string()
                                         aria-haspopup="menu"
