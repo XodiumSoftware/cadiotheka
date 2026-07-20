@@ -5,7 +5,7 @@ use sha2::Sha256;
 use worker::*;
 
 use crate::api::accounts::{Account, fetch_account_by_provider};
-use crate::utils::{public_origin, rust_err};
+use crate::utils::{is_https_request, public_origin, rust_err, safe_redirect_target};
 
 const AUTH_KV_BINDING: &str = "AUTH_KV";
 const SESSION_COOKIE_NAME_PREFIX: &str = "__Host-session";
@@ -230,15 +230,26 @@ pub async fn me(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     }
 }
 
-/// Clears the session cookie and removes the session from KV.
+/// Clears the session cookie and removes the session from KV, then redirects
+/// the browser to a safe frontend location.
+///
+/// The redirect target is read from the `redirect_to` query parameter. If it
+/// is missing or not a safe relative path or allowed origin, the request's
+/// public origin is used as a fallback.
 pub async fn logout(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let is_https = is_https_origin(&public_origin(&req));
+    let is_https = is_https_request(&req);
     let cookie_name = session_cookie_name(is_https);
+
+    let redirect_to = req
+        .url()
+        .ok()
+        .and_then(|url| safe_redirect_target(is_https, &url, "redirect_to"))
+        .unwrap_or_else(|| public_origin(&req));
 
     let cookie_header = match req.headers().get("Cookie")? {
         Some(value) => value,
         None => {
-            return build_logout_response(public_origin(&req), cookie_name, is_https);
+            return build_logout_response(redirect_to, cookie_name, is_https);
         }
     };
 
@@ -259,7 +270,7 @@ pub async fn logout(req: Request, ctx: RouteContext<()>) -> Result<Response> {
         }
     }
 
-    build_logout_response(public_origin(&req), cookie_name, is_https)
+    build_logout_response(redirect_to, cookie_name, is_https)
 }
 
 fn build_logout_response(origin: String, cookie_name: &str, is_https: bool) -> Result<Response> {

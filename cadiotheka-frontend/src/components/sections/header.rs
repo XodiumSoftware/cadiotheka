@@ -5,7 +5,9 @@ use crate::contexts::{
 };
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
 use crate::i18n::{t_string, use_i18n};
-use crate::utils::{auth_url, placeholder_color, placeholder_letter, window_event_listener};
+use crate::utils::{
+    auth_url, encode_redirect_url, placeholder_color, placeholder_letter, window_event_listener,
+};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos::wasm_bindgen::JsCast;
@@ -522,7 +524,7 @@ pub fn Header() -> impl IntoView {
                                                     </li>
                                                     <li role="none">
                                                         <a
-                                                            href={auth_url("/logout")}
+                                                            href={encode_redirect_url(&auth_url("/logout"))}
                                                             class="block w-full text-left px-4 py-2 hover:bg-base-content/10 text-error"
                                                             role="menuitem"
                                                             on:click=move |_| set_account_menu_open.set(false)
