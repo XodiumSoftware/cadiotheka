@@ -38,6 +38,9 @@ pub fn AddProjectModal() -> impl IntoView {
     let on_close = move |_| modal.close();
 
     // Form fields
+    let title_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
+    let desc_input_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
+    let extended_input_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
     let (title, set_title) = signal(String::new());
     let (description, set_description) = signal(String::new());
     let (extended_desc, set_extended_desc) = signal(String::new());
@@ -55,6 +58,15 @@ pub fn AddProjectModal() -> impl IntoView {
         set_selected_platforms.set(Vec::new());
         set_errors.set(FormErrors::default());
         set_submit_error.set(None);
+        if let Some(input) = title_input_ref.get() {
+            input.set_value("");
+        }
+        if let Some(input) = desc_input_ref.get() {
+            input.set_value("");
+        }
+        if let Some(input) = extended_input_ref.get() {
+            input.set_value("");
+        }
     };
 
     // Reset the form whenever the modal opens so stale data isn't shown.
@@ -207,10 +219,10 @@ pub fn AddProjectModal() -> impl IntoView {
                                         {move || t_string!(i18n, add_project.field_title)}
                                     </label>
                                     <input
+                                        node_ref=title_input_ref
                                         id="add-project-title"
                                         type="text"
                                         class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
-                                        prop:value=move || title.get()
                                         on:input=move |ev| {
                                             set_title.set(event_target_value(&ev));
                                             set_errors.update(|errs| errs.title = None);
@@ -227,9 +239,9 @@ pub fn AddProjectModal() -> impl IntoView {
                                         {move || t_string!(i18n, add_project.field_description)}
                                     </label>
                                     <textarea
+                                        node_ref=desc_input_ref
                                         id="add-project-description"
                                         class="textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none min-h-[4rem]"
-                                        prop:value=move || description.get()
                                         on:input=move |ev| {
                                             set_description.set(event_target_value(&ev));
                                             set_errors.update(|errs| errs.description = None);
@@ -246,9 +258,9 @@ pub fn AddProjectModal() -> impl IntoView {
                                         {move || t_string!(i18n, add_project.field_extended)}
                                     </label>
                                     <textarea
+                                        node_ref=extended_input_ref
                                         id="add-project-extended"
                                         class="textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none min-h-[6rem]"
-                                        prop:value=move || extended_desc.get()
                                         on:input=move |ev| {
                                             set_extended_desc.set(event_target_value(&ev));
                                         }
