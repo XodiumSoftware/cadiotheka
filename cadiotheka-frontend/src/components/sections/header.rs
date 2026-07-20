@@ -479,12 +479,25 @@ pub fn Header() -> impl IntoView {
                                         on:click=move |_| set_account_menu_open.update(|open| *open = !*open)
                                     >
                                         {move || {
-                                            let avatar_letter = placeholder_letter(&account.username);
-                                            let avatar_bg = placeholder_color(&account.username);
-                                            view! {
-                                                <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
-                                                    {avatar_letter}
-                                                </div>
+                                            let username = account.username.clone();
+                                            let avatar_letter = placeholder_letter(&username);
+                                            let avatar_bg = placeholder_color(&username);
+                                            let avatar_alt = format!("{}'s avatar", account.display_name);
+                                            match account.avatar_url.clone() {
+                                                Some(url) => view! {
+                                                    <img
+                                                        class="w-full h-full object-cover"
+                                                        src=url
+                                                        alt=avatar_alt
+                                                    />
+                                                }
+                                                .into_any(),
+                                                None => view! {
+                                                    <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
+                                                        {avatar_letter}
+                                                    </div>
+                                                }
+                                                .into_any(),
                                             }
                                         }}
                                     </button>

@@ -39,6 +39,7 @@ fn ProfileModalContent(
     let display_name = account.display_name.clone();
     let username = account.username.clone();
     let bio = account.bio.clone();
+    let avatar_alt = format!("{}'s avatar", display_name);
     let role_label = move || match account.role {
         crate::data::AccountRole::Creator => t_string!(i18n, account.role_creator),
         crate::data::AccountRole::Admin => t_string!(i18n, account.role_admin),
@@ -47,11 +48,25 @@ fn ProfileModalContent(
     view! {
         <div class="space-y-4 flex flex-col min-h-0">
             <div class="flex items-start gap-4">
-                <div class=format!("flex-shrink-0 w-16 h-16 rounded flex items-center justify-center text-white font-bold text-xl {}", bg)
-                    aria-hidden="true"
-                >
-                    {letter}
-                </div>
+                {match account.avatar_url.clone() {
+                    Some(url) => view! {
+                        <img
+                            class="flex-shrink-0 w-16 h-16 rounded object-cover"
+                            src=url
+                            alt=avatar_alt.clone()
+                            aria-hidden="true"
+                        />
+                    }
+                    .into_any(),
+                    None => view! {
+                        <div class=format!("flex-shrink-0 w-16 h-16 rounded flex items-center justify-center text-white font-bold text-xl {}", bg)
+                            aria-hidden="true"
+                        >
+                            {letter.clone()}
+                        </div>
+                    }
+                    .into_any(),
+                }}
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
                     <div class="flex items-center gap-2">
                         <h2 class="text-xl font-bold text-primary leading-tight truncate">
