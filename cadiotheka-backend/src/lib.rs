@@ -93,6 +93,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
     let path = req.path();
     let is_data_route = path.starts_with("/data/");
+    let is_login_route = path.starts_with("/login/");
 
     let result = router
         .get_async("/data/accounts", api::accounts::list_accounts)
@@ -116,11 +117,11 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
     match result {
         Ok(resp) => {
-            // Auth routes that return JSON (login URL endpoints) need CORS headers
-            // so the frontend dev proxy can read the response. Redirects and data
-            // routes are handled separately.
+            // Auth routes that return JSON (login URL endpoints and /auth/*) need CORS
+            // headers so the frontend can read the response. Redirects and data routes are
+            // handled separately.
             let is_redirect = (300..400).contains(&resp.status_code());
-            if is_data_route || (!is_redirect && path.starts_with("/auth/")) {
+            if is_data_route || is_login_route || (!is_redirect && path.starts_with("/auth/")) {
                 add_cors_headers(resp, &origin)
             } else {
                 Ok(resp)
