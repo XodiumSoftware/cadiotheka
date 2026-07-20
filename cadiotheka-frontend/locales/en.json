@@ -62,6 +62,11 @@
         "hint_dismiss": "to close",
         "empty": "No project selected."
     },
+    "add_project": {
+        "title": "Add Project",
+        "stub_message": "Project creation is coming soon. This modal will let you publish a new project once the feature is ready.",
+        "close": "Close"
+    },
     "footer": {
         "company_name": "XODIUM™",
         "tagline": ". Open-Source (CAD) Software Company."

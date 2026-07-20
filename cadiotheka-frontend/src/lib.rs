@@ -9,7 +9,7 @@ pub mod components {
     }
 
     pub mod cards {
-        pub mod project_card;
+        pub mod project;
     }
 
     pub mod effects {
@@ -20,10 +20,11 @@ pub mod components {
         pub mod corner_frame;
         pub mod markdown;
         pub mod modals {
-            pub mod login_modal;
-            pub mod profile_modal;
-            pub mod project_modal;
-            pub mod search_modal;
+            pub mod add_project;
+            pub mod login;
+            pub mod profile;
+            pub mod project;
+            pub mod search;
         }
         pub mod overflow_row;
         pub mod toggle;
@@ -33,16 +34,17 @@ pub mod components {
     pub use sections::header::Header;
     pub use sections::projects::ProjectsSection;
 
-    pub use cards::project_card::{ProjectCard, ProjectCardProperties, from_project_data};
+    pub use cards::project::{ProjectCard, ProjectCardProperties, from_project_data};
 
     pub use effects::section_fade::FadeOverlay;
 
     pub use ui::corner_frame::CornerFrame;
     pub use ui::markdown::MarkdownView;
-    pub use ui::modals::login_modal::LoginModal;
-    pub use ui::modals::profile_modal::ProfileModal;
-    pub use ui::modals::project_modal::ProjectModal;
-    pub use ui::modals::search_modal::SearchModal;
+    pub use ui::modals::add_project::AddProjectModal;
+    pub use ui::modals::login::LoginModal;
+    pub use ui::modals::profile::ProfileModal;
+    pub use ui::modals::project::ProjectModal;
+    pub use ui::modals::search::SearchModal;
     pub use ui::overflow_row::OverflowRow;
     pub use ui::toggle::ToggleSlider;
     pub use ui::toggle::ToggleSliderWithSlashLabel;
@@ -52,20 +54,24 @@ pub mod contexts {
     pub mod accounts;
     pub mod current_user;
     pub mod layout;
-    pub mod login_modal;
-    pub mod profile_modal;
-    pub mod project_modal;
+    pub mod modals {
+        pub mod add_project;
+        pub mod login;
+        pub mod profile;
+        pub mod project;
+        pub mod search;
+    }
     pub mod projects;
-    pub mod search;
 
     pub use accounts::AccountsContext;
     pub use current_user::CurrentUserContext;
     pub use layout::LayoutContext;
-    pub use login_modal::LoginModalContext;
-    pub use profile_modal::ProfileModalContext;
-    pub use project_modal::ProjectModalContext;
+    pub use modals::add_project::AddProjectModalContext;
+    pub use modals::login::LoginModalContext;
+    pub use modals::profile::ProfileModalContext;
+    pub use modals::project::ProjectModalContext;
+    pub use modals::search::SearchContext;
     pub use projects::ProjectsContext;
-    pub use search::SearchContext;
 }
 
 pub mod data {

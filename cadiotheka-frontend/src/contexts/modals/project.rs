@@ -1,4 +1,4 @@
-use crate::components::cards::project_card::ProjectCardProperties;
+use crate::components::cards::project::ProjectCardProperties;
 use leptos::prelude::*;
 
 /// Provides and reads the project detail modal state.

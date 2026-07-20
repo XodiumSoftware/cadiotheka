@@ -1,4 +1,4 @@
-use crate::components::ui::modals::search_modal::SearchModal;
+use crate::components::ui::modals::search::SearchModal;
 use crate::contexts::ProfileModalContext;
 use crate::i18n::{t_string, use_i18n};
 use crate::utils::{placeholder_color, placeholder_letter};

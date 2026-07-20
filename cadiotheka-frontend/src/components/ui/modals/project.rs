@@ -1,6 +1,6 @@
-use crate::components::cards::project_card::ProjectCardProperties;
+use crate::components::cards::project::ProjectCardProperties;
 use crate::components::ui::markdown::MarkdownView;
-use crate::components::ui::modals::search_modal::SearchModal;
+use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::contexts::{AccountsContext, ProfileModalContext, ProjectModalContext};
 use crate::data::IconUrl;

@@ -1,4 +1,4 @@
-use crate::components::cards::project_card::ProjectCard;
+use crate::components::cards::project::ProjectCard;
 use crate::components::effects::section_fade::FadeOverlay;
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;

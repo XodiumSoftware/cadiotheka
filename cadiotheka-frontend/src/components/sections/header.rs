@@ -1,7 +1,7 @@
-use crate::components::ui::modals::search_modal::SearchModal;
+use crate::components::ui::modals::search::SearchModal;
 use crate::contexts::{
-    CurrentUserContext, LayoutContext, LoginModalContext, ProfileModalContext, ProjectsContext,
-    SearchContext,
+    AddProjectModalContext, CurrentUserContext, LayoutContext, LoginModalContext,
+    ProfileModalContext, ProjectsContext, SearchContext,
 };
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
 use crate::i18n::{t_string, use_i18n};
@@ -436,10 +436,7 @@ pub fn Header() -> impl IntoView {
                                 type="button"
                                 class="btn btn-primary btn-lift hidden sm:flex items-center gap-2"
                                 on:click=move |_| {
-                                    // TODO: open project creation UI once it exists.
-                                    leptos::web_sys::console::log_1(
-                                        &"Open project creation UI (not implemented)".into(),
-                                    );
+                                    AddProjectModalContext::use_context().open();
                                 }
                             >
                                 <svg

@@ -5,7 +5,7 @@ use gloo_net::http::Request;
 use leptos::prelude::*;
 use leptos::web_sys;
 
-use super::search_modal::SearchModal;
+use super::search::SearchModal;
 
 #[derive(Debug, serde::Deserialize)]
 struct AuthUrlResponse {
