@@ -45,7 +45,7 @@ fn ProfileModalContent(
     };
 
     view! {
-        <div class="space-y-0 flex flex-col min-h-0">
+        <div class="space-y-4 flex flex-col min-h-0">
             <div class="flex items-start gap-4">
                 <div class=format!("flex-shrink-0 w-16 h-16 rounded flex items-center justify-center text-white font-bold text-xl {}", bg)
                     aria-hidden="true"

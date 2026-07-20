@@ -70,7 +70,7 @@ fn ProjectModalContent(
     let platforms = card.supported_platforms.clone();
 
     view! {
-        <div class="space-y-0 flex flex-col min-h-0">
+        <div class="space-y-4 flex flex-col min-h-0">
             <div class="flex items-start gap-4">
                 {move || {
                     let icon_alt = icon_alt.clone();
