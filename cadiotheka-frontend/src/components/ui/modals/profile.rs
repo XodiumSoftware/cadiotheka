@@ -1,7 +1,7 @@
 use crate::components::ui::modals::search::SearchModal;
 use crate::contexts::ProfileModalContext;
 use crate::i18n::{t_string, use_i18n};
-use crate::utils::{placeholder_color, placeholder_letter};
+use crate::utils::{format_time_full, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 
 /// Modal dialog that displays profile information for a selected account.
@@ -94,7 +94,7 @@ fn ProfileModalContent(
                 </p>
                 <p>
                     <span class="font-semibold text-base-content">{move || t_string!(i18n, account.joined_label)}</span>
-                    <span class="ml-1">{account.created_at.to_string()}</span>
+                    <span class="ml-1">{format_time_full(account.created_at)}</span>
                 </p>
                 {if bio.is_empty() {
                     None
