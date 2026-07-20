@@ -33,9 +33,13 @@ fn InnerApp() -> impl IntoView {
     CurrentUserContext::provide();
 
     let layout = LayoutContext::use_context();
+    let add_project_modal = AddProjectModalContext::use_context();
+    let current_user = CurrentUserContext::use_context();
 
     Effect::new(move |_| {
         let layout = layout;
+        let add_project_modal = add_project_modal;
+        let current_user = current_user;
         window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("w") {
                 let wide_enough = web_sys::window()
@@ -45,6 +49,14 @@ fn InnerApp() -> impl IntoView {
                 if wide_enough {
                     ev.prevent_default();
                     layout.set_wide.set(!layout.wide.get_untracked());
+                }
+                return;
+            }
+
+            if ev.alt_key() && ev.key().eq_ignore_ascii_case("n") {
+                ev.prevent_default();
+                if current_user.account.get_untracked().is_some() {
+                    add_project_modal.open();
                 }
             }
         });

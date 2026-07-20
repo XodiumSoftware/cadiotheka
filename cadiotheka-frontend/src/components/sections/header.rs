@@ -143,8 +143,7 @@ pub fn Header() -> impl IntoView {
     let login_modal_ctx = LoginModalContext::use_context();
 
     // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Alt+L opens the
-    // login modal when not authenticated, Alt+N opens the add-project modal,
-    // and Escape closes open menus.
+    // login modal when not authenticated, and Escape closes open menus.
     Effect::new(move |_| {
         let current_user = current_user_ctx;
         let login_modal = login_modal_ctx;
@@ -170,14 +169,6 @@ pub fn Header() -> impl IntoView {
                 ev.prevent_default();
                 if current_user.account.get_untracked().is_none() {
                     login_modal.open();
-                }
-                return;
-            }
-
-            if ev.alt_key() && ev.key().eq_ignore_ascii_case("n") {
-                ev.prevent_default();
-                if current_user.account.get_untracked().is_some() {
-                    AddProjectModalContext::use_context().open();
                 }
                 return;
             }
