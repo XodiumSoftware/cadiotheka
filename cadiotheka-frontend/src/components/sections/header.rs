@@ -143,7 +143,8 @@ pub fn Header() -> impl IntoView {
     let login_modal_ctx = LoginModalContext::use_context();
 
     // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Alt+L opens the
-    // login modal when not authenticated, and Escape closes open menus.
+    // login modal when not authenticated, Alt+N opens the add-project modal,
+    // and Escape closes open menus.
     Effect::new(move |_| {
         let current_user = current_user_ctx;
         let login_modal = login_modal_ctx;
@@ -169,6 +170,14 @@ pub fn Header() -> impl IntoView {
                 ev.prevent_default();
                 if current_user.account.get_untracked().is_none() {
                     login_modal.open();
+                }
+                return;
+            }
+
+            if ev.alt_key() && ev.key().eq_ignore_ascii_case("n") {
+                ev.prevent_default();
+                if current_user.account.get_untracked().is_some() {
+                    AddProjectModalContext::use_context().open();
                 }
                 return;
             }
@@ -435,6 +444,7 @@ pub fn Header() -> impl IntoView {
                             <button
                                 type="button"
                                 class="btn btn-primary btn-lift hidden sm:flex items-center gap-2"
+                                aria-label=move || t_string!(i18n, projects.add)
                                 on:click=move |_| {
                                     AddProjectModalContext::use_context().open();
                                 }
@@ -451,7 +461,7 @@ pub fn Header() -> impl IntoView {
                                 >
                                     <path d="M12 5v14M5 12h14" />
                                 </svg>
-                                <span>{move || t_string!(i18n, projects.add)}</span>
+                                <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans" aria-hidden="true">{move || t_string!(i18n, projects.shortcut_add)}</kbd>
                             </button>
                         })
                     }}

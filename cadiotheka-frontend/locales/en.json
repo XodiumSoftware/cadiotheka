@@ -9,7 +9,8 @@
         "add": "Add project",
         "wide_mode": "Wide",
         "narrow_mode": "Narrow",
-        "shortcut_wide": "Alt + W"
+        "shortcut_wide": "Alt + W",
+        "shortcut_add": "Alt + N"
     },
     "search": {
         "open": "Open search",
