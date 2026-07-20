@@ -119,6 +119,113 @@ pub struct ProjectData {
     pub icon_url: Option<IconUrl>,
 }
 
+/// Returns the current UTC time using the JavaScript `Date` API.
+fn now_utc() -> time::OffsetDateTime {
+    let millis = js_sys::Date::now();
+    let seconds = (millis / 1_000.0) as i64;
+    let nanos = ((millis % 1_000.0) * 1_000_000.0) as i32;
+    time::OffsetDateTime::from_unix_timestamp(seconds).unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
+        + time::Duration::nanoseconds(nanos.into())
+}
+
+/// Creates a new project payload for submission to the backend.
+///
+/// The backend fills in `author`, `author_id`, `downloads`, and `favorites`,
+/// so this function generates the remaining fields and leaves the computed
+/// ones empty or zeroed.
+pub fn new_project_payload(
+    title: String,
+    description: String,
+    extended_desc: String,
+    tags: Vec<Tag>,
+    supported_platforms: Vec<Platform>,
+) -> ProjectData {
+    ProjectData {
+        id: uuid::Uuid::new_v4().to_string(),
+        title,
+        author: String::new(),
+        author_id: String::new(),
+        description,
+        extended_desc,
+        tags,
+        supported_platforms,
+        downloads: 0,
+        favorites: 0,
+        timestamp: now_utc(),
+        icon_url: None,
+    }
+}
+
+/// Submits a new project to the backend API.
+///
+/// Sends a `POST /data/projects` request with credentials so the session
+/// cookie is included. On success the created project is returned; on failure
+/// `None` is returned and the error is logged to the browser console.
+pub async fn create_project(project: &ProjectData) -> Option<ProjectData> {
+    let url = api_url("/projects");
+    let body = match serde_json::to_string(project) {
+        Ok(json) => json,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to serialize project payload: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    let request = match gloo_net::http::Request::post(&url)
+        .credentials(web_sys::RequestCredentials::Include)
+        .header("Content-Type", "application/json")
+        .body(body)
+    {
+        Ok(req) => req,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to build project creation request: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    match request.send().await {
+        Ok(response) => {
+            let status = response.status();
+            if !response.ok() {
+                let text = response.text().await.unwrap_or_default();
+                leptos::web_sys::console::error_1(
+                    &format!("Failed to create project: HTTP {status}\n{text}").into(),
+                );
+                return None;
+            }
+
+            let text = response.text().await.unwrap_or_default();
+            match serde_json::from_str::<ProjectData>(&text) {
+                Ok(data) => Some(data),
+                Err(err) => {
+                    // The backend currently returns an empty body on success,
+                    // so a parse error here is expected for now. Re-fetching
+                    // the project list is handled by the caller.
+                    if text.trim().is_empty() {
+                        Some(project.clone())
+                    } else {
+                        leptos::web_sys::console::error_1(
+                            &format!(
+                                "Failed to parse created project response (status={status}): {err:?}\n{text}"
+                            )
+                            .into(),
+                        );
+                        None
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(&format!("Failed to create project: {err:?}").into());
+            None
+        }
+    }
+}
+
 /// Fetch projects from the backend API.
 ///
 /// On failure it logs to the browser console and returns an empty vector so

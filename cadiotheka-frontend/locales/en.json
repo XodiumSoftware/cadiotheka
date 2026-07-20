@@ -66,8 +66,25 @@
     },
     "add_project": {
         "title": "Add Project",
-        "stub_message": "Project creation is coming soon. This modal will let you publish a new project once the feature is ready.",
-        "close": "Close"
+        "field_title": "Title",
+        "field_description": "Short description",
+        "field_extended": "Extended description (markdown)",
+        "field_tags": "Tags",
+        "field_platforms": "Supported platforms",
+        "markdown_hint": "Markdown formatting is supported.",
+        "submit": "Add project",
+        "submitting": "Adding...",
+        "cancel": "Cancel",
+        "close": "Close",
+        "login_required": "Sign in to publish a new project.",
+        "login_action": "Log in",
+        "error_title_required": "A project title is required.",
+        "error_title_long": "Title must be 120 characters or fewer.",
+        "error_description_required": "A short description is required.",
+        "error_description_long": "Description must be 500 characters or fewer.",
+        "error_tags_required": "Select at least one tag.",
+        "error_platforms_required": "Select at least one supported platform.",
+        "error_submit": "Could not add the project. Please try again."
     },
     "footer": {
         "company_name": "XODIUM™",
