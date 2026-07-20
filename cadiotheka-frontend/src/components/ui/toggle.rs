@@ -15,7 +15,7 @@ pub fn ToggleSlider(
     view! {
         <label
             for=input_id
-            class="inline-flex items-center cursor-pointer select-none gap-2"
+            class="hidden sm:inline-flex items-center cursor-pointer select-none gap-2"
         >
             {label_left.map(|label| {
                 view! { <span class="text-sm font-medium text-base-content/80">{label}</span> }
@@ -59,7 +59,7 @@ pub fn ToggleSliderWithSlashLabel(
     view! {
         <label
             for=input_id
-            class="inline-flex items-center cursor-pointer select-none gap-2"
+            class="hidden sm:inline-flex items-center cursor-pointer select-none gap-2"
         >
             <span class="text-sm font-medium text-base-content/60">
                 <span class=move || if checked.get() { "text-base-content/40" } else { "text-base-content" }>{move || label_left.get()}</span>
