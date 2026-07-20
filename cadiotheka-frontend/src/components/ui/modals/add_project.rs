@@ -386,8 +386,16 @@ pub fn AddProjectModal() -> impl IntoView {
 /// Reads the value from an input/textarea event target.
 fn event_target_value(ev: &leptos::web_sys::Event) -> String {
     ev.target()
-        .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
-        .map(|input| input.value())
+        .and_then(|t| {
+            t.dyn_into::<leptos::web_sys::HtmlTextAreaElement>()
+                .ok()
+                .map(|textarea| textarea.value())
+        })
+        .or_else(|| {
+            ev.target()
+                .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+                .map(|input| input.value())
+        })
         .unwrap_or_default()
 }
 
@@ -410,5 +418,16 @@ mod tests {
             platforms: None,
         };
         assert!(!errors.is_empty());
+    }
+
+    #[test]
+    fn form_errors_empty_after_closing_all_errors() {
+        let errors = FormErrors {
+            title: None,
+            description: None,
+            tags: None,
+            platforms: None,
+        };
+        assert!(errors.is_empty());
     }
 }
