@@ -18,8 +18,8 @@ pub fn Footer() -> impl IntoView {
     view! {
         <footer class="text-base-content px-6 lg:px-8 py-4">
             <div class="mx-auto max-w-7xl flex justify-center items-center gap-4">
-                <aside class="text-center" style="container-type: inline-size">
-                    <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-0 justify-center">
+                <aside class="max-md:w-full max-md:text-center" style="container-type: inline-size">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-center gap-1 md:gap-0">
                         <p class="font-bold whitespace-nowrap max-md:text-[clamp(0.5rem,3.1cqw,1rem)] inline">
                             {format!("© {current_year} ")}
                             <a href="/" class="link link-hover link-primary">
