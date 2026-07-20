@@ -92,6 +92,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let mut payload: ProjectPayload = req.json().await?;
     payload.author_id = account.id;
     payload.author = account.display_name;
+    let project_id = payload.id.clone();
 
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
     let platforms =
@@ -118,7 +119,11 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
         ])?
         .run()
         .await?;
-    Response::empty()
+
+    let created = fetch_project(&ctx, &project_id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("created project not found".into()))?;
+    Response::from_json(&created)
 }
 
 /// Replaces an existing project, identified by the `:id` path parameter.

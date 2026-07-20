@@ -202,20 +202,13 @@ pub async fn create_project(project: &ProjectData) -> Option<ProjectData> {
             match serde_json::from_str::<ProjectData>(&text) {
                 Ok(data) => Some(data),
                 Err(err) => {
-                    // The backend currently returns an empty body on success,
-                    // so a parse error here is expected for now. Re-fetching
-                    // the project list is handled by the caller.
-                    if text.trim().is_empty() {
-                        Some(project.clone())
-                    } else {
-                        leptos::web_sys::console::error_1(
-                            &format!(
-                                "Failed to parse created project response (status={status}): {err:?}\n{text}"
-                            )
-                            .into(),
-                        );
-                        None
-                    }
+                    leptos::web_sys::console::error_1(
+                        &format!(
+                            "Failed to parse created project response (status={status}): {err:?}\n{text}"
+                        )
+                        .into(),
+                    );
+                    None
                 }
             }
         }

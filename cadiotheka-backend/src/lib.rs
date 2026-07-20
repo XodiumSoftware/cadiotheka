@@ -131,6 +131,12 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let headers = Headers::new();
             headers.set("Content-Type", "text/plain")?;
             let _ = headers.set("Access-Control-Allow-Origin", &origin);
+            let _ = headers.set("Access-Control-Allow-Credentials", "true");
+            let _ = headers.set(
+                "Access-Control-Allow-Methods",
+                "GET, POST, PUT, DELETE, OPTIONS",
+            );
+            let _ = headers.set("Access-Control-Allow-Headers", "Content-Type");
             Ok(ResponseBuilder::new()
                 .with_status(500)
                 .with_headers(headers)
