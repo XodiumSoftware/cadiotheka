@@ -1,48 +1,3 @@
-use leptos::wasm_bindgen::JsCast;
-use leptos::wasm_bindgen::JsValue;
-use leptos::wasm_bindgen::closure::Closure;
-
-/// Add a listener to the browser `window` and automatically remove it when
-/// the surrounding effect is cleaned up.
-///
-/// Returns `None` if the listener could not be registered.
-pub fn window_event_listener<E, F>(event: &'static str, mut handler: F) -> Option<()>
-where
-    E: JsCast + 'static,
-    F: FnMut(E) + 'static,
-{
-    let window = leptos::web_sys::window()?;
-    let closure = Closure::wrap(Box::new(move |ev: leptos::web_sys::Event| {
-        if let Ok(typed) = ev.dyn_into::<E>() {
-            handler(typed);
-        }
-    }) as Box<dyn FnMut(_)>);
-
-    // Transfer the closure to JavaScript ownership. The listener is removed in
-    // `on_cleanup`; once detached, the JS function becomes unreachable and is
-    // collected, freeing the associated Rust closure.
-    let function: js_sys::Function = closure.as_ref().unchecked_ref::<js_sys::Function>().clone();
-    if let Err(err) = window.add_event_listener_with_callback(event, &function) {
-        leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(
-            "Failed to add window '{event}' event listener: {err:?}"
-        )));
-        return None;
-    }
-    std::mem::forget(closure);
-
-    leptos::prelude::on_cleanup(move || {
-        if let Some(window) = leptos::web_sys::window()
-            && let Err(err) = window.remove_event_listener_with_callback(event, &function)
-        {
-            leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(
-                "Failed to remove window '{event}' event listener: {err:?}"
-            )));
-        }
-    });
-
-    Some(())
-}
-
 /// Strip a `-dirty` suffix from a Git SHA, if present.
 pub fn clean_sha(sha: &str) -> &str {
     sha.strip_suffix("-dirty").unwrap_or(sha)
@@ -56,28 +11,6 @@ pub fn placeholder_letter(title: &str) -> String {
         .unwrap_or('?')
         .to_uppercase()
         .to_string()
-}
-
-/// Returns a deterministic Tailwind background color class from a string.
-pub fn placeholder_color(title: &str) -> &'static str {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-
-    let palette: [&'static str; 8] = [
-        "bg-red-500",
-        "bg-orange-500",
-        "bg-yellow-500",
-        "bg-green-500",
-        "bg-cyan-500",
-        "bg-blue-500",
-        "bg-purple-500",
-        "bg-pink-500",
-    ];
-
-    let mut hasher = DefaultHasher::new();
-    title.hash(&mut hasher);
-    let hash = hasher.finish();
-    palette[(hash as usize) % palette.len()]
 }
 
 /// Formats a non-negative integer with SI suffixes for compact display.
@@ -106,6 +39,12 @@ pub fn format_number_full(value: u64) -> String {
 /// Returns a human-readable relative age string such as "2 weeks ago".
 pub fn format_time_ago(timestamp: time::OffsetDateTime) -> String {
     format_duration_ago(now_utc() - timestamp)
+}
+
+/// Returns a full timestamp formatted as "dd/mm/yyyy at hh:mm".
+pub fn format_time_full(timestamp: time::OffsetDateTime) -> String {
+    let format = time::macros::format_description!("[day]/[month]/[year] at [hour]:[minute]");
+    timestamp.format(&format).unwrap_or_default()
 }
 
 /// Formats a duration as a relative age string.
@@ -139,12 +78,6 @@ fn format_duration_ago(duration: time::Duration) -> String {
     }
 }
 
-/// Returns a full timestamp formatted as "dd/mm/yyyy at hh:mm".
-pub fn format_time_full(timestamp: time::OffsetDateTime) -> String {
-    let format = time::macros::format_description!("[day]/[month]/[year] at [hour]:[minute]");
-    timestamp.format(&format).unwrap_or_default()
-}
-
 /// Returns the current UTC time using the JavaScript `Date` API.
 fn now_utc() -> time::OffsetDateTime {
     let millis = js_sys::Date::now();
@@ -152,77 +85,6 @@ fn now_utc() -> time::OffsetDateTime {
     let nanos = ((millis % 1_000.0) * 1_000_000.0) as i32;
     time::OffsetDateTime::from_unix_timestamp(seconds).unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
         + time::Duration::nanoseconds(nanos.into())
-}
-
-/// Backend API origin.
-///
-/// In release builds the frontend is served from `cadiotheka.com` and talks
-/// directly to `api.cadiotheka.com`. In debug builds Trunk proxies requests to
-/// the local backend, so an empty origin is used to keep URLs relative.
-const fn backend_origin() -> &'static str {
-    if cfg!(debug_assertions) {
-        ""
-    } else {
-        "https://api.cadiotheka.com"
-    }
-}
-
-/// Builds a full backend URL from a route prefix and path.
-fn backend_url(prefix: &str, path: &str) -> String {
-    let base = format!("{}{prefix}", backend_origin());
-    if path.starts_with('/') {
-        format!("{base}{path}")
-    } else {
-        format!("{base}/{path}")
-    }
-}
-
-/// Returns the full URL for a backend API path (`/data/...`).
-pub fn api_url(path: &str) -> String {
-    backend_url("/data", path)
-}
-
-/// Returns the full URL for an auth endpoint (`/auth/...`).
-pub fn auth_url(path: &str) -> String {
-    backend_url("/auth", path)
-}
-
-/// Appends a safe `redirect_to` query parameter to a URL, using the current
-/// browser location as the return target. Relative paths are used in release
-/// builds; the full URL is used during local development so the backend can
-/// send the browser back to the Trunk dev server.
-pub fn encode_redirect_url(base: &str) -> String {
-    let redirect_to = leptos::web_sys::window()
-        .and_then(|w| w.location().href().ok())
-        .unwrap_or_else(|| "/".to_string());
-
-    let encoded = urlencoding::encode(&redirect_to);
-    format!("{base}?redirect_to={encoded}")
-}
-
-/// Returns the full URL for an OAuth login provider endpoint (`/login/...`).
-pub fn login_url(provider: &str) -> String {
-    backend_url("/login", provider)
-}
-
-/// Return a Tailwind color class for a programming language name.
-///
-/// Unknown languages fall back to a neutral base-content badge.
-pub fn language_color(language: &str) -> &'static str {
-    match language {
-        "Rust" => "bg-[#dea584]",
-        "TypeScript" => "bg-[#3178c6]",
-        "JavaScript" => "bg-[#f1e05a]",
-        "Python" => "bg-[#3572A5]",
-        "HTML" => "bg-[#e34c26]",
-        "CSS" => "bg-[#563d7c]",
-        "Java" | "java" => "bg-[#b07219]",
-        "Go" => "bg-[#00ADD8]",
-        "C" => "bg-[#555555]",
-        "C++" => "bg-[#f34b7d]",
-        "Kotlin" => "bg-[#A97BFF]",
-        _ => "bg-base-content/50",
-    }
 }
 
 #[cfg(test)]
@@ -326,34 +188,24 @@ mod tests {
     }
 
     #[test]
-    fn test_placeholder_letter() {
-        assert_eq!(placeholder_letter("Blender"), "B");
-        assert_eq!(placeholder_letter("freecad"), "F");
-        assert_eq!(placeholder_letter(""), "?");
-    }
-
-    #[test]
-    fn test_placeholder_color_is_deterministic() {
-        let a = placeholder_color("abc");
-        let b = placeholder_color("abc");
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn language_color_case_sensitive_and_variants() {
-        assert_eq!(language_color("Java"), "bg-[#b07219]");
-        assert_eq!(language_color("java"), "bg-[#b07219]");
-        assert_eq!(language_color("Kotlin"), "bg-[#A97BFF]");
-        assert_eq!(language_color("Go"), "bg-[#00ADD8]");
-        assert_eq!(language_color(""), "bg-base-content/50");
-    }
-
-    #[test]
     fn clean_sha_only_strips_trailing_dirty() {
         assert_eq!(clean_sha("abc123-dirty-foo"), "abc123-dirty-foo");
         assert_eq!(clean_sha(""), "");
         assert_eq!(clean_sha("-dirty"), "");
         assert_eq!(clean_sha("abc123-dirty-dirty"), "abc123-dirty");
+    }
+
+    #[test]
+    fn clean_sha_removes_dirty_suffix() {
+        assert_eq!(clean_sha("abc123-dirty"), "abc123");
+        assert_eq!(clean_sha("abc123"), "abc123");
+    }
+
+    #[test]
+    fn test_placeholder_letter() {
+        assert_eq!(placeholder_letter("Blender"), "B");
+        assert_eq!(placeholder_letter("freecad"), "F");
+        assert_eq!(placeholder_letter(""), "?");
     }
 
     #[test]
@@ -366,17 +218,5 @@ mod tests {
     fn format_time_full_rounds_down_minutes() {
         let timestamp = time::OffsetDateTime::from_unix_timestamp(90).unwrap();
         assert_eq!(format_time_full(timestamp), "01/01/1970 at 00:01");
-    }
-
-    #[test]
-    fn language_color_returns_expected() {
-        assert_eq!(language_color("Rust"), "bg-[#dea584]");
-        assert_eq!(language_color("UnknownLang"), "bg-base-content/50");
-    }
-
-    #[test]
-    fn clean_sha_removes_dirty_suffix() {
-        assert_eq!(clean_sha("abc123-dirty"), "abc123");
-        assert_eq!(clean_sha("abc123"), "abc123");
     }
 }

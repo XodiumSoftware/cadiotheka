@@ -1,6 +1,5 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
-use crate::contexts::{AccountsContext, ProfileModalContext, ProjectModalContext};
 use crate::data::{IconUrl, ProjectData};
 use crate::i18n::{t_string, use_i18n};
 use crate::metadata::platforms::Platform;
@@ -123,7 +122,11 @@ pub fn ClockIcon() -> impl IntoView {
 }
 
 #[component]
-pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
+pub fn ProjectCard(
+    #[prop(into)] props: ProjectCardProperties,
+    #[prop(into)] on_click: Callback<()>,
+    #[prop(into)] on_author_click: Callback<()>,
+) -> impl IntoView {
     let i18n = use_i18n();
     let letter = placeholder_letter(&props.title);
     let bg = placeholder_color(&props.title);
@@ -132,26 +135,7 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
     let favorites = props.favorites;
     let timestamp = props.timestamp;
 
-    let props_for_modal = props.clone();
-    let open_modal = move |_| {
-        ProjectModalContext::use_context().open(props_for_modal.clone());
-    };
     let card_title = props.title.clone();
-    let card_author_id = props.author_id.clone();
-    let accounts = AccountsContext::use_context();
-    let open_author_profile = {
-        let card_author_id = card_author_id.clone();
-        move |_| {
-            let account = accounts
-                .accounts
-                .get()
-                .into_iter()
-                .find(|a| a.id == card_author_id);
-            if let Some(account) = account {
-                ProfileModalContext::use_context().open(account);
-            }
-        }
-    };
     let card_author = props.author.clone();
     let card_title_for_icon_alt = card_title.clone();
     let icon_alt = Signal::derive(move || {
@@ -179,7 +163,7 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
     view! {
         <article
             class="btn-lift hover:border-primary block h-full p-2 cursor-pointer"
-            on:click=open_modal
+            on:click=move |_| on_click.run(())
             role="button"
             tabindex="0"
             aria-label=aria_label
@@ -219,7 +203,7 @@ pub fn ProjectCard(props: ProjectCardProperties) -> impl IntoView {
                                         title={card_author.clone()}
                                         on:click=move |ev| {
                                             ev.stop_propagation();
-                                            open_author_profile(());
+                                            on_author_click.run(());
                                         }
                                     >
                                         {card_author.clone()}

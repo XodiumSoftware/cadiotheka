@@ -109,7 +109,7 @@ cadiotheka/
 - Address all `cargo clippy` warnings.
 - Use clear module boundaries as the project grows.
 - Prefer immutable data and explicit error handling (`Result`, `Option`).
-- **Register modules and re-exports in `src/lib.rs` explicitly; do not use `mod.rs` files.**
+- **Register modules and re-exports in `src/lib.rs` explicitly.** Do not use `mod.rs` files, and do not nest `mod` declarations inside other module files. Every module in the crate must be declared directly in the crate root (`src/lib.rs` for `cadiotheka-frontend`, `src/lib.rs` for `cadiotheka-backend`).
 - Use `snake_case` for all Rust source filenames. Compound module names should be split with underscores (e.g. `project_card.rs`, `search_modal.rs`, `corner_frame.rs`, `project_list.rs`), not concatenated.
 - When adding crate dependencies, look up the latest version on [crates.io](https://crates.io) rather than guessing or reusing an old version from another crate in the workspace.
 - Backend route handlers live under `cadiotheka-backend/src/api/` and are wired in `cadiotheka-backend/src/lib.rs`.

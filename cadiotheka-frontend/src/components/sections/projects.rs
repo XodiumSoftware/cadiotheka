@@ -1,11 +1,14 @@
-use crate::components::cards::project::ProjectCard;
-use crate::components::effects::section_fade::FadeOverlay;
+use crate::components::cards::project::{ProjectCard, ProjectCardProperties};
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
-use crate::contexts::{LayoutContext, ProjectsContext, SearchContext};
+use crate::contexts::{
+    AccountsContext, LayoutContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
+    SearchContext,
+};
 use crate::data::ProjectData;
 use crate::engines::SearchEngine;
 use crate::i18n::{t, t_string, use_i18n};
+use crate::ui::effects::section_fade::FadeOverlay;
 use leptos::prelude::*;
 
 #[component]
@@ -115,8 +118,27 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                 {cards
                                     .into_iter()
                                     .map(|project: ProjectData| {
+                                        let project_for_modal = project.clone();
+                                        let project_for_profile = project.clone();
+                                        let props: ProjectCardProperties = project.into();
+                                        let accounts_ctx = AccountsContext::use_context();
+                                        let profile_modal = ProfileModalContext::use_context();
+                                        let project_modal = ProjectModalContext::use_context();
                                         view! {
-                                            <ProjectCard props=project.into() />
+                                            <ProjectCard
+                                                props=props
+                                                on_click=move |_| project_modal.open(project_for_modal.clone().into())
+                                                on_author_click=move |_| {
+                                                    let account = accounts_ctx
+                                                        .accounts
+                                                        .get()
+                                                        .into_iter()
+                                                        .find(|a| a.id == project_for_profile.author_id);
+                                                    if let Some(account) = account {
+                                                        profile_modal.open(account);
+                                                    }
+                                                }
+                                            />
                                         }
                                     })
                                     .collect_view()}
