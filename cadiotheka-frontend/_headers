@@ -1,0 +1,2 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.github.com https://api.cadiotheka.com; img-src 'self' https://avatars.githubusercontent.com data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';
