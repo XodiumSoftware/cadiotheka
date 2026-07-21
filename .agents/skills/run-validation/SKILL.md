@@ -24,9 +24,13 @@ Use this skill when the user wants to verify the project state or before finishi
    cargo fmt --all -- --check
    ```
 
-4. Optionally run `cargo machete` to detect unused dependencies if it is installed:
+4. Run `cargo machete` to detect unused dependencies:
    ```bash
    cargo machete
+   ```
+   If `cargo-machete` is not installed, install it first:
+   ```bash
+   cargo binstall cargo-machete --no-confirm --force
    ```
 
 5. Report the outcome concisely:
@@ -38,4 +42,5 @@ Use this skill when the user wants to verify the project state or before finishi
 
 - `cargo test` runs on the native target because the project no longer forces a global `[build] target`.
 - Clippy must target `wasm32-unknown-unknown` for WASM-equivalent checks.
+- `cargo machete` is a required check; if it reports unused dependencies, fix or ignore them before claiming validation passed.
 - If a command fails, stop and report the error; do not hide it.
