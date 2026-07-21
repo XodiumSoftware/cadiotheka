@@ -180,7 +180,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
             <hr class="border-base-content/10" />
             <div class="space-y-2 text-sm text-base-content/80">
                 <div class="flex items-stretch gap-2">
-                    <div class="flex-shrink-0 flex bg-surface-light p-1 relative">
+                    <div class="flex-shrink-0 flex bg-surface-light p-1 relative w-8">
                         <CornerFrame
                             style="square"
                             black=true
