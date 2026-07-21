@@ -141,6 +141,7 @@ pub fn new_project_payload(
     extended_desc: String,
     tags: Vec<Tag>,
     supported_platforms: Vec<Platform>,
+    icon_url: Option<String>,
 ) -> ProjectData {
     ProjectData {
         id: uuid::Uuid::new_v4().to_string(),
@@ -155,7 +156,7 @@ pub fn new_project_payload(
         downloads: 0,
         favorites: 0,
         timestamp: now_utc(),
-        icon_url: None,
+        icon_url: icon_url.map(IconUrl),
     }
 }
 

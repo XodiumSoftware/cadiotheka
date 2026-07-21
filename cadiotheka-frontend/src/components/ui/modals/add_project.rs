@@ -5,6 +5,7 @@ use crate::contexts::{
 use crate::data::{create_project, new_project_payload};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
+use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -44,6 +45,8 @@ pub fn AddProjectModal() -> impl IntoView {
     let (extended_desc, set_extended_desc) = signal(String::new());
     let (selected_tags, set_selected_tags) = signal(Vec::<Tag>::new());
     let (selected_platforms, set_selected_platforms) = signal(Vec::<Platform>::new());
+    let (icon_url, set_icon_url) = signal(String::new());
+    let (show_icon_input, set_show_icon_input) = signal(false);
     let (errors, set_errors) = signal(FormErrors::default());
     let (is_submitting, set_is_submitting) = signal(false);
     let (submit_error, set_submit_error) = signal(Option::<String>::None);
@@ -54,6 +57,8 @@ pub fn AddProjectModal() -> impl IntoView {
         set_extended_desc.set(String::new());
         set_selected_tags.set(Vec::new());
         set_selected_platforms.set(Vec::new());
+        set_icon_url.set(String::new());
+        set_show_icon_input.set(false);
         set_errors.set(FormErrors::default());
         set_submit_error.set(None);
         if let Some(input) = title_input_ref.get() {
@@ -138,6 +143,14 @@ pub fn AddProjectModal() -> impl IntoView {
             extended_desc.get_untracked(),
             selected_tags.get_untracked(),
             selected_platforms.get_untracked(),
+            {
+                let url = icon_url.get_untracked();
+                if url.trim().is_empty() {
+                    None
+                } else {
+                    Some(url)
+                }
+            },
         );
 
         set_is_submitting.set(true);
@@ -210,6 +223,66 @@ pub fn AddProjectModal() -> impl IntoView {
                     view! {
                         <form class="space-y-4 flex flex-col min-h-0 overflow-hidden" on:submit=on_submit>
                             <div class="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
+                                <div class="flex flex-col items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="group relative flex-shrink-0 w-20 h-20 rounded overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary"
+                                        aria-label="Set project icon"
+                                        on:click=move |_| set_show_icon_input.update(|v| *v = !*v)
+                                        disabled=move || is_submitting.get()
+                                    >
+                                        {move || {
+                                            let url = icon_url.get();
+                                            let letter = placeholder_letter(&title.get());
+                                            let bg = placeholder_color(&title.get());
+                                            if url.trim().is_empty() {
+                                                view! {
+                                                    <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-2xl {}", bg)
+                                                        aria-hidden="true"
+                                                    >
+                                                        {letter}
+                                                    </div>
+                                                }
+                                                .into_any()
+                                            } else {
+                                                view! {
+                                                    <img
+                                                        src=url.clone()
+                                                        alt="Project icon preview"
+                                                        class="w-full h-full object-cover"
+                                                    />
+                                                }
+                                                .into_any()
+                                            }
+                                        }}
+                                        <div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                                            <svg
+                                                class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                            </svg>
+                                        </div>
+                                    </button>
+                                    {move || {
+                                        show_icon_input.get().then(|| view! {
+                                            <input
+                                                type="text"
+                                                class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                                placeholder="https://example.com/icon.svg"
+                                                prop:value=icon_url.get()
+                                                on:input=move |ev| set_icon_url.set(event_target_value(&ev))
+                                                disabled=move || is_submitting.get()
+                                            />
+                                        })
+                                    }}
+                                </div>
+
                                 <div>
                                     <label class="block text-sm font-medium text-base-content mb-1" for="add-project-title">
                                         {move || {
