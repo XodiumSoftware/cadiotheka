@@ -96,6 +96,16 @@ disables the service worker cache so you always see the latest build.
 
 Trunk rebuilds automatically when you edit the project.
 
+If you want local development to use your real Cloudflare resources instead of local emulation, start the backend with remote bindings:
+
+```bash
+cd cadiotheka-backend
+worker-build
+npx wrangler dev --remote
+```
+
+That uses the `DB`, `AUTH`, and `PI` bindings from `wrangler.toml`. Be careful: if those bindings point at production, your local app will read and write real production data.
+
 ## Run Backend Locally
 
 The backend is a Cloudflare Pages Functions Rust worker. First build the WASM bundle, then run Wrangler:
@@ -110,6 +120,8 @@ npx wrangler dev
 The local API is available at <http://localhost:8787/data/accounts> by default.
 
 Project icons are uploaded through the backend and stored in the `PI` R2 binding (backed by the `cadiotheka-projects-icons` bucket). D1 stores only the generated object key, and the frontend loads the image through the backend icon route.
+
+For local emulation, use plain `npx wrangler dev`. To hit the bound remote Cloudflare resources instead, use `npx wrangler dev --remote`.
 
 ## Create the Database Tables
 
