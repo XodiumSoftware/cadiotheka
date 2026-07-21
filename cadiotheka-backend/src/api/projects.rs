@@ -7,7 +7,7 @@ use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::utils::js_option;
 
-const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
+const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
 
 /// Maximum allowed length for a project title.
 const MAX_TITLE_LENGTH: usize = 100;
@@ -41,6 +41,8 @@ pub struct Project {
     pub author: String,
     pub author_id: String,
     pub author_username: String,
+    #[serde(with = "json_string")]
+    pub collaborator_ids: Vec<String>,
     pub description: String,
     pub extended_desc: String,
     #[serde(with = "json_string")]
@@ -62,6 +64,8 @@ pub struct ProjectPayload {
     pub author: String,
     pub author_id: String,
     pub author_username: String,
+    #[serde(with = "json_string")]
+    pub collaborator_ids: Vec<String>,
     pub description: String,
     pub extended_desc: String,
     #[serde(with = "json_string")]
@@ -132,11 +136,13 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let platforms =
         serde_json::to_string(&payload.supported_platforms).unwrap_or_else(|_| "[]".to_string());
     let favorites = serde_json::to_string(&payload.favorites).unwrap_or_else(|_| "[]".to_string());
+    let collaborator_ids =
+        serde_json::to_string(&payload.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO projects (id, title, author, author_id, author_username, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
         )
         .bind(&[
             payload.id.into(),
@@ -144,6 +150,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             payload.author.into(),
             payload.author_id.into(),
             payload.author_username.into(),
+            collaborator_ids.into(),
             payload.description.into(),
             payload.extended_desc.into(),
             tags.into(),
@@ -171,6 +178,7 @@ pub struct ProjectPatch {
     description: Option<String>,
     tags: Option<Vec<String>>,
     supported_platforms: Option<Vec<String>>,
+    collaborator_ids: Option<Vec<String>>,
     extended_desc: Option<String>,
 }
 
@@ -244,6 +252,16 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
             .await?;
     }
 
+    if let Some(collaborator_ids) = patch.collaborator_ids {
+        let collaborator_ids =
+            serde_json::to_string(&collaborator_ids).unwrap_or_else(|_| "[]".to_string());
+        db(&ctx)?
+            .prepare("UPDATE projects SET collaborator_ids = ?1 WHERE id = ?2")
+            .bind(&[collaborator_ids.into(), id.clone().into()])?
+            .run()
+            .await?;
+    }
+
     if let Some(extended_desc) = patch.extended_desc {
         if extended_desc.len() > MAX_EXTENDED_DESC_LENGTH {
             return Response::error("Extended description must be 5000 characters or fewer", 400);
@@ -279,19 +297,23 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
     let platforms =
         serde_json::to_string(&payload.supported_platforms).unwrap_or_else(|_| "[]".to_string());
+    payload.collaborator_ids = project.collaborator_ids.clone();
     let favorites = serde_json::to_string(&project.favorites).unwrap_or_else(|_| "[]".to_string());
+    let collaborator_ids =
+        serde_json::to_string(&payload.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
 
     db(&ctx)?
         .prepare(
             "UPDATE projects \
-             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, description = ?5, extended_desc = ?6, tags = ?7, supported_platforms = ?8, downloads = ?9, favorites = ?10, timestamp = ?11, icon_url = ?12 \
-             WHERE id = ?13",
+             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, extended_desc = ?7, tags = ?8, supported_platforms = ?9, downloads = ?10, favorites = ?11, timestamp = ?12, icon_url = ?13 \
+             WHERE id = ?14",
         )
         .bind(&[
             payload.title.into(),
             payload.author.into(),
             payload.author_id.into(),
             payload.author_username.into(),
+            collaborator_ids.into(),
             payload.description.into(),
             payload.extended_desc.into(),
             tags.into(),
@@ -494,6 +516,7 @@ mod tests {
             author: "Author".into(),
             author_id: author_id.into(),
             author_username: "author".into(),
+            collaborator_ids: vec![],
             description: "".into(),
             extended_desc: "".into(),
             tags: vec![],
@@ -512,6 +535,7 @@ mod tests {
             author: "Author".into(),
             author_id: "acc-1".into(),
             author_username: "author".into(),
+            collaborator_ids: vec![],
             description: "A short description.".into(),
             extended_desc: "".into(),
             tags: vec![],

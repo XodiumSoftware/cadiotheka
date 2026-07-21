@@ -8,8 +8,9 @@ use crate::contexts::{
     SearchContext,
 };
 use crate::data::{
-    AccountRole, update_project_description, update_project_extended_desc,
-    update_project_platforms, update_project_tags, update_project_title, upload_project_icon,
+    AccountRole, update_project_collaborators, update_project_description,
+    update_project_extended_desc, update_project_platforms, update_project_tags,
+    update_project_title, upload_project_icon,
 };
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
@@ -215,6 +216,10 @@ fn ProjectModalContent(
     let (editing_extended, set_editing_extended) = signal(false);
     let (draft_extended, set_draft_extended) = signal(card.extended_desc.clone());
     let (extended_desc, set_extended_desc) = signal(card.extended_desc.clone());
+    let (editing_collaborators, set_editing_collaborators) = signal(false);
+    let (collaborator_ids, set_collaborator_ids) = signal(card.collaborator_ids.clone());
+    let (draft_collaborator_ids, set_draft_collaborator_ids) =
+        signal(card.collaborator_ids.clone());
     let project_id = card.id.clone();
 
     let start_edit = move |_| {
@@ -444,6 +449,58 @@ fn ProjectModalContent(
         })
     };
 
+    let start_edit_collaborators = move || {
+        set_draft_collaborator_ids.set(collaborator_ids.get());
+        set_editing_collaborators.set(true);
+    };
+
+    let cancel_edit_collaborators = move || {
+        set_editing_collaborators.set(false);
+    };
+
+    let toggle_collaborator = Callback::new(move |account_id: String| {
+        set_draft_collaborator_ids.update(|ids| {
+            if let Some(pos) = ids.iter().position(|id| id == &account_id) {
+                ids.remove(pos);
+            } else {
+                ids.push(account_id);
+            }
+        });
+    });
+
+    let commit_edit_collaborators = {
+        let project_id = project_id.clone();
+        Callback::new(move |draft_value: Vec<String>| {
+            let project_id = project_id.clone();
+            let set_collaborator_ids = set_collaborator_ids;
+            let set_editing_collaborators = set_editing_collaborators;
+            let modal_card = modal.set_card;
+            let set_projects = projects_ctx.set_projects;
+
+            leptos::task::spawn_local(async move {
+                if let Some(new_collaborator_ids) =
+                    update_project_collaborators(&project_id, draft_value).await
+                {
+                    set_collaborator_ids.set(new_collaborator_ids.clone());
+                    modal_card.update(|opt| {
+                        if let Some(card) = opt.as_mut() {
+                            card.collaborator_ids = new_collaborator_ids.clone();
+                        }
+                    });
+                    set_projects.update(|projects| {
+                        for project in projects.iter_mut() {
+                            if project.id == project_id {
+                                project.collaborator_ids = new_collaborator_ids.clone();
+                                break;
+                            }
+                        }
+                    });
+                }
+                set_editing_collaborators.set(false);
+            });
+        })
+    };
+
     let commit_edit = {
         let project_id = project_id.clone();
         Callback::new(move |draft_value: String| {
@@ -475,27 +532,8 @@ fn ProjectModalContent(
         })
     };
 
-    let author = card.author.clone();
-    let author_username = card.author_username.clone();
     let author_id = card.author_id.clone();
-    let author_avatar_letter = placeholder_letter(&author_username);
-    let author_avatar_bg = placeholder_color(&author_username);
-    let author_avatar_alt = format!("{}'s avatar", author);
     let accounts = AccountsContext::use_context();
-    let open_author_profile = {
-        let author_id = author_id.clone();
-        move |_| {
-            on_close.run(());
-            let account = accounts
-                .accounts
-                .get()
-                .into_iter()
-                .find(|a| a.id == author_id);
-            if let Some(account) = account {
-                ProfileModalContext::use_context().open(account);
-            }
-        }
-    };
     let apply_filter = Callback::new(move |filter: String| {
         search.set_query.set(format!("#{filter}"));
         modal.close();
@@ -788,39 +826,154 @@ fn ProjectModalContent(
                         <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
                             <div class="flex items-center justify-between">
                                 <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
+                                {is_editable.then(|| view! {
+                                    <EditIconButton
+                                        aria_label="Edit collaborators"
+                                        on_click=Callback::new(move |_| start_edit_collaborators())
+                                    />
+                                })}
                             </div>
-                            <button
-                                type="button"
-                                class="w-12 h-12 border border-base-content/10 overflow-hidden hover:border-primary/40 transition-colors"
-                                title={format!("Open {}'s profile", author)}
-                                aria-label={format!("Open {}'s profile", author)}
-                                on:click=open_author_profile
-                            >
-                                {accounts
-                                    .accounts
-                                    .get()
-                                    .into_iter()
-                                    .find(|account| account.id == author_id)
-                                    .and_then(|account| account.avatar_url)
-                                    .map(|url| {
-                                        view! {
-                                            <img
-                                                class="w-full h-full object-cover"
-                                                src=url
-                                                alt=author_avatar_alt.clone()
-                                            />
-                                        }
-                                            .into_any()
-                                    })
-                                    .unwrap_or_else(|| {
-                                        view! {
-                                            <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", author_avatar_bg)>
-                                                {author_avatar_letter.clone()}
+                            {move || {
+                                let all_accounts = accounts.accounts.get();
+                                let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
+                                let collaborator_accounts = all_accounts
+                                    .iter()
+                                    .filter(|account| collaborator_ids.get().contains(&account.id))
+                                    .cloned()
+                                    .collect::<Vec<_>>();
+
+                                if editing_collaborators.get() {
+                                    let draft_ids = draft_collaborator_ids.get();
+                                    view! {
+                                        <div class="space-y-3">
+                                            <div class="flex flex-wrap gap-2">
+                                                {all_accounts.into_iter().filter(|account| account.id != author_id).map(|account| {
+                                                    let account_id = account.id.clone();
+                                                    let display_name = account.display_name.clone();
+                                                    let avatar_alt = format!("{}'s avatar", display_name);
+                                                    let avatar_letter = placeholder_letter(&account.username);
+                                                    let avatar_bg = placeholder_color(&account.username);
+                                                    view! {
+                                                        <button
+                                                            type="button"
+                                                            class=move || format!(
+                                                                "w-12 h-12 border overflow-hidden transition-colors {}",
+                                                                if draft_collaborator_ids.get().contains(&account_id) {
+                                                                    "border-primary ring-1 ring-primary"
+                                                                } else {
+                                                                    "border-base-content/10 hover:border-primary/40"
+                                                                }
+                                                            )
+                                                            title=display_name.clone()
+                                                            aria-label=display_name.clone()
+                                                            on:click={
+                                                                let account_id = account.id.clone();
+                                                                move |_| toggle_collaborator.run(account_id.clone())
+                                                            }
+                                                        >
+                                                            {account.avatar_url.clone().map(|url| {
+                                                                view! {
+                                                                    <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() />
+                                                                }.into_any()
+                                                            }).unwrap_or_else(|| {
+                                                                view! {
+                                                                    <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
+                                                                        {avatar_letter.clone()}
+                                                                    </div>
+                                                                }.into_any()
+                                                            })}
+                                                        </button>
+                                                    }
+                                                }).collect_view()}
                                             </div>
-                                        }
-                                            .into_any()
-                                    })}
-                            </button>
+                                            <div class="flex justify-end gap-2">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-ghost btn-xs"
+                                                    on:click=move |_| cancel_edit_collaborators()
+                                                >"Cancel"</button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-primary btn-xs"
+                                                    on:click=move |_| commit_edit_collaborators.run(draft_ids.clone())
+                                                >"Save"</button>
+                                            </div>
+                                        </div>
+                                    }.into_any()
+                                } else {
+                                    view! {
+                                        <div class="flex flex-wrap gap-2">
+                                            {owner_account.map(|account| {
+                                                let display_name = account.display_name.clone();
+                                                let avatar_alt = format!("{}'s avatar", display_name);
+                                                let avatar_letter = placeholder_letter(&account.username);
+                                                let avatar_bg = placeholder_color(&account.username);
+                                                let owner_click = {
+                                                    let account = account.clone();
+                                                    move |_| {
+                                                        on_close.run(());
+                                                        ProfileModalContext::use_context().open(account.clone());
+                                                    }
+                                                };
+                                                view! {
+                                                    <button
+                                                        type="button"
+                                                        class="w-12 h-12 border border-base-content/10 overflow-hidden hover:border-primary/40 transition-colors"
+                                                        title={format!("Open {}'s profile", display_name)}
+                                                        aria-label={format!("Open {}'s profile", display_name)}
+                                                        on:click=owner_click
+                                                    >
+                                                        {account.avatar_url.clone().map(|url| {
+                                                            view! {
+                                                                <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() />
+                                                            }.into_any()
+                                                        }).unwrap_or_else(|| {
+                                                            view! {
+                                                                <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
+                                                                    {avatar_letter.clone()}
+                                                                </div>
+                                                            }.into_any()
+                                                        })}
+                                                    </button>
+                                                }
+                                            })}
+                                            {collaborator_accounts.into_iter().map(|account| {
+                                                let display_name = account.display_name.clone();
+                                                let avatar_alt = format!("{}'s avatar", display_name);
+                                                let avatar_letter = placeholder_letter(&account.username);
+                                                let avatar_bg = placeholder_color(&account.username);
+                                                view! {
+                                                    <button
+                                                        type="button"
+                                                        class="w-12 h-12 border border-base-content/10 overflow-hidden hover:border-primary/40 transition-colors"
+                                                        title={format!("Open {}'s profile", display_name)}
+                                                        aria-label={format!("Open {}'s profile", display_name)}
+                                                        on:click={
+                                                            let account = account.clone();
+                                                            move |_| {
+                                                                on_close.run(());
+                                                                ProfileModalContext::use_context().open(account.clone());
+                                                            }
+                                                        }
+                                                    >
+                                                        {account.avatar_url.clone().map(|url| {
+                                                            view! {
+                                                                <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() />
+                                                            }.into_any()
+                                                        }).unwrap_or_else(|| {
+                                                            view! {
+                                                                <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
+                                                                    {avatar_letter.clone()}
+                                                                </div>
+                                                            }.into_any()
+                                                        })}
+                                                    </button>
+                                                }
+                                            }).collect_view()}
+                                        </div>
+                                    }.into_any()
+                                }
+                            }}
                         </div>
                     </div>
                 </div>

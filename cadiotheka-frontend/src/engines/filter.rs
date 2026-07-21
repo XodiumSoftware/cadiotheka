@@ -205,6 +205,7 @@ mod tests {
                 0
             ),
             author_username: author_username.to_owned(),
+            collaborator_ids: vec![],
             description: description.to_owned(),
             extended_desc: format!("Extended markdown summary for {}.", title),
             tags: tags.to_vec(),

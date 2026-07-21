@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS projects (
     author TEXT NOT NULL,
     author_id TEXT NOT NULL,
     author_username TEXT NOT NULL,
+    collaborator_ids TEXT NOT NULL DEFAULT '[]',
     description TEXT NOT NULL DEFAULT '',
     extended_desc TEXT NOT NULL DEFAULT '',
     tags TEXT NOT NULL DEFAULT '[]',

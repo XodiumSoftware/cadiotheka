@@ -115,6 +115,9 @@ pub struct ProjectData {
     pub author_id: String,
     /// Author username (used for `@author:` filtering and links).
     pub author_username: String,
+    /// Account ids of credited collaborators for this project.
+    #[serde(default, with = "favorites_json_string")]
+    pub collaborator_ids: Vec<String>,
     /// Short description of the content.
     pub description: String,
     /// Extended markdown description shown in the project detail modal.
@@ -174,6 +177,7 @@ pub fn new_project_payload(
         author: String::new(),
         author_id: String::new(),
         author_username: String::new(),
+        collaborator_ids: vec![],
         description,
         extended_desc,
         tags,
@@ -351,6 +355,30 @@ pub async fn update_project_extended_desc(id: &str, extended_desc: String) -> Op
 
     patch_project(&url, body, "extended description").await?;
     Some(extended_desc)
+}
+
+/// Updates the collaborator ids of an existing project via `PATCH /data/projects/:id`.
+///
+/// On success it returns the new collaborator id list; on failure it logs to the
+/// console and returns `None`.
+pub async fn update_project_collaborators(
+    id: &str,
+    collaborator_ids: Vec<String>,
+) -> Option<Vec<String>> {
+    let url = api_url(&format!("/projects/{id}"));
+    let body =
+        match serde_json::to_string(&serde_json::json!({ "collaborator_ids": collaborator_ids })) {
+            Ok(json) => json,
+            Err(err) => {
+                leptos::web_sys::console::error_1(
+                    &format!("Failed to serialize collaborator update payload: {err:?}").into(),
+                );
+                return None;
+            }
+        };
+
+    patch_project(&url, body, "collaborators").await?;
+    Some(collaborator_ids)
 }
 
 /// Updates the icon URL of an existing project via `PATCH /data/projects/:id`.
@@ -572,6 +600,7 @@ mod tests {
             author: "TrailBlazer".to_owned(),
             author_id: "8af81bd9-b70a-4d64-89e9-83bbc4e0297d".to_owned(),
             author_username: "trailblazer".to_owned(),
+            collaborator_ids: vec![],
             description: "A rugged mountain bike model ready for off-road adventures.".to_owned(),
             extended_desc: "Extended description.".to_owned(),
             tags: vec![Tag::Model3d, Tag::Vehicle],
@@ -588,7 +617,7 @@ mod tests {
 
     #[test]
     fn project_deserializes_backend_json_string_columns() {
-        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","description":"A rugged mountain bike model ready for off-road adventures.","extended_desc":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","supported_platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","collaborator_ids":"[]","description":"A rugged mountain bike model ready for off-road adventures.","extended_desc":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","supported_platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).expect("backend JSON parses");
         assert_eq!(projects.len(), 1);
         assert_eq!(projects[0].title, "Mountain Bike");
