@@ -620,7 +620,7 @@ fn ProjectModalContent(
                             <ProjectIconPicker
                                 icon_url={move || icon_url.get()}
                                 title=move || title.get()
-                                editable={Signal::derive(move || is_editable)}
+                                editable={Signal::derive(move || is_editable && edit_mode.get())}
                                 on_click=move |_| {
                                     if let Some(input) = icon_input_ref.get() {
                                         input.click();
