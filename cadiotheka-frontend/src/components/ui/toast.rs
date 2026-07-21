@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 /// A brief, auto-dismissible toast notification fixed to the top-center of the
-/// viewport.
+/// viewport using DaisyUI toast styling.
 #[component]
 pub fn Toast(
     #[prop(into)] message: Signal<String>,
@@ -12,17 +12,21 @@ pub fn Toast(
         <div
             class=move || {
                 if visible.get() {
-                    "fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-primary text-black font-bold shadow-lg border border-primary transition-opacity duration-200 opacity-100 cursor-pointer"
+                    "toast toast-top toast-center z-[100] transition-opacity duration-200 opacity-100"
                 } else {
-                    "fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-primary text-black font-bold shadow-lg border border-primary transition-opacity duration-200 opacity-0 pointer-events-none"
+                    "toast toast-top toast-center z-[100] transition-opacity duration-200 opacity-0 pointer-events-none"
                 }
             }
-            role="status"
-            aria-live="polite"
             aria-hidden=move || !visible.get()
-            on:click=move |_| on_dismiss.run(())
         >
-            {message}
+            <div
+                class="alert alert-primary shadow-lg cursor-pointer"
+                role="status"
+                aria-live="polite"
+                on:click=move |_| on_dismiss.run(())
+            >
+                <span class="font-bold text-primary-content">{message}</span>
+            </div>
         </div>
     }
 }
