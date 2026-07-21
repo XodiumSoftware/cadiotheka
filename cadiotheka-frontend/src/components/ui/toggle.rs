@@ -92,11 +92,11 @@ pub fn IconToggle(
                 }
             />
             <span
-                class="swap-off"
+                class="swap-off text-base-content/50 w-full h-full flex items-center justify-center"
                 inner_html=icon_off
             ></span>
             <span
-                class="swap-on"
+                class="swap-on text-primary w-full h-full flex items-center justify-center"
                 inner_html=icon_on
             ></span>
         </label>
@@ -115,8 +115,8 @@ pub fn EditToggle(
         <IconToggle
             checked=checked
             on_change=on_change
-            icon_off={format!("swap-off text-base-content/50 {}", pencil_icon)}
-            icon_on={format!("swap-on text-primary {}", pencil_icon)}
+            icon_off=pencil_icon.to_string()
+            icon_on=pencil_icon.to_string()
             tooltip_off="Enter edit mode"
             tooltip_on="Exit edit mode"
             class="w-8 h-8 rounded hover:bg-base-200 transition-colors"
