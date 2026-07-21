@@ -42,7 +42,13 @@ impl SearchEngine {
             .cards
             .iter()
             .filter_map(|card| {
-                let score = self.score(card, &query, &parsed.filters, parsed.author)?;
+                let score = self.score(
+                    card,
+                    &query,
+                    &parsed.filters,
+                    parsed.author,
+                    parsed.favorited_by,
+                )?;
                 Some((score, card))
             })
             .collect();
@@ -78,6 +84,7 @@ impl SearchEngine {
         query: &str,
         filters: &[&str],
         author: Option<&str>,
+        favorited_by: Option<&str>,
     ) -> Option<i64> {
         let matches_filters = filters.iter().all(|filter| {
             card.tags
@@ -97,6 +104,12 @@ impl SearchEngine {
                 .author_username
                 .to_lowercase()
                 .starts_with(author.to_lowercase().as_str())
+        {
+            return None;
+        }
+
+        if let Some(favorited_by) = favorited_by
+            && !card.favorites.iter().any(|id| id == favorited_by)
         {
             return None;
         }

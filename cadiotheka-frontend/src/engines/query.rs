@@ -96,6 +96,8 @@ pub struct ParsedQuery<'a> {
     pub filters: Vec<&'a str>,
     /// Author filter requested with `@author:`.
     pub author: Option<&'a str>,
+    /// Account id filter for projects favorited by that account.
+    pub favorited_by: Option<&'a str>,
     /// Sort selection parsed from directives.
     pub sort: SortSelection,
     /// Whether the user explicitly requested a sort directive.
@@ -109,6 +111,7 @@ pub fn parse_query(query: &str) -> ParsedQuery<'_> {
     let mut filter_parts = Vec::new();
     let mut filters = Vec::new();
     let mut author: Option<&str> = None;
+    let mut favorited_by: Option<&str> = None;
     let mut sort = SortSelection::default();
     let mut sort_found = false;
 
@@ -122,6 +125,12 @@ pub fn parse_query(query: &str) -> ParsedQuery<'_> {
             if let Some(value) = token.strip_prefix("@author:") {
                 if !value.is_empty() {
                     author = Some(value);
+                }
+                continue;
+            }
+            if let Some(value) = token.strip_prefix("@favorited_by:") {
+                if !value.is_empty() {
+                    favorited_by = Some(value);
                 }
                 continue;
             }
@@ -140,6 +149,7 @@ pub fn parse_query(query: &str) -> ParsedQuery<'_> {
         filter: filter_parts,
         filters,
         author,
+        favorited_by,
         sort,
         sort_explicit: sort_found,
     }
