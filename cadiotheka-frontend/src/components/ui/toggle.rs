@@ -41,7 +41,7 @@ pub fn ToggleSlider(
     }
 }
 
-/// DaisyUI `swap` checkbox toggle that swaps between two SVG icon strings.
+/// DaisyUI `swap` toggle that swaps between two SVG icon strings.
 /// `icon_off` is shown when unchecked, `icon_on` when checked.
 #[component]
 pub fn IconToggle(
@@ -53,7 +53,6 @@ pub fn IconToggle(
     #[prop(optional)] tooltip_on: Option<&'static str>,
     #[prop(optional)] class: Option<&'static str>,
 ) -> impl IntoView {
-    let input_id = "icon-toggle";
     let aria_label = move || {
         if checked.get() {
             tooltip_on.unwrap_or("Toggle off")
@@ -63,12 +62,13 @@ pub fn IconToggle(
     };
 
     view! {
-        <label
-            for=input_id
+        <button
+            type="button"
             class=move || {
                 format!(
-                    "swap swap-rotate cursor-pointer inline-flex items-center justify-center {} tooltip tooltip-bottom",
-                    class.unwrap_or("")
+                    "swap swap-rotate cursor-pointer inline-flex items-center justify-center {} tooltip tooltip-bottom {}",
+                    class.unwrap_or(""),
+                    if checked.get() { "swap-active" } else { "" }
                 )
             }
             data-tip=move || {
@@ -79,17 +79,8 @@ pub fn IconToggle(
                 }
             }
             aria-label=aria_label
+            on:click=move |_| on_change.run(!checked.get_untracked())
         >
-            <input
-                id=input_id
-                type="checkbox"
-                prop:checked=move || checked.get()
-                on:change=move |ev| {
-                    if let Some(input) = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok()) {
-                        on_change.run(input.checked());
-                    }
-                }
-            />
             <span
                 class="swap-off text-base-content/50 w-full h-full flex items-center justify-center"
                 inner_html=icon_off
@@ -98,7 +89,7 @@ pub fn IconToggle(
                 class="swap-on text-primary w-full h-full flex items-center justify-center"
                 inner_html=icon_on
             ></span>
-        </label>
+        </button>
     }
 }
 
