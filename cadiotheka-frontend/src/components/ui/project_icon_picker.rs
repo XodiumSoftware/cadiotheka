@@ -29,7 +29,7 @@ pub fn ProjectIconPicker(
         <button
             type="button"
             class=format!(
-                "group relative btn btn-ghost btn-lift p-0 overflow-hidden hover:border-base-content/30 {}",
+                "group relative btn btn-ghost btn-lift p-0 overflow-hidden hover:border-primary transition-colors {}",
                 class
             )
             aria-label="Edit project icon"
@@ -60,9 +60,9 @@ pub fn ProjectIconPicker(
                 }
             }}
             {move || editable.get().then(|| view! {
-                <div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
                     <svg
-                        class="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                        class="w-5 h-5 text-primary"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
