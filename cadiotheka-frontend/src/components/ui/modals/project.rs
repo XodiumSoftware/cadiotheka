@@ -4,7 +4,8 @@ use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::project_icon_picker::ProjectIconPicker;
 use crate::contexts::{
-    AccountsContext, CurrentUserContext, ProjectModalContext, ProjectsContext, SearchContext,
+    AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
+    SearchContext,
 };
 use crate::data::{
     AccountData, AccountRole, update_project_collaborators, update_project_description,
@@ -42,7 +43,7 @@ pub fn ProjectModal() -> impl IntoView {
                 let maybe_card = modal.card.get();
                 match maybe_card {
                     Some(card) => view! {
-                        <ProjectModalContent card=card on_close=on_close />
+                        <ProjectModalContent card=card _on_close=on_close />
                     }
                         .into_any(),
                     None => view! {
@@ -215,11 +216,12 @@ where
 #[component]
 fn ProjectModalContent(
     #[prop(into)] card: ProjectCardProperties,
-    #[prop(into)] on_close: Callback<()>,
+    #[prop(into)] _on_close: Callback<()>,
 ) -> impl IntoView {
     let current_user = CurrentUserContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
     let modal = ProjectModalContext::use_context();
+    let profile_modal = ProfileModalContext::use_context();
     let search = SearchContext::use_context();
     let is_editable = current_user
         .account
@@ -995,7 +997,17 @@ fn ProjectModalContent(
                                         <div class="space-y-3">
                                             <div class="flex flex-wrap gap-2 items-center">
                                                 {owner_account.as_ref().map(|account| {
-                                                    avatar_button(account, None)
+                                                    let account = account.clone();
+                                                    view! {
+                                                        <button
+                                                            type="button"
+                                                            on:click=move |_| {
+                                                                profile_modal.open(account.clone());
+                                                            }
+                                                        >
+                                                            {avatar_button(&account, None)}
+                                                        </button>
+                                                    }
                                                 })}
                                                 {draft_collaborator_ids.get().into_iter().filter_map(|id| {
                                                     let all_accounts = all_accounts.clone();
@@ -1098,19 +1110,29 @@ fn ProjectModalContent(
                                 } else {
                                     view! {
                                         <div class="flex flex-wrap gap-2">
-                                            {owner_account.as_ref().map(|account| avatar_button(account, None))}
-                                            {current_collaborators.into_iter().map(|account| {
-                                                let account_id = account.id.clone();
+                                            {owner_account.as_ref().map(|account| {
+                                                let account = account.clone();
                                                 view! {
                                                     <button
-                                                    type="button"
-                                                    on:click=move |_| {
-                                                        on_close.run(());
-                                                        modal.close();
-                                                        search.set_query.set(format!("@author:{}", account_id.clone()));
-                                                    }
-                                                >
-                                                    {avatar_button(&account, None)}
+                                                        type="button"
+                                                        on:click=move |_| {
+                                                            profile_modal.open(account.clone());
+                                                        }
+                                                    >
+                                                        {avatar_button(&account, None)}
+                                                    </button>
+                                                }
+                                            })}
+                                            {current_collaborators.into_iter().map(|account| {
+                                                let account = account.clone();
+                                                view! {
+                                                    <button
+                                                        type="button"
+                                                        on:click=move |_| {
+                                                            profile_modal.open(account.clone());
+                                                        }
+                                                    >
+                                                        {avatar_button(&account, None)}
                                                     </button>
                                                 }
                                             }).collect_view()}
