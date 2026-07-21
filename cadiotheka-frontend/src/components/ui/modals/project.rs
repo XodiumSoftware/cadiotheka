@@ -72,26 +72,27 @@ fn ProjectModalContent(
     let (draft_extended, set_draft_extended) = signal(card.extended_desc.clone());
     let (extended_desc, set_extended_desc) = signal(card.extended_desc.clone());
     let project_id = card.id.clone();
-    let _project_id_for_start_edit = project_id.clone();
 
     let start_edit = move |_| {
         set_draft.set(title.get());
         set_editing.set(true);
     };
 
-    let start_edit_icon = move |_| {
-        set_draft_icon_url.set(
-            icon_url
-                .get()
-                .as_ref()
-                .map(|IconUrl(url)| url.clone())
-                .unwrap_or_default(),
-        );
-        set_editing_icon.set(true);
+    let cancel_edit = move || {
+        set_editing.set(false);
     };
 
     let cancel_edit_icon = move || {
         set_editing_icon.set(false);
+    };
+
+    let start_edit_extended = move || {
+        set_draft_extended.set(extended_desc.get());
+        set_editing_extended.set(true);
+    };
+
+    let cancel_edit_extended = move || {
+        set_editing_extended.set(false);
     };
 
     let commit_edit_icon = {
@@ -128,19 +129,6 @@ fn ProjectModalContent(
                 set_editing_icon.set(false);
             });
         })
-    };
-
-    let cancel_edit = move || {
-        set_editing.set(false);
-    };
-
-    let start_edit_extended = move || {
-        set_draft_extended.set(extended_desc.get());
-        set_editing_extended.set(true);
-    };
-
-    let cancel_edit_extended = move || {
-        set_editing_extended.set(false);
     };
 
     let commit_edit_extended = {
@@ -207,8 +195,6 @@ fn ProjectModalContent(
         })
     };
 
-    let letter = placeholder_letter(&card.title);
-    let bg = placeholder_color(&card.title);
     let icon_alt = format!("{} icon", card.title.clone());
     let author = card.author.clone();
     let author_username = card.author_username.clone();
@@ -236,51 +222,62 @@ fn ProjectModalContent(
             <div class="flex items-start gap-4">
                 {move || {
                     let icon_alt = icon_alt.clone();
-                    let edit_btn = is_editable.then(|| view! {
+                    let current_url = icon_url
+                        .get()
+                        .as_ref()
+                        .map(|IconUrl(url)| url.clone())
+                        .unwrap_or_default();
+                    let current_url_for_set = current_url.clone();
+                    let current_url_for_empty = current_url.clone();
+                    let current_url_for_img = current_url.clone();
+                    let letter = placeholder_letter(&title.get());
+                    let bg = placeholder_color(&title.get());
+                    view! {
                         <button
                             type="button"
-                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0 absolute top-0 right-0"
+                            class="group relative flex-shrink-0 w-16 h-16 rounded overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary"
                             aria-label="Edit project icon"
-                            on:click=start_edit_icon
+                            on:click=move |_| {
+                                set_draft_icon_url.set(current_url_for_set.clone());
+                                set_editing_icon.update(|v| *v = !*v);
+                            }
                         >
-                            <svg
-                                class="w-4 h-4 text-base-content/60"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            >
-                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                            </svg>
-                        </button>
-                    });
-                    match icon_url.get() {
-                        Some(IconUrl(url)) => view! {
-                            <div class="relative flex-shrink-0 w-16 h-16 rounded">
-                                <img
-                                    src={url}
-                                    alt={icon_alt}
-                                    class="w-16 h-16 rounded object-cover"
-                                />
-                                {edit_btn}
-                            </div>
-                        }
-                            .into_any(),
-                        None => view! {
-                            <div class="relative flex-shrink-0 w-16 h-16 rounded">
-                                <div
-                                    class={format!("w-16 h-16 rounded flex items-center justify-center text-white font-bold text-xl {}", bg)}
-                                    aria-hidden="true"
+                            {if current_url_for_empty.trim().is_empty() {
+                                view! {
+                                    <div
+                                        class={format!("w-full h-full flex items-center justify-center text-white font-bold text-xl {}", bg)}
+                                        aria-hidden="true"
+                                    >
+                                        {letter}
+                                    </div>
+                                }
+                                    .into_any()
+                            } else {
+                                view! {
+                                    <img
+                                        src={current_url_for_img}
+                                        alt={icon_alt}
+                                        class="w-full h-full object-cover"
+                                    />
+                                }
+                                    .into_any()
+                            }}
+                            <div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                                <svg
+                                    class="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
                                 >
-                                    {letter.clone()}
-                                </div>
-                                {edit_btn}
+                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                </svg>
                             </div>
-                        }
-                            .into_any(),
+                        </button>
                     }
+                        .into_any()
                 }}
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
                     {move || {
@@ -295,10 +292,10 @@ fn ProjectModalContent(
                                         prop:value=draft_icon_url.get()
                                         on:input=move |ev| set_draft_icon_url.set(event_target_value(&ev))
                                         on:keyup=move |ev| {
-                                            match ev.key().as_str() {
-                                                "Enter" => commit_edit_icon.run(draft_icon_url.get()),
-                                                "Escape" => cancel_edit_icon(),
-                                                _ => {}
+                                            if ev.key().as_str() == "Enter" {
+                                                commit_edit_icon.run(draft_icon_url.get());
+                                            } else if ev.key().as_str() == "Escape" {
+                                                cancel_edit_icon();
                                             }
                                         }
                                         autofocus
