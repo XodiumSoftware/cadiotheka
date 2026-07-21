@@ -329,7 +329,10 @@ pub fn AddProjectModal() -> impl IntoView {
 
                                 <div>
                                     <label class="block text-sm font-medium text-base-content mb-1" for="add-project-extended">
-                                        "Extended description"
+                                        {move || {
+                                            let count = extended_desc.get().len();
+                                            format!("Extended description ({count}/5000)")
+                                        }}
                                     </label>
                                     <textarea
                                         node_ref=extended_input_ref

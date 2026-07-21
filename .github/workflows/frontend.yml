@@ -106,6 +106,8 @@ jobs:
       !contains(github.event.pull_request.title, '[ci-skip]')
     needs: [lint]
     runs-on: ubuntu-latest
+    environment:
+      name: "${{ github.ref_name }}"
     steps:
       - id: checkout
         name: Checkout
@@ -144,6 +146,8 @@ jobs:
       !contains(github.event.pull_request.title, '[ci-skip]')
     needs: [lint, test]
     runs-on: ubuntu-latest
+    environment:
+      name: "${{ github.ref_name }}"
     env:
       SCCACHE_GHA_ENABLED: "true"
       RUSTC_WRAPPER: "sccache"

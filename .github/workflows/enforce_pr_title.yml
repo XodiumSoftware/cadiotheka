@@ -15,6 +15,8 @@ permissions:
 jobs:
   enforce-title:
     runs-on: ubuntu-latest
+    environment:
+      name: "${{ github.ref_name }}"
     if: github.actor != 'renovate[bot]'
     steps:
       - id: enforce_title
