@@ -2,10 +2,10 @@ use crate::components::cards::project::ProjectCardProperties;
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
-use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::components::ui::project_icon_picker::ProjectIconPicker;
 use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
+    SearchContext,
 };
 use crate::data::{
     AccountRole, update_project_description, update_project_extended_desc,
@@ -18,6 +18,13 @@ use leptos::wasm_bindgen::JsCast;
 const MAX_TITLE_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 500;
 const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ProjectDetailsTab {
+    About,
+    Viewer3d,
+    Versions,
+}
 
 /// Modal dialog that displays detailed information about a selected project.
 #[component]
@@ -84,8 +91,8 @@ fn EditableChipSection<T>(
     on_cancel: Callback<()>,
     on_toggle: Callback<T>,
     on_save: Callback<Vec<T>>,
+    on_item_click: Callback<T>,
     label_fn: fn(&T) -> &'static str,
-    color_fn: fn(&T) -> &'static str,
     selected_items: Signal<Vec<T>>,
     badge_class: &'static str,
 ) -> impl IntoView
@@ -154,15 +161,19 @@ where
                         .into_any()
                 } else {
                     view! {
-                        <div class="flex flex-wrap gap-2">
-                            <OverflowRow
-                                items={items
-                                    .iter()
-                                    .map(|item| OverflowItem::new(label_fn(item), color_fn(item)))
-                                    .collect::<Vec<_>>()}
-                                max_visible=usize::MAX
-                                badge_class=badge_class
-                            />
+                        <div class="flex flex-wrap gap-2" role="group" aria-label=aria_label>
+                            {items.iter().map(|item| {
+                                let item_for_click = item.clone();
+                                view! {
+                                    <button
+                                        type="button"
+                                        class=badge_class
+                                        on:click=move |_| on_item_click.run(item_for_click.clone())
+                                    >
+                                        {label_fn(item)}
+                                    </button>
+                                }
+                            }).collect_view()}
                         </div>
                     }
                         .into_any()
@@ -180,11 +191,13 @@ fn ProjectModalContent(
     let current_user = CurrentUserContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
     let modal = ProjectModalContext::use_context();
+    let search = SearchContext::use_context();
     let is_editable = current_user
         .account
         .get()
         .is_some_and(|me| me.role == AccountRole::Admin || me.id == card.author_id);
 
+    let (active_tab, set_active_tab) = signal(ProjectDetailsTab::About);
     let (editing, set_editing) = signal(false);
     let (draft, set_draft) = signal(card.title.clone());
     let (title, set_title) = signal(card.title.clone());
@@ -263,6 +276,7 @@ fn ProjectModalContent(
     let start_edit_extended = move || {
         set_draft_extended.set(extended_desc.get());
         set_editing_extended.set(true);
+        set_active_tab.set(ProjectDetailsTab::About);
     };
 
     let cancel_edit_extended = move || {
@@ -482,6 +496,10 @@ fn ProjectModalContent(
             }
         }
     };
+    let apply_filter = Callback::new(move |filter: String| {
+        search.set_query.set(format!("#{filter}"));
+        modal.close();
+    });
     let platforms = supported_platforms;
 
     view! {
@@ -663,38 +681,66 @@ fn ProjectModalContent(
                     <div class="min-w-0 space-y-4">
                         <div class="flex items-center justify-between gap-3 pb-2">
                             <div class="tabs tabs-border">
-                                <button type="button" class="tab tab-active">"About"</button>
-                                <button type="button" class="tab" disabled>"3D viewer"</button>
-                                <button type="button" class="tab" disabled>"Versions"</button>
+                                <button
+                                    type="button"
+                                    class=move || if active_tab.get() == ProjectDetailsTab::About { "tab tab-active" } else { "tab" }
+                                    on:click=move |_| set_active_tab.set(ProjectDetailsTab::About)
+                                >"About"</button>
+                                <button
+                                    type="button"
+                                    class=move || if active_tab.get() == ProjectDetailsTab::Viewer3d { "tab tab-active" } else { "tab" }
+                                    on:click=move |_| set_active_tab.set(ProjectDetailsTab::Viewer3d)
+                                >"3D viewer"</button>
+                                <button
+                                    type="button"
+                                    class=move || if active_tab.get() == ProjectDetailsTab::Versions { "tab tab-active" } else { "tab" }
+                                    on:click=move |_| set_active_tab.set(ProjectDetailsTab::Versions)
+                                >"Versions"</button>
                             </div>
-                            {is_editable.then(|| view! {
-                                <EditIconButton
-                                    aria_label="Edit extended description"
-                                    on_click=Callback::new(move |_| start_edit_extended())
-                                />
-                            })}
-                        </div>
-                        {move || {
-                            if editing_extended.get() {
-                                view! {
-                                    <MarkdownEditor
-                                        value=draft_extended
-                                        on_input=Callback::new(move |value| set_draft_extended.set(value))
-                                        on_cancel=Callback::new(move |_| cancel_edit_extended())
-                                        on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
-                                        maxlength=MAX_EXTENDED_DESC_LENGTH
-                                        editor_class="min-h-[20rem] font-mono text-sm"
+                            {move || {
+                                (active_tab.get() == ProjectDetailsTab::About && is_editable).then(|| view! {
+                                    <EditIconButton
+                                        aria_label="Edit extended description"
+                                        on_click=Callback::new(move |_| start_edit_extended())
                                     />
+                                })
+                            }}
+                        </div>
+                        {move || match active_tab.get() {
+                            ProjectDetailsTab::About => {
+                                if editing_extended.get() {
+                                    view! {
+                                        <MarkdownEditor
+                                            value=draft_extended
+                                            on_input=Callback::new(move |value| set_draft_extended.set(value))
+                                            on_cancel=Callback::new(move |_| cancel_edit_extended())
+                                            on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
+                                            maxlength=MAX_EXTENDED_DESC_LENGTH
+                                            editor_class="min-h-[20rem] font-mono text-sm"
+                                        />
+                                    }
+                                        .into_any()
+                                } else {
+                                    view! {
+                                        <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
+                                            <MarkdownView source=extended_desc.get() />
+                                        </div>
+                                    }
+                                        .into_any()
                                 }
-                                    .into_any()
-                            } else {
-                                view! {
-                                    <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
-                                        <MarkdownView source=extended_desc.get() />
-                                    </div>
-                                }
-                                    .into_any()
                             }
+                            ProjectDetailsTab::Viewer3d => view! {
+                                <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 flex items-center justify-center text-base-content/50 text-sm">
+                                    "3D viewer coming later."
+                                </div>
+                            }
+                                .into_any(),
+                            ProjectDetailsTab::Versions => view! {
+                                <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 flex items-center justify-center text-base-content/50 text-sm">
+                                    "Versions coming later."
+                                </div>
+                            }
+                                .into_any(),
                         }}
                     </div>
 
@@ -713,10 +759,10 @@ fn ProjectModalContent(
                                 on_cancel=Callback::new(move |_| cancel_edit_platforms())
                                 on_toggle=toggle_platform
                                 on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
+                                on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
                                 label_fn=crate::metadata::platforms::platform_label
-                                color_fn=crate::metadata::platforms::platform_color
                                 selected_items=draft_platforms.into()
-                                badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
+                                badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
                             />
                         </div>
 
@@ -732,10 +778,10 @@ fn ProjectModalContent(
                                 on_cancel=Callback::new(move |_| cancel_edit_tags())
                                 on_toggle=toggle_tag
                                 on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
+                                on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
                                 label_fn=crate::metadata::tags::tag_label
-                                color_fn=crate::metadata::tags::tag_color
                                 selected_items=draft_tags.into()
-                                badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
+                                badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
                             />
                         </div>
 
@@ -781,4 +827,21 @@ fn ProjectModalContent(
             </div>
         </div>
     }
+}
+
+fn event_target_value(ev: &leptos::web_sys::Event) -> String {
+    ev.target()
+        .and_then(|t| {
+            t.dyn_into::<leptos::web_sys::HtmlTextAreaElement>()
+                .ok()
+                .map(|textarea| textarea.value())
+        })
+        .or_else(|| {
+            ev.target().and_then(|t| {
+                t.dyn_into::<leptos::web_sys::HtmlInputElement>()
+                    .ok()
+                    .map(|input| input.value())
+            })
+        })
+        .unwrap_or_default()
 }
