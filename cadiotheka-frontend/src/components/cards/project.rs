@@ -298,9 +298,9 @@ pub fn ProjectCard(
                                 class=move || {
                                     if current_user.account.get().is_some() {
                                         if is_favorited.get() {
-                                            "flex items-center gap-1 cursor-pointer select-none text-error"
+                                            "flex items-center gap-1 cursor-pointer select-none text-error hover:text-base-content/50"
                                         } else {
-                                            "flex items-center gap-1 cursor-pointer select-none hover:text-error"
+                                            "flex items-center gap-1 cursor-pointer select-none text-base-content/50 hover:text-error"
                                         }
                                     } else {
                                         "flex items-center gap-1 select-none"
