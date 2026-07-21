@@ -198,7 +198,13 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             view! {
                                 <div class="space-y-2 flex-1">
                                     <textarea
-                                        class="textarea w-full min-h-[5rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                        class=move || {
+                                            let at_max = draft.get().len() >= MAX_BIO_LENGTH;
+                                            format!(
+                                                "textarea w-full min-h-[5rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {}",
+                                                if at_max { "hover:border-error" } else { "" }
+                                            )
+                                        }
                                         maxlength=MAX_BIO_LENGTH.to_string()
                                         prop:value=draft.get()
                                         on:input=move |ev| set_draft.set(event_target_value(&ev))
@@ -210,7 +216,13 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                         autofocus
                                     ></textarea>
                                     <div class="flex items-center justify-between">
-                                        <span class="text-xs text-base-content/50">
+                                        <span class=move || {
+                                            if draft.get().len() >= MAX_BIO_LENGTH {
+                                                "text-xs text-error"
+                                            } else {
+                                                "text-xs text-base-content/50"
+                                            }
+                                        }>
                                             {move || format!("{}/{}", draft.get().len(), MAX_BIO_LENGTH)}
                                         </span>
                                         <div class="flex gap-2">

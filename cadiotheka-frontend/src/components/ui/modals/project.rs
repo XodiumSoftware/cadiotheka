@@ -698,7 +698,13 @@ fn ProjectModalContent(
                             view! {
                                 <div class="flex items-center gap-2">
                                     <input
-                                        class="input input-sm input-bordered flex-1 text-base-content text-xl font-bold"
+                                        class=move || {
+                                            let at_max = draft.get().len() >= MAX_TITLE_LENGTH;
+                                            format!(
+                                                "input input-sm input-bordered flex-1 text-base-content text-xl font-bold {}",
+                                                if at_max { "hover:border-error" } else { "" }
+                                            )
+                                        }
                                         type="text"
                                         maxlength=MAX_TITLE_LENGTH.to_string()
                                         prop:value=draft.get()
@@ -712,7 +718,13 @@ fn ProjectModalContent(
                                         }
                                         autofocus
                                     />
-                                    <span class="text-xs text-base-content/50 flex-shrink-0">
+                                    <span class=move || {
+                                        if draft.get().len() >= MAX_TITLE_LENGTH {
+                                            "text-xs text-error flex-shrink-0"
+                                        } else {
+                                            "text-xs text-base-content/50 flex-shrink-0"
+                                        }
+                                    }>
                                         {move || format!("{}/{}", draft.get().len(), MAX_TITLE_LENGTH)}
                                     </span>
                                 </div>
@@ -743,7 +755,13 @@ fn ProjectModalContent(
                                 view! {
                                     <div class="space-y-2">
                                         <textarea
-                                            class="textarea w-full min-h-[5rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                            class=move || {
+                                                let at_max = draft_description.get().len() >= MAX_DESCRIPTION_LENGTH;
+                                                format!(
+                                                    "textarea w-full min-h-[5rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {}",
+                                                    if at_max { "hover:border-error" } else { "" }
+                                                )
+                                            }
                                             maxlength=MAX_DESCRIPTION_LENGTH.to_string()
                                             prop:value=draft_description.get()
                                             on:input=move |ev| set_draft_description.set(event_target_value(&ev))
@@ -755,7 +773,13 @@ fn ProjectModalContent(
                                             autofocus
                                         ></textarea>
                                         <div class="flex items-center justify-between">
-                                            <span class="text-xs text-base-content/50">
+                                            <span class=move || {
+                                                if draft_description.get().len() >= MAX_DESCRIPTION_LENGTH {
+                                                    "text-xs text-error"
+                                                } else {
+                                                    "text-xs text-base-content/50"
+                                                }
+                                            }>
                                                 {move || format!("{}/{}", draft_description.get().len(), MAX_DESCRIPTION_LENGTH)}
                                             </span>
                                             <div class="flex gap-2">
@@ -925,55 +949,79 @@ fn ProjectModalContent(
                         <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
 
                         <div class="space-y-4">
-                            <EditableOverlay
-                                editable=is_editable
-                                aria_label="Edit supported platforms"
-                                on_click=Callback::new(move |_| start_edit_platforms())
-                                bordered=true
-                            >
-                                <div class="rounded-none bg-base-200/20 p-4">
-                                    <EditableChipSection
-                                        title="Supported platforms"
-                                        aria_label="Supported platforms"
-                                        items=platforms.get()
-                                        all_items=crate::metadata::platforms::Platform::all().to_vec()
-                                        editing=editing_platforms.into()
-                                        on_cancel=Callback::new(move |_| cancel_edit_platforms())
-                                        on_toggle=toggle_platform
-                                        on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
-                                        on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
-                                        label_fn=crate::metadata::platforms::platform_label
-                                        color_fn=crate::metadata::platforms::platform_color
-                                        selected_items=draft_platforms.into()
-                                        badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                                    />
-                                </div>
-                            </EditableOverlay>
+                            {move || {
+                                let platforms_card = view! {
+                                    <div class="rounded-none bg-base-200/20 p-4">
+                                        <EditableChipSection
+                                            title="Supported platforms"
+                                            aria_label="Supported platforms"
+                                            items=platforms.get()
+                                            all_items=crate::metadata::platforms::Platform::all().to_vec()
+                                            editing=editing_platforms.into()
+                                            on_cancel=Callback::new(move |_| cancel_edit_platforms())
+                                            on_toggle=toggle_platform
+                                            on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
+                                            on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
+                                            label_fn=crate::metadata::platforms::platform_label
+                                            color_fn=crate::metadata::platforms::platform_color
+                                            selected_items=draft_platforms.into()
+                                            badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                        />
+                                    </div>
+                                };
+                                if editing_platforms.get() {
+                                    platforms_card.into_any()
+                                } else {
+                                    view! {
+                                        <EditableOverlay
+                                            editable=is_editable
+                                            aria_label="Edit supported platforms"
+                                            on_click=Callback::new(move |_| start_edit_platforms())
+                                            bordered=true
+                                        >
+                                            {platforms_card}
+                                        </EditableOverlay>
+                                    }
+                                        .into_any()
+                                }
+                            }}
 
-                            <EditableOverlay
-                                editable=is_editable
-                                aria_label="Edit tags"
-                                on_click=Callback::new(move |_| start_edit_tags())
-                                bordered=true
-                            >
-                                <div class="rounded-none bg-base-200/20 p-4">
-                                    <EditableChipSection
-                                        title="Tags"
-                                        aria_label="Tags"
-                                        items=tags.get()
-                                        all_items=crate::metadata::tags::Tag::all().to_vec()
-                                        editing=editing_tags.into()
-                                        on_cancel=Callback::new(move |_| cancel_edit_tags())
-                                        on_toggle=toggle_tag
-                                        on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
-                                        on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
-                                        label_fn=crate::metadata::tags::tag_label
-                                        color_fn=crate::metadata::tags::tag_color
-                                        selected_items=draft_tags.into()
-                                        badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                                    />
-                                </div>
-                            </EditableOverlay>
+                            {move || {
+                                let tags_card = view! {
+                                    <div class="rounded-none bg-base-200/20 p-4">
+                                        <EditableChipSection
+                                            title="Tags"
+                                            aria_label="Tags"
+                                            items=tags.get()
+                                            all_items=crate::metadata::tags::Tag::all().to_vec()
+                                            editing=editing_tags.into()
+                                            on_cancel=Callback::new(move |_| cancel_edit_tags())
+                                            on_toggle=toggle_tag
+                                            on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
+                                            on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
+                                            label_fn=crate::metadata::tags::tag_label
+                                            color_fn=crate::metadata::tags::tag_color
+                                            selected_items=draft_tags.into()
+                                            badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                        />
+                                    </div>
+                                };
+                                if editing_tags.get() {
+                                    tags_card.into_any()
+                                } else {
+                                    view! {
+                                        <EditableOverlay
+                                            editable=is_editable
+                                            aria_label="Edit tags"
+                                            on_click=Callback::new(move |_| start_edit_tags())
+                                            bordered=true
+                                        >
+                                            {tags_card}
+                                        </EditableOverlay>
+                                    }
+                                        .into_any()
+                                }
+                            }}
 
                             <div class="rounded-none border border-base-content/10 hover:border-primary transition-colors bg-base-200/20 p-4 space-y-3">
                                 <EditableOverlay

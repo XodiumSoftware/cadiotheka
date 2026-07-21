@@ -267,7 +267,16 @@ pub fn AddProjectModal() -> impl IntoView {
                                         class="w-20 h-20"
                                     />
                                     <div class="flex-1 min-w-0">
-                                        <label class="block text-sm font-medium text-base-content mb-1" for="add-project-title">
+                                        <label
+                                            class=move || {
+                                                if title.get().len() >= 100 {
+                                                    "block text-sm font-medium text-error mb-1"
+                                                } else {
+                                                    "block text-sm font-medium text-base-content mb-1"
+                                                }
+                                            }
+                                            for="add-project-title"
+                                        >
                                             {move || {
                                                 let count = title.get().len();
                                                 format!("Title ({count}/100)")
@@ -277,7 +286,13 @@ pub fn AddProjectModal() -> impl IntoView {
                                             node_ref=title_input_ref
                                             id="add-project-title"
                                             type="text"
-                                            class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                            class=move || {
+                                                let at_max = title.get().len() >= 100;
+                                                format!(
+                                                    "input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {}",
+                                                    if at_max { "hover:border-error" } else { "" }
+                                                )
+                                            }
                                             on:input=move |ev| {
                                                 set_title.set(event_target_value(&ev));
                                                 set_errors.update(|errs| errs.title = None);
@@ -292,7 +307,16 @@ pub fn AddProjectModal() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-base-content mb-1" for="add-project-description">
+                                    <label
+                                        class=move || {
+                                            if description.get().len() >= 500 {
+                                                "block text-sm font-medium text-error mb-1"
+                                            } else {
+                                                "block text-sm font-medium text-base-content mb-1"
+                                            }
+                                        }
+                                        for="add-project-description"
+                                    >
                                         {move || {
                                             let count = description.get().len();
                                             format!("Short description ({count}/500)")
@@ -301,7 +325,13 @@ pub fn AddProjectModal() -> impl IntoView {
                                     <textarea
                                         node_ref=desc_input_ref
                                         id="add-project-description"
-                                        class="textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none min-h-[4rem]"
+                                        class=move || {
+                                            let at_max = description.get().len() >= 500;
+                                            format!(
+                                                "textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none min-h-[4rem] {}",
+                                                if at_max { "hover:border-error" } else { "" }
+                                            )
+                                        }
                                         on:input=move |ev| {
                                             set_description.set(event_target_value(&ev));
                                             set_errors.update(|errs| errs.description = None);

@@ -26,6 +26,17 @@ pub fn MarkdownEditor(
     let history_read: Signal<Vec<String>> = history.into();
     let history_index_read: Signal<usize> = history_index.into();
     let (last_selection, set_last_selection) = signal((0usize, 0usize));
+    let textarea_class = Signal::derive({
+        let editor_class = editor_class.clone();
+        move || {
+            let at_max = value.get().len() >= maxlength;
+            format!(
+                "textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {} {}",
+                editor_class,
+                if at_max { "hover:border-error" } else { "" }
+            )
+        }
+    });
     let textarea_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
 
     let push_history = {
@@ -195,7 +206,7 @@ pub fn MarkdownEditor(
                         view! {
                             <textarea
                                 node_ref=textarea_ref
-                                class=format!("textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {}", editor_class)
+                                class=textarea_class
                                 maxlength=maxlength.to_string()
                                 prop:value=value.get()
                                 on:input=move |ev| {
@@ -288,7 +299,13 @@ pub fn MarkdownEditor(
                     if on_cancel.is_some() && on_save.is_some() {
                         view! {
                             <div class="flex items-center justify-between gap-2">
-                                <span class="text-xs text-base-content/50">
+                                <span class=move || {
+                                    if value.get().len() >= maxlength {
+                                        "text-xs text-error"
+                                    } else {
+                                        "text-xs text-base-content/50"
+                                    }
+                                }>
                                     {move || format!("{}/{}", value.get().len(), maxlength)}
                                 </span>
                                 <div class="flex gap-2">
@@ -317,7 +334,13 @@ pub fn MarkdownEditor(
                     } else {
                         view! {
                             <div class="flex items-center justify-between gap-2">
-                                <span class="text-xs text-base-content/50">
+                                <span class=move || {
+                                    if value.get().len() >= maxlength {
+                                        "text-xs text-error"
+                                    } else {
+                                        "text-xs text-base-content/50"
+                                    }
+                                }>
                                     {move || format!("{}/{}", value.get().len(), maxlength)}
                                 </span>
                             </div>
