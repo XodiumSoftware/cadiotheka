@@ -67,7 +67,7 @@ pub fn IconToggle(
             for=input_id
             class=move || {
                 format!(
-                    "swap swap-rotate cursor-pointer inline-flex items-center justify-center {} tooltip tooltip-top",
+                    "swap swap-rotate cursor-pointer inline-flex items-center justify-center {} tooltip tooltip-bottom",
                     class.unwrap_or("")
                 )
             }
