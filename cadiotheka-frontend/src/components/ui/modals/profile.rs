@@ -186,8 +186,10 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             black=true
                             class="h-full w-full flex items-center justify-center"
                         >
-                            <h2 class="text-lg font-bold tracking-tight text-transparent bg-base-100 bg-clip-text [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">
-                                "BIO"
+                            <h2 class="text-lg font-bold tracking-tight text-transparent bg-base-100 bg-clip-text flex flex-col items-center justify-center leading-none">
+                                <span>"B"</span>
+                                <span>"I"</span>
+                                <span>"O"</span>
                             </h2>
                         </CornerFrame>
                     </div>
