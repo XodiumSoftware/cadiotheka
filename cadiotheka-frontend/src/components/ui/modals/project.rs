@@ -11,6 +11,7 @@ use crate::data::{
     AccountRole, update_project_description, update_project_extended_desc,
     update_project_platforms, update_project_tags, update_project_title, upload_project_icon,
 };
+use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -463,6 +464,9 @@ fn ProjectModalContent(
     let author = card.author.clone();
     let author_username = card.author_username.clone();
     let author_id = card.author_id.clone();
+    let author_avatar_letter = placeholder_letter(&author_username);
+    let author_avatar_bg = placeholder_color(&author_username);
+    let author_avatar_alt = format!("{}'s avatar", author);
     let accounts = AccountsContext::use_context();
     let open_author_profile = {
         let author_id = author_id.clone();
@@ -657,7 +661,7 @@ fn ProjectModalContent(
             <div class="overflow-y-auto flex-1 min-h-0 py-2">
                 <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start">
                     <div class="min-w-0 space-y-4">
-                        <div class="flex items-center justify-between gap-3 border-b border-base-content/10 pb-2">
+                        <div class="flex items-center justify-between gap-3 pb-2">
                             <div class="tabs tabs-border">
                                 <button type="button" class="tab tab-active">"About"</button>
                                 <button type="button" class="tab" disabled>"3D viewer"</button>
@@ -741,12 +745,35 @@ fn ProjectModalContent(
                             </div>
                             <button
                                 type="button"
-                                class="font-semibold text-base-content hover:text-primary hover:underline text-left"
-                                title={format!("@{}", author_username)}
+                                class="w-12 h-12 border border-base-content/10 overflow-hidden hover:border-primary/40 transition-colors"
+                                title={format!("Open {}'s profile", author)}
+                                aria-label={format!("Open {}'s profile", author)}
                                 on:click=open_author_profile
                             >
-                                {author.clone()}
-                                <span class="ml-1 text-xs font-normal text-base-content/50">{format!("@{}", author_username)}</span>
+                                {accounts
+                                    .accounts
+                                    .get()
+                                    .into_iter()
+                                    .find(|account| account.id == author_id)
+                                    .and_then(|account| account.avatar_url)
+                                    .map(|url| {
+                                        view! {
+                                            <img
+                                                class="w-full h-full object-cover"
+                                                src=url
+                                                alt=author_avatar_alt.clone()
+                                            />
+                                        }
+                                            .into_any()
+                                    })
+                                    .unwrap_or_else(|| {
+                                        view! {
+                                            <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", author_avatar_bg)>
+                                                {author_avatar_letter.clone()}
+                                            </div>
+                                        }
+                                            .into_any()
+                                    })}
                             </button>
                         </div>
                     </div>
