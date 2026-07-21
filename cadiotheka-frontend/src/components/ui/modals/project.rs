@@ -592,7 +592,7 @@ fn ProjectModalContent(
     let platforms = supported_platforms;
 
     view! {
-        <div class="space-y-4 flex flex-col min-h-0">
+        <div class="space-y-4 flex flex-col min-h-0 overflow-hidden">
             <div class="flex items-start gap-4 relative">
                 <div class="relative flex-shrink-0">
                     <input
