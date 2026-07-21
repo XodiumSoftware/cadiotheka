@@ -1,4 +1,4 @@
-use crate::components::cards::project::ProjectCardProperties;
+use crate::components::cards::project::{HeartIcon, ProjectCardProperties};
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
@@ -249,6 +249,64 @@ fn ProjectModalContent(
     let (draft_collaborator_ids, set_draft_collaborator_ids) =
         signal(card.collaborator_ids.clone());
     let project_id = card.id.clone();
+
+    let toggle_favorite_click = {
+        let project_id = card.id.clone();
+        let set_projects = projects_ctx.set_projects;
+        let modal_set_card = modal.set_card;
+        Callback::new(move |_| {
+            let project_id = project_id.clone();
+            leptos::task::spawn_local(async move {
+                if let Some(updated) = ProjectsContext::toggle_favorite(&project_id).await {
+                    let updated_for_modal = updated.clone();
+                    set_projects.update(|projects| {
+                        if let Some(project) =
+                            projects.iter_mut().find(|project| project.id == updated.id)
+                        {
+                            *project = updated.clone();
+                        }
+                    });
+                    modal_set_card.update(|card| {
+                        if let Some(card) = card.as_mut()
+                            && card.id == updated_for_modal.id
+                        {
+                            card.favorites = updated_for_modal.favorites.clone();
+                        }
+                    });
+                }
+            });
+        })
+    };
+
+    let is_favorited = Signal::derive({
+        let project_id = project_id.clone();
+        move || {
+            projects_ctx
+                .projects
+                .get()
+                .into_iter()
+                .find(|project| project.id == project_id)
+                .and_then(|project| {
+                    current_user
+                        .account
+                        .get()
+                        .map(|me| project.favorites.contains(&me.id))
+                })
+                .unwrap_or(false)
+        }
+    });
+    let favorite_count = Signal::derive({
+        let project_id = project_id.clone();
+        move || {
+            projects_ctx
+                .projects
+                .get()
+                .into_iter()
+                .find(|project| project.id == project_id)
+                .map(|project| project.favorites.len())
+                .unwrap_or(card.favorites.len())
+        }
+    });
 
     let start_edit = move |_| {
         set_draft.set(title.get());
@@ -737,6 +795,37 @@ fn ProjectModalContent(
                         } else {
                             view! {
                                 <>
+                                    <button
+                                        type="button"
+                                        class=move || {
+                                            if is_favorited.get() {
+                                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error"
+                                            } else {
+                                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error"
+                                            }
+                                        }
+                                        aria-label=move || {
+                                            if is_favorited.get() {
+                                                format!("Remove {} from favorites", title.get())
+                                            } else {
+                                                format!("Add {} to favorites", title.get())
+                                            }
+                                        }
+                                        title=move || {
+                                            if is_favorited.get() {
+                                                "Remove favorite".to_string()
+                                            } else {
+                                                "Add favorite".to_string()
+                                            }
+                                        }
+                                        on:click={
+                                            let cb = toggle_favorite_click;
+                                            move |_| cb.run(())
+                                        }
+                                    >
+                                        <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
+                                        <span>{move || favorite_count.get().to_string()}</span>
+                                    </button>
                                     <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
                                     <span>to close</span>
                                 </>
