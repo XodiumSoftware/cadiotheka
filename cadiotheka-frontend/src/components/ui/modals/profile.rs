@@ -88,23 +88,18 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
     };
 
     let (toast_visible, set_toast_visible) = signal(false);
-    let show_toast = {
-        let set_toast_visible = set_toast_visible;
-        move || {
-            set_toast_visible.set(true);
-            leptos::task::spawn_local(async move {
-                TimeoutFuture::new(1500).await;
-                set_toast_visible.set(false);
-            });
-        }
+    let show_toast = move || {
+        set_toast_visible.set(true);
+        leptos::task::spawn_local(async move {
+            TimeoutFuture::new(1500).await;
+            set_toast_visible.set(false);
+        });
     };
 
     let copy_username = {
         let username = username.clone();
-        let show_toast = show_toast.clone();
         move |_| {
             let username = username.clone();
-            let show_toast = show_toast.clone();
             leptos::task::spawn_local(async move {
                 if let Some(clipboard) = window().map(|w| w.navigator().clipboard()) {
                     let _ = clipboard.write_text(&username).await;
