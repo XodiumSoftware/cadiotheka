@@ -148,8 +148,6 @@ pub fn AddProjectModal() -> impl IntoView {
 
             match result {
                 Some(_) => {
-                    // Refresh the project list from the backend so the new
-                    // card appears with server-assigned author info.
                     let refreshed = crate::data::fetch_projects().await;
                     projects_ctx.set_projects.set(refreshed);
                     modal.close();
@@ -259,7 +257,7 @@ pub fn AddProjectModal() -> impl IntoView {
 
                                 <div>
                                     <label class="block text-sm font-medium text-base-content mb-1" for="add-project-extended">
-                                        "Extended description (markdown)"
+                                        "Extended description"
                                     </label>
                                     <textarea
                                         node_ref=extended_input_ref
