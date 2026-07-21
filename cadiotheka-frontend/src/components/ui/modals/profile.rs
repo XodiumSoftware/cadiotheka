@@ -97,7 +97,10 @@ fn ProfileModalContent(
                     None
                 } else {
                     Some(view! {
-                        <p class="text-base-content/70 mt-2">{bio}</p>
+                        <p>
+                            <span class="font-semibold text-base-content">Bio:</span>
+                            <span class="ml-1 text-base-content/70">{bio}</span>
+                        </p>
                     })
                 }}
             </div>
