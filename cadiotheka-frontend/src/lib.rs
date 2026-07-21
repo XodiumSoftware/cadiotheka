@@ -18,6 +18,7 @@ pub mod components {
             pub mod section_fade;
         }
         pub mod markdown;
+        pub mod markdown_editor;
         pub mod modals {
             pub mod add_project;
             pub mod login;
@@ -38,6 +39,7 @@ pub mod components {
     pub use ui::corner_frame::CornerFrame;
     pub use ui::effects::section_fade::FadeOverlay;
     pub use ui::markdown::MarkdownView;
+    pub use ui::markdown_editor::MarkdownEditor;
     pub use ui::modals::add_project::AddProjectModal;
     pub use ui::modals::login::LoginModal;
     pub use ui::modals::profile::ProfileModal;

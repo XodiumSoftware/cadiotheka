@@ -1,3 +1,4 @@
+use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::project_icon_picker::ProjectIconPicker;
 use crate::contexts::{
@@ -39,7 +40,6 @@ pub fn AddProjectModal() -> impl IntoView {
     // Form fields
     let title_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let desc_input_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
-    let extended_input_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
     let icon_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (title, set_title) = signal(String::new());
     let (description, set_description) = signal(String::new());
@@ -66,9 +66,6 @@ pub fn AddProjectModal() -> impl IntoView {
             input.set_value("");
         }
         if let Some(input) = desc_input_ref.get() {
-            input.set_value("");
-        }
-        if let Some(input) = extended_input_ref.get() {
             input.set_value("");
         }
     };
@@ -317,22 +314,17 @@ pub fn AddProjectModal() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-base-content mb-1" for="add-project-extended">
-                                        {move || {
-                                            let count = extended_desc.get().len();
-                                            format!("Extended description ({count}/5000)")
-                                        }}
+                                    <label class="block text-sm font-medium text-base-content mb-1">
+                                        "Extended description"
                                     </label>
-                                    <textarea
-                                        node_ref=extended_input_ref
-                                        id="add-project-extended"
-                                        class="textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none min-h-[6rem]"
-                                        on:input=move |ev| {
-                                            set_extended_desc.set(event_target_value(&ev));
-                                        }
-                                        disabled=move || is_submitting.get()
-                                    ></textarea>
-                                    <p class="text-xs text-base-content/50 mt-1">"Markdown formatting is supported."</p>
+                                    <MarkdownEditor
+                                        value=extended_desc
+                                        on_input=Callback::new(move |value| set_extended_desc.set(value))
+                                        on_cancel=Callback::new(move |_| set_extended_desc.set(String::new()))
+                                        on_save=Callback::new(move |_| {})
+                                        maxlength=5000
+                                        editor_class="min-h-[12rem] font-mono text-sm"
+                                    />
                                 </div>
 
                                 <div>

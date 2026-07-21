@@ -1,5 +1,6 @@
 use crate::components::cards::project::ProjectCardProperties;
 use crate::components::ui::markdown::MarkdownView;
+use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::components::ui::project_icon_picker::ProjectIconPicker;
@@ -740,37 +741,14 @@ fn ProjectModalContent(
                         {move || {
                             if editing_extended.get() {
                                 view! {
-                                    <div class="space-y-2">
-                                        <textarea
-                                            class="textarea w-full min-h-[8rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
-                                            maxlength=MAX_EXTENDED_DESC_LENGTH.to_string()
-                                            prop:value=draft_extended.get()
-                                            on:input=move |ev| set_draft_extended.set(event_target_value(&ev))
-                                            on:keyup=move |ev| {
-                                                if ev.key().as_str() == "Escape" {
-                                                    cancel_edit_extended();
-                                                }
-                                            }
-                                            autofocus
-                                        ></textarea>
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-xs text-base-content/50">
-                                                {move || format!("{}/{}", draft_extended.get().len(), MAX_EXTENDED_DESC_LENGTH)}
-                                            </span>
-                                            <div class="flex gap-2">
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-ghost btn-xs"
-                                                    on:click=move |_| cancel_edit_extended()
-                                                >"Cancel"</button>
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-primary btn-xs"
-                                                    on:click=move |_| commit_edit_extended.run(draft_extended.get())
-                                                >"Save"</button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <MarkdownEditor
+                                        value=draft_extended
+                                        on_input=Callback::new(move |value| set_draft_extended.set(value))
+                                        on_cancel=Callback::new(move |_| cancel_edit_extended())
+                                        on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
+                                        maxlength=MAX_EXTENDED_DESC_LENGTH
+                                        editor_class="min-h-[12rem] font-mono text-sm"
+                                    />
                                 }
                                     .into_any()
                             } else {
