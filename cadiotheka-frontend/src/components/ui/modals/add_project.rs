@@ -225,7 +225,7 @@ pub fn AddProjectModal() -> impl IntoView {
 
                     view! {
                         <form class="space-y-4 flex flex-col min-h-0 overflow-hidden" on:submit=on_submit>
-                            <div class="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
+                            <div class="overflow-y-auto flex-1 min-h-0 space-y-4 p-2 pr-3">
                                 <div class="flex items-start gap-4">
                                     <input
                                         node_ref=icon_input_ref
