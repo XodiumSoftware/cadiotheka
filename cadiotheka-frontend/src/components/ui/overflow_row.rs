@@ -19,12 +19,13 @@ impl OverflowItem {
 /// Renders a row of badge-like items with overflow collapsed into a "+N" box.
 ///
 /// The container is `flex-nowrap` so it never wraps. Items beyond `max_visible`
-/// are hidden and summarized by the overflow box, which shows a native tooltip
+/// are hidden and summarized by the overflow box, which shows a DaisyUI tooltip
 /// listing all hidden labels vertically.
 #[component]
 pub fn OverflowRow(
     #[prop(into)] items: Vec<OverflowItem>,
     #[prop(default = 3)] max_visible: usize,
+    #[prop(optional)] tooltip_position: Option<&'static str>,
     #[prop(into)] badge_class: String,
 ) -> impl IntoView {
     let total = items.len();
@@ -49,10 +50,14 @@ pub fn OverflowRow(
                 })
                 .collect_view()}
             {if overflow_count > 0 {
+                let tooltip_class = format!(
+                    "tooltip {} badge badge-xs badge-outline rounded-none border-base-content/20 text-base-content/70 cursor-help flex-shrink-0",
+                    tooltip_position.unwrap_or("tooltip-bottom")
+                );
                 view! {
                     <span
-                        class="badge badge-xs badge-outline rounded-none border-base-content/20 text-base-content/70 cursor-help flex-shrink-0"
-                        title={tooltip}
+                        class=tooltip_class
+                        data-tip={tooltip}
                     >
                         {format!("+{}", overflow_count)}
                     </span>
