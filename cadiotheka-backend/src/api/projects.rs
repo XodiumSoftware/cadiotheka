@@ -168,6 +168,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 pub struct ProjectPatch {
     title: Option<String>,
     icon_key: Option<Option<String>>,
+    description: Option<String>,
     extended_desc: Option<String>,
 }
 
@@ -207,6 +208,17 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         db(&ctx)?
             .prepare("UPDATE projects SET icon_url = ?1 WHERE id = ?2")
             .bind(&[js_option(icon_key), id.clone().into()])?
+            .run()
+            .await?;
+    }
+
+    if let Some(description) = patch.description {
+        if description.len() > MAX_DESCRIPTION_LENGTH {
+            return Response::error("Description must be 500 characters or fewer", 400);
+        }
+        db(&ctx)?
+            .prepare("UPDATE projects SET description = ?1 WHERE id = ?2")
+            .bind(&[description.into(), id.clone().into()])?
             .run()
             .await?;
     }

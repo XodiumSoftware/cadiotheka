@@ -7,12 +7,14 @@ use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
 };
 use crate::data::{
-    AccountRole, update_project_extended_desc, update_project_title, upload_project_icon,
+    AccountRole, update_project_description, update_project_extended_desc, update_project_title,
+    upload_project_icon,
 };
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
 const MAX_TITLE_LENGTH: usize = 100;
+const MAX_DESCRIPTION_LENGTH: usize = 500;
 const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
 
 /// Modal dialog that displays detailed information about a selected project.
@@ -62,6 +64,9 @@ fn ProjectModalContent(
     let (editing_icon, set_editing_icon) = signal(false);
     let (selected_icon_file, set_selected_icon_file) = signal(Option::<web_sys::File>::None);
     let (icon_url, set_icon_url) = signal(card.icon_url.clone());
+    let (editing_description, set_editing_description) = signal(false);
+    let (draft_description, set_draft_description) = signal(card.description.clone());
+    let (description, set_description) = signal(card.description.clone());
     let (editing_extended, set_editing_extended) = signal(false);
     let (draft_extended, set_draft_extended) = signal(card.extended_desc.clone());
     let (extended_desc, set_extended_desc) = signal(card.extended_desc.clone());
@@ -79,6 +84,15 @@ fn ProjectModalContent(
     let cancel_edit_icon = move || {
         set_selected_icon_file.set(None);
         set_editing_icon.set(false);
+    };
+
+    let start_edit_description = move || {
+        set_draft_description.set(description.get());
+        set_editing_description.set(true);
+    };
+
+    let cancel_edit_description = move || {
+        set_editing_description.set(false);
     };
 
     let start_edit_extended = move || {
@@ -119,6 +133,39 @@ fn ProjectModalContent(
                 }
                 set_selected_icon_file.set(None);
                 set_editing_icon.set(false);
+            });
+        })
+    };
+
+    let commit_edit_description = {
+        let project_id = project_id.clone();
+        Callback::new(move |draft_value: String| {
+            let project_id = project_id.clone();
+            let set_description = set_description;
+            let set_editing_description = set_editing_description;
+            let modal_card = modal.set_card;
+            let set_projects = projects_ctx.set_projects;
+
+            leptos::task::spawn_local(async move {
+                if let Some(new_description) =
+                    update_project_description(&project_id, draft_value).await
+                {
+                    set_description.set(new_description.clone());
+                    modal_card.update(|opt| {
+                        if let Some(card) = opt.as_mut() {
+                            card.description = new_description.clone();
+                        }
+                    });
+                    set_projects.update(|projects| {
+                        for project in projects.iter_mut() {
+                            if project.id == project_id {
+                                project.description = new_description.clone();
+                                break;
+                            }
+                        }
+                    });
+                }
+                set_editing_description.set(false);
             });
         })
     };
@@ -414,73 +461,144 @@ fn ProjectModalContent(
                 }
                     .into_any())}
 
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <h3 class="text-sm font-semibold text-base-content">"Description"</h3>
-                        {is_editable.then(|| view! {
-                            <button
-                                type="button"
-                                class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
-                                aria-label="Edit extended description"
-                                on:click=move |_| start_edit_extended()
-                            >
-                                <svg
-                                    class="w-4 h-4 text-base-content/60"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <h3 class="text-sm font-semibold text-base-content">"Short description"</h3>
+                            {is_editable.then(|| view! {
+                                <button
+                                    type="button"
+                                    class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
+                                    aria-label="Edit short description"
+                                    on:click=move |_| start_edit_description()
                                 >
-                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                                </svg>
-                            </button>
-                        })}
-                    </div>
-                    {move || {
-                        if editing_extended.get() {
-                            view! {
-                                <div class="space-y-2">
-                                    <textarea
-                                        class="textarea w-full min-h-[8rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
-                                        maxlength=MAX_EXTENDED_DESC_LENGTH.to_string()
-                                        prop:value=draft_extended.get()
-                                        on:input=move |ev| set_draft_extended.set(event_target_value(&ev))
-                                        on:keyup=move |ev| {
-                                            if ev.key().as_str() == "Escape" {
-                                                cancel_edit_extended();
+                                    <svg
+                                        class="w-4 h-4 text-base-content/60"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                    </svg>
+                                </button>
+                            })}
+                        </div>
+                        {move || {
+                            if editing_description.get() {
+                                view! {
+                                    <div class="space-y-2">
+                                        <textarea
+                                            class="textarea w-full min-h-[5rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                            maxlength=MAX_DESCRIPTION_LENGTH.to_string()
+                                            prop:value=draft_description.get()
+                                            on:input=move |ev| set_draft_description.set(event_target_value(&ev))
+                                            on:keyup=move |ev| {
+                                                if ev.key().as_str() == "Escape" {
+                                                    cancel_edit_description();
+                                                }
                                             }
-                                        }
-                                        autofocus
-                                    ></textarea>
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs text-base-content/50">
-                                            {move || format!("{}/{}", draft_extended.get().len(), MAX_EXTENDED_DESC_LENGTH)}
-                                        </span>
-                                        <div class="flex gap-2">
-                                            <button
-                                                type="button"
-                                                class="btn btn-ghost btn-xs"
-                                                on:click=move |_| cancel_edit_extended()
-                                            >"Cancel"</button>
-                                            <button
-                                                type="button"
-                                                class="btn btn-primary btn-xs"
-                                                on:click=move |_| commit_edit_extended.run(draft_extended.get())
-                                            >"Save"</button>
+                                            autofocus
+                                        ></textarea>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-base-content/50">
+                                                {move || format!("{}/{}", draft_description.get().len(), MAX_DESCRIPTION_LENGTH)}
+                                            </span>
+                                            <div class="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-ghost btn-xs"
+                                                    on:click=move |_| cancel_edit_description()
+                                                >"Cancel"</button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-primary btn-xs"
+                                                    on:click=move |_| commit_edit_description.run(draft_description.get())
+                                                >"Save"</button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                }
+                                    .into_any()
+                            } else {
+                                view! {
+                                    <p class="text-base-content/70 text-sm whitespace-pre-wrap">{description.get()}</p>
+                                }
+                                    .into_any()
                             }
-                                .into_any()
-                        } else {
-                            view! {
-                                <MarkdownView source=extended_desc.get() />
+                        }}
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <h3 class="text-sm font-semibold text-base-content">"Extended description"</h3>
+                            {is_editable.then(|| view! {
+                                <button
+                                    type="button"
+                                    class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
+                                    aria-label="Edit extended description"
+                                    on:click=move |_| start_edit_extended()
+                                >
+                                    <svg
+                                        class="w-4 h-4 text-base-content/60"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                    </svg>
+                                </button>
+                            })}
+                        </div>
+                        {move || {
+                            if editing_extended.get() {
+                                view! {
+                                    <div class="space-y-2">
+                                        <textarea
+                                            class="textarea w-full min-h-[8rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                            maxlength=MAX_EXTENDED_DESC_LENGTH.to_string()
+                                            prop:value=draft_extended.get()
+                                            on:input=move |ev| set_draft_extended.set(event_target_value(&ev))
+                                            on:keyup=move |ev| {
+                                                if ev.key().as_str() == "Escape" {
+                                                    cancel_edit_extended();
+                                                }
+                                            }
+                                            autofocus
+                                        ></textarea>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-base-content/50">
+                                                {move || format!("{}/{}", draft_extended.get().len(), MAX_EXTENDED_DESC_LENGTH)}
+                                            </span>
+                                            <div class="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-ghost btn-xs"
+                                                    on:click=move |_| cancel_edit_extended()
+                                                >"Cancel"</button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-primary btn-xs"
+                                                    on:click=move |_| commit_edit_extended.run(draft_extended.get())
+                                                >"Save"</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                    .into_any()
+                            } else {
+                                view! {
+                                    <MarkdownView source=extended_desc.get() />
+                                }
+                                    .into_any()
                             }
-                                .into_any()
-                        }
-                    }}
+                        }}
+                    </div>
                 </div>
             </div>
 

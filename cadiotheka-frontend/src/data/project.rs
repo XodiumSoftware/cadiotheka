@@ -268,6 +268,26 @@ pub async fn update_project_title(id: &str, title: String) -> Option<String> {
     Some(title)
 }
 
+/// Updates the short description of an existing project via `PATCH /data/projects/:id`.
+///
+/// On success it returns the new description; on failure it logs to the console
+/// and returns `None`.
+pub async fn update_project_description(id: &str, description: String) -> Option<String> {
+    let url = api_url(&format!("/projects/{id}"));
+    let body = match serde_json::to_string(&serde_json::json!({ "description": description })) {
+        Ok(json) => json,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to serialize description update payload: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    patch_project(&url, body, "description").await?;
+    Some(description)
+}
+
 /// Updates the extended description of an existing project via `PATCH /data/projects/:id`.
 ///
 /// On success it returns the new extended description; on failure it logs to the
