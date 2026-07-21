@@ -566,113 +566,6 @@ fn ProjectModalContent(
                                 .into_any()
                         }
                     }}
-                    <p class="text-base-content/70 text-sm">
-                        by
-                        <button
-                            type="button"
-                            class="font-semibold text-base-content ml-1 hover:text-primary hover:underline"
-                            title={format!("@{}", author_username)}
-                            on:click=open_author_profile
-                        >
-                            {author.clone()}
-                        </button>
-                    </p>
-                </div>
-                <div class="hidden sm:flex items-center gap-2 text-xs text-base-content/50 flex-shrink-0">
-                    {move || {
-                        if editing.get() {
-                            view! {
-                                <>
-                                    <button
-                                        type="button"
-                                        class="btn btn-ghost btn-xs"
-                                        on:click=move |_| cancel_edit()
-                                    >"Cancel"</button>
-                                    <button
-                                        type="button"
-                                        class="btn btn-primary btn-xs"
-                                        on:click=move |_| commit_edit.run(draft.get())
-                                    >"Save"</button>
-                                </>
-                            }
-                                .into_any()
-                        } else {
-                            view! {
-                                <>
-                                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
-                                    <span>to close</span>
-                                </>
-                            }
-                                .into_any()
-                        }
-                    }}
-                </div>
-            </div>
-
-            <hr class="border-base-content/10" />
-
-            <div class="overflow-y-auto flex-1 min-h-0 py-2 space-y-4">
-                {move || {
-                    let current_tags = tags.get();
-                    let current_platforms = platforms.get();
-                    if current_tags.is_empty() && current_platforms.is_empty() {
-                        return None;
-                    }
-                    Some(view! {
-                        <div class="space-y-3">
-                            <EditableChipSection
-                                title="Tags"
-                                aria_label="Tags"
-                                items=current_tags.clone()
-                                all_items=crate::metadata::tags::Tag::all().to_vec()
-                                editing=editing_tags.into()
-                                editable=is_editable
-                                on_start_edit=Callback::new(move |_| start_edit_tags())
-                                on_cancel=Callback::new(move |_| cancel_edit_tags())
-                                on_toggle=toggle_tag
-                                on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
-                                label_fn=crate::metadata::tags::tag_label
-                                color_fn=crate::metadata::tags::tag_color
-                                selected_items=draft_tags.into()
-                                badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
-                            />
-                            {(!current_tags.is_empty() && !current_platforms.is_empty()).then(|| view! {
-                                <span class="w-px h-5 bg-base-content/20 self-center" aria-hidden="true" />
-                            }
-                                .into_any())}
-                            {(!current_platforms.is_empty()).then(|| view! {
-                                <OverflowRow
-                                    items={current_platforms
-                                        .iter()
-                                        .map(|platform| OverflowItem::new(platform.label(), platform.color()))
-                                        .collect::<Vec<_>>()}
-                                    max_visible=usize::MAX
-                                    badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
-                                />
-                            }
-                                .into_any())}
-                        </div>
-                    })
-                }}
-
-                <EditableChipSection
-                    title="Supported platforms"
-                    aria_label="Supported platforms"
-                    items=platforms.get()
-                    all_items=crate::metadata::platforms::Platform::all().to_vec()
-                    editing=editing_platforms.into()
-                    editable=is_editable
-                    on_start_edit=Callback::new(move |_| start_edit_platforms())
-                    on_cancel=Callback::new(move |_| cancel_edit_platforms())
-                    on_toggle=toggle_platform
-                    on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
-                    label_fn=crate::metadata::platforms::platform_label
-                    color_fn=crate::metadata::platforms::platform_color
-                    selected_items=draft_platforms.into()
-                    badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
-                />
-
-                <div class="space-y-4">
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <h3 class="text-sm font-semibold text-base-content">"Short description"</h3>
@@ -727,37 +620,131 @@ fn ProjectModalContent(
                             }
                         }}
                     </div>
-
-                    <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <h3 class="text-sm font-semibold text-base-content">"Extended description"</h3>
-                            {is_editable.then(|| view! {
-                                <EditIconButton
-                                    aria_label="Edit extended description"
-                                    on_click=Callback::new(move |_| start_edit_extended())
-                                />
-                            })}
-                        </div>
-                        {move || {
-                            if editing_extended.get() {
-                                view! {
-                                    <MarkdownEditor
-                                        value=draft_extended
-                                        on_input=Callback::new(move |value| set_draft_extended.set(value))
-                                        on_cancel=Callback::new(move |_| cancel_edit_extended())
-                                        on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
-                                        maxlength=MAX_EXTENDED_DESC_LENGTH
-                                        editor_class="min-h-[12rem] font-mono text-sm"
-                                    />
-                                }
-                                    .into_any()
-                            } else {
-                                view! {
-                                    <MarkdownView source=extended_desc.get() />
-                                }
-                                    .into_any()
+                </div>
+                <div class="hidden sm:flex items-center gap-2 text-xs text-base-content/50 flex-shrink-0">
+                    {move || {
+                        if editing.get() {
+                            view! {
+                                <>
+                                    <button
+                                        type="button"
+                                        class="btn btn-ghost btn-xs"
+                                        on:click=move |_| cancel_edit()
+                                    >"Cancel"</button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary btn-xs"
+                                        on:click=move |_| commit_edit.run(draft.get())
+                                    >"Save"</button>
+                                </>
                             }
-                        }}
+                                .into_any()
+                        } else {
+                            view! {
+                                <>
+                                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
+                                    <span>to close</span>
+                                </>
+                            }
+                                .into_any()
+                        }
+                    }}
+                </div>
+            </div>
+
+            <hr class="border-base-content/10" />
+
+            <div class="overflow-y-auto flex-1 min-h-0 py-2">
+                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)] gap-6 items-start">
+                    <div class="min-w-0 space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <h3 class="text-sm font-semibold text-base-content">"About"</h3>
+                                {is_editable.then(|| view! {
+                                    <EditIconButton
+                                        aria_label="Edit extended description"
+                                        on_click=Callback::new(move |_| start_edit_extended())
+                                    />
+                                })}
+                            </div>
+                            {move || {
+                                if editing_extended.get() {
+                                    view! {
+                                        <MarkdownEditor
+                                            value=draft_extended
+                                            on_input=Callback::new(move |value| set_draft_extended.set(value))
+                                            on_cancel=Callback::new(move |_| cancel_edit_extended())
+                                            on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
+                                            maxlength=MAX_EXTENDED_DESC_LENGTH
+                                            editor_class="min-h-[20rem] font-mono text-sm"
+                                        />
+                                    }
+                                        .into_any()
+                                } else {
+                                    view! {
+                                        <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
+                                            <MarkdownView source=extended_desc.get() />
+                                        </div>
+                                    }
+                                        .into_any()
+                                }
+                            }}
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                            <EditableChipSection
+                                title="Supported platforms"
+                                aria_label="Supported platforms"
+                                items=platforms.get()
+                                all_items=crate::metadata::platforms::Platform::all().to_vec()
+                                editing=editing_platforms.into()
+                                editable=is_editable
+                                on_start_edit=Callback::new(move |_| start_edit_platforms())
+                                on_cancel=Callback::new(move |_| cancel_edit_platforms())
+                                on_toggle=toggle_platform
+                                on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
+                                label_fn=crate::metadata::platforms::platform_label
+                                color_fn=crate::metadata::platforms::platform_color
+                                selected_items=draft_platforms.into()
+                                badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
+                            />
+                        </div>
+
+                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                            <EditableChipSection
+                                title="Tags"
+                                aria_label="Tags"
+                                items=tags.get()
+                                all_items=crate::metadata::tags::Tag::all().to_vec()
+                                editing=editing_tags.into()
+                                editable=is_editable
+                                on_start_edit=Callback::new(move |_| start_edit_tags())
+                                on_cancel=Callback::new(move |_| cancel_edit_tags())
+                                on_toggle=toggle_tag
+                                on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
+                                label_fn=crate::metadata::tags::tag_label
+                                color_fn=crate::metadata::tags::tag_color
+                                selected_items=draft_tags.into()
+                                badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
+                            />
+                        </div>
+
+                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
+                            </div>
+                            <button
+                                type="button"
+                                class="w-full text-left rounded-none border border-base-content/10 px-3 py-2 hover:border-primary/40 hover:bg-base-100/40 transition-colors"
+                                title={format!("@{}", author_username)}
+                                on:click=open_author_profile
+                            >
+                                <div class="text-sm font-semibold text-base-content">{author.clone()}</div>
+                                <div class="text-xs text-base-content/50">{format!("@{}", author_username)}</div>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
