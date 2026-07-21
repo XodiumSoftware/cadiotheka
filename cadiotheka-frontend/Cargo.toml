@@ -6,7 +6,6 @@ publish = false
 
 [dependencies]
 leptos = { version = "0.8.17", features = ["csr"] }
-leptos_i18n = { version = "0.6.2", default-features = false, features = ["csr"] }
 gloo-timers = { version = "0.4.0", features = ["futures"] }
 gloo-net = "0.6"
 time = { version = "0.3", features = ["serde", "wasm-bindgen", "macros", "formatting", "parsing"] }
@@ -20,16 +19,7 @@ console_error_panic_hook = "0.1.7"
 urlencoding = "2.1"
 uuid = { version = "1.11", features = ["v4", "serde", "js"] }
 
-[build-dependencies]
-leptos_i18n_build = "0.6.2"
-
-[dev-dependencies]
 wasm-bindgen-test = "0.3"
-
-[package.metadata.cargo-machete]
-# leptos_i18n is used at compile time by leptos_i18n_build and referenced
-# through generated code, which cargo-machete cannot detect.
-ignored = ["leptos_i18n"]
 
 [lints]
 workspace = true

@@ -3,7 +3,6 @@ use crate::contexts::{
     AddProjectModalContext, CurrentUserContext, LoginModalContext, ProjectsContext,
 };
 use crate::data::{create_project, new_project_payload};
-use crate::i18n::{t_string, use_i18n};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use leptos::prelude::*;
@@ -30,7 +29,6 @@ impl FormErrors {
 /// Modal dialog for adding a new project.
 #[component]
 pub fn AddProjectModal() -> impl IntoView {
-    let i18n = use_i18n();
     let modal = AddProjectModalContext::use_context();
     let current_user = CurrentUserContext::use_context();
     let login_modal = LoginModalContext::use_context();
@@ -80,25 +78,24 @@ pub fn AddProjectModal() -> impl IntoView {
         let mut e = FormErrors::default();
         let t = title.get();
         if t.trim().is_empty() {
-            e.title = Some(t_string!(i18n, add_project.error_title_required).to_string());
+            e.title = Some("A project title is required.".to_string());
         } else if t.trim().len() > 100 {
-            e.title = Some(t_string!(i18n, add_project.error_title_long).to_string());
+            e.title = Some("Title must be 100 characters or fewer.".to_string());
         }
 
         let d = description.get();
         if d.trim().is_empty() {
-            e.description =
-                Some(t_string!(i18n, add_project.error_description_required).to_string());
+            e.description = Some("A short description is required.".to_string());
         } else if d.trim().len() > 500 {
-            e.description = Some(t_string!(i18n, add_project.error_description_long).to_string());
+            e.description = Some("Description must be 500 characters or fewer.".to_string());
         }
 
         if selected_tags.get().is_empty() {
-            e.tags = Some(t_string!(i18n, add_project.error_tags_required).to_string());
+            e.tags = Some("Select at least one tag.".to_string());
         }
 
         if selected_platforms.get().is_empty() {
-            e.platforms = Some(t_string!(i18n, add_project.error_platforms_required).to_string());
+            e.platforms = Some("Select at least one supported platform.".to_string());
         }
 
         set_errors.set(e.clone());
@@ -159,8 +156,9 @@ pub fn AddProjectModal() -> impl IntoView {
                     reset_form();
                 }
                 None => {
-                    set_submit_error
-                        .set(Some(t_string!(i18n, add_project.error_submit).to_string()));
+                    set_submit_error.set(Some(
+                        "Could not add the project. Please try again.".to_string(),
+                    ));
                 }
             }
         });
@@ -173,12 +171,12 @@ pub fn AddProjectModal() -> impl IntoView {
         >
             <div class="space-y-4 flex flex-col min-h-0 max-h-[70vh]">
                 <div class="flex items-center justify-between flex-shrink-0">
-                    <h2 class="text-xl font-bold text-primary">{move || t_string!(i18n, add_project.title)}</h2>
+                    <h2 class="text-xl font-bold text-primary">"Add Project"</h2>
                     <div class="hidden sm:flex items-center gap-1.5 text-xs text-base-content/50">
                         <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
-                            {move || t_string!(i18n, search.keyboard_esc)}
+                            "esc"
                         </kbd>
-                        <span>{move || t_string!(i18n, project_modal.hint_dismiss)}</span>
+                        <span>"to dismiss"</span>
                     </div>
                 </div>
 
@@ -195,7 +193,7 @@ pub fn AddProjectModal() -> impl IntoView {
                         return view! {
                             <div class="space-y-4 flex flex-col">
                                 <p class="text-sm text-base-content/80">
-                                    {move || t_string!(i18n, add_project.login_required)}
+                                    "Sign in to publish a new project."
                                 </p>
                                 <button
                                     type="button"
@@ -205,7 +203,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                         login_modal.open();
                                     }
                                 >
-                                    {move || t_string!(i18n, add_project.login_action)}
+                                    "Log in"
                                 </button>
                             </div>
                         }.into_any();
@@ -218,7 +216,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                     <label class="block text-sm font-medium text-base-content mb-1" for="add-project-title">
                                         {move || {
                                             let count = title.get().len();
-                                            format!("{} ({count}/100)", t_string!(i18n, add_project.field_title))
+                                            format!("Title ({count}/100)")
                                         }}
                                     </label>
                                     <input
@@ -241,7 +239,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                     <label class="block text-sm font-medium text-base-content mb-1" for="add-project-description">
                                         {move || {
                                             let count = description.get().len();
-                                            format!("{} ({count}/500)", t_string!(i18n, add_project.field_description))
+                                            format!("Short description ({count}/500)")
                                         }}
                                     </label>
                                     <textarea
@@ -261,7 +259,7 @@ pub fn AddProjectModal() -> impl IntoView {
 
                                 <div>
                                     <label class="block text-sm font-medium text-base-content mb-1" for="add-project-extended">
-                                        {move || t_string!(i18n, add_project.field_extended)}
+                                        "Extended description (markdown)"
                                     </label>
                                     <textarea
                                         node_ref=extended_input_ref
@@ -272,12 +270,12 @@ pub fn AddProjectModal() -> impl IntoView {
                                         }
                                         disabled=move || is_submitting.get()
                                     ></textarea>
-                                    <p class="text-xs text-base-content/50 mt-1">{move || t_string!(i18n, add_project.markdown_hint)}</p>
+                                    <p class="text-xs text-base-content/50 mt-1">"Markdown formatting is supported."</p>
                                 </div>
 
                                 <div>
-                                    <span class="block text-sm font-medium text-base-content mb-2">{move || t_string!(i18n, add_project.field_tags)}</span>
-                                    <div class="flex flex-wrap gap-2" role="group" aria-label=move || t_string!(i18n, add_project.field_tags)>
+                                    <span class="block text-sm font-medium text-base-content mb-2">"Tags"</span>
+                                    <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
                                         {Tag::all().into_iter().map(|tag| {
                                             let tag_clone = tag;
                                             view! {
@@ -309,8 +307,8 @@ pub fn AddProjectModal() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <span class="block text-sm font-medium text-base-content mb-2">{move || t_string!(i18n, add_project.field_platforms)}</span>
-                                    <div class="flex flex-wrap gap-2" role="group" aria-label=move || t_string!(i18n, add_project.field_platforms)>
+                                    <span class="block text-sm font-medium text-base-content mb-2">"Supported platforms"</span>
+                                    <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
                                         {Platform::all().into_iter().map(|platform| {
                                             let platform_clone = platform;
                                             view! {
@@ -353,7 +351,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                     on:click=move |_| modal.close()
                                     disabled=move || is_submitting.get()
                                 >
-                                    {move || t_string!(i18n, add_project.cancel)}
+                                    "Cancel"
                                 </button>
                                 <button
                                     type="submit"
@@ -362,9 +360,9 @@ pub fn AddProjectModal() -> impl IntoView {
                                 >
                                     {move || {
                                         let label = if is_submitting.get() {
-                                            t_string!(i18n, add_project.submitting)
+                                            "Adding..."
                                         } else {
-                                            t_string!(i18n, add_project.submit)
+                                            "Add project"
                                         };
                                         view! {
                                             <span class="flex items-center gap-2">

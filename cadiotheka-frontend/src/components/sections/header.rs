@@ -4,7 +4,6 @@ use crate::contexts::{
     ProfileModalContext, ProjectsContext, SearchContext,
 };
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
-use crate::i18n::{t_string, use_i18n};
 use crate::utils::{
     auth_url, encode_redirect_url, placeholder_color, placeholder_letter, window_event_listener,
 };
@@ -99,7 +98,6 @@ fn replace_last_token(parts: &mut Vec<String>, replacement: String) {
 
 #[component]
 pub fn Header() -> impl IntoView {
-    let i18n = use_i18n();
     let _layout = LayoutContext::use_context();
     let search = SearchContext::use_context();
     let (is_scrolled, set_is_scrolled) = signal(false);
@@ -301,10 +299,10 @@ pub fn Header() -> impl IntoView {
             _ => {}
         }
     };
-    let logo_wordmark = move || t_string!(i18n, header.logo_wordmark);
+    let logo_wordmark = "Cadiotheka";
 
     let letter_elements = move || {
-        logo_wordmark()
+        logo_wordmark
         .chars()
         .enumerate()
         .map(|(idx, ch)| {
@@ -398,7 +396,7 @@ pub fn Header() -> impl IntoView {
                             </svg>
                         </span>
                         <span class="text-2xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors overflow-hidden whitespace-nowrap">
-                            {move || letter_elements().into_iter().collect_view()}
+                            {letter_elements().into_iter().collect_view()}
                         </span>
                     </a>
                 </div>
@@ -408,7 +406,7 @@ pub fn Header() -> impl IntoView {
                         type="button"
                         class="btn btn-primary hover:btn-warning btn-lift"
                         on:click=move |_| set_search_open.set(true)
-                        aria-label=move || t_string!(i18n, search.open)
+                        aria-label="Open search"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -424,7 +422,7 @@ pub fn Header() -> impl IntoView {
                             <circle cx="11" cy="11" r="8" />
                             <path d="m21 21-4.3-4.3" />
                         </svg>
-                        <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">{move || t_string!(i18n, search.shortcut_open)}</kbd>
+                        <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">"Alt + S"</kbd>
                     </button>
                     {move || {
                         let current_user = CurrentUserContext::use_context();
@@ -435,7 +433,7 @@ pub fn Header() -> impl IntoView {
                             <button
                                 type="button"
                                 class="btn btn-primary btn-lift hidden sm:flex items-center gap-2"
-                                aria-label=move || t_string!(i18n, projects.add)
+                                aria-label="Add project"
                                 on:click=move |_| {
                                     AddProjectModalContext::use_context().open();
                                 }
@@ -452,7 +450,7 @@ pub fn Header() -> impl IntoView {
                                 >
                                     <path d="M12 5v14M5 12h14" />
                                 </svg>
-                                <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans" aria-hidden="true">{move || t_string!(i18n, projects.shortcut_add)}</kbd>
+                                <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans" aria-hidden="true">"Alt + N"</kbd>
                             </button>
                         })
                     }}
@@ -473,7 +471,7 @@ pub fn Header() -> impl IntoView {
                                     <button
                                         type="button"
                                         class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden hover:border-base-content/30"
-                                        aria-label=move || t_string!(i18n, account.menu)
+                                        aria-label="Open account menu"
                                         aria-expanded=move || account_menu_open.get().to_string()
                                         aria-haspopup="menu"
                                         on:click=move |_| set_account_menu_open.update(|open| *open = !*open)
@@ -520,7 +518,7 @@ pub fn Header() -> impl IntoView {
                                                                 }
                                                             }
                                                         >
-                                                            {move || t_string!(i18n, account.profile)}
+                                                            "Profile"
                                                         </button>
                                                     </li>
                                                     <li role="none">
@@ -536,7 +534,7 @@ pub fn Header() -> impl IntoView {
                                                                 }
                                                             }
                                                         >
-                                                            {move || t_string!(i18n, account.my_projects)}
+                                                            "My projects"
                                                         </button>
                                                     </li>
                                                     <li role="none">
@@ -546,7 +544,7 @@ pub fn Header() -> impl IntoView {
                                                             role="menuitem"
                                                             on:click=move |_| set_account_menu_open.set(false)
                                                         >
-                                                            {move || t_string!(i18n, account.logout)}
+                                                            "Log out"
                                                         </a>
                                                     </li>
                                                 </ul>
@@ -562,7 +560,7 @@ pub fn Header() -> impl IntoView {
                                 <button
                                     type="button"
                                     class="btn btn-primary btn-lift flex items-center gap-2"
-                                    aria-label=move || t_string!(i18n, login.action)
+                                    aria-label="Log in"
                                     on:click=move |_| login_modal.open()
                                 >
                                     <svg
@@ -580,7 +578,7 @@ pub fn Header() -> impl IntoView {
                                         <line x1="15" y1="12" x2="3" y2="12" />
                                     </svg>
                                     <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans">
-                                        {move || t_string!(i18n, login.shortcut)}
+                                        "Alt + L"
                                     </kbd>
                                 </button>
                             }
@@ -599,7 +597,7 @@ pub fn Header() -> impl IntoView {
                         <input
                             type="text"
                             class="input w-full pr-20 bg-transparent !border-0 !outline-none !ring-0 focus:!outline-none focus:!ring-0"
-                            placeholder=move || t_string!(i18n, search.placeholder)
+                            placeholder="Search projects, tags, platforms, authors..."
                             prop:value=move || search.query.get()
                             role="combobox"
                             aria-expanded=move || {
@@ -628,7 +626,7 @@ pub fn Header() -> impl IntoView {
                                     "absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
                                 }
                             }
-                            aria-label=move || t_string!(i18n, search.clear)
+                            aria-label="Clear search"
                             on:click=move |_| search.set_query.set(String::new())
                         >
                             "×"
@@ -643,9 +641,9 @@ pub fn Header() -> impl IntoView {
                                 let groups = suggestions.get();
                                 let has_suggestions = groups.iter().any(|g| !g.suggestions.is_empty());
                                 if has_suggestions {
-                                    t_string!(i18n, search.suggestions_available)
+                                    "Suggestions available.".to_string()
                                 } else {
-                                    t_string!(i18n, search.no_suggestions)
+                                    "No suggestions available.".to_string()
                                 }
                             }}
                         </div>
@@ -655,7 +653,7 @@ pub fn Header() -> impl IntoView {
 
                             if groups.iter().all(|group| group.suggestions.is_empty()) {
                                 view! {
-                                    <p class="text-base-content/50 text-sm px-3 py-2" aria-live="polite" aria-atomic="true">{move || t_string!(i18n, search.no_suggestions)}</p>
+                                    <p class="text-base-content/50 text-sm px-3 py-2" aria-live="polite" aria-atomic="true">"No suggestions available."</p>
                                 }
                                     .into_any()
                             } else {
@@ -739,15 +737,15 @@ pub fn Header() -> impl IntoView {
 
                     <div class="hidden sm:flex items-center justify-end gap-4 text-xs text-base-content/50 px-3 py-2">
                         <div class="flex items-center gap-1.5">
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.keyboard_esc)}</kbd>
-                            <span>{move || t_string!(i18n, search.hint_dismiss)}</span>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"esc"</kbd>
+                            <span>"to dismiss"</span>
                         </div>
 
                         <span class="text-base-content/30" aria-hidden="true">"|"</span>
 
                         <div class="flex items-center gap-1.5">
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.keyboard_return)}</kbd>
-                            <span>{move || t_string!(i18n, search.hint_select)}</span>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"return"</kbd>
+                            <span>"to select"</span>
                         </div>
                     </div>
                 </div>

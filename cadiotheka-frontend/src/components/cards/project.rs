@@ -1,7 +1,6 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::data::{IconUrl, ProjectData};
-use crate::i18n::{t_string, use_i18n};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use crate::utils::{
@@ -129,7 +128,6 @@ pub fn ProjectCard(
     #[prop(into)] on_click: Callback<()>,
     #[prop(into)] on_author_click: Callback<()>,
 ) -> impl IntoView {
-    let i18n = use_i18n();
     let letter = placeholder_letter(&props.title);
     let bg = placeholder_color(&props.title);
     let icon_url = props.icon_url.as_ref().map(|IconUrl(url)| url.clone());
@@ -141,21 +139,14 @@ pub fn ProjectCard(
     let card_author = props.author.clone();
     let card_author_username = props.author_username.clone();
     let card_title_for_icon_alt = card_title.clone();
-    let icon_alt = Signal::derive(move || {
-        t_string!(
-            i18n,
-            project_card.icon_alt,
-            title = card_title_for_icon_alt.clone()
-        )
-    });
+    let icon_alt = Signal::derive(move || format!("{} icon", card_title_for_icon_alt.clone()));
     let card_title_for_aria = card_title.clone();
     let card_author_for_aria = card_author.clone();
     let aria_label = Signal::derive(move || {
-        t_string!(
-            i18n,
-            project_card.open_details,
-            title = card_title_for_aria.clone(),
-            author = card_author_for_aria.clone()
+        format!(
+            "Open details for {} by {}",
+            card_title_for_aria.clone(),
+            card_author_for_aria.clone()
         )
     });
     let tags = props.tags.clone();
@@ -249,21 +240,21 @@ pub fn ProjectCard(
                         <div class="flex items-center gap-4 text-base-content/60 text-sm">
                             <span
                                 class="flex items-center gap-1"
-                                title={move || t_string!(i18n, project_card.downloads_title, count = format_number_full(downloads))}
+                                title={move || format!("{} downloads", format_number_full(downloads))}
                             >
                                 <DownloadIcon />
                                 {move || format_number(downloads)}
                             </span>
                             <span
                                 class="flex items-center gap-1"
-                                title={move || t_string!(i18n, project_card.favorites_title, count = format_number_full(favorites))}
+                                title={move || format!("{} favorites", format_number_full(favorites))}
                             >
                                 <HeartIcon />
                                 {move || format_number(favorites)}
                             </span>
                             <span
                                 class="flex items-center gap-1"
-                                title={move || t_string!(i18n, project_card.updated_title, time = format_time_full(timestamp))}
+                                title={move || format!("Updated {}", format_time_full(timestamp))}
                             >
                                 <ClockIcon />
                                 {move || format_time_ago(timestamp)}

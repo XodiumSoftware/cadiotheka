@@ -4,14 +4,12 @@ use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::contexts::{AccountsContext, ProfileModalContext, ProjectModalContext};
 use crate::data::IconUrl;
-use crate::i18n::{t_string, use_i18n};
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 
 /// Modal dialog that displays detailed information about a selected project.
 #[component]
 pub fn ProjectModal() -> impl IntoView {
-    let i18n = use_i18n();
     let modal = ProjectModalContext::use_context();
     let on_close = move |_| modal.close();
 
@@ -28,7 +26,7 @@ pub fn ProjectModal() -> impl IntoView {
                     }
                         .into_any(),
                     None => view! {
-                        <p class="text-base-content/50 text-sm">{t_string!(i18n, project_modal.empty)}</p>
+                        <p class="text-base-content/50 text-sm">No project selected.</p>
                     }
                         .into_any(),
                 }
@@ -42,11 +40,10 @@ fn ProjectModalContent(
     #[prop(into)] card: ProjectCardProperties,
     #[prop(into)] on_close: Callback<()>,
 ) -> impl IntoView {
-    let i18n = use_i18n();
     let letter = placeholder_letter(&card.title);
     let bg = placeholder_color(&card.title);
     let icon_url = card.icon_url.as_ref().map(|IconUrl(url)| url.clone());
-    let icon_alt = t_string!(i18n, project_card.icon_alt, title = card.title.clone());
+    let icon_alt = format!("{} icon", card.title.clone());
     let title = card.title.clone();
     let author = card.author.clone();
     let author_username = card.author_username.clone();
@@ -99,7 +96,7 @@ fn ProjectModalContent(
                         {title.clone()}
                     </h2>
                     <p class="text-base-content/70 text-sm">
-                        {t_string!(i18n, project_modal.by)}
+                        by
                         <button
                             type="button"
                             class="font-semibold text-base-content ml-1 hover:text-primary hover:underline"
@@ -111,8 +108,8 @@ fn ProjectModalContent(
                     </p>
                 </div>
                 <div class="hidden sm:flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">
-                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{t_string!(i18n, search.keyboard_esc)}</kbd>
-                    <span>{t_string!(i18n, project_modal.hint_dismiss)}</span>
+                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
+                    <span>to close</span>
                 </div>
             </div>
 
@@ -152,7 +149,7 @@ fn ProjectModalContent(
                     .into_any())}
 
                 <div>
-                    <h3 class="text-sm font-semibold text-base-content mb-1">{t_string!(i18n, project_modal.description)}</h3>
+                    <h3 class="text-sm font-semibold text-base-content mb-1">Description</h3>
                     <MarkdownView source=extended_desc />
                 </div>
             </div>

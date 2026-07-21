@@ -1,13 +1,11 @@
 use crate::components::ui::modals::search::SearchModal;
 use crate::contexts::ProfileModalContext;
-use crate::i18n::{t_string, use_i18n};
 use crate::utils::{format_time_full, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 
 /// Modal dialog that displays profile information for a selected account.
 #[component]
 pub fn ProfileModal() -> impl IntoView {
-    let _i18n = use_i18n();
     let modal = ProfileModalContext::use_context();
     let on_close = move |_| modal.close();
 
@@ -33,7 +31,6 @@ fn ProfileModalContent(
     #[prop(into)] on_close: Callback<()>,
 ) -> impl IntoView {
     let _ = on_close;
-    let i18n = use_i18n();
     let letter = placeholder_letter(&account.username);
     let bg = placeholder_color(&account.username);
     let display_name = account.display_name.clone();
@@ -41,8 +38,8 @@ fn ProfileModalContent(
     let bio = account.bio.clone();
     let avatar_alt = format!("{}'s avatar", display_name);
     let role_label = move || match account.role {
-        crate::data::AccountRole::Creator => t_string!(i18n, account.role_creator),
-        crate::data::AccountRole::Admin => t_string!(i18n, account.role_admin),
+        crate::data::AccountRole::Creator => "Creator".to_string(),
+        crate::data::AccountRole::Admin => "Admin".to_string(),
     };
 
     view! {
@@ -82,18 +79,18 @@ fn ProfileModalContent(
                     </p>
                 </div>
                 <div class="hidden sm:flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">
-                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || t_string!(i18n, search.keyboard_esc)}</kbd>
-                    <span>{move || t_string!(i18n, project_modal.hint_dismiss)}</span>
+                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
+                    <span>to close</span>
                 </div>
             </div>
             <hr class="border-base-content/10" />
             <div class="space-y-2 text-sm text-base-content/80">
                 <p>
-                    <span class="font-semibold text-base-content">{move || t_string!(i18n, account.email_label)}</span>
+                    <span class="font-semibold text-base-content">Email:</span>
                     <span class="ml-1">{account.email.clone()}</span>
                 </p>
                 <p>
-                    <span class="font-semibold text-base-content">{move || t_string!(i18n, account.joined_label)}</span>
+                    <span class="font-semibold text-base-content">Joined:</span>
                     <span class="ml-1">{format_time_full(account.created_at)}</span>
                 </p>
                 {if bio.is_empty() {
