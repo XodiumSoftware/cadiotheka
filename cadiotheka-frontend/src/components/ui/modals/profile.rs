@@ -1,3 +1,4 @@
+use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::modals::search::SearchModal;
 use crate::contexts::{CurrentUserContext, ProfileModalContext};
 use crate::utils::{format_time_full, placeholder_color, placeholder_letter};
@@ -146,7 +147,17 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
             <hr class="border-base-content/10" />
             <div class="space-y-2 text-sm text-base-content/80">
                 <div class="flex items-start gap-2">
-                    <span class="font-semibold text-base-content flex-shrink-0">Bio:</span>
+                    <div class="flex-shrink-0 flex items-center bg-base-200 p-2 relative">
+                        <CornerFrame
+                            style="square"
+                            black=true
+                            class="h-full w-full flex items-center justify-center"
+                        >
+                            <h2 class="text-lg font-bold tracking-tight text-transparent bg-base-100 bg-clip-text [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">
+                                "BIO"
+                            </h2>
+                        </CornerFrame>
+                    </div>
                     {move || {
                         if editing.get() {
                             view! {
