@@ -3,8 +3,7 @@ use crate::components::ui::modals::search::SearchModal;
 use crate::contexts::{CurrentUserContext, ProfileModalContext};
 use crate::utils::{format_time_full, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
-
-/// Maximum length for a user-written bio, matching GitHub's profile bio limit.
+use web_sys::window;
 const MAX_BIO_LENGTH: usize = 160;
 
 /// Modal dialog that displays profile information for a selected account.
@@ -86,6 +85,18 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
         crate::data::AccountRole::Admin => "Admin".to_string(),
     };
 
+    let copy_username = {
+        let username = username.clone();
+        move |_| {
+            let username = username.clone();
+            leptos::task::spawn_local(async move {
+                if let Some(clipboard) = window().map(|w| w.navigator().clipboard()) {
+                    let _ = clipboard.write_text(&username).await;
+                }
+            });
+        }
+    };
+
     view! {
         <div class="space-y-4 flex flex-col min-h-0">
             <div class="flex items-start gap-4">
@@ -110,17 +121,21 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                 }}
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-bold text-primary leading-tight truncate">
-                            {display_name.clone()}
-                        </h2>
+                        <button
+                            type="button"
+                            class="text-left group cursor-pointer"
+                            title={format!("@{}", username)}
+                            aria-label={format!("Copy username @{}", username)}
+                            on:click=copy_username
+                        >
+                            <h2 class="text-xl font-bold text-primary leading-tight truncate group-hover:text-primary/80 transition-colors">
+                                {display_name.clone()}
+                            </h2>
+                        </button>
                         <span class="badge badge-xs badge-outline rounded-none border-base-content/20 text-base-content/70 self-center">
                             {role_label}
                         </span>
                     </div>
-                    <p class="text-base-content/70 text-sm">
-                        {"@"}
-                        {username.clone()}
-                    </p>
                     <div class="flex items-center gap-2 text-xs text-base-content/60 whitespace-nowrap">
                         <span class="flex items-center gap-1" title={format!("Email: {}", account.email)}>
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
