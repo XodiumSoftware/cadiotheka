@@ -106,7 +106,7 @@ where
                     view! {
                         <div class="space-y-2">
                             <div class="flex flex-wrap gap-2" role="group" aria-label=aria_label>
-                                {all_items.iter().cloned().map(|item| {
+                                {all_items.iter().map(|item| {
                                     let item_for_class = item.clone();
                                     let item_for_aria = item.clone();
                                     view! {
@@ -129,7 +129,7 @@ where
                                             }
                                             aria-pressed=move || selected_items.get().contains(&item_for_aria).to_string()
                                         >
-                                            {label_fn(&item)}
+                                            {label_fn(item)}
                                         </button>
                                     }
                                 }).collect_view()}
