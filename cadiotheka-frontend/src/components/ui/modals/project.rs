@@ -56,53 +56,6 @@ pub fn ProjectModal() -> impl IntoView {
     }
 }
 
-/// Wraps children in a clickable area with a hover border and edit-icon overlay.
-/// When `editable` is false, only the children are rendered.
-#[component]
-fn EditableOverlay(
-    editable: bool,
-    aria_label: &'static str,
-    #[prop(into)] on_click: Callback<()>,
-    bordered: bool,
-    children: Children,
-) -> leptos::prelude::AnyView {
-    let children_view = children().into_any();
-    if !editable {
-        return children_view;
-    }
-
-    let border_class = if bordered {
-        "border border-base-content/20 hover:border-primary"
-    } else {
-        "border border-transparent hover:border-primary"
-    };
-
-    view! {
-        <button
-            type="button"
-            class=format!("group relative w-full text-left rounded-none cursor-pointer transition-colors {}", border_class)
-            aria-label=aria_label
-            on:click=move |_| on_click.run(())
-        >
-            {children_view}
-            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <svg
-                    class="w-5 h-5 text-primary"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                </svg>
-            </div>
-        </button>
-    }
-    .into_any()
-}
-
 fn avatar_button(account: &AccountData, class: Option<String>) -> impl IntoView + use<> {
     let display_name = account.display_name.clone();
     let avatar_alt = format!("{}'s avatar", display_name);
@@ -211,10 +164,7 @@ where
                                     <button
                                         type="button"
                                         class=format!("{} {}", badge_class, color_fn(item))
-                                        on:click=move |ev: leptos::web_sys::MouseEvent| {
-                                            ev.stop_propagation();
-                                            on_item_click.run(item_for_click.clone());
-                                        }
+                                        on:click=move |_| on_item_click.run(item_for_click.clone())
                                     >
                                         {label_fn(item)}
                                     </button>
@@ -245,6 +195,7 @@ fn ProjectModalContent(
         .is_some_and(|me| me.role == AccountRole::Admin || me.id == card.author_id);
 
     let (active_tab, set_active_tab) = signal(ProjectDetailsTab::About);
+    let (edit_mode, set_edit_mode) = signal(false);
     let (editing, set_editing) = signal(false);
     let (draft, set_draft) = signal(card.title.clone());
     let (title, set_title) = signal(card.title.clone());
@@ -267,6 +218,25 @@ fn ProjectModalContent(
     let (draft_collaborator_ids, set_draft_collaborator_ids) =
         signal(card.collaborator_ids.clone());
     let project_id = card.id.clone();
+
+    let toggle_edit_mode = move |_| {
+        let next = !edit_mode.get();
+        set_edit_mode.set(next);
+        set_editing.set(next);
+        set_editing_description.set(next);
+        set_editing_extended.set(next);
+        set_editing_platforms.set(next);
+        set_editing_tags.set(next);
+        set_editing_collaborators.set(next);
+        if next {
+            set_draft.set(title.get_untracked());
+            set_draft_description.set(description.get_untracked());
+            set_draft_extended.set(extended_desc.get_untracked());
+            set_draft_platforms.set(supported_platforms.get_untracked());
+            set_draft_tags.set(tags.get_untracked());
+            set_draft_collaborator_ids.set(collaborator_ids.get_untracked());
+        }
+    };
 
     let toggle_favorite_click = {
         let project_id = card.id.clone();
@@ -326,27 +296,12 @@ fn ProjectModalContent(
         }
     });
 
-    let start_edit = move |_| {
-        set_draft.set(title.get());
-        set_editing.set(true);
-    };
-
     let cancel_edit = move || {
         set_editing.set(false);
     };
 
-    let start_edit_description = move || {
-        set_draft_description.set(description.get());
-        set_editing_description.set(true);
-    };
-
     let cancel_edit_description = move || {
         set_editing_description.set(false);
-    };
-
-    let start_edit_tags = move || {
-        set_draft_tags.set(tags.get());
-        set_editing_tags.set(true);
     };
 
     let cancel_edit_tags = move || {
@@ -363,15 +318,6 @@ fn ProjectModalContent(
         });
     });
 
-    let start_edit_platforms = move || {
-        set_draft_platforms.set(supported_platforms.get());
-        set_editing_platforms.set(true);
-    };
-
-    let cancel_edit_platforms = move || {
-        set_editing_platforms.set(false);
-    };
-
     let toggle_platform = Callback::new(move |platform: crate::metadata::platforms::Platform| {
         set_draft_platforms.update(|platforms| {
             if let Some(pos) = platforms.iter().position(|p| *p == platform) {
@@ -382,19 +328,12 @@ fn ProjectModalContent(
         });
     });
 
-    let start_edit_extended = move || {
-        set_draft_extended.set(extended_desc.get());
-        set_editing_extended.set(true);
-        set_active_tab.set(ProjectDetailsTab::About);
+    let cancel_edit_platforms = move || {
+        set_editing_platforms.set(false);
     };
 
     let cancel_edit_extended = move || {
         set_editing_extended.set(false);
-    };
-
-    let start_edit_collaborators = move || {
-        set_draft_collaborator_ids.set(collaborator_ids.get());
-        set_editing_collaborators.set(true);
     };
 
     let cancel_edit_collaborators = move || {
@@ -696,55 +635,62 @@ fn ProjectModalContent(
                     {move || {
                         if editing.get() {
                             view! {
-                                <div class="flex items-center gap-2">
-                                    <input
-                                        class=move || {
-                                            let at_max = draft.get().len() >= MAX_TITLE_LENGTH;
-                                            format!(
-                                                "input input-sm input-bordered flex-1 text-base-content text-xl font-bold {}",
-                                                if at_max { "hover:border-error" } else { "" }
-                                            )
-                                        }
-                                        type="text"
-                                        maxlength=MAX_TITLE_LENGTH.to_string()
-                                        prop:value=draft.get()
-                                        on:input=move |ev| set_draft.set(event_target_value(&ev))
-                                        on:keyup=move |ev| {
-                                            match ev.key().as_str() {
-                                                "Enter" => commit_edit.run(draft.get()),
-                                                "Escape" => cancel_edit(),
-                                                _ => {}
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-2">
+                                        <input
+                                            class=move || {
+                                                let at_max = draft.get().len() >= MAX_TITLE_LENGTH;
+                                                format!(
+                                                    "input input-sm input-bordered flex-1 text-base-content text-xl font-bold {}",
+                                                    if at_max { "hover:border-error" } else { "" }
+                                                )
                                             }
-                                        }
-                                        autofocus
-                                    />
-                                    <span class=move || {
-                                        if draft.get().len() >= MAX_TITLE_LENGTH {
-                                            "text-xs text-error flex-shrink-0"
-                                        } else {
-                                            "text-xs text-base-content/50 flex-shrink-0"
-                                        }
-                                    }>
-                                        {move || format!("{}/{}", draft.get().len(), MAX_TITLE_LENGTH)}
-                                    </span>
+                                            type="text"
+                                            maxlength=MAX_TITLE_LENGTH.to_string()
+                                            prop:value=draft.get()
+                                            on:input=move |ev| set_draft.set(event_target_value(&ev))
+                                            on:keyup=move |ev| {
+                                                match ev.key().as_str() {
+                                                    "Enter" => commit_edit.run(draft.get()),
+                                                    "Escape" => cancel_edit(),
+                                                    _ => {}
+                                                }
+                                            }
+                                            autofocus
+                                        />
+                                        <span class=move || {
+                                            if draft.get().len() >= MAX_TITLE_LENGTH {
+                                                "text-xs text-error flex-shrink-0"
+                                            } else {
+                                                "text-xs text-base-content/50 flex-shrink-0"
+                                            }
+                                        }>
+                                            {move || format!("{}/{}", draft.get().len(), MAX_TITLE_LENGTH)}
+                                        </span>
+                                    </div>
+                                    <div class="flex justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            class="btn btn-ghost btn-xs"
+                                            on:click=move |_| cancel_edit()
+                                        >"Cancel"</button>
+                                        <button
+                                            type="button"
+                                            class="btn btn-primary btn-xs"
+                                            on:click=move |_| commit_edit.run(draft.get())
+                                        >"Save"</button>
+                                    </div>
                                 </div>
                             }
                                 .into_any()
                         } else {
                             view! {
-                                <EditableOverlay
-                                    editable=is_editable
-                                    aria_label="Edit project title"
-                                    on_click=Callback::new(move |_| start_edit(()))
-                                    bordered=false
+                                <h2
+                                    class="text-xl font-bold text-primary leading-tight truncate"
+                                    title={title.get()}
                                 >
-                                    <h2
-                                        class="text-xl font-bold text-primary leading-tight truncate"
-                                        title={title.get()}
-                                    >
-                                        {title.get()}
-                                    </h2>
-                                </EditableOverlay>
+                                    {title.get()}
+                                </h2>
                             }
                                 .into_any()
                         }
@@ -800,79 +746,62 @@ fn ProjectModalContent(
                                     .into_any()
                             } else {
                                 view! {
-                                    <EditableOverlay
-                                        editable=is_editable
-                                        aria_label="Edit short description"
-                                        on_click=Callback::new(move |_| start_edit_description())
-                                        bordered=false
-                                    >
-                                        <p class="text-base-content/70 text-sm whitespace-pre-wrap">{description.get()}</p>
-                                    </EditableOverlay>
+                                    <p class="text-base-content/70 text-sm whitespace-pre-wrap">{description.get()}</p>
                                 }
                                     .into_any()
                             }
                         }}
                     </div>
                 </div>
-                <div class="hidden sm:flex items-center gap-2 text-xs text-base-content/50 flex-shrink-0">
-                    {move || {
-                        if editing.get() {
-                            view! {
-                                <>
-                                    <button
-                                        type="button"
-                                        class="btn btn-ghost btn-xs"
-                                        on:click=move |_| cancel_edit()
-                                    >"Cancel"</button>
-                                    <button
-                                        type="button"
-                                        class="btn btn-primary btn-xs"
-                                        on:click=move |_| commit_edit.run(draft.get())
-                                    >"Save"</button>
-                                </>
+                <div class="hidden sm:flex items-center gap-2 text-xs flex-shrink-0">
+                    {is_editable.then(|| view! {
+                        <button
+                            type="button"
+                            class=move || {
+                                if edit_mode.get() {
+                                    "btn btn-primary btn-xs"
+                                } else {
+                                    "btn btn-ghost btn-xs"
+                                }
                             }
-                                .into_any()
-                        } else {
-                            view! {
-                                <>
-                                    <button
-                                        type="button"
-                                        class=move || {
-                                            if is_favorited.get() {
-                                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error"
-                                            } else {
-                                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error"
-                                            }
-                                        }
-                                        aria-label=move || {
-                                            if is_favorited.get() {
-                                                format!("Remove {} from favorites", title.get())
-                                            } else {
-                                                format!("Add {} to favorites", title.get())
-                                            }
-                                        }
-                                        title=move || {
-                                            if is_favorited.get() {
-                                                "Remove favorite".to_string()
-                                            } else {
-                                                "Add favorite".to_string()
-                                            }
-                                        }
-                                        on:click={
-                                            let cb = toggle_favorite_click;
-                                            move |_| cb.run(())
-                                        }
-                                    >
-                                        <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
-                                        <span>{move || favorite_count.get().to_string()}</span>
-                                    </button>
-                                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
-                                    <span>to close</span>
-                                </>
+                            on:click=toggle_edit_mode
+                        >
+                            {move || if edit_mode.get() { "Done" } else { "Edit" }}
+                        </button>
+                    })}
+                    <button
+                        type="button"
+                        class=move || {
+                            if is_favorited.get() {
+                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50"
+                            } else {
+                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error"
                             }
-                                .into_any()
                         }
-                    }}
+                        aria-label=move || {
+                            if is_favorited.get() {
+                                format!("Remove {} from favorites", title.get())
+                            } else {
+                                format!("Add {} to favorites", title.get())
+                            }
+                        }
+                        title=move || {
+                            if is_favorited.get() {
+                                "Remove favorite".to_string()
+                            } else {
+                                "Add favorite".to_string()
+                            }
+                        }
+                        on:click={
+                            let cb = toggle_favorite_click;
+                            move |_| cb.run(())
+                        }
+                    >
+                        <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
+                        <span>{move || favorite_count.get().to_string()}</span>
+                    </button>
+                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
+                    <span class="text-base-content/50">to close</span>
                 </div>
             </div>
 
@@ -917,16 +846,9 @@ fn ProjectModalContent(
                                             .into_any()
                                     } else {
                                         view! {
-                                            <EditableOverlay
-                                                editable=is_editable
-                                                aria_label="Edit extended description"
-                                                on_click=Callback::new(move |_| start_edit_extended())
-                                                bordered=true
-                                            >
-                                                <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
-                                                    <MarkdownView source=extended_desc.get() />
-                                                </div>
-                                            </EditableOverlay>
+                                            <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
+                                                <MarkdownView source=extended_desc.get() />
+                                            </div>
                                         }
                                             .into_any()
                                     }
@@ -949,89 +871,44 @@ fn ProjectModalContent(
                         <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
 
                         <div class="space-y-4">
-                            {move || {
-                                let platforms_card = view! {
-                                    <div class="rounded-none bg-base-200/20 p-4">
-                                        <EditableChipSection
-                                            title="Supported platforms"
-                                            aria_label="Supported platforms"
-                                            items=platforms.get()
-                                            all_items=crate::metadata::platforms::Platform::all().to_vec()
-                                            editing=editing_platforms.into()
-                                            on_cancel=Callback::new(move |_| cancel_edit_platforms())
-                                            on_toggle=toggle_platform
-                                            on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
-                                            on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
-                                            label_fn=crate::metadata::platforms::platform_label
-                                            color_fn=crate::metadata::platforms::platform_color
-                                            selected_items=draft_platforms.into()
-                                            badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                                        />
-                                    </div>
-                                };
-                                if editing_platforms.get() {
-                                    platforms_card.into_any()
-                                } else {
-                                    view! {
-                                        <EditableOverlay
-                                            editable=is_editable
-                                            aria_label="Edit supported platforms"
-                                            on_click=Callback::new(move |_| start_edit_platforms())
-                                            bordered=true
-                                        >
-                                            {platforms_card}
-                                        </EditableOverlay>
-                                    }
-                                        .into_any()
-                                }
-                            }}
+                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                <EditableChipSection
+                                    title="Supported platforms"
+                                    aria_label="Supported platforms"
+                                    items=platforms.get()
+                                    all_items=crate::metadata::platforms::Platform::all().to_vec()
+                                    editing=editing_platforms.into()
+                                    on_cancel=Callback::new(move |_| cancel_edit_platforms())
+                                    on_toggle=toggle_platform
+                                    on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
+                                    on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
+                                    label_fn=crate::metadata::platforms::platform_label
+                                    color_fn=crate::metadata::platforms::platform_color
+                                    selected_items=draft_platforms.into()
+                                    badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                />
+                            </div>
 
-                            {move || {
-                                let tags_card = view! {
-                                    <div class="rounded-none bg-base-200/20 p-4">
-                                        <EditableChipSection
-                                            title="Tags"
-                                            aria_label="Tags"
-                                            items=tags.get()
-                                            all_items=crate::metadata::tags::Tag::all().to_vec()
-                                            editing=editing_tags.into()
-                                            on_cancel=Callback::new(move |_| cancel_edit_tags())
-                                            on_toggle=toggle_tag
-                                            on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
-                                            on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
-                                            label_fn=crate::metadata::tags::tag_label
-                                            color_fn=crate::metadata::tags::tag_color
-                                            selected_items=draft_tags.into()
-                                            badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                                        />
-                                    </div>
-                                };
-                                if editing_tags.get() {
-                                    tags_card.into_any()
-                                } else {
-                                    view! {
-                                        <EditableOverlay
-                                            editable=is_editable
-                                            aria_label="Edit tags"
-                                            on_click=Callback::new(move |_| start_edit_tags())
-                                            bordered=true
-                                        >
-                                            {tags_card}
-                                        </EditableOverlay>
-                                    }
-                                        .into_any()
-                                }
-                            }}
+                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                <EditableChipSection
+                                    title="Tags"
+                                    aria_label="Tags"
+                                    items=tags.get()
+                                    all_items=crate::metadata::tags::Tag::all().to_vec()
+                                    editing=editing_tags.into()
+                                    on_cancel=Callback::new(move |_| cancel_edit_tags())
+                                    on_toggle=toggle_tag
+                                    on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
+                                    on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
+                                    label_fn=crate::metadata::tags::tag_label
+                                    color_fn=crate::metadata::tags::tag_color
+                                    selected_items=draft_tags.into()
+                                    badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                />
+                            </div>
 
-                            <div class="rounded-none border border-base-content/10 hover:border-primary transition-colors bg-base-200/20 p-4 space-y-3">
-                                <EditableOverlay
-                                    editable=is_editable
-                                    aria_label="Edit authors"
-                                    on_click=Callback::new(move |_| start_edit_collaborators())
-                                    bordered=false
-                                >
-                                    <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
-                                </EditableOverlay>
+                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                                <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
                                 {move || {
                                     let all_accounts = accounts.accounts.get();
                                     let author_id = author_id.clone();
