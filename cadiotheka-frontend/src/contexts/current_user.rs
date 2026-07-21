@@ -89,6 +89,41 @@ struct MeResponse {
     account: AccountData,
 }
 
+/// Updates the current user's bio on the backend and returns the new bio on
+/// success, or `None` if the request failed.
+pub async fn update_bio(new_bio: String) -> Option<String> {
+    let url = auth_url("/me");
+    let request = match Request::put(&url)
+        .credentials(RequestCredentials::Include)
+        .header("Content-Type", "application/json")
+        .body(serde_json::json!({ "bio": new_bio }).to_string())
+    {
+        Ok(req) => req,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to build bio update request: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    match request.send().await {
+        Ok(response) if response.ok() => Some(new_bio),
+        Ok(response) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to update bio at {url}: HTTP {}", response.status()).into(),
+            );
+            None
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to update bio at {url}: {err:?}").into(),
+            );
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

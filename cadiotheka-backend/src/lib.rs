@@ -111,6 +111,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .get_async("/login/google", api::auth::google_login)
         .get_async("/auth/google/callback", api::auth::google_callback)
         .get_async("/auth/me", api::session::me)
+        .put_async("/auth/me", api::session::update_me)
         .get_async("/auth/logout", api::session::logout)
         .run(req, env)
         .await;

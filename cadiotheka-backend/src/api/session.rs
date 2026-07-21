@@ -221,6 +221,27 @@ pub async fn require_account(req: &Request, ctx: &RouteContext<()>) -> Result<Ac
     }
 }
 
+/// Updates the currently authenticated account.
+///
+/// Accepts a JSON body with the fields the user is allowed to edit themselves.
+/// Currently only `bio` is supported.
+pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let account = require_account(&req, &ctx).await?;
+    #[derive(Deserialize)]
+    struct UpdatePayload {
+        bio: String,
+    }
+    let payload: UpdatePayload = req.json().await?;
+
+    let db = ctx.env.d1(crate::DB_BINDING)?;
+    db.prepare("UPDATE accounts SET bio = ?1 WHERE id = ?2")
+        .bind(&[payload.bio.into(), account.id.into()])?
+        .run()
+        .await?;
+
+    Response::empty()
+}
+
 /// Returns the currently authenticated account wrapped in `{ "account": ... }`,
 /// or 401 if the request is not authenticated.
 pub async fn me(req: Request, ctx: RouteContext<()>) -> Result<Response> {

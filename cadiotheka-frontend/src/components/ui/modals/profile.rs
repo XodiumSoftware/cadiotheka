@@ -1,5 +1,5 @@
 use crate::components::ui::modals::search::SearchModal;
-use crate::contexts::ProfileModalContext;
+use crate::contexts::{CurrentUserContext, ProfileModalContext};
 use crate::utils::{format_time_full, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 
@@ -17,7 +17,7 @@ pub fn ProfileModal() -> impl IntoView {
             {move || {
                 modal.account.get().map(|account| {
                     view! {
-                        <ProfileModalContent account=account on_close=on_close />
+                        <ProfileModalContent account=account />
                     }
                 })
             }}
@@ -26,16 +26,56 @@ pub fn ProfileModal() -> impl IntoView {
 }
 
 #[component]
-fn ProfileModalContent(
-    #[prop(into)] account: crate::data::AccountData,
-    #[prop(into)] on_close: Callback<()>,
-) -> impl IntoView {
-    let _ = on_close;
+fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl IntoView {
+    let current_user = CurrentUserContext::use_context();
+    let modal = ProfileModalContext::use_context();
+    let is_editable = current_user
+        .account
+        .get()
+        .is_some_and(|me| me.id == account.id);
+
+    let (editing, set_editing) = signal(false);
+    let (draft, set_draft) = signal(account.bio.clone());
+    let (bio, set_bio) = signal(account.bio.clone());
+
+    let start_edit = move |_| {
+        set_draft.set(bio.get());
+        set_editing.set(true);
+    };
+
+    let cancel_edit = move || {
+        set_editing.set(false);
+    };
+
+    let commit_edit = move |draft_value: String| {
+        let current_user = current_user;
+        let modal_account = modal.set_account;
+        let set_current_user = current_user.set_account;
+        let set_bio = set_bio;
+        let set_editing = set_editing;
+
+        leptos::task::spawn_local(async move {
+            if let Some(new_bio) = crate::contexts::current_user::update_bio(draft_value).await {
+                set_bio.set(new_bio.clone());
+                modal_account.update(|opt| {
+                    if let Some(acc) = opt.as_mut() {
+                        acc.bio.clone_from(&new_bio);
+                    }
+                });
+                set_current_user.update(|opt| {
+                    if let Some(acc) = opt.as_mut() {
+                        acc.bio.clone_from(&new_bio);
+                    }
+                });
+            }
+            set_editing.set(false);
+        });
+    };
+
     let letter = placeholder_letter(&account.username);
     let bg = placeholder_color(&account.username);
     let display_name = account.display_name.clone();
     let username = account.username.clone();
-    let bio = account.bio.clone();
     let avatar_alt = format!("{}'s avatar", display_name);
     let role_label = move || match account.role {
         crate::data::AccountRole::Creator => "Creator".to_string(),
@@ -93,16 +133,57 @@ fn ProfileModalContent(
                     <span class="font-semibold text-base-content">Joined:</span>
                     <span class="ml-1">{format_time_full(account.created_at)}</span>
                 </p>
-                {if bio.is_empty() {
-                    None
-                } else {
-                    Some(view! {
-                        <p>
-                            <span class="font-semibold text-base-content">Bio:</span>
-                            <span class="ml-1 text-base-content/70">{bio}</span>
-                        </p>
-                    })
-                }}
+                <div class="flex items-start gap-2">
+                    <span class="font-semibold text-base-content flex-shrink-0">Bio:</span>
+                    {move || {
+                        if editing.get() {
+                            view! {
+                                <input
+                                    class="input input-sm input-bordered flex-1 text-base-content"
+                                    type="text"
+                                    prop:value=draft.get()
+                                    on:input=move |ev| set_draft.set(event_target_value(&ev))
+                                    on:keyup=move |ev| {
+                                        match ev.key().as_str() {
+                                            "Enter" => commit_edit(draft.get()),
+                                            "Escape" => cancel_edit(),
+                                            _ => {}
+                                        }
+                                    }
+                                    autofocus
+                                />
+                            }
+                            .into_any()
+                        } else {
+                            view! {
+                                <div class="flex items-center gap-2 flex-1">
+                                    <span class="text-base-content/70">{bio.get()}</span>
+                                    {is_editable.then(|| view! {
+                                        <button
+                                            type="button"
+                                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
+                                            aria-label="Edit bio"
+                                            on:click=start_edit
+                                        >
+                                            <svg
+                                                class="w-4 h-4 text-base-content/60"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                            </svg>
+                                        </button>
+                                    })}
+                                </div>
+                            }
+                            .into_any()
+                        }
+                    }}
+                </div>
             </div>
         </div>
     }
