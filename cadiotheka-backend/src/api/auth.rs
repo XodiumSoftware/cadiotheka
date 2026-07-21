@@ -13,7 +13,7 @@ use crate::api::accounts::{
 use crate::api::session::create_session;
 use crate::utils::{public_origin, query_param, rust_err};
 
-const AUTH_KV_BINDING: &str = "AUTH_KV";
+const AUTH_KV_BINDING: &str = "AUTH";
 const OAUTH_STATE_TTL_SECONDS: u64 = 10 * 60;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

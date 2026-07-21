@@ -8,11 +8,11 @@ database_name = "cadiotheka"
 database_id = "c4694439-e7f4-48e0-9e2a-a7e431a8fbce"
 
 [[kv_namespaces]]
-binding = "AUTH_KV"
+binding = "AUTH"
 id = "ba027b7e98784b0dae06ab649b1738e4"
 
 [[r2_buckets]]
-binding = "CADIOTHEKA_PROJECTS_ICONS"
+binding = "PI"
 bucket_name = "cadiotheka-projects-icons"
 
 [observability.logs]

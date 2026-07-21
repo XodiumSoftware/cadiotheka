@@ -1,7 +1,7 @@
 /// Name of the D1 binding configured in `wrangler.toml`.
 pub(crate) const DB_BINDING: &str = "DB";
 /// Name of the R2 binding configured in `wrangler.toml` for project icons.
-pub(crate) const ICONS_R2_BINDING: &str = "CADIOTHEKA_PROJECTS_ICONS";
+pub(crate) const ICONS_R2_BINDING: &str = "PI";
 
 /// Origins allowed to call the API from a browser.
 const ALLOWED_ORIGINS: &[&str] = &["https://cadiotheka.com", "https://www.cadiotheka.com"];

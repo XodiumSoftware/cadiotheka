@@ -109,7 +109,7 @@ npx wrangler dev
 
 The local API is available at <http://localhost:8787/data/accounts> by default.
 
-Project icons are uploaded through the backend and stored in the `CADIOTHEKA_PROJECTS_ICONS` R2 bucket. D1 stores only the generated object key, and the frontend loads the image through the backend icon route.
+Project icons are uploaded through the backend and stored in the `PI` R2 binding (backed by the `cadiotheka-projects-icons` bucket). D1 stores only the generated object key, and the frontend loads the image through the backend icon route.
 
 ## Create the Database Tables
 
@@ -121,11 +121,16 @@ npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
 ```
 
+The backend uses these short Worker bindings:
+- `DB` for the D1 database
+- `AUTH` for the KV namespace used by OAuth state and sessions
+- `PI` for the R2 bucket that stores project icons
+
 For project icon uploads, also ensure `wrangler.toml` includes an R2 bucket binding:
 
 ```toml
 [[r2_buckets]]
-binding = "CADIOTHEKA_PROJECTS_ICONS"
+binding = "PI"
 bucket_name = "cadiotheka-projects-icons"
 ```
 
@@ -241,10 +246,11 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
 
 3. Update `wrangler.toml` with:
    - the D1 database ID from step 1
+   - the short bindings `DB`, `AUTH`, and `PI` as needed
    - the R2 binding:
    ```toml
    [[r2_buckets]]
-   binding = "CADIOTHEKA_PROJECTS_ICONS"
+   binding = "PI"
    bucket_name = "cadiotheka-projects-icons"
    ```
 

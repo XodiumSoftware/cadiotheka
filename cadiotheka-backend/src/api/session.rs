@@ -7,7 +7,7 @@ use worker::*;
 use crate::api::accounts::{Account, fetch_account_by_provider};
 use crate::utils::{is_https_request, public_origin, rust_err, safe_redirect_target};
 
-const AUTH_KV_BINDING: &str = "AUTH_KV";
+const AUTH_KV_BINDING: &str = "AUTH";
 const SESSION_COOKIE_NAME_PREFIX: &str = "__Host-session";
 const SESSION_COOKIE_NAME_PLAIN: &str = "session";
 const SESSION_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;

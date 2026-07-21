@@ -91,7 +91,7 @@ npx wrangler dev
 
 The backend API is available at <http://localhost:8787/data/accounts> by default.
 
-Project icons are uploaded through the backend and stored in the `CADIOTHEKA_PROJECTS_ICONS` R2 bucket. The database stores only the generated R2 object key (for example `icons/<project_id>/<uuid>`), and the frontend renders icons through the backend icon route.
+Project icons are uploaded through the backend and stored in the `PI` R2 binding (backed by the `cadiotheka-projects-icons` bucket). The database stores only the generated R2 object key (for example `icons/<project_id>/<uuid>`), and the frontend renders icons through the backend icon route.
 
 To create the local D1 database tables:
 
@@ -105,7 +105,7 @@ For icon uploads, also create or bind an R2 bucket in `wrangler.toml`:
 
 ```toml
 [[r2_buckets]]
-binding = "CADIOTHEKA_PROJECTS_ICONS"
+binding = "PI"
 bucket_name = "cadiotheka-projects-icons"
 ```
 
@@ -148,9 +148,14 @@ The static site is placed in `cadiotheka-frontend/dist/`.
 
 2. Update `cadiotheka-backend/wrangler.toml` with the database ID from step 1.
 
+   The backend uses these short Worker bindings:
+   - `DB` for the D1 database
+   - `AUTH` for the KV namespace used by OAuth state and sessions
+   - `PI` for the R2 bucket that stores project icons
+
 3. Create a KV namespace for OAuth state and sessions:
    ```bash
-   npx wrangler kv:namespace create AUTH_KV
+   npx wrangler kv:namespace create AUTH
    ```
 
    Then copy the resulting ID into `cadiotheka-backend/wrangler.toml` under `[[kv_namespaces]]`.
