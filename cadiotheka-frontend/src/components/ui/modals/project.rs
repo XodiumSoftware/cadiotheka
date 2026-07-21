@@ -121,6 +121,7 @@ fn EditableChipSection<T>(
     on_save: Callback<Vec<T>>,
     on_item_click: Callback<T>,
     label_fn: fn(&T) -> &'static str,
+    color_fn: fn(&T) -> &'static str,
     selected_items: Signal<Vec<T>>,
     badge_class: &'static str,
 ) -> impl IntoView
@@ -195,7 +196,7 @@ where
                                 view! {
                                     <button
                                         type="button"
-                                        class=badge_class
+                                        class=format!("{} {}", badge_class, color_fn(item))
                                         on:click=move |_| on_item_click.run(item_for_click.clone())
                                     >
                                         {label_fn(item)}
@@ -833,6 +834,7 @@ fn ProjectModalContent(
                                 on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
                                 on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
                                 label_fn=crate::metadata::platforms::platform_label
+                                color_fn=crate::metadata::platforms::platform_color
                                 selected_items=draft_platforms.into()
                                 badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
                             />
@@ -852,6 +854,7 @@ fn ProjectModalContent(
                                 on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
                                 on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
                                 label_fn=crate::metadata::tags::tag_label
+                                color_fn=crate::metadata::tags::tag_color
                                 selected_items=draft_tags.into()
                                 badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
                             />
