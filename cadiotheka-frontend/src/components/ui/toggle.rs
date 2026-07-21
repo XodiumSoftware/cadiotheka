@@ -83,7 +83,6 @@ pub fn IconToggle(
             <input
                 id=input_id
                 type="checkbox"
-                class="sr-only peer"
                 prop:checked=move || checked.get()
                 on:change=move |ev| {
                     if let Some(input) = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok()) {
