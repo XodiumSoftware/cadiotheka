@@ -183,8 +183,7 @@ fn ProjectModalContent(
     let (editing, set_editing) = signal(false);
     let (draft, set_draft) = signal(card.title.clone());
     let (title, set_title) = signal(card.title.clone());
-    let (editing_icon, set_editing_icon) = signal(false);
-    let (selected_icon_file, set_selected_icon_file) = signal(Option::<web_sys::File>::None);
+    let icon_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (icon_url, set_icon_url) = signal(card.icon_url.clone());
     let (editing_description, set_editing_description) = signal(false);
     let (draft_description, set_draft_description) = signal(card.description.clone());
@@ -207,11 +206,6 @@ fn ProjectModalContent(
 
     let cancel_edit = move || {
         set_editing.set(false);
-    };
-
-    let cancel_edit_icon = move || {
-        set_selected_icon_file.set(None);
-        set_editing_icon.set(false);
     };
 
     let start_edit_description = move || {
@@ -275,8 +269,6 @@ fn ProjectModalContent(
         Callback::new(move |file: web_sys::File| {
             let project_id = project_id.clone();
             let set_icon_url = set_icon_url;
-            let set_editing_icon = set_editing_icon;
-            let set_selected_icon_file = set_selected_icon_file;
             let modal_card = modal.set_card;
             let set_projects = projects_ctx.set_projects;
 
@@ -297,8 +289,6 @@ fn ProjectModalContent(
                         }
                     });
                 }
-                set_selected_icon_file.set(None);
-                set_editing_icon.set(false);
             });
         })
     };
@@ -490,6 +480,26 @@ fn ProjectModalContent(
         <div class="space-y-4 flex flex-col min-h-0">
             <div class="flex items-start gap-4 relative">
                 <div class="relative flex-shrink-0">
+                    <input
+                        node_ref=icon_input_ref
+                        type="file"
+                        class="hidden"
+                        accept="image/png,image/jpeg,image/webp"
+                        on:change=move |ev| {
+                            let input = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok());
+                            let Some(input) = input else {
+                                return;
+                            };
+                            let Some(files) = input.files() else {
+                                return;
+                            };
+                            let Some(file) = files.get(0).and_then(|blob| blob.dyn_into::<web_sys::File>().ok()) else {
+                                return;
+                            };
+                            commit_edit_icon.run(file);
+                            input.set_value("");
+                        }
+                    />
                     {move || {
                         view! {
                             <ProjectIconPicker
@@ -497,61 +507,14 @@ fn ProjectModalContent(
                                 title=move || title.get()
                                 editable={Signal::derive(move || is_editable)}
                                 on_click=move |_| {
-                                    set_selected_icon_file.set(None);
-                                    set_editing_icon.update(|v| *v = !*v);
+                                    if let Some(input) = icon_input_ref.get() {
+                                        input.click();
+                                    }
                                 }
                                 class="w-16 h-16"
                             />
                         }
                             .into_any()
-                    }}
-                    {move || {
-                        if editing_icon.get() {
-                            view! {
-                                <div class="absolute top-full left-0 mt-2 z-10 w-max max-w-[24rem]">
-                                    <div class="flex items-center gap-2">
-                                        <input
-                                            class="file-input file-input-bordered file-input-sm w-56 text-base-content"
-                                            type="file"
-                                            accept="image/png,image/jpeg,image/webp"
-                                            on:change=move |ev| {
-                                                let input = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok());
-                                                let Some(input) = input else {
-                                                    return;
-                                                };
-                                                let Some(files) = input.files() else {
-                                                    set_selected_icon_file.set(None);
-                                                    return;
-                                                };
-                                                let Some(file) = files.get(0).and_then(|blob| blob.dyn_into::<web_sys::File>().ok()) else {
-                                                    set_selected_icon_file.set(None);
-                                                    return;
-                                                };
-                                                set_selected_icon_file.set(Some(file));
-                                            }
-                                            autofocus
-                                        />
-                                        <button
-                                            type="button"
-                                            class="btn btn-ghost btn-xs whitespace-nowrap"
-                                            on:click=move |_| cancel_edit_icon()
-                                        >"Cancel"</button>
-                                        <button
-                                            type="button"
-                                            class="btn btn-primary btn-xs whitespace-nowrap"
-                                            on:click=move |_| {
-                                                if let Some(file) = selected_icon_file.get() {
-                                                    commit_edit_icon.run(file);
-                                                }
-                                            }
-                                        >"Upload"</button>
-                                    </div>
-                                </div>
-                            }
-                                .into_any()
-                        } else {
-                            ().into_any()
-                        }
                     }}
                 </div>
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
