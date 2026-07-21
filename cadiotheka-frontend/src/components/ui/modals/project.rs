@@ -56,30 +56,6 @@ pub fn ProjectModal() -> impl IntoView {
     }
 }
 
-#[component]
-fn EditIconButton(aria_label: &'static str, #[prop(into)] on_click: Callback<()>) -> impl IntoView {
-    view! {
-        <button
-            type="button"
-            class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
-            aria-label=aria_label
-            on:click=move |_| on_click.run(())
-        >
-            <svg
-                class="w-4 h-4 text-base-content/60"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-            >
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-            </svg>
-        </button>
-    }
-}
-
 /// Wraps children in a clickable area with a hover border and edit-icon overlay.
 /// When `editable` is false, only the children are rendered.
 #[component]
@@ -897,14 +873,6 @@ fn ProjectModalContent(
                             on:click=move |_| set_active_tab.set(ProjectDetailsTab::Versions)
                         >"Versions"</button>
                     </div>
-                    {move || {
-                        (active_tab.get() == ProjectDetailsTab::About && is_editable).then(|| view! {
-                            <EditIconButton
-                                aria_label="Edit extended description"
-                                on_click=Callback::new(move |_| start_edit_extended())
-                            />
-                        })
-                    }}
                 </div>
                 <div class="overflow-y-auto flex-1 min-h-0">
                     <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start">
