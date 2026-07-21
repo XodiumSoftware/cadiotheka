@@ -4,6 +4,7 @@ use worker::*;
 use crate::DB_BINDING;
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
+use crate::utils::js_option;
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
 
@@ -115,7 +116,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             (payload.downloads as f64).into(),
             (payload.favorites as f64).into(),
             payload.timestamp.into(),
-            payload.icon_url.into(),
+            js_option(payload.icon_url),
         ])?
         .run()
         .await?;
@@ -161,7 +162,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             (payload.downloads as f64).into(),
             (payload.favorites as f64).into(),
             payload.timestamp.into(),
-            payload.icon_url.into(),
+            js_option(payload.icon_url),
             id.into(),
         ])?
         .run()

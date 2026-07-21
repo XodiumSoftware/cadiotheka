@@ -3,7 +3,7 @@ use worker::*;
 
 use crate::DB_BINDING;
 use crate::api::session::require_account;
-use crate::utils::now_utc;
+use crate::utils::{js_option, now_utc};
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT id, username, display_name, email, role, bio, avatar_url, created_at, verified, provider, provider_id FROM accounts";
 
@@ -132,7 +132,7 @@ pub async fn create_oauth_account(
             account.email.clone().into(),
             account.role.clone().into(),
             account.bio.clone().into(),
-            account.avatar_url.clone().into(),
+            js_option(account.avatar_url.clone()),
             account.created_at.clone().into(),
             account.verified.into(),
             account.provider.clone().into(),
@@ -216,7 +216,7 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
             payload.email.into(),
             payload.role.into(),
             payload.bio.into(),
-            payload.avatar_url.into(),
+            js_option(payload.avatar_url),
             payload.created_at.into(),
             payload.verified.into(),
             payload.provider.into(),
@@ -249,7 +249,7 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
             payload.email.into(),
             payload.role.into(),
             payload.bio.into(),
-            payload.avatar_url.into(),
+            js_option(payload.avatar_url),
             payload.created_at.into(),
             payload.verified.into(),
             payload.provider.into(),

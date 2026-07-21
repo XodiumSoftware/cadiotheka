@@ -5,6 +5,18 @@ pub fn rust_err<E: std::fmt::Display>(err: E) -> worker::Error {
     worker::Error::RustError(err.to_string())
 }
 
+/// Converts an optional string into a D1-compatible `JsValue`.
+///
+/// D1 rejects JavaScript `undefined` values, which is what `Option::into`
+/// currently produces for `None`. This helper emits an explicit SQL `NULL`
+/// (`JsValue::NULL`) instead.
+pub fn js_option(value: Option<String>) -> wasm_bindgen::JsValue {
+    match value {
+        Some(s) => s.into(),
+        None => wasm_bindgen::JsValue::NULL,
+    }
+}
+
 /// Returns the current UTC time using the JavaScript `Date` API.
 ///
 /// `std::time` is unavailable in the Workers WASM runtime, so this is the

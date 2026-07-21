@@ -172,6 +172,7 @@ dependencies = [
  "time",
  "url",
  "uuid",
+ "wasm-bindgen",
  "worker",
 ]
 
