@@ -3,7 +3,7 @@ use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::project_icon_picker::ProjectIconPicker;
-use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
+use crate::components::ui::toggle::EditToggle;
 use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
     SearchContext,
@@ -756,7 +756,7 @@ fn ProjectModalContent(
                 </div>
                 <div class="hidden sm:flex items-center gap-2 text-xs flex-shrink-0">
                     {is_editable.then(|| view! {
-                        <ToggleSliderWithSlashLabel
+                        <EditToggle
                             checked=Signal::derive(move || edit_mode.get())
                             on_change=Callback::new(move |checked: bool| {
                                 let current = edit_mode.get_untracked();
@@ -764,8 +764,6 @@ fn ProjectModalContent(
                                     toggle_edit_mode(());
                                 }
                             })
-                            label_left=Signal::derive(move || "View".to_string())
-                            label_right=Signal::derive(move || "Edit".to_string())
                         />
                     })}
                     <button

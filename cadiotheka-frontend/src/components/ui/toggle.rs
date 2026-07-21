@@ -41,6 +41,89 @@ pub fn ToggleSlider(
     }
 }
 
+/// DaisyUI `swap` checkbox toggle that swaps between two SVG icon strings.
+/// `icon_off` is shown when unchecked, `icon_on` when checked.
+#[component]
+pub fn IconToggle(
+    #[prop(into)] checked: Signal<bool>,
+    #[prop(into)] on_change: Callback<bool>,
+    #[prop(into)] icon_off: String,
+    #[prop(into)] icon_on: String,
+    #[prop(optional)] tooltip_off: Option<&'static str>,
+    #[prop(optional)] tooltip_on: Option<&'static str>,
+    #[prop(optional)] class: Option<&'static str>,
+) -> impl IntoView {
+    let input_id = "icon-toggle";
+    let aria_label = move || {
+        if checked.get() {
+            tooltip_on.unwrap_or("Toggle off")
+        } else {
+            tooltip_off.unwrap_or("Toggle on")
+        }
+    };
+
+    view! {
+        <label
+            for=input_id
+            class=move || {
+                format!(
+                    "swap swap-rotate cursor-pointer inline-flex items-center justify-center {} tooltip tooltip-top",
+                    class.unwrap_or("")
+                )
+            }
+            data-tip=move || {
+                if checked.get() {
+                    tooltip_on.unwrap_or("")
+                } else {
+                    tooltip_off.unwrap_or("")
+                }
+            }
+            aria-label=aria_label
+        >
+            <input
+                id=input_id
+                type="checkbox"
+                class="sr-only peer"
+                prop:checked=move || checked.get()
+                on:change=move |ev| {
+                    if let Some(input) = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok()) {
+                        on_change.run(input.checked());
+                    }
+                }
+            />
+            <span
+                class="swap-off"
+                inner_html=icon_off
+            ></span>
+            <span
+                class="swap-on"
+                inner_html=icon_on
+            ></span>
+        </label>
+    }
+}
+
+/// A pencil-icon edit toggle. The pencil is muted when edit is off and primary when edit is on.
+#[component]
+pub fn EditToggle(
+    #[prop(into)] checked: Signal<bool>,
+    #[prop(into)] on_change: Callback<bool>,
+) -> impl IntoView {
+    let pencil_icon = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>"#;
+
+    view! {
+        <IconToggle
+            checked=checked
+            on_change=on_change
+            icon_off={format!("swap-off text-base-content/50 {}", pencil_icon)}
+            icon_on={format!("swap-on text-primary {}", pencil_icon)}
+            tooltip_off="Enter edit mode"
+            tooltip_on="Exit edit mode"
+            class="w-8 h-8 rounded hover:bg-base-200 transition-colors"
+        />
+    }
+}
+
 /// A toggle switch that shows a combined "Off / On" label before the slider.
 /// The active side is emphasized based on `checked`.
 /// An optional keyboard shortcut hint can be appended after the slider.
