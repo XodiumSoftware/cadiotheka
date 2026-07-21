@@ -89,9 +89,19 @@ struct MeResponse {
     account: AccountData,
 }
 
+/// Maximum length for a user-written bio, matching GitHub's profile bio limit.
+const MAX_BIO_LENGTH: usize = 160;
+
 /// Updates the current user's bio on the backend and returns the new bio on
 /// success, or `None` if the request failed.
 pub async fn update_bio(new_bio: String) -> Option<String> {
+    if new_bio.len() > MAX_BIO_LENGTH {
+        leptos::web_sys::console::error_1(
+            &format!("Bio must be {MAX_BIO_LENGTH} characters or fewer").into(),
+        );
+        return None;
+    }
+
     let url = auth_url("/me");
     let request = match Request::put(&url)
         .credentials(RequestCredentials::Include)

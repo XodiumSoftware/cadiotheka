@@ -3,6 +3,9 @@ use crate::contexts::{CurrentUserContext, ProfileModalContext};
 use crate::utils::{format_time_full, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 
+/// Maximum length for a user-written bio, matching GitHub's profile bio limit.
+const MAX_BIO_LENGTH: usize = 160;
+
 /// Modal dialog that displays profile information for a selected account.
 #[component]
 pub fn ProfileModal() -> impl IntoView {
@@ -138,20 +141,26 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                     {move || {
                         if editing.get() {
                             view! {
-                                <input
-                                    class="input input-sm input-bordered flex-1 text-base-content"
-                                    type="text"
-                                    prop:value=draft.get()
-                                    on:input=move |ev| set_draft.set(event_target_value(&ev))
-                                    on:keyup=move |ev| {
-                                        match ev.key().as_str() {
-                                            "Enter" => commit_edit(draft.get()),
-                                            "Escape" => cancel_edit(),
-                                            _ => {}
+                                <div class="flex items-center gap-2 flex-1">
+                                    <input
+                                        class="input input-sm input-bordered flex-1 text-base-content"
+                                        type="text"
+                                        maxlength=MAX_BIO_LENGTH.to_string()
+                                        prop:value=draft.get()
+                                        on:input=move |ev| set_draft.set(event_target_value(&ev))
+                                        on:keyup=move |ev| {
+                                            match ev.key().as_str() {
+                                                "Enter" => commit_edit(draft.get()),
+                                                "Escape" => cancel_edit(),
+                                                _ => {}
+                                            }
                                         }
-                                    }
-                                    autofocus
-                                />
+                                        autofocus
+                                    />
+                                    <span class="text-xs text-base-content/50 flex-shrink-0">
+                                        {move || format!("{}/{}", draft.get().len(), MAX_BIO_LENGTH)}
+                                    </span>
+                                </div>
                             }
                             .into_any()
                         } else {

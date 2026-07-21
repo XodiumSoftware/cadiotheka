@@ -221,6 +221,9 @@ pub async fn require_account(req: &Request, ctx: &RouteContext<()>) -> Result<Ac
     }
 }
 
+/// Maximum length for a user-written bio, matching GitHub's profile bio limit.
+const MAX_BIO_LENGTH: usize = 160;
+
 /// Updates the currently authenticated account.
 ///
 /// Accepts a JSON body with the fields the user is allowed to edit themselves.
@@ -232,6 +235,10 @@ pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Respon
         bio: String,
     }
     let payload: UpdatePayload = req.json().await?;
+
+    if payload.bio.len() > MAX_BIO_LENGTH {
+        return Response::error("Bio must be 160 characters or fewer", 400);
+    }
 
     let db = ctx.env.d1(crate::DB_BINDING)?;
     db.prepare("UPDATE accounts SET bio = ?1 WHERE id = ?2")
