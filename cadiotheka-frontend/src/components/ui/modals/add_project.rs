@@ -216,7 +216,10 @@ pub fn AddProjectModal() -> impl IntoView {
                             <div class="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
                                 <div>
                                     <label class="block text-sm font-medium text-base-content mb-1" for="add-project-title">
-                                        {move || t_string!(i18n, add_project.field_title)}
+                                        {move || {
+                                            let count = title.get().len();
+                                            format!("{} ({count}/100)", t_string!(i18n, add_project.field_title))
+                                        }}
                                     </label>
                                     <input
                                         node_ref=title_input_ref
@@ -236,7 +239,10 @@ pub fn AddProjectModal() -> impl IntoView {
 
                                 <div>
                                     <label class="block text-sm font-medium text-base-content mb-1" for="add-project-description">
-                                        {move || t_string!(i18n, add_project.field_description)}
+                                        {move || {
+                                            let count = description.get().len();
+                                            format!("{} ({count}/500)", t_string!(i18n, add_project.field_description))
+                                        }}
                                     </label>
                                     <textarea
                                         node_ref=desc_input_ref
