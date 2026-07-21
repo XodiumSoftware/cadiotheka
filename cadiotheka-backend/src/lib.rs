@@ -30,7 +30,7 @@ fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Response> {
         if headers
             .set(
                 "Access-Control-Allow-Methods",
-                "GET, POST, PUT, DELETE, OPTIONS",
+                "GET, POST, PUT, PATCH, DELETE, OPTIONS",
             )
             .is_err()
         {
@@ -59,7 +59,7 @@ fn cors_preflight(origin: &str) -> Result<Response> {
     headers.set("Access-Control-Allow-Origin", origin)?;
     headers.set(
         "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     )?;
     headers.set("Access-Control-Allow-Headers", "Content-Type")?;
     headers.set("Access-Control-Allow-Credentials", "true")?;
@@ -136,7 +136,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let _ = headers.set("Access-Control-Allow-Credentials", "true");
             let _ = headers.set(
                 "Access-Control-Allow-Methods",
-                "GET, POST, PUT, DELETE, OPTIONS",
+                "GET, POST, PUT, PATCH, DELETE, OPTIONS",
             );
             let _ = headers.set("Access-Control-Allow-Headers", "Content-Type");
             Ok(ResponseBuilder::new()
