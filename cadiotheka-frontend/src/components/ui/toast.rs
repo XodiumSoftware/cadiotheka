@@ -12,9 +12,9 @@ pub fn Toast(
         <div
             class=move || {
                 if visible.get() {
-                    "fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-primary text-primary-content text-sm font-medium shadow-lg border border-primary transition-opacity duration-200 opacity-100 cursor-pointer"
+                    "fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-primary text-black font-bold shadow-lg border border-primary transition-opacity duration-200 opacity-100 cursor-pointer"
                 } else {
-                    "fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-primary text-primary-content text-sm font-medium shadow-lg border border-primary transition-opacity duration-200 opacity-0 pointer-events-none"
+                    "fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-primary text-black font-bold shadow-lg border border-primary transition-opacity duration-200 opacity-0 pointer-events-none"
                 }
             }
             role="status"
