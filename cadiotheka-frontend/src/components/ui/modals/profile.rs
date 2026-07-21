@@ -121,7 +121,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                         {"@"}
                         {username.clone()}
                     </p>
-                    <div class="flex items-center gap-2 text-xs text-base-content/60">
+                    <div class="flex items-center gap-2 text-xs text-base-content/60 whitespace-nowrap">
                         <span class="flex items-center gap-1" title={format!("Email: {}", account.email)}>
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="2" y="4" width="20" height="16" rx="2" />
