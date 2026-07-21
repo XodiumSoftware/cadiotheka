@@ -4,11 +4,10 @@ use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::project_icon_picker::ProjectIconPicker;
 use crate::contexts::{
-    AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
-    SearchContext,
+    AccountsContext, CurrentUserContext, ProjectModalContext, ProjectsContext, SearchContext,
 };
 use crate::data::{
-    AccountRole, update_project_collaborators, update_project_description,
+    AccountData, AccountRole, update_project_collaborators, update_project_description,
     update_project_extended_desc, update_project_platforms, update_project_tags,
     update_project_title, upload_project_icon,
 };
@@ -77,6 +76,34 @@ fn EditIconButton(aria_label: &'static str, #[prop(into)] on_click: Callback<()>
                 <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
             </svg>
         </button>
+    }
+}
+
+fn avatar_button(account: &AccountData, class: Option<String>) -> impl IntoView + use<> {
+    let display_name = account.display_name.clone();
+    let avatar_alt = format!("{}'s avatar", display_name);
+    let avatar_letter = placeholder_letter(&display_name);
+    let avatar_bg = placeholder_color(&display_name);
+    let size_class = class.unwrap_or_else(|| "w-12 h-12".to_string());
+    let url = account.avatar_url.clone();
+    view! {
+        <div
+            class=format!("{} border border-base-content/10 overflow-hidden flex items-center justify-center text-white font-bold text-lg {}", size_class, avatar_bg)
+            title=display_name.clone()
+            aria-label=avatar_alt.clone()
+        >
+            {url.map(|url| {
+                view! {
+                    <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() />
+                }
+                    .into_any()
+            }).unwrap_or_else(move || {
+                view! {
+                    <span>{avatar_letter.clone()}</span>
+                }
+                    .into_any()
+            })}
+        </div>
     }
 }
 
@@ -288,6 +315,31 @@ fn ProjectModalContent(
         set_editing_extended.set(false);
     };
 
+    let start_edit_collaborators = move || {
+        set_draft_collaborator_ids.set(collaborator_ids.get());
+        set_editing_collaborators.set(true);
+    };
+
+    let cancel_edit_collaborators = move || {
+        set_editing_collaborators.set(false);
+    };
+
+    let add_collaborator = Callback::new(move |account_id: String| {
+        set_draft_collaborator_ids.update(|ids| {
+            if !ids.contains(&account_id) {
+                ids.push(account_id);
+            }
+        });
+    });
+
+    let remove_collaborator = Callback::new(move |account_id: String| {
+        set_draft_collaborator_ids.update(|ids| {
+            if let Some(pos) = ids.iter().position(|id| id == &account_id) {
+                ids.remove(pos);
+            }
+        });
+    });
+
     let commit_edit_icon = {
         let project_id = project_id.clone();
         Callback::new(move |file: web_sys::File| {
@@ -449,25 +501,6 @@ fn ProjectModalContent(
         })
     };
 
-    let start_edit_collaborators = move || {
-        set_draft_collaborator_ids.set(collaborator_ids.get());
-        set_editing_collaborators.set(true);
-    };
-
-    let cancel_edit_collaborators = move || {
-        set_editing_collaborators.set(false);
-    };
-
-    let toggle_collaborator = Callback::new(move |account_id: String| {
-        set_draft_collaborator_ids.update(|ids| {
-            if let Some(pos) = ids.iter().position(|id| id == &account_id) {
-                ids.remove(pos);
-            } else {
-                ids.push(account_id);
-            }
-        });
-    });
-
     let commit_edit_collaborators = {
         let project_id = project_id.clone();
         Callback::new(move |draft_value: Vec<String>| {
@@ -534,6 +567,7 @@ fn ProjectModalContent(
 
     let author_id = card.author_id.clone();
     let accounts = AccountsContext::use_context();
+
     let apply_filter = Callback::new(move |filter: String| {
         search.set_query.set(format!("#{filter}"));
         modal.close();
@@ -835,57 +869,126 @@ fn ProjectModalContent(
                             </div>
                             {move || {
                                 let all_accounts = accounts.accounts.get();
+                                let author_id = author_id.clone();
                                 let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
-                                let collaborator_accounts = all_accounts
+                                let current_collaborators = all_accounts
                                     .iter()
                                     .filter(|account| collaborator_ids.get().contains(&account.id))
                                     .cloned()
                                     .collect::<Vec<_>>();
 
                                 if editing_collaborators.get() {
-                                    let draft_ids = draft_collaborator_ids.get();
+                                    let all_accounts_for_select = all_accounts.clone();
+                                    let (add_open, set_add_open) = signal(false);
+                                    let add_open_signal = Signal::derive(move || add_open.get());
+                                    let draft_query = RwSignal::new(String::new());
+                                    let selectable_accounts = Memo::new(move |_| {
+                                        let query = draft_query.get().to_lowercase();
+                                        let excluded_ids: std::collections::HashSet<String> = std::iter::once(author_id.clone())
+                                            .chain(draft_collaborator_ids.get().into_iter())
+                                            .collect();
+                                        all_accounts_for_select
+                                            .clone()
+                                            .into_iter()
+                                            .filter(|account| !excluded_ids.contains(&account.id))
+                                            .filter(|account| {
+                                                query.is_empty()
+                                                    || account.username.to_lowercase().contains(&query)
+                                                    || account.display_name.to_lowercase().contains(&query)
+                                            })
+                                            .collect::<Vec<_>>()
+                                    });
+
                                     view! {
                                         <div class="space-y-3">
-                                            <div class="flex flex-wrap gap-2">
-                                                {all_accounts.into_iter().filter(|account| account.id != author_id).map(|account| {
+                                            <div class="flex flex-wrap gap-2 items-center">
+                                                {owner_account.as_ref().map(|account| {
+                                                    avatar_button(account, None)
+                                                })}
+                                                {draft_collaborator_ids.get().into_iter().filter_map(|id| {
+                                                    let all_accounts = all_accounts.clone();
+                                                    all_accounts.iter().find(|account| account.id == id).cloned()
+                                                }).map(|account| {
                                                     let account_id = account.id.clone();
                                                     let display_name = account.display_name.clone();
-                                                    let avatar_alt = format!("{}'s avatar", display_name);
-                                                    let avatar_letter = placeholder_letter(&account.username);
-                                                    let avatar_bg = placeholder_color(&account.username);
                                                     view! {
-                                                        <button
-                                                            type="button"
-                                                            class=move || format!(
-                                                                "w-12 h-12 border overflow-hidden transition-colors {}",
-                                                                if draft_collaborator_ids.get().contains(&account_id) {
-                                                                    "border-primary ring-1 ring-primary"
-                                                                } else {
-                                                                    "border-base-content/10 hover:border-primary/40"
-                                                                }
-                                                            )
-                                                            title=display_name.clone()
-                                                            aria-label=display_name.clone()
-                                                            on:click={
-                                                                let account_id = account.id.clone();
-                                                                move |_| toggle_collaborator.run(account_id.clone())
-                                                            }
-                                                        >
-                                                            {account.avatar_url.clone().map(|url| {
-                                                                view! {
-                                                                    <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() />
-                                                                }.into_any()
-                                                            }).unwrap_or_else(|| {
-                                                                view! {
-                                                                    <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
-                                                                        {avatar_letter.clone()}
-                                                                    </div>
-                                                                }.into_any()
-                                                            })}
-                                                        </button>
+                                                        <div class="relative group">
+                                                            {avatar_button(&account, None)}
+                                                            <button
+                                                                type="button"
+                                                                class="absolute inset-0 flex items-center justify-center bg-error/80 opacity-0 group-hover:opacity-100 transition-opacity text-white"
+                                                                title={format!("Remove {}", display_name)}
+                                                                aria-label={format!("Remove {}", display_name)}
+                                                                on:click=move |_| remove_collaborator.run(account_id.clone())
+                                                            >
+                                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
                                                     }
                                                 }).collect_view()}
+                                                <button
+                                                    type="button"
+                                                    class="w-12 h-12 border border-dashed border-base-content/30 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors"
+                                                    aria-label="Add collaborator"
+                                                    title="Add collaborator"
+                                                    on:click=move |_| set_add_open.set(true)
+                                                >
+                                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                                    </svg>
+                                                </button>
                                             </div>
+                                            <SearchModal
+                                                open=add_open_signal
+                                                on_close=Callback::new(move |_| set_add_open.set(false))
+                                            >
+                                                <div class="space-y-3">
+                                                    <h3 class="text-sm font-semibold text-base-content">"Add collaborator"</h3>
+                                                    <input
+                                                        type="text"
+                                                        class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                                        placeholder="Search users..."
+                                                        prop:value=draft_query.get()
+                                                        on:input=move |ev| draft_query.set(event_target_value(&ev))
+                                                    />
+                                                    <div class="max-h-60 overflow-y-auto space-y-1">
+                                                        {move || {
+                                                            let accounts = selectable_accounts.get();
+                                                            if accounts.is_empty() {
+                                                                view! {
+                                                                    <p class="text-sm text-base-content/50 py-2">"No users found."</p>
+                                                                }.into_any()
+                                                            } else {
+                                                                view! {
+                                                                    <div class="flex flex-wrap gap-2">
+                                                                        {accounts.into_iter().map(|account| {
+                                                                            let account_id = account.id.clone();
+                                                                            let display_name = account.display_name.clone();
+                                                                            view! {
+                                                                                <button
+                                                                                    type="button"
+                                                                                    class="flex items-center gap-2 px-2 py-1 border border-base-content/10 hover:border-primary/40 transition-colors"
+                                                                                    on:click=move |_| {
+                                                                                        add_collaborator.run(account_id.clone());
+                                                                                        set_add_open.set(false);
+                                                                                    }
+                                                                                >
+                                                                                    {avatar_button(&account, Some("w-8 h-8".to_string()))}
+                                                                                    <span class="text-sm text-base-content">{display_name.clone()}</span>
+                                                                                    <span class="text-xs text-base-content/50">{format!("@{}", account.username)}</span>
+                                                                                </button>
+                                                                            }
+                                                                        }).collect_view()}
+                                                                    </div>
+                                                                }.into_any()
+                                                            }
+                                                        }}
+                                                    </div>
+                                                </div>
+                                            </SearchModal>
                                             <div class="flex justify-end gap-2">
                                                 <button
                                                     type="button"
@@ -895,7 +998,7 @@ fn ProjectModalContent(
                                                 <button
                                                     type="button"
                                                     class="btn btn-primary btn-xs"
-                                                    on:click=move |_| commit_edit_collaborators.run(draft_ids.clone())
+                                                    on:click=move |_| commit_edit_collaborators.run(draft_collaborator_ids.get())
                                                 >"Save"</button>
                                             </div>
                                         </div>
@@ -903,70 +1006,19 @@ fn ProjectModalContent(
                                 } else {
                                     view! {
                                         <div class="flex flex-wrap gap-2">
-                                            {owner_account.map(|account| {
-                                                let display_name = account.display_name.clone();
-                                                let avatar_alt = format!("{}'s avatar", display_name);
-                                                let avatar_letter = placeholder_letter(&account.username);
-                                                let avatar_bg = placeholder_color(&account.username);
-                                                let owner_click = {
-                                                    let account = account.clone();
-                                                    move |_| {
+                                            {owner_account.as_ref().map(|account| avatar_button(account, None))}
+                                            {current_collaborators.into_iter().map(|account| {
+                                                let account_id = account.id.clone();
+                                                view! {
+                                                    <button
+                                                    type="button"
+                                                    on:click=move |_| {
                                                         on_close.run(());
-                                                        ProfileModalContext::use_context().open(account.clone());
+                                                        modal.close();
+                                                        search.set_query.set(format!("@author:{}", account_id.clone()));
                                                     }
-                                                };
-                                                view! {
-                                                    <button
-                                                        type="button"
-                                                        class="w-12 h-12 border border-base-content/10 overflow-hidden hover:border-primary/40 transition-colors"
-                                                        title={format!("Open {}'s profile", display_name)}
-                                                        aria-label={format!("Open {}'s profile", display_name)}
-                                                        on:click=owner_click
-                                                    >
-                                                        {account.avatar_url.clone().map(|url| {
-                                                            view! {
-                                                                <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() />
-                                                            }.into_any()
-                                                        }).unwrap_or_else(|| {
-                                                            view! {
-                                                                <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
-                                                                    {avatar_letter.clone()}
-                                                                </div>
-                                                            }.into_any()
-                                                        })}
-                                                    </button>
-                                                }
-                                            })}
-                                            {collaborator_accounts.into_iter().map(|account| {
-                                                let display_name = account.display_name.clone();
-                                                let avatar_alt = format!("{}'s avatar", display_name);
-                                                let avatar_letter = placeholder_letter(&account.username);
-                                                let avatar_bg = placeholder_color(&account.username);
-                                                view! {
-                                                    <button
-                                                        type="button"
-                                                        class="w-12 h-12 border border-base-content/10 overflow-hidden hover:border-primary/40 transition-colors"
-                                                        title={format!("Open {}'s profile", display_name)}
-                                                        aria-label={format!("Open {}'s profile", display_name)}
-                                                        on:click={
-                                                            let account = account.clone();
-                                                            move |_| {
-                                                                on_close.run(());
-                                                                ProfileModalContext::use_context().open(account.clone());
-                                                            }
-                                                        }
-                                                    >
-                                                        {account.avatar_url.clone().map(|url| {
-                                                            view! {
-                                                                <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() />
-                                                            }.into_any()
-                                                        }).unwrap_or_else(|| {
-                                                            view! {
-                                                                <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
-                                                                    {avatar_letter.clone()}
-                                                                </div>
-                                                            }.into_any()
-                                                        })}
+                                                >
+                                                    {avatar_button(&account, None)}
                                                     </button>
                                                 }
                                             }).collect_view()}
