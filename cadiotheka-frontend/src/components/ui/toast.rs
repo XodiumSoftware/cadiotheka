@@ -10,9 +10,9 @@ fn toast_view(
         <div
             class=move || {
                 if visible.get() {
-                    "toast toast-top toast-center z-[100] transition-opacity duration-200 opacity-100"
+                    "fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 transition-opacity duration-200 opacity-100"
                 } else {
-                    "toast toast-top toast-center z-[100] transition-opacity duration-200 opacity-0 pointer-events-none"
+                    "fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 transition-opacity duration-200 opacity-0 pointer-events-none"
                 }
             }
             aria-hidden=move || !visible.get()
