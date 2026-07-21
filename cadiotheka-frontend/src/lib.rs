@@ -28,6 +28,7 @@ pub mod components {
         }
         pub mod overflow_row;
         pub mod project_icon_picker;
+        pub mod toast;
         pub mod toggle;
     }
     pub use sections::footer::Footer;
@@ -47,6 +48,7 @@ pub mod components {
     pub use ui::modals::search::SearchModal;
     pub use ui::overflow_row::OverflowRow;
     pub use ui::project_icon_picker::ProjectIconPicker;
+    pub use ui::toast::Toast;
     pub use ui::toggle::ToggleSlider;
     pub use ui::toggle::ToggleSliderWithSlashLabel;
 }

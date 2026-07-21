@@ -1,7 +1,9 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::modals::search::SearchModal;
+use crate::components::ui::toast::Toast;
 use crate::contexts::{CurrentUserContext, ProfileModalContext};
 use crate::utils::{format_time_full, placeholder_color, placeholder_letter};
+use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use web_sys::window;
 const MAX_BIO_LENGTH: usize = 160;
@@ -85,19 +87,41 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
         crate::data::AccountRole::Admin => "Admin".to_string(),
     };
 
-    let copy_username = {
-        let username = username.clone();
-        move |_| {
-            let username = username.clone();
+    let (toast_visible, set_toast_visible) = signal(false);
+    let show_toast = {
+        let set_toast_visible = set_toast_visible;
+        move || {
+            set_toast_visible.set(true);
             leptos::task::spawn_local(async move {
-                if let Some(clipboard) = window().map(|w| w.navigator().clipboard()) {
-                    let _ = clipboard.write_text(&username).await;
-                }
+                TimeoutFuture::new(1500).await;
+                set_toast_visible.set(false);
             });
         }
     };
 
+    let copy_username = {
+        let username = username.clone();
+        let show_toast = show_toast.clone();
+        move |_| {
+            let username = username.clone();
+            let show_toast = show_toast.clone();
+            leptos::task::spawn_local(async move {
+                if let Some(clipboard) = window().map(|w| w.navigator().clipboard()) {
+                    let _ = clipboard.write_text(&username).await;
+                }
+                show_toast();
+            });
+        }
+    };
+
+    let dismiss_toast = Callback::new(move |_| set_toast_visible.set(false));
+
     view! {
+        <Toast
+            message=Signal::derive(move || "Copied username to clipboard".to_string())
+            visible=Signal::derive(move || toast_visible.get())
+            on_dismiss=dismiss_toast
+        />
         <div class="space-y-4 flex flex-col min-h-0">
             <div class="flex items-start gap-4">
                 {match account.avatar_url.clone() {
