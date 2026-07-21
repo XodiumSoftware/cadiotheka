@@ -179,8 +179,8 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
             </div>
             <hr class="border-base-content/10" />
             <div class="space-y-2 text-sm text-base-content/80">
-                <div class="flex items-start gap-2">
-                    <div class="flex-shrink-0 flex items-center bg-surface-light p-2 relative">
+                <div class="flex items-stretch gap-2">
+                    <div class="flex-shrink-0 flex bg-surface-light p-2 relative">
                         <CornerFrame
                             style="square"
                             black=true
