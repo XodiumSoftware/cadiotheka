@@ -770,9 +770,9 @@ fn ProjectModalContent(
                         type="button"
                         class=move || {
                             if is_favorited.get() {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50 tooltip tooltip-top"
+                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50 tooltip tooltip-bottom"
                             } else {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error tooltip tooltip-top"
+                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error tooltip tooltip-bottom"
                             }
                         }
                         aria-label=move || {
