@@ -1,12 +1,10 @@
 use leptos::prelude::*;
 
-/// A brief, auto-dismissible toast notification fixed to the top-center of the
-/// viewport using DaisyUI toast styling.
-#[component]
-pub fn Toast(
-    #[prop(into)] message: Signal<String>,
-    #[prop(into)] visible: Signal<bool>,
-    #[prop(into)] on_dismiss: Callback<()>,
+/// Builds the toast DOM for the given state.
+fn toast_view(
+    visible: Signal<bool>,
+    message: Signal<String>,
+    on_dismiss: Callback<()>,
 ) -> impl IntoView {
     view! {
         <div
@@ -28,5 +26,29 @@ pub fn Toast(
                 <span class="font-bold text-primary-content">{message}</span>
             </div>
         </div>
+    }
+}
+
+/// A brief, auto-dismissible toast notification fixed to the top-center of the
+/// viewport using DaisyUI toast styling. It is rendered as a portal to the
+/// document body so it always sits above modals and backdrops.
+#[component]
+pub fn Toast(
+    #[prop(into)] message: Signal<String>,
+    #[prop(into)] visible: Signal<bool>,
+    #[prop(into)] on_dismiss: Callback<()>,
+) -> impl IntoView {
+    let body = leptos::web_sys::window()
+        .and_then(|w| w.document())
+        .and_then(|d| d.body());
+
+    match body {
+        Some(body) => view! {
+            <leptos::portal::Portal mount=body>
+                {toast_view(visible, message, on_dismiss)}
+            </leptos::portal::Portal>
+        }
+        .into_any(),
+        None => toast_view(visible, message, on_dismiss).into_any(),
     }
 }
