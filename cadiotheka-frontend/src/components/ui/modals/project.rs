@@ -80,6 +80,53 @@ fn EditIconButton(aria_label: &'static str, #[prop(into)] on_click: Callback<()>
     }
 }
 
+/// Wraps children in a clickable area with a hover border and edit-icon overlay.
+/// When `editable` is false, only the children are rendered.
+#[component]
+fn EditableOverlay(
+    editable: bool,
+    aria_label: &'static str,
+    #[prop(into)] on_click: Callback<()>,
+    bordered: bool,
+    children: Children,
+) -> leptos::prelude::AnyView {
+    let children_view = children().into_any();
+    if !editable {
+        return children_view;
+    }
+
+    let border_class = if bordered {
+        "border border-base-content/20 hover:border-primary"
+    } else {
+        "border border-transparent hover:border-primary"
+    };
+
+    view! {
+        <button
+            type="button"
+            class=format!("group relative w-full text-left rounded-none cursor-pointer transition-colors {}", border_class)
+            aria-label=aria_label
+            on:click=move |_| on_click.run(())
+        >
+            {children_view}
+            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <svg
+                    class="w-5 h-5 text-primary"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                </svg>
+            </div>
+        </button>
+    }
+    .into_any()
+}
+
 fn avatar_button(account: &AccountData, class: Option<String>) -> impl IntoView + use<> {
     let display_name = account.display_name.clone();
     let avatar_alt = format!("{}'s avatar", display_name);
@@ -115,8 +162,6 @@ fn EditableChipSection<T>(
     items: Vec<T>,
     all_items: Vec<T>,
     editing: Signal<bool>,
-    editable: bool,
-    on_start_edit: Callback<()>,
     on_cancel: Callback<()>,
     on_toggle: Callback<T>,
     on_save: Callback<Vec<T>>,
@@ -131,15 +176,7 @@ where
 {
     view! {
         <div class="space-y-3">
-            <div class="flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-base-content">{title}</h3>
-                {editable.then(|| view! {
-                    <EditIconButton
-                        aria_label=title
-                        on_click=Callback::new(move |_| on_start_edit.run(()))
-                    />
-                })}
-            </div>
+            <h3 class="text-sm font-semibold text-base-content">{title}</h3>
             {move || {
                 if editing.get() {
                     let current_selected = selected_items.get();
@@ -198,7 +235,10 @@ where
                                     <button
                                         type="button"
                                         class=format!("{} {}", badge_class, color_fn(item))
-                                        on:click=move |_| on_item_click.run(item_for_click.clone())
+                                        on:click=move |ev: leptos::web_sys::MouseEvent| {
+                                            ev.stop_propagation();
+                                            on_item_click.run(item_for_click.clone());
+                                        }
                                     >
                                         {label_fn(item)}
                                     </button>
@@ -704,20 +744,19 @@ fn ProjectModalContent(
                                 .into_any()
                         } else {
                             view! {
-                                <div class="flex items-center gap-2">
+                                <EditableOverlay
+                                    editable=is_editable
+                                    aria_label="Edit project title"
+                                    on_click=Callback::new(move |_| start_edit(()))
+                                    bordered=false
+                                >
                                     <h2
                                         class="text-xl font-bold text-primary leading-tight truncate"
                                         title={title.get()}
                                     >
                                         {title.get()}
                                     </h2>
-                                    {is_editable.then(|| view! {
-                                        <EditIconButton
-                                            aria_label="Edit project title"
-                                            on_click=Callback::new(move |_| start_edit(()))
-                                        />
-                                    })}
-                                </div>
+                                </EditableOverlay>
                             }
                                 .into_any()
                         }
@@ -761,15 +800,14 @@ fn ProjectModalContent(
                                     .into_any()
                             } else {
                                 view! {
-                                    <div class="flex items-center gap-2">
+                                    <EditableOverlay
+                                        editable=is_editable
+                                        aria_label="Edit short description"
+                                        on_click=Callback::new(move |_| start_edit_description())
+                                        bordered=false
+                                    >
                                         <p class="text-base-content/70 text-sm whitespace-pre-wrap">{description.get()}</p>
-                                        {is_editable.then(|| view! {
-                                            <EditIconButton
-                                                aria_label="Edit short description"
-                                                on_click=Callback::new(move |_| start_edit_description())
-                                            />
-                                        })}
-                                    </div>
+                                    </EditableOverlay>
                                 }
                                     .into_any()
                             }
@@ -887,9 +925,16 @@ fn ProjectModalContent(
                                             .into_any()
                                     } else {
                                         view! {
-                                            <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
-                                                <MarkdownView source=extended_desc.get() />
-                                            </div>
+                                            <EditableOverlay
+                                                editable=is_editable
+                                                aria_label="Edit extended description"
+                                                on_click=Callback::new(move |_| start_edit_extended())
+                                                bordered=true
+                                            >
+                                                <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
+                                                    <MarkdownView source=extended_desc.get() />
+                                                </div>
+                                            </EditableOverlay>
                                         }
                                             .into_any()
                                     }
@@ -912,65 +957,74 @@ fn ProjectModalContent(
                         <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
 
                         <div class="space-y-4">
-                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                                <EditableChipSection
-                                    title="Supported platforms"
-                                    aria_label="Supported platforms"
-                                    items=platforms.get()
-                                    all_items=crate::metadata::platforms::Platform::all().to_vec()
-                                    editing=editing_platforms.into()
-                                    editable=is_editable
-                                    on_start_edit=Callback::new(move |_| start_edit_platforms())
-                                    on_cancel=Callback::new(move |_| cancel_edit_platforms())
-                                    on_toggle=toggle_platform
-                                    on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
-                                    on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
-                                    label_fn=crate::metadata::platforms::platform_label
-                                    color_fn=crate::metadata::platforms::platform_color
-                                    selected_items=draft_platforms.into()
-                                    badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                                />
-                            </div>
-
-                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                                <EditableChipSection
-                                    title="Tags"
-                                    aria_label="Tags"
-                                    items=tags.get()
-                                    all_items=crate::metadata::tags::Tag::all().to_vec()
-                                    editing=editing_tags.into()
-                                    editable=is_editable
-                                    on_start_edit=Callback::new(move |_| start_edit_tags())
-                                    on_cancel=Callback::new(move |_| cancel_edit_tags())
-                                    on_toggle=toggle_tag
-                                    on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
-                                    on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
-                                    label_fn=crate::metadata::tags::tag_label
-                                    color_fn=crate::metadata::tags::tag_color
-                                    selected_items=draft_tags.into()
-                                    badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                                />
-                            </div>
-
-                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
-                            <div class="flex items-center justify-between">
-                                <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
-                                {is_editable.then(|| view! {
-                                    <EditIconButton
-                                        aria_label="Edit collaborators"
-                                        on_click=Callback::new(move |_| start_edit_collaborators())
+                            <EditableOverlay
+                                editable=is_editable
+                                aria_label="Edit supported platforms"
+                                on_click=Callback::new(move |_| start_edit_platforms())
+                                bordered=true
+                            >
+                                <div class="rounded-none bg-base-200/20 p-4">
+                                    <EditableChipSection
+                                        title="Supported platforms"
+                                        aria_label="Supported platforms"
+                                        items=platforms.get()
+                                        all_items=crate::metadata::platforms::Platform::all().to_vec()
+                                        editing=editing_platforms.into()
+                                        on_cancel=Callback::new(move |_| cancel_edit_platforms())
+                                        on_toggle=toggle_platform
+                                        on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
+                                        on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
+                                        label_fn=crate::metadata::platforms::platform_label
+                                        color_fn=crate::metadata::platforms::platform_color
+                                        selected_items=draft_platforms.into()
+                                        badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
                                     />
-                                })}
-                            </div>
-                            {move || {
-                                let all_accounts = accounts.accounts.get();
-                                let author_id = author_id.clone();
-                                let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
-                                let current_collaborators = all_accounts
-                                    .iter()
-                                    .filter(|account| collaborator_ids.get().contains(&account.id))
-                                    .cloned()
-                                    .collect::<Vec<_>>();
+                                </div>
+                            </EditableOverlay>
+
+                            <EditableOverlay
+                                editable=is_editable
+                                aria_label="Edit tags"
+                                on_click=Callback::new(move |_| start_edit_tags())
+                                bordered=true
+                            >
+                                <div class="rounded-none bg-base-200/20 p-4">
+                                    <EditableChipSection
+                                        title="Tags"
+                                        aria_label="Tags"
+                                        items=tags.get()
+                                        all_items=crate::metadata::tags::Tag::all().to_vec()
+                                        editing=editing_tags.into()
+                                        on_cancel=Callback::new(move |_| cancel_edit_tags())
+                                        on_toggle=toggle_tag
+                                        on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
+                                        on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
+                                        label_fn=crate::metadata::tags::tag_label
+                                        color_fn=crate::metadata::tags::tag_color
+                                        selected_items=draft_tags.into()
+                                        badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                    />
+                                </div>
+                            </EditableOverlay>
+
+                            <div class="rounded-none border border-base-content/10 hover:border-primary transition-colors bg-base-200/20 p-4 space-y-3">
+                                <EditableOverlay
+                                    editable=is_editable
+                                    aria_label="Edit authors"
+                                    on_click=Callback::new(move |_| start_edit_collaborators())
+                                    bordered=false
+                                >
+                                    <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
+                                </EditableOverlay>
+                                {move || {
+                                    let all_accounts = accounts.accounts.get();
+                                    let author_id = author_id.clone();
+                                    let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
+                                    let current_collaborators = all_accounts
+                                        .iter()
+                                        .filter(|account| collaborator_ids.get().contains(&account.id))
+                                        .cloned()
+                                        .collect::<Vec<_>>();
 
                                 if editing_collaborators.get() {
                                     let all_accounts_for_select = all_accounts.clone();
@@ -1142,10 +1196,10 @@ fn ProjectModalContent(
                                 }
                             }}
                         </div>
-                        </div>
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     }
 }
