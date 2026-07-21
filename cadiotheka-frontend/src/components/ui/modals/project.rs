@@ -827,7 +827,7 @@ fn ProjectModalContent(
                         >"Versions"</button>
                     </div>
                 </div>
-                <div class="overflow-y-auto flex-1 min-h-0">
+                <div class="overflow-y-auto flex-1 min-h-0 p-2 pr-3">
                     <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start">
                         <div class="min-w-0 space-y-4">
                             {move || match active_tab.get() {
