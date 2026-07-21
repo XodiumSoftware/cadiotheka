@@ -57,7 +57,6 @@ cd cadiotheka-backend && worker-build
 ## Data Sources
 
 - The backend owns the canonical data in D1.
-- Fixture data lives as SQL seed scripts in `cadiotheka-backend/scripts/` (e.g. `seed_accounts.sql`, `seed_projects.sql`).
 - The frontend does **not** embed JSON fixtures; it fetches accounts from `/data/accounts` and projects from `/data/projects`.
 - Schemas live in `cadiotheka-backend/schemas/` (one entity per file, e.g. `accounts.sql`, `projects.sql`).
 

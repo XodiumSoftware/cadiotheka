@@ -91,15 +91,15 @@ npx wrangler dev
 
 The backend API is available at <http://localhost:8787/data/accounts> by default.
 
-To seed the local D1 database with fixture accounts and projects:
+To create the local D1 database tables:
 
 ```bash
 cd cadiotheka-backend
 npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql --local
-npx wrangler d1 execute cadiotheka-db --file=scripts/seed_accounts.sql --local
-npx wrangler d1 execute cadiotheka-db --file=scripts/seed_projects.sql --local
 ```
+
+Create accounts and projects through the application UI or API as needed.
 
 ### Tests & Linting
 
@@ -161,13 +161,13 @@ The static site is placed in `cadiotheka-frontend/dist/`.
    - Use callback URLs `https://api.cadiotheka.com/auth/github/callback` and `https://api.cadiotheka.com/auth/google/callback`.
    - If your backend is served from the same origin as the frontend (e.g. via a Cloudflare Pages Function or a zone route), use `https://cadiotheka.com/auth/...` instead.
 
-5. Apply the schema and seed data:
+5. Apply the schema:
    ```bash
    npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/schemas/accounts.sql
    npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/schemas/projects.sql
-   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/scripts/seed_accounts.sql
-   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/scripts/seed_projects.sql
    ```
+
+   Create the first accounts and projects through the deployed application UI or API.
 
 6. Build and deploy:
    ```bash
