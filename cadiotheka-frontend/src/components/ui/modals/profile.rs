@@ -194,25 +194,36 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                     {move || {
                         if editing.get() {
                             view! {
-                                <div class="flex items-center gap-2 flex-1">
-                                    <input
-                                        class="input input-sm input-bordered flex-1 text-base-content"
-                                        type="text"
+                                <div class="space-y-2 flex-1">
+                                    <textarea
+                                        class="textarea w-full min-h-[5rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
                                         maxlength=MAX_BIO_LENGTH.to_string()
                                         prop:value=draft.get()
                                         on:input=move |ev| set_draft.set(event_target_value(&ev))
                                         on:keyup=move |ev| {
-                                            match ev.key().as_str() {
-                                                "Enter" => commit_edit(draft.get()),
-                                                "Escape" => cancel_edit(),
-                                                _ => {}
+                                            if ev.key().as_str() == "Escape" {
+                                                cancel_edit();
                                             }
                                         }
                                         autofocus
-                                    />
-                                    <span class="text-xs text-base-content/50 flex-shrink-0">
-                                        {move || format!("{}/{}", draft.get().len(), MAX_BIO_LENGTH)}
-                                    </span>
+                                    ></textarea>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs text-base-content/50">
+                                            {move || format!("{}/{}", draft.get().len(), MAX_BIO_LENGTH)}
+                                        </span>
+                                        <div class="flex gap-2">
+                                            <button
+                                                type="button"
+                                                class="btn btn-ghost btn-xs"
+                                                on:click=move |_| cancel_edit()
+                                            >"Cancel"</button>
+                                            <button
+                                                type="button"
+                                                class="btn btn-primary btn-xs"
+                                                on:click=move |_| commit_edit(draft.get())
+                                            >"Save"</button>
+                                        </div>
+                                    </div>
                                 </div>
                             }
                             .into_any()
