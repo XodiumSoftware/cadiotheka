@@ -29,7 +29,7 @@ pub fn ProjectIconPicker(
         <button
             type="button"
             class=format!(
-                "group relative rounded overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary {}",
+                "group relative btn btn-ghost btn-lift p-0 overflow-hidden hover:border-base-content/30 {}",
                 class
             )
             aria-label="Edit project icon"
@@ -41,7 +41,7 @@ pub fn ProjectIconPicker(
                 if url.trim().is_empty() {
                     view! {
                         <div
-                            class=format!("w-full h-full flex items-center justify-center text-white font-bold text-xl {}", bg.get())
+                            class=format!("w-full h-full flex items-center justify-center text-white font-bold text-xl rounded-[inherit] {}", bg.get())
                             aria-hidden="true"
                         >
                             {letter.get()}
@@ -53,7 +53,7 @@ pub fn ProjectIconPicker(
                         <img
                             src=url
                             alt=move || format!("{} icon", title.get())
-                            class="w-full h-full object-cover"
+                            class="w-full h-full object-cover rounded-[inherit]"
                         />
                     }
                         .into_any()
