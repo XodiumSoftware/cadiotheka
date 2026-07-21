@@ -288,6 +288,51 @@ pub async fn update_project_description(id: &str, description: String) -> Option
     Some(description)
 }
 
+/// Updates the tags of an existing project via `PATCH /data/projects/:id`.
+///
+/// On success it returns the new tag list; on failure it logs to the console and
+/// returns `None`.
+pub async fn update_project_tags(id: &str, tags: Vec<Tag>) -> Option<Vec<Tag>> {
+    let url = api_url(&format!("/projects/{id}"));
+    let body = match serde_json::to_string(&serde_json::json!({ "tags": tags })) {
+        Ok(json) => json,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to serialize tags update payload: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    patch_project(&url, body, "tags").await?;
+    Some(tags)
+}
+
+/// Updates the supported platforms of an existing project via `PATCH /data/projects/:id`.
+///
+/// On success it returns the new platform list; on failure it logs to the console
+/// and returns `None`.
+pub async fn update_project_platforms(
+    id: &str,
+    supported_platforms: Vec<Platform>,
+) -> Option<Vec<Platform>> {
+    let url = api_url(&format!("/projects/{id}"));
+    let body = match serde_json::to_string(
+        &serde_json::json!({ "supported_platforms": supported_platforms }),
+    ) {
+        Ok(json) => json,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to serialize supported platforms update payload: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    patch_project(&url, body, "supported platforms").await?;
+    Some(supported_platforms)
+}
+
 /// Updates the extended description of an existing project via `PATCH /data/projects/:id`.
 ///
 /// On success it returns the new extended description; on failure it logs to the

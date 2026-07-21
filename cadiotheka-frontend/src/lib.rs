@@ -79,7 +79,7 @@ pub mod data {
     pub use project::{
         IconUrl, ProjectData, create_project, fetch_projects, new_project_payload,
         toggle_project_favorite, update_project_description, update_project_extended_desc,
-        update_project_title, upload_project_icon,
+        update_project_platforms, update_project_tags, update_project_title, upload_project_icon,
     };
 }
 

@@ -169,6 +169,8 @@ pub struct ProjectPatch {
     title: Option<String>,
     icon_key: Option<Option<String>>,
     description: Option<String>,
+    tags: Option<Vec<String>>,
+    supported_platforms: Option<Vec<String>>,
     extended_desc: Option<String>,
 }
 
@@ -219,6 +221,25 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         db(&ctx)?
             .prepare("UPDATE projects SET description = ?1 WHERE id = ?2")
             .bind(&[description.into(), id.clone().into()])?
+            .run()
+            .await?;
+    }
+
+    if let Some(tags) = patch.tags {
+        let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
+        db(&ctx)?
+            .prepare("UPDATE projects SET tags = ?1 WHERE id = ?2")
+            .bind(&[tags.into(), id.clone().into()])?
+            .run()
+            .await?;
+    }
+
+    if let Some(supported_platforms) = patch.supported_platforms {
+        let supported_platforms =
+            serde_json::to_string(&supported_platforms).unwrap_or_else(|_| "[]".to_string());
+        db(&ctx)?
+            .prepare("UPDATE projects SET supported_platforms = ?1 WHERE id = ?2")
+            .bind(&[supported_platforms.into(), id.clone().into()])?
             .run()
             .await?;
     }

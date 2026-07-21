@@ -7,8 +7,8 @@ use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
 };
 use crate::data::{
-    AccountRole, update_project_description, update_project_extended_desc, update_project_title,
-    upload_project_icon,
+    AccountRole, update_project_description, update_project_extended_desc,
+    update_project_platforms, update_project_tags, update_project_title, upload_project_icon,
 };
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
@@ -46,6 +46,128 @@ pub fn ProjectModal() -> impl IntoView {
 }
 
 #[component]
+fn EditIconButton(aria_label: &'static str, #[prop(into)] on_click: Callback<()>) -> impl IntoView {
+    view! {
+        <button
+            type="button"
+            class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
+            aria-label=aria_label
+            on:click=move |_| on_click.run(())
+        >
+            <svg
+                class="w-4 h-4 text-base-content/60"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            >
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            </svg>
+        </button>
+    }
+}
+
+#[component]
+fn EditableChipSection<T>(
+    title: &'static str,
+    aria_label: &'static str,
+    items: Vec<T>,
+    all_items: Vec<T>,
+    editing: Signal<bool>,
+    editable: bool,
+    on_start_edit: Callback<()>,
+    on_cancel: Callback<()>,
+    on_toggle: Callback<T>,
+    on_save: Callback<Vec<T>>,
+    label_fn: fn(&T) -> &'static str,
+    color_fn: fn(&T) -> &'static str,
+    selected_items: Signal<Vec<T>>,
+    badge_class: &'static str,
+) -> impl IntoView
+where
+    T: Clone + PartialEq + Send + Sync + 'static,
+{
+    view! {
+        <div class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-base-content">{title}</h3>
+                {editable.then(|| view! {
+                    <EditIconButton
+                        aria_label=title
+                        on_click=Callback::new(move |_| on_start_edit.run(()))
+                    />
+                })}
+            </div>
+            {move || {
+                if editing.get() {
+                    let current_selected = selected_items.get();
+                    view! {
+                        <div class="space-y-2">
+                            <div class="flex flex-wrap gap-2" role="group" aria-label=aria_label>
+                                {all_items.iter().cloned().map(|item| {
+                                    let item_for_class = item.clone();
+                                    let item_for_aria = item.clone();
+                                    let item_for_click = item.clone();
+                                    view! {
+                                        <button
+                                            type="button"
+                                            class=move || {
+                                                let selected = selected_items.get().contains(&item_for_class);
+                                                format!(
+                                                    "badge badge-sm badge-outline rounded-none cursor-pointer transition-colors {}",
+                                                    if selected {
+                                                        "bg-primary/20 border-primary text-primary"
+                                                    } else {
+                                                        "border-base-content/20 text-base-content/70 hover:border-primary/50"
+                                                    }
+                                                )
+                                            }
+                                            on:click=move |_| on_toggle.run(item_for_click.clone())
+                                            aria-pressed=move || selected_items.get().contains(&item_for_aria).to_string()
+                                        >
+                                            {label_fn(&item)}
+                                        </button>
+                                    }
+                                }).collect_view()}
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    class="btn btn-ghost btn-xs"
+                                    on:click=move |_| on_cancel.run(())
+                                >"Cancel"</button>
+                                <button
+                                    type="button"
+                                    class="btn btn-primary btn-xs"
+                                    on:click=move |_| on_save.run(current_selected.clone())
+                                >"Save"</button>
+                            </div>
+                        </div>
+                    }
+                        .into_any()
+                } else {
+                    view! {
+                        <div class="flex flex-wrap gap-2">
+                            <OverflowRow
+                                items={items
+                                    .iter()
+                                    .map(|item| OverflowItem::new(label_fn(item), color_fn(item)))
+                                    .collect::<Vec<_>>()}
+                                max_visible=usize::MAX
+                                badge_class=badge_class
+                            />
+                        </div>
+                    }
+                        .into_any()
+                }
+            }}
+        </div>
+    }
+}
+
+#[component]
 fn ProjectModalContent(
     #[prop(into)] card: ProjectCardProperties,
     #[prop(into)] on_close: Callback<()>,
@@ -67,6 +189,12 @@ fn ProjectModalContent(
     let (editing_description, set_editing_description) = signal(false);
     let (draft_description, set_draft_description) = signal(card.description.clone());
     let (description, set_description) = signal(card.description.clone());
+    let (editing_tags, set_editing_tags) = signal(false);
+    let (draft_tags, set_draft_tags) = signal(card.tags.clone());
+    let (tags, set_tags) = signal(card.tags.clone());
+    let (editing_platforms, set_editing_platforms) = signal(false);
+    let (draft_platforms, set_draft_platforms) = signal(card.supported_platforms.clone());
+    let (supported_platforms, set_supported_platforms) = signal(card.supported_platforms.clone());
     let (editing_extended, set_editing_extended) = signal(false);
     let (draft_extended, set_draft_extended) = signal(card.extended_desc.clone());
     let (extended_desc, set_extended_desc) = signal(card.extended_desc.clone());
@@ -93,6 +221,44 @@ fn ProjectModalContent(
 
     let cancel_edit_description = move || {
         set_editing_description.set(false);
+    };
+
+    let start_edit_tags = move || {
+        set_draft_tags.set(tags.get());
+        set_editing_tags.set(true);
+    };
+
+    let cancel_edit_tags = move || {
+        set_editing_tags.set(false);
+    };
+
+    let toggle_tag = move |tag: crate::metadata::tags::Tag| {
+        set_draft_tags.update(|tags| {
+            if let Some(pos) = tags.iter().position(|t| *t == tag) {
+                tags.remove(pos);
+            } else {
+                tags.push(tag);
+            }
+        });
+    };
+
+    let start_edit_platforms = move || {
+        set_draft_platforms.set(supported_platforms.get());
+        set_editing_platforms.set(true);
+    };
+
+    let cancel_edit_platforms = move || {
+        set_editing_platforms.set(false);
+    };
+
+    let toggle_platform = move |platform: crate::metadata::platforms::Platform| {
+        set_draft_platforms.update(|platforms| {
+            if let Some(pos) = platforms.iter().position(|p| *p == platform) {
+                platforms.remove(pos);
+            } else {
+                platforms.push(platform);
+            }
+        });
     };
 
     let start_edit_extended = move || {
@@ -168,6 +334,72 @@ fn ProjectModalContent(
                 set_editing_description.set(false);
             });
         })
+    };
+
+    let commit_edit_tags = {
+        let project_id = project_id.clone();
+        Callback::new(move |draft_value: Vec<crate::metadata::tags::Tag>| {
+            let project_id = project_id.clone();
+            let set_tags = set_tags;
+            let set_editing_tags = set_editing_tags;
+            let modal_card = modal.set_card;
+            let set_projects = projects_ctx.set_projects;
+
+            leptos::task::spawn_local(async move {
+                if let Some(new_tags) = update_project_tags(&project_id, draft_value).await {
+                    set_tags.set(new_tags.clone());
+                    modal_card.update(|opt| {
+                        if let Some(card) = opt.as_mut() {
+                            card.tags = new_tags.clone();
+                        }
+                    });
+                    set_projects.update(|projects| {
+                        for project in projects.iter_mut() {
+                            if project.id == project_id {
+                                project.tags = new_tags.clone();
+                                break;
+                            }
+                        }
+                    });
+                }
+                set_editing_tags.set(false);
+            });
+        })
+    };
+
+    let commit_edit_platforms = {
+        let project_id = project_id.clone();
+        Callback::new(
+            move |draft_value: Vec<crate::metadata::platforms::Platform>| {
+                let project_id = project_id.clone();
+                let set_supported_platforms = set_supported_platforms;
+                let set_editing_platforms = set_editing_platforms;
+                let modal_card = modal.set_card;
+                let set_projects = projects_ctx.set_projects;
+
+                leptos::task::spawn_local(async move {
+                    if let Some(new_platforms) =
+                        update_project_platforms(&project_id, draft_value).await
+                    {
+                        set_supported_platforms.set(new_platforms.clone());
+                        modal_card.update(|opt| {
+                            if let Some(card) = opt.as_mut() {
+                                card.supported_platforms = new_platforms.clone();
+                            }
+                        });
+                        set_projects.update(|projects| {
+                            for project in projects.iter_mut() {
+                                if project.id == project_id {
+                                    project.supported_platforms = new_platforms.clone();
+                                    break;
+                                }
+                            }
+                        });
+                    }
+                    set_editing_platforms.set(false);
+                });
+            },
+        )
     };
 
     let commit_edit_extended = {
@@ -252,8 +484,7 @@ fn ProjectModalContent(
             }
         }
     };
-    let tags = card.tags.clone();
-    let platforms = card.supported_platforms.clone();
+    let platforms = supported_platforms;
 
     view! {
         <div class="space-y-4 flex flex-col min-h-0">
@@ -359,24 +590,10 @@ fn ProjectModalContent(
                                         {title.get()}
                                     </h2>
                                     {is_editable.then(|| view! {
-                                        <button
-                                            type="button"
-                                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
-                                            aria-label="Edit project title"
-                                            on:click=start_edit
-                                        >
-                                            <svg
-                                                class="w-4 h-4 text-base-content/60"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            >
-                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                                            </svg>
-                                        </button>
+                                        <EditIconButton
+                                            aria_label="Edit project title"
+                                            on_click=Callback::new(move |_| start_edit(()))
+                                        />
                                     })}
                                 </div>
                             }
@@ -429,61 +646,75 @@ fn ProjectModalContent(
             <hr class="border-base-content/10" />
 
             <div class="overflow-y-auto flex-1 min-h-0 py-2 space-y-4">
-                {(!tags.is_empty() || !platforms.is_empty()).then(|| view! {
-                    <div class="flex flex-wrap items-center gap-2">
-                        {(!tags.is_empty()).then(|| view! {
-                            <OverflowRow
-                                items={tags
-                                    .iter()
-                                    .map(|tag| OverflowItem::new(tag.label(), tag.color()))
-                                    .collect::<Vec<_>>()}
-                                max_visible=usize::MAX
+                {move || {
+                    let current_tags = tags.get();
+                    let current_platforms = platforms.get();
+                    if current_tags.is_empty() && current_platforms.is_empty() {
+                        return None;
+                    }
+                    Some(view! {
+                        <div class="space-y-3">
+                            <EditableChipSection
+                                title="Tags"
+                                aria_label="Tags"
+                                items=current_tags.clone()
+                                all_items=crate::metadata::tags::Tag::all().to_vec()
+                                editing=editing_tags.into()
+                                editable=is_editable
+                                on_start_edit=Callback::new(move |_| start_edit_tags())
+                                on_cancel=Callback::new(move |_| cancel_edit_tags())
+                                on_toggle=Callback::new(move |tag| toggle_tag(tag))
+                                on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
+                                label_fn=crate::metadata::tags::tag_label
+                                color_fn=crate::metadata::tags::tag_color
+                                selected_items=draft_tags.into()
                                 badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
                             />
-                        }
-                            .into_any())}
-                        {(!tags.is_empty() && !platforms.is_empty()).then(|| view! {
-                            <span class="w-px h-5 bg-base-content/20 self-center" aria-hidden="true" />
-                        }
-                            .into_any())}
-                        {(!platforms.is_empty()).then(|| view! {
-                            <OverflowRow
-                                items={platforms
-                                    .iter()
-                                    .map(|platform| OverflowItem::new(platform.label(), platform.color()))
-                                    .collect::<Vec<_>>()}
-                                max_visible=usize::MAX
-                                badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
-                            />
-                        }
-                            .into_any())}
-                    </div>
-                }
-                    .into_any())}
+                            {(!current_tags.is_empty() && !current_platforms.is_empty()).then(|| view! {
+                                <span class="w-px h-5 bg-base-content/20 self-center" aria-hidden="true" />
+                            }
+                                .into_any())}
+                            {(!current_platforms.is_empty()).then(|| view! {
+                                <OverflowRow
+                                    items={current_platforms
+                                        .iter()
+                                        .map(|platform| OverflowItem::new(platform.label(), platform.color()))
+                                        .collect::<Vec<_>>()}
+                                    max_visible=usize::MAX
+                                    badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
+                                />
+                            }
+                                .into_any())}
+                        </div>
+                    })
+                }}
+
+                <EditableChipSection
+                    title="Supported platforms"
+                    aria_label="Supported platforms"
+                    items=platforms.get()
+                    all_items=crate::metadata::platforms::Platform::all().to_vec()
+                    editing=editing_platforms.into()
+                    editable=is_editable
+                    on_start_edit=Callback::new(move |_| start_edit_platforms())
+                    on_cancel=Callback::new(move |_| cancel_edit_platforms())
+                    on_toggle=Callback::new(move |platform| toggle_platform(platform))
+                    on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
+                    label_fn=crate::metadata::platforms::platform_label
+                    color_fn=crate::metadata::platforms::platform_color
+                    selected_items=draft_platforms.into()
+                    badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
+                />
 
                 <div class="space-y-4">
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <h3 class="text-sm font-semibold text-base-content">"Short description"</h3>
                             {is_editable.then(|| view! {
-                                <button
-                                    type="button"
-                                    class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
-                                    aria-label="Edit short description"
-                                    on:click=move |_| start_edit_description()
-                                >
-                                    <svg
-                                        class="w-4 h-4 text-base-content/60"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    >
-                                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                                    </svg>
-                                </button>
+                                <EditIconButton
+                                    aria_label="Edit short description"
+                                    on_click=Callback::new(move |_| start_edit_description())
+                                />
                             })}
                         </div>
                         {move || {
@@ -535,24 +766,10 @@ fn ProjectModalContent(
                         <div class="flex items-center justify-between mb-1">
                             <h3 class="text-sm font-semibold text-base-content">"Extended description"</h3>
                             {is_editable.then(|| view! {
-                                <button
-                                    type="button"
-                                    class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
-                                    aria-label="Edit extended description"
-                                    on:click=move |_| start_edit_extended()
-                                >
-                                    <svg
-                                        class="w-4 h-4 text-base-content/60"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    >
-                                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                                    </svg>
-                                </button>
+                                <EditIconButton
+                                    aria_label="Edit extended description"
+                                    on_click=Callback::new(move |_| start_edit_extended())
+                                />
                             })}
                         </div>
                         {move || {
