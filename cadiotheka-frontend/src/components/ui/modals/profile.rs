@@ -231,28 +231,38 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             .into_any()
                         } else {
                             view! {
-                                <div class="flex items-center gap-2 flex-1">
-                                    <span class="text-base-content/70">{bio.get()}</span>
-                                    {is_editable.then(|| view! {
-                                        <button
-                                            type="button"
-                                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
-                                            aria-label="Edit bio"
-                                            on:click=start_edit
-                                        >
-                                            <svg
-                                                class="w-4 h-4 text-base-content/60"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
+                                <div class="flex items-stretch gap-2 flex-1">
+                                    {if is_editable {
+                                        view! {
+                                            <button
+                                                type="button"
+                                                class="group text-left relative border border-base-content/20 rounded-none p-2 flex-1 hover:border-primary transition-colors cursor-pointer"
+                                                aria-label="Edit bio"
+                                                on:click=start_edit
                                             >
-                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                                            </svg>
-                                        </button>
-                                    })}
+                                                <span class="text-base-content/70 group-hover:text-base-content transition-colors">{bio.get()}</span>
+                                                <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <svg
+                                                        class="w-5 h-5 text-primary"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                    >
+                                                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                                    </svg>
+                                                </div>
+                                            </button>
+                                        }
+                                            .into_any()
+                                    } else {
+                                        view! {
+                                            <span class="text-base-content/70 border border-base-content/20 rounded-none p-2 flex-1">{bio.get()}</span>
+                                        }
+                                            .into_any()
+                                    }}
                                 </div>
                             }
                             .into_any()
