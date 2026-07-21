@@ -97,7 +97,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             aria-hidden="true"
                         />
                     }
-                    .into_any(),
+                        .into_any(),
                     None => view! {
                         <div class=format!("flex-shrink-0 w-16 h-16 rounded flex items-center justify-center text-white font-bold text-xl {}", bg)
                             aria-hidden="true"
@@ -105,7 +105,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             {letter.clone()}
                         </div>
                     }
-                    .into_any(),
+                        .into_any(),
                 }}
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
                     <div class="flex items-center gap-2">
@@ -120,6 +120,23 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                         {"@"}
                         {username.clone()}
                     </p>
+                    <div class="flex items-center gap-2 text-xs text-base-content/60">
+                        <span class="flex items-center gap-1" title={format!("Email: {}", account.email)}>
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="4" width="20" height="16" rx="2" />
+                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                            </svg>
+                            <span>{account.email.clone()}</span>
+                        </span>
+                        <span class="text-base-content/30">"•"</span>
+                        <span class="flex items-center gap-1" title={format!("Joined: {}", format_time_full(account.created_at))}>
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 6v6l4 2" />
+                            </svg>
+                            <span>{format_time_full(account.created_at)}</span>
+                        </span>
+                    </div>
                 </div>
                 <div class="hidden sm:flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">
                     <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
@@ -128,14 +145,6 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
             </div>
             <hr class="border-base-content/10" />
             <div class="space-y-2 text-sm text-base-content/80">
-                <p>
-                    <span class="font-semibold text-base-content">Email:</span>
-                    <span class="ml-1">{account.email.clone()}</span>
-                </p>
-                <p>
-                    <span class="font-semibold text-base-content">Joined:</span>
-                    <span class="ml-1">{format_time_full(account.created_at)}</span>
-                </p>
                 <div class="flex items-start gap-2">
                     <span class="font-semibold text-base-content flex-shrink-0">Bio:</span>
                     {move || {
