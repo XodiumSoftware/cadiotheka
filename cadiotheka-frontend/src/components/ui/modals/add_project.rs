@@ -277,6 +277,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                             }
                                             for="add-project-title"
                                         >
+                                            <span class="text-error mr-1">"*"</span>
                                             {move || {
                                                 let count = title.get().len();
                                                 format!("Title ({count}/100)")
@@ -317,6 +318,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                         }
                                         for="add-project-description"
                                     >
+                                        <span class="text-error mr-1">"*"</span>
                                         {move || {
                                             let count = description.get().len();
                                             format!("Short description ({count}/500)")
@@ -356,7 +358,10 @@ pub fn AddProjectModal() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <span class="block text-sm font-medium text-base-content mb-2">"Tags"</span>
+                                    <span class="block text-sm font-medium text-base-content mb-2">
+                                        <span class="text-error mr-1">"*"</span>
+                                        "Tags"
+                                    </span>
                                     <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
                                         {Tag::all().into_iter().map(|tag| {
                                             let tag_clone = tag;
@@ -389,7 +394,10 @@ pub fn AddProjectModal() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <span class="block text-sm font-medium text-base-content mb-2">"Supported platforms"</span>
+                                    <span class="block text-sm font-medium text-base-content mb-2">
+                                        <span class="text-error mr-1">"*"</span>
+                                        "Supported platforms"
+                                    </span>
                                     <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
                                         {Platform::all().into_iter().map(|platform| {
                                             let platform_clone = platform;
