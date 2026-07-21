@@ -211,28 +211,28 @@ fn ProjectModalContent(
     view! {
         <div class="space-y-4 flex flex-col min-h-0">
             <div class="flex items-start gap-4">
-                {move || {
-                    view! {
-                        <ProjectIconPicker
-                            icon_url={move || icon_url.get()}
-                            title=move || title.get()
-                            editable={Signal::derive(move || is_editable)}
-                            on_click=move |_| {
-                                set_selected_icon_file.set(None);
-                                set_editing_icon.update(|v| *v = !*v);
-                            }
-                            class="w-16 h-16"
-                        />
-                    }
-                        .into_any()
-                }}
-                <div class="min-w-0 flex-1 flex flex-col gap-1">
+                <div class="flex flex-col items-start gap-2 flex-shrink-0">
+                    {move || {
+                        view! {
+                            <ProjectIconPicker
+                                icon_url={move || icon_url.get()}
+                                title=move || title.get()
+                                editable={Signal::derive(move || is_editable)}
+                                on_click=move |_| {
+                                    set_selected_icon_file.set(None);
+                                    set_editing_icon.update(|v| *v = !*v);
+                                }
+                                class="w-16 h-16"
+                            />
+                        }
+                            .into_any()
+                    }}
                     {move || {
                         if editing_icon.get() {
                             view! {
-                                <div class="flex items-center gap-2">
+                                <div class="w-56 max-w-full space-y-2">
                                     <input
-                                        class="file-input file-input-bordered flex-1 text-base-content"
+                                        class="file-input file-input-bordered w-full text-base-content"
                                         type="file"
                                         accept="image/png,image/jpeg,image/webp"
                                         on:change=move |ev| {
@@ -271,7 +271,14 @@ fn ProjectModalContent(
                                 </div>
                             }
                                 .into_any()
-                        } else if editing.get() {
+                        } else {
+                            ().into_any()
+                        }
+                    }}
+                </div>
+                <div class="min-w-0 flex-1 flex flex-col gap-1">
+                    {move || {
+                        if editing.get() {
                             view! {
                                 <div class="flex items-center gap-2">
                                     <input
