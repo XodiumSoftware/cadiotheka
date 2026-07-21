@@ -910,7 +910,7 @@ fn ProjectModalContent(
 
                     <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
 
-                    <div class="space-y-4">
+                    <div class="space-y-4 max-h-[45vh] overflow-y-auto xl:max-h-none xl:overflow-visible pr-1 xl:pr-0">
                         <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
                             <EditableChipSection
                                 title="Supported platforms"
