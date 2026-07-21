@@ -33,7 +33,9 @@ pub fn ProjectModal() -> impl IntoView {
                 let maybe_card = modal.card.get();
                 match maybe_card {
                     Some(card) => view! {
-                        <ProjectModalContent card=card on_close=on_close />
+                        <div class="w-[min(92vw,72rem)] max-w-[72rem] max-h-[88vh] flex flex-col">
+                            <ProjectModalContent card=card on_close=on_close />
+                        </div>
                     }
                         .into_any(),
                     None => view! {

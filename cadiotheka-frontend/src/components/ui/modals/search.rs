@@ -79,7 +79,7 @@ pub fn SearchModal(
                 }
             }
         >
-            <div class="w-full max-w-6xl max-h-[90vh] flex flex-col">
+            <div class="w-full max-w-lg max-h-[80vh] flex flex-col">
                 <div class="block p-2 bg-base-100 border-2 border-primary overflow-hidden">
                     <CornerFrame style="square" class="w-full">
                         <div class="h-full rounded-none p-6 overflow-hidden flex flex-col">
