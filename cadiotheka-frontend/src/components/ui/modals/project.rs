@@ -756,7 +756,23 @@ fn ProjectModalContent(
                 </div>
                 <div class="hidden sm:flex items-center gap-2 text-xs flex-shrink-0">
                     {is_editable.then(|| view! {
-                        <div class="hidden sm:inline-flex items-center gap-2">
+                        <div
+                            class="hidden sm:inline-flex items-center gap-2 tooltip tooltip-bottom"
+                            data-tip=move || {
+                                if edit_mode.get() {
+                                    "Exit edit mode".to_string()
+                                } else {
+                                    "Enter edit mode".to_string()
+                                }
+                            }
+                            aria-label=move || {
+                                if edit_mode.get() {
+                                    "Exit edit mode"
+                                } else {
+                                    "Enter edit mode"
+                                }
+                            }
+                        >
                             <svg
                                 class=move || {
                                     if edit_mode.get() {
