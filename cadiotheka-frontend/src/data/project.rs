@@ -223,7 +223,7 @@ pub async fn create_project(project: &ProjectData) -> Option<ProjectData> {
     }
 }
 
-/// Updates a single field of an existing project via `PATCH /data/projects/:id`.
+/// Updates the title of an existing project via `PATCH /data/projects/:id`.
 ///
 /// On success it returns the new title; on failure it logs to the console and
 /// returns `None`.
@@ -239,7 +239,40 @@ pub async fn update_project_title(id: &str, title: String) -> Option<String> {
         }
     };
 
-    let request = match gloo_net::http::Request::patch(&url)
+    patch_project(&url, body, "title").await?;
+    Some(title)
+}
+
+/// Updates the icon URL of an existing project via `PATCH /data/projects/:id`.
+///
+/// On success it returns the new icon URL (or `None` when cleared); on failure
+/// it logs to the console and returns `None`.
+pub async fn update_project_icon_url(
+    id: &str,
+    icon_url: Option<String>,
+) -> Option<Option<IconUrl>> {
+    let url = api_url(&format!("/projects/{id}"));
+    let body = match serde_json::to_string(&serde_json::json!({ "icon_url": icon_url })) {
+        Ok(json) => json,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to serialize icon URL update payload: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    patch_project(&url, body, "icon URL")
+        .await
+        .map(|()| icon_url.map(IconUrl))
+}
+
+/// Sends a `PATCH` request to the given project endpoint.
+///
+/// Logs failures under the provided field name and returns `Some(())` only when
+/// the response is successful.
+async fn patch_project(url: &str, body: String, field_name: &str) -> Option<()> {
+    let request = match gloo_net::http::Request::patch(url)
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .body(body)
@@ -247,7 +280,7 @@ pub async fn update_project_title(id: &str, title: String) -> Option<String> {
         Ok(req) => req,
         Err(err) => {
             leptos::web_sys::console::error_1(
-                &format!("Failed to build title update request: {err:?}").into(),
+                &format!("Failed to build {field_name} update request: {err:?}").into(),
             );
             return None;
         }
@@ -258,15 +291,15 @@ pub async fn update_project_title(id: &str, title: String) -> Option<String> {
             if !response.ok() {
                 let status = response.status();
                 leptos::web_sys::console::error_1(
-                    &format!("Failed to update project title: HTTP {status}").into(),
+                    &format!("Failed to update project {field_name}: HTTP {status}").into(),
                 );
                 return None;
             }
-            Some(title)
+            Some(())
         }
         Err(err) => {
             leptos::web_sys::console::error_1(
-                &format!("Failed to update project title: {err:?}").into(),
+                &format!("Failed to update project {field_name}: {err:?}").into(),
             );
             None
         }

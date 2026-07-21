@@ -12,6 +12,8 @@ const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, autho
 const MAX_TITLE_LENGTH: usize = 100;
 /// Maximum allowed length for a project short description.
 const MAX_DESCRIPTION_LENGTH: usize = 500;
+/// Maximum allowed length for a project icon URL.
+const MAX_ICON_URL_LENGTH: usize = 500;
 
 /// Validates the project payload and returns an error message when a field
 /// exceeds its allowed length. The route handler turns this message into a
@@ -157,6 +159,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 #[derive(Deserialize, Debug)]
 pub struct ProjectPatch {
     title: Option<String>,
+    icon_url: Option<Option<String>>,
 }
 
 /// Partially updates an existing project, identified by the `:id` path parameter.
@@ -178,7 +181,21 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         }
         db(&ctx)?
             .prepare("UPDATE projects SET title = ?1 WHERE id = ?2")
-            .bind(&[title.into(), id.into()])?
+            .bind(&[title.into(), id.clone().into()])?
+            .run()
+            .await?;
+    }
+
+    if let Some(icon_url) = patch.icon_url {
+        if icon_url
+            .as_ref()
+            .is_some_and(|url| url.len() > MAX_ICON_URL_LENGTH)
+        {
+            return Response::error("Icon URL must be 500 characters or fewer", 400);
+        }
+        db(&ctx)?
+            .prepare("UPDATE projects SET icon_url = ?1 WHERE id = ?2")
+            .bind(&[js_option(icon_url), id.into()])?
             .run()
             .await?;
     }

@@ -5,11 +5,12 @@ use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
 };
-use crate::data::{IconUrl, update_project_title};
+use crate::data::{AccountRole, IconUrl, update_project_icon_url, update_project_title};
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 
 const MAX_TITLE_LENGTH: usize = 100;
+const MAX_ICON_URL_LENGTH: usize = 500;
 
 /// Modal dialog that displays detailed information about a selected project.
 #[component]
@@ -50,16 +51,75 @@ fn ProjectModalContent(
     let is_editable = current_user
         .account
         .get()
-        .is_some_and(|me| me.id == card.author_id);
+        .is_some_and(|me| me.role == AccountRole::Admin || me.id == card.author_id);
 
     let (editing, set_editing) = signal(false);
     let (draft, set_draft) = signal(card.title.clone());
     let (title, set_title) = signal(card.title.clone());
+    let (editing_icon, set_editing_icon) = signal(false);
+    let (draft_icon_url, set_draft_icon_url) = signal(
+        card.icon_url
+            .as_ref()
+            .map(|IconUrl(url)| url.clone())
+            .unwrap_or_default(),
+    );
+    let (icon_url, set_icon_url) = signal(card.icon_url.clone());
     let project_id = card.id.clone();
 
     let start_edit = move |_| {
         set_draft.set(title.get());
         set_editing.set(true);
+    };
+
+    let start_edit_icon = move |_| {
+        set_draft_icon_url.set(
+            icon_url
+                .get()
+                .as_ref()
+                .map(|IconUrl(url)| url.clone())
+                .unwrap_or_default(),
+        );
+        set_editing_icon.set(true);
+    };
+
+    let cancel_edit_icon = move || {
+        set_editing_icon.set(false);
+    };
+
+    let commit_edit_icon = {
+        let project_id = project_id.clone();
+        Callback::new(move |draft_value: String| {
+            let project_id = project_id.clone();
+            let set_icon_url = set_icon_url;
+            let set_editing_icon = set_editing_icon;
+            let modal_card = modal.set_card;
+            let set_projects = projects_ctx.set_projects;
+
+            leptos::task::spawn_local(async move {
+                let new_url = if draft_value.trim().is_empty() {
+                    None
+                } else {
+                    Some(draft_value.trim().to_string())
+                };
+                if let Some(new_icon) = update_project_icon_url(&project_id, new_url).await {
+                    set_icon_url.set(new_icon.clone());
+                    modal_card.update(|opt| {
+                        if let Some(card) = opt.as_mut() {
+                            card.icon_url = new_icon.clone();
+                        }
+                    });
+                    set_projects.update(|projects| {
+                        for project in projects.iter_mut() {
+                            if project.id == project_id {
+                                project.icon_url = new_icon.clone();
+                                break;
+                            }
+                        }
+                    });
+                }
+                set_editing_icon.set(false);
+            });
+        })
     };
 
     let cancel_edit = move || {
@@ -99,7 +159,6 @@ fn ProjectModalContent(
 
     let letter = placeholder_letter(&card.title);
     let bg = placeholder_color(&card.title);
-    let icon_url = card.icon_url.as_ref().map(|IconUrl(url)| url.clone());
     let icon_alt = format!("{} icon", card.title.clone());
     let author = card.author.clone();
     let author_username = card.author_username.clone();
@@ -128,28 +187,80 @@ fn ProjectModalContent(
             <div class="flex items-start gap-4">
                 {move || {
                     let icon_alt = icon_alt.clone();
-                    match icon_url.clone() {
-                    Some(url) => view! {
-                        <img
-                            src={url}
-                            alt={icon_alt}
-                            class="flex-shrink-0 w-16 h-16 rounded object-cover"
-                        />
-                    }
-                        .into_any(),
-                    None => view! {
-                        <div
-                            class={format!("flex-shrink-0 w-16 h-16 rounded flex items-center justify-center text-white font-bold text-xl {}", bg)}
-                            aria-hidden="true"
+                    let edit_btn = is_editable.then(|| view! {
+                        <button
+                            type="button"
+                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0 absolute top-0 right-0"
+                            aria-label="Edit project icon"
+                            on:click=start_edit_icon
                         >
-                            {letter.clone()}
-                        </div>
+                            <svg
+                                class="w-4 h-4 text-base-content/60"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                            </svg>
+                        </button>
+                    });
+                    match icon_url.get() {
+                        Some(IconUrl(url)) => view! {
+                            <div class="relative flex-shrink-0 w-16 h-16 rounded">
+                                <img
+                                    src={url}
+                                    alt={icon_alt}
+                                    class="w-16 h-16 rounded object-cover"
+                                />
+                                {edit_btn}
+                            </div>
+                        }
+                            .into_any(),
+                        None => view! {
+                            <div class="relative flex-shrink-0 w-16 h-16 rounded">
+                                <div
+                                    class={format!("w-16 h-16 rounded flex items-center justify-center text-white font-bold text-xl {}", bg)}
+                                    aria-hidden="true"
+                                >
+                                    {letter.clone()}
+                                </div>
+                                {edit_btn}
+                            </div>
+                        }
+                            .into_any(),
                     }
-                        .into_any(),
-                }}}
+                }}
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
                     {move || {
-                        if editing.get() {
+                        if editing_icon.get() {
+                            view! {
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        class="input input-sm input-bordered flex-1 text-base-content"
+                                        type="text"
+                                        maxlength=MAX_ICON_URL_LENGTH.to_string()
+                                        placeholder="https://example.com/icon.svg"
+                                        prop:value=draft_icon_url.get()
+                                        on:input=move |ev| set_draft_icon_url.set(event_target_value(&ev))
+                                        on:keyup=move |ev| {
+                                            match ev.key().as_str() {
+                                                "Enter" => commit_edit_icon.run(draft_icon_url.get()),
+                                                "Escape" => cancel_edit_icon(),
+                                                _ => {}
+                                            }
+                                        }
+                                        autofocus
+                                    />
+                                    <span class="text-xs text-base-content/50 flex-shrink-0">
+                                        {move || format!("{}/{}", draft_icon_url.get().len(), MAX_ICON_URL_LENGTH)}
+                                    </span>
+                                </div>
+                            }
+                                .into_any()
+                        } else if editing.get() {
                             view! {
                                 <div class="flex items-center gap-2">
                                     <input
@@ -172,7 +283,7 @@ fn ProjectModalContent(
                                     </span>
                                 </div>
                             }
-                            .into_any()
+                                .into_any()
                         } else {
                             view! {
                                 <div class="flex items-center gap-2">
@@ -204,7 +315,7 @@ fn ProjectModalContent(
                                     })}
                                 </div>
                             }
-                            .into_any()
+                                .into_any()
                         }
                     }}
                     <p class="text-base-content/70 text-sm">

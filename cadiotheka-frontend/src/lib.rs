@@ -76,7 +76,7 @@ pub mod data {
     pub use account::{AccountData, AccountRole, fetch_accounts};
     pub use project::{
         IconUrl, ProjectData, create_project, fetch_projects, new_project_payload,
-        update_project_title,
+        update_project_icon_url, update_project_title,
     };
 }
 
