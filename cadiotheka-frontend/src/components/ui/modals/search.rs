@@ -82,8 +82,8 @@ pub fn SearchModal(
             }
         >
             <div class=container_class>
-                <div class="block p-2 bg-base-100 border-2 border-primary overflow-hidden">
-                    <CornerFrame style="square" class="w-full">
+                <div class="block p-2 bg-base-100 border-2 border-primary overflow-hidden h-full flex flex-col">
+                    <CornerFrame style="square" class="w-full h-full">
                         <div class="h-full rounded-none p-6 overflow-hidden flex flex-col">
                             {children_view}
                         </div>
