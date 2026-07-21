@@ -49,6 +49,7 @@ fn ProjectModalContent(
     let icon_alt = t_string!(i18n, project_card.icon_alt, title = card.title.clone());
     let title = card.title.clone();
     let author = card.author.clone();
+    let author_username = card.author_username.clone();
     let author_id = card.author_id.clone();
     let accounts = AccountsContext::use_context();
     let open_author_profile = {
@@ -102,7 +103,7 @@ fn ProjectModalContent(
                         <button
                             type="button"
                             class="font-semibold text-base-content ml-1 hover:text-primary hover:underline"
-                            title={author.clone()}
+                            title={format!("@{}", author_username)}
                             on:click=open_author_profile
                         >
                             {author.clone()}

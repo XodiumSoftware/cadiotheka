@@ -139,6 +139,7 @@ pub fn ProjectCard(
 
     let card_title = props.title.clone();
     let card_author = props.author.clone();
+    let card_author_username = props.author_username.clone();
     let card_title_for_icon_alt = card_title.clone();
     let icon_alt = Signal::derive(move || {
         t_string!(
@@ -202,7 +203,7 @@ pub fn ProjectCard(
                                     <button
                                         type="button"
                                         class="text-base-content font-semibold truncate hover:text-primary hover:underline"
-                                        title={card_author.clone()}
+                                        title={format!("@{}", card_author_username)}
                                         on:click=move |ev| {
                                             ev.stop_propagation();
                                             on_author_click.run(());
