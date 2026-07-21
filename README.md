@@ -33,7 +33,7 @@
 
 ## About
 
-Cadiotheka is an open hub for CAD creators. It collects, organizes, and provides resources, tooling, and references to support people working with computer-aided design. The hub runs as a browser application built with [leptos](https://github.com/leptos-rs/leptos) and compiled to WebAssembly, backed by a Cloudflare Pages Functions Rust backend that uses a D1 database.
+Cadiotheka is an open hub for CAD creators. It collects, organizes, and provides resources, tooling, and references to support people working with computer-aided design. The hub runs as a browser application built with [leptos](https://github.com/leptos) and compiled to WebAssembly, backed by a Cloudflare Pages Functions Rust backend that uses a D1 database and an R2 bucket for uploaded project icons.
 
 ## Requirements
 
@@ -41,7 +41,7 @@ Cadiotheka is an open hub for CAD creators. It collects, organizes, and provides
 - `wasm32-unknown-unknown` target (for the frontend)
 - [Trunk](https://trunkrs.dev/) (for the frontend)
 - [Node.js](https://nodejs.org/) and `npx` (for the backend)
-- A [Cloudflare](https://cloudflare.com/) account with D1 access (for backend deployment)
+- A [Cloudflare](https://cloudflare.com/) account with D1 and R2 access (for backend deployment)
 
 Install the target and Trunk with:
 
@@ -91,12 +91,22 @@ npx wrangler dev
 
 The backend API is available at <http://localhost:8787/data/accounts> by default.
 
+Project icons are uploaded through the backend and stored in the `CADIOTHEKA_PROJECTS_ICONS` R2 bucket. The database stores only the generated R2 object key (for example `icons/<project_id>/<uuid>`), and the frontend renders icons through the backend icon route.
+
 To create the local D1 database tables:
 
 ```bash
 cd cadiotheka-backend
 npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql --local
+```
+
+For icon uploads, also create or bind an R2 bucket in `wrangler.toml`:
+
+```toml
+[[r2_buckets]]
+binding = "CADIOTHEKA_PROJECTS_ICONS"
+bucket_name = "cadiotheka-projects-icons"
 ```
 
 Create accounts and projects through the application UI or API as needed.

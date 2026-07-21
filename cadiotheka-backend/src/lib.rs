@@ -1,5 +1,7 @@
 /// Name of the D1 binding configured in `wrangler.toml`.
 pub(crate) const DB_BINDING: &str = "DB";
+/// Name of the R2 binding configured in `wrangler.toml` for project icons.
+pub(crate) const ICONS_R2_BINDING: &str = "CADIOTHEKA_PROJECTS_ICONS";
 
 /// Origins allowed to call the API from a browser.
 const ALLOWED_ORIGINS: &[&str] = &["https://cadiotheka.com", "https://www.cadiotheka.com"];
@@ -104,6 +106,14 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .get_async("/data/projects", api::projects::list_projects)
         .post_async("/data/projects", api::projects::create_project)
         .get_async("/data/projects/:id", api::projects::read_project)
+        .post_async(
+            "/data/projects/:id/icon",
+            api::projects::upload_project_icon,
+        )
+        .get_async(
+            "/data/icons/:project_id/:icon_id",
+            api::projects::serve_icon,
+        )
         .patch_async("/data/projects/:id", api::projects::patch_project)
         .put_async("/data/projects/:id", api::projects::update_project)
         .delete_async("/data/projects/:id", api::projects::delete_project)

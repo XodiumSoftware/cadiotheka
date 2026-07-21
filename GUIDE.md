@@ -109,6 +109,8 @@ npx wrangler dev
 
 The local API is available at <http://localhost:8787/data/accounts> by default.
 
+Project icons are uploaded through the backend and stored in the `CADIOTHEKA_PROJECTS_ICONS` R2 bucket. D1 stores only the generated object key, and the frontend loads the image through the backend icon route.
+
 ## Create the Database Tables
 
 Apply the schemas to the local D1 database:
@@ -117,6 +119,14 @@ Apply the schemas to the local D1 database:
 cd cadiotheka-backend
 npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
+```
+
+For project icon uploads, also ensure `wrangler.toml` includes an R2 bucket binding:
+
+```toml
+[[r2_buckets]]
+binding = "CADIOTHEKA_PROJECTS_ICONS"
+bucket_name = "cadiotheka-projects-icons"
 ```
 
 Create accounts and projects through the application UI or API as needed.
@@ -224,14 +234,27 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
    npx wrangler d1 create cadiotheka-db
    ```
 
-2. Update `wrangler.toml` with the database ID from step 1.
-
-3. Apply the schema:
+2. Create an R2 bucket for project icons:
    ```bash
-   npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql
+   npx wrangler r2 bucket create cadiotheka-projects-icons
    ```
 
-4. Build and deploy:
+3. Update `wrangler.toml` with:
+   - the D1 database ID from step 1
+   - the R2 binding:
+   ```toml
+   [[r2_buckets]]
+   binding = "CADIOTHEKA_PROJECTS_ICONS"
+   bucket_name = "cadiotheka-projects-icons"
+   ```
+
+4. Apply the schema:
+   ```bash
+   npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql
+   npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql
+   ```
+
+5. Build and deploy:
    ```bash
    npx wrangler deploy
    ```

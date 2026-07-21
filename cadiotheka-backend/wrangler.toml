@@ -11,6 +11,10 @@ database_id = "c4694439-e7f4-48e0-9e2a-a7e431a8fbce"
 binding = "AUTH_KV"
 id = "ba027b7e98784b0dae06ab649b1738e4"
 
+[[r2_buckets]]
+binding = "CADIOTHEKA_PROJECTS_ICONS"
+bucket_name = "cadiotheka-projects-icons"
+
 [observability.logs]
 enabled = true
 invocation_logs = true

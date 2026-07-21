@@ -3,7 +3,7 @@ use crate::components::ui::project_icon_picker::ProjectIconPicker;
 use crate::contexts::{
     AddProjectModalContext, CurrentUserContext, LoginModalContext, ProjectsContext,
 };
-use crate::data::{IconUrl, create_project, new_project_payload};
+use crate::data::{IconUrl, create_project, new_project_payload, upload_project_icon};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use leptos::prelude::*;
@@ -45,7 +45,8 @@ pub fn AddProjectModal() -> impl IntoView {
     let (extended_desc, set_extended_desc) = signal(String::new());
     let (selected_tags, set_selected_tags) = signal(Vec::<Tag>::new());
     let (selected_platforms, set_selected_platforms) = signal(Vec::<Platform>::new());
-    let (icon_url, set_icon_url) = signal(String::new());
+    let (selected_icon_file, set_selected_icon_file) = signal(Option::<web_sys::File>::None);
+    let (selected_icon_preview, set_selected_icon_preview) = signal(Option::<String>::None);
     let (show_icon_input, set_show_icon_input) = signal(false);
     let (errors, set_errors) = signal(FormErrors::default());
     let (is_submitting, set_is_submitting) = signal(false);
@@ -57,7 +58,8 @@ pub fn AddProjectModal() -> impl IntoView {
         set_extended_desc.set(String::new());
         set_selected_tags.set(Vec::new());
         set_selected_platforms.set(Vec::new());
-        set_icon_url.set(String::new());
+        set_selected_icon_file.set(None);
+        set_selected_icon_preview.set(None);
         set_show_icon_input.set(false);
         set_errors.set(FormErrors::default());
         set_submit_error.set(None);
@@ -143,24 +145,28 @@ pub fn AddProjectModal() -> impl IntoView {
             extended_desc.get_untracked(),
             selected_tags.get_untracked(),
             selected_platforms.get_untracked(),
-            {
-                let url = icon_url.get_untracked();
-                if url.trim().is_empty() {
-                    None
-                } else {
-                    Some(url)
-                }
-            },
         );
+        let selected_icon_file_value = selected_icon_file.get_untracked();
 
         set_is_submitting.set(true);
 
         leptos::task::spawn_local(async move {
             let result = create_project(&payload).await;
-            set_is_submitting.set(false);
 
             match result {
-                Some(_) => {
+                Some(created) => {
+                    if let Some(file) = selected_icon_file_value
+                        && upload_project_icon(&created.id, file).await.is_none()
+                    {
+                        set_is_submitting.set(false);
+                        set_submit_error.set(Some(
+                            "Project was created, but the icon upload failed. Please try editing the project icon afterward.".to_string(),
+                        ));
+                        let refreshed = crate::data::fetch_projects().await;
+                        projects_ctx.set_projects.set(refreshed);
+                        return;
+                    }
+
                     let refreshed = crate::data::fetch_projects().await;
                     projects_ctx.set_projects.set(refreshed);
                     modal.close();
@@ -172,6 +178,7 @@ pub fn AddProjectModal() -> impl IntoView {
                     ));
                 }
             }
+            set_is_submitting.set(false);
         });
     };
 
@@ -225,10 +232,7 @@ pub fn AddProjectModal() -> impl IntoView {
                             <div class="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
                                 <div class="flex items-start gap-4">
                                     <ProjectIconPicker
-                                        icon_url={move || {
-                                            let url = icon_url.get();
-                                            if url.trim().is_empty() { None } else { Some(IconUrl(url)) }
-                                        }}
+                                        icon_url={move || selected_icon_preview.get().map(IconUrl)}
                                         title=move || title.get()
                                         editable={Signal::derive(move || !is_submitting.get())}
                                         on_click=move |_| set_show_icon_input.update(|v| *v = !*v)
@@ -258,11 +262,29 @@ pub fn AddProjectModal() -> impl IntoView {
                                         {move || {
                                             show_icon_input.get().then(|| view! {
                                                 <input
-                                                    type="text"
-                                                    class="input w-full mt-2 rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
-                                                    placeholder="https://example.com/icon.svg"
-                                                    prop:value=icon_url.get()
-                                                    on:input=move |ev| set_icon_url.set(event_target_value(&ev))
+                                                    type="file"
+                                                    class="file-input file-input-bordered w-full mt-2 rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                                    accept="image/png,image/jpeg,image/webp"
+                                                    on:change=move |ev| {
+                                                        let input = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok());
+                                                        let Some(input) = input else {
+                                                            return;
+                                                        };
+                                                        let Some(files) = input.files() else {
+                                                            set_selected_icon_file.set(None);
+                                                            set_selected_icon_preview.set(None);
+                                                            return;
+                                                        };
+                                                        let Some(file) = files.get(0).and_then(|blob| blob.dyn_into::<web_sys::File>().ok()) else {
+                                                            set_selected_icon_file.set(None);
+                                                            set_selected_icon_preview.set(None);
+                                                            return;
+                                                        };
+
+                                                        let preview = leptos::web_sys::Url::create_object_url_with_blob(&file).ok();
+                                                        set_selected_icon_file.set(Some(file));
+                                                        set_selected_icon_preview.set(preview);
+                                                    }
                                                     disabled=move || is_submitting.get()
                                                 />
                                             })

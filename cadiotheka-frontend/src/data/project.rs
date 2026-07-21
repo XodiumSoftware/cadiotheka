@@ -118,7 +118,16 @@ pub struct ProjectData {
     #[serde(with = "time::serde::rfc3339")]
     pub timestamp: time::OffsetDateTime,
     /// Optional icon URL (when absent, a colored placeholder is generated).
+    #[serde(deserialize_with = "deserialize_icon_key")]
     pub icon_url: Option<IconUrl>,
+}
+
+fn deserialize_icon_key<'de, D>(deserializer: D) -> Result<Option<IconUrl>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let key = Option::<String>::deserialize(deserializer)?;
+    Ok(key.map(|key| icon_src_from_key(&key)))
 }
 
 /// Returns the current UTC time using the JavaScript `Date` API.
@@ -141,7 +150,6 @@ pub fn new_project_payload(
     extended_desc: String,
     tags: Vec<Tag>,
     supported_platforms: Vec<Platform>,
-    icon_url: Option<String>,
 ) -> ProjectData {
     ProjectData {
         id: uuid::Uuid::new_v4().to_string(),
@@ -156,7 +164,7 @@ pub fn new_project_payload(
         downloads: 0,
         favorites: 0,
         timestamp: now_utc(),
-        icon_url: icon_url.map(IconUrl),
+        icon_url: None,
     }
 }
 
@@ -267,24 +275,84 @@ pub async fn update_project_extended_desc(id: &str, extended_desc: String) -> Op
 ///
 /// On success it returns the new icon URL (or `None` when cleared); on failure
 /// it logs to the console and returns `None`.
-pub async fn update_project_icon_url(
-    id: &str,
-    icon_url: Option<String>,
-) -> Option<Option<IconUrl>> {
-    let url = api_url(&format!("/projects/{id}"));
-    let body = match serde_json::to_string(&serde_json::json!({ "icon_url": icon_url })) {
-        Ok(json) => json,
+pub async fn upload_project_icon(id: &str, file: web_sys::File) -> Option<IconUrl> {
+    let url = api_url(&format!("/projects/{id}/icon"));
+    let form = match web_sys::FormData::new() {
+        Ok(form) => form,
         Err(err) => {
             leptos::web_sys::console::error_1(
-                &format!("Failed to serialize icon URL update payload: {err:?}").into(),
+                &format!("Failed to create icon upload form data: {err:?}").into(),
             );
             return None;
         }
     };
 
-    patch_project(&url, body, "icon URL")
-        .await
-        .map(|()| icon_url.map(IconUrl))
+    if let Err(err) = form.append_with_blob_and_filename("icon", &file, &file.name()) {
+        leptos::web_sys::console::error_1(
+            &format!("Failed to append icon file to form data: {err:?}").into(),
+        );
+        return None;
+    }
+
+    let request = match gloo_net::http::Request::post(&url)
+        .credentials(web_sys::RequestCredentials::Include)
+        .body(form)
+    {
+        Ok(req) => req,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to build icon upload request: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    #[derive(Deserialize)]
+    struct UploadResponse {
+        icon_key: String,
+    }
+
+    match request.send().await {
+        Ok(response) => {
+            let status = response.status();
+            if !response.ok() {
+                let text = response.text().await.unwrap_or_default();
+                leptos::web_sys::console::error_1(
+                    &format!("Failed to upload project icon: HTTP {status}\n{text}").into(),
+                );
+                return None;
+            }
+
+            let text = response.text().await.unwrap_or_default();
+            match serde_json::from_str::<UploadResponse>(&text) {
+                Ok(upload) => Some(icon_src_from_key(&upload.icon_key)),
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!(
+                            "Failed to parse project icon upload response (status={status}): {err:?}\n{text}"
+                        )
+                        .into(),
+                    );
+                    None
+                }
+            }
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to upload project icon: {err:?}").into(),
+            );
+            None
+        }
+    }
+}
+
+/// Converts a stored R2 icon key into the backend URL used by `<img src>`.
+pub fn icon_src_from_key(key: &str) -> IconUrl {
+    let mut parts = key.split('/');
+    let _prefix = parts.next();
+    let project_id = parts.next().unwrap_or_default();
+    let icon_id = parts.next().unwrap_or_default();
+    IconUrl(api_url(&format!("/icons/{project_id}/{icon_id}")))
 }
 
 /// Sends a `PATCH` request to the given project endpoint.
