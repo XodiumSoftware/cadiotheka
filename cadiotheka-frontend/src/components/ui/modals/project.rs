@@ -210,8 +210,8 @@ fn ProjectModalContent(
 
     view! {
         <div class="space-y-4 flex flex-col min-h-0">
-            <div class="flex items-start gap-4">
-                <div class="flex flex-col items-start gap-2 flex-shrink-0">
+            <div class="flex items-start gap-4 relative">
+                <div class="relative flex-shrink-0">
                     {move || {
                         view! {
                             <ProjectIconPicker
@@ -230,37 +230,37 @@ fn ProjectModalContent(
                     {move || {
                         if editing_icon.get() {
                             view! {
-                                <div class="w-56 max-w-full space-y-2">
-                                    <input
-                                        class="file-input file-input-bordered w-full text-base-content"
-                                        type="file"
-                                        accept="image/png,image/jpeg,image/webp"
-                                        on:change=move |ev| {
-                                            let input = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok());
-                                            let Some(input) = input else {
-                                                return;
-                                            };
-                                            let Some(files) = input.files() else {
-                                                set_selected_icon_file.set(None);
-                                                return;
-                                            };
-                                            let Some(file) = files.get(0).and_then(|blob| blob.dyn_into::<web_sys::File>().ok()) else {
-                                                set_selected_icon_file.set(None);
-                                                return;
-                                            };
-                                            set_selected_icon_file.set(Some(file));
-                                        }
-                                        autofocus
-                                    />
-                                    <div class="flex gap-2">
+                                <div class="absolute top-full left-0 mt-2 z-10 w-max max-w-[24rem]">
+                                    <div class="flex items-center gap-2">
+                                        <input
+                                            class="file-input file-input-bordered file-input-sm w-56 text-base-content"
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/webp"
+                                            on:change=move |ev| {
+                                                let input = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok());
+                                                let Some(input) = input else {
+                                                    return;
+                                                };
+                                                let Some(files) = input.files() else {
+                                                    set_selected_icon_file.set(None);
+                                                    return;
+                                                };
+                                                let Some(file) = files.get(0).and_then(|blob| blob.dyn_into::<web_sys::File>().ok()) else {
+                                                    set_selected_icon_file.set(None);
+                                                    return;
+                                                };
+                                                set_selected_icon_file.set(Some(file));
+                                            }
+                                            autofocus
+                                        />
                                         <button
                                             type="button"
-                                            class="btn btn-ghost btn-xs"
+                                            class="btn btn-ghost btn-xs whitespace-nowrap"
                                             on:click=move |_| cancel_edit_icon()
                                         >"Cancel"</button>
                                         <button
                                             type="button"
-                                            class="btn btn-primary btn-xs"
+                                            class="btn btn-primary btn-xs whitespace-nowrap"
                                             on:click=move |_| {
                                                 if let Some(file) = selected_icon_file.get() {
                                                     commit_edit_icon.run(file);
