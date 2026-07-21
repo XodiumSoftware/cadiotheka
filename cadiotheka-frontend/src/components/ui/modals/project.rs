@@ -840,118 +840,119 @@ fn ProjectModalContent(
 
             <hr class="border-base-content/10" />
 
-            <div class="overflow-y-auto flex-1 min-h-0 py-2">
-                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start">
-                    <div class="min-w-0 space-y-4">
-                        <div class="flex items-center justify-between gap-3 pb-2">
-                            <div class="tabs tabs-border">
-                                <button
-                                    type="button"
-                                    class=move || if active_tab.get() == ProjectDetailsTab::About { "tab tab-active" } else { "tab" }
-                                    on:click=move |_| set_active_tab.set(ProjectDetailsTab::About)
-                                >"About"</button>
-                                <button
-                                    type="button"
-                                    class=move || if active_tab.get() == ProjectDetailsTab::Viewer3d { "tab tab-active" } else { "tab" }
-                                    on:click=move |_| set_active_tab.set(ProjectDetailsTab::Viewer3d)
-                                >"3D viewer"</button>
-                                <button
-                                    type="button"
-                                    class=move || if active_tab.get() == ProjectDetailsTab::Versions { "tab tab-active" } else { "tab" }
-                                    on:click=move |_| set_active_tab.set(ProjectDetailsTab::Versions)
-                                >"Versions"</button>
-                            </div>
-                            {move || {
-                                (active_tab.get() == ProjectDetailsTab::About && is_editable).then(|| view! {
-                                    <EditIconButton
-                                        aria_label="Edit extended description"
-                                        on_click=Callback::new(move |_| start_edit_extended())
-                                    />
-                                })
+            <div class="flex flex-col min-h-0 py-2">
+                <div class="flex items-center justify-between gap-3 pb-2 flex-shrink-0">
+                    <div class="tabs tabs-border">
+                        <button
+                            type="button"
+                            class=move || if active_tab.get() == ProjectDetailsTab::About { "tab tab-active" } else { "tab" }
+                            on:click=move |_| set_active_tab.set(ProjectDetailsTab::About)
+                        >"About"</button>
+                        <button
+                            type="button"
+                            class=move || if active_tab.get() == ProjectDetailsTab::Viewer3d { "tab tab-active" } else { "tab" }
+                            on:click=move |_| set_active_tab.set(ProjectDetailsTab::Viewer3d)
+                        >"3D viewer"</button>
+                        <button
+                            type="button"
+                            class=move || if active_tab.get() == ProjectDetailsTab::Versions { "tab tab-active" } else { "tab" }
+                            on:click=move |_| set_active_tab.set(ProjectDetailsTab::Versions)
+                        >"Versions"</button>
+                    </div>
+                    {move || {
+                        (active_tab.get() == ProjectDetailsTab::About && is_editable).then(|| view! {
+                            <EditIconButton
+                                aria_label="Edit extended description"
+                                on_click=Callback::new(move |_| start_edit_extended())
+                            />
+                        })
+                    }}
+                </div>
+                <div class="overflow-y-auto flex-1 min-h-0">
+                    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start">
+                        <div class="min-w-0 space-y-4">
+                            {move || match active_tab.get() {
+                                ProjectDetailsTab::About => {
+                                    if editing_extended.get() {
+                                        view! {
+                                            <MarkdownEditor
+                                                value=draft_extended
+                                                on_input=Callback::new(move |value| set_draft_extended.set(value))
+                                                on_cancel=Callback::new(move |_| cancel_edit_extended())
+                                                on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
+                                                maxlength=MAX_EXTENDED_DESC_LENGTH
+                                                editor_class="min-h-[20rem] font-mono text-sm"
+                                            />
+                                        }
+                                            .into_any()
+                                    } else {
+                                        view! {
+                                            <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
+                                                <MarkdownView source=extended_desc.get() />
+                                            </div>
+                                        }
+                                            .into_any()
+                                    }
+                                }
+                                ProjectDetailsTab::Viewer3d => view! {
+                                    <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 flex items-center justify-center text-base-content/50 text-sm">
+                                        "3D viewer coming later."
+                                    </div>
+                                }
+                                    .into_any(),
+                                ProjectDetailsTab::Versions => view! {
+                                    <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 flex items-center justify-center text-base-content/50 text-sm">
+                                        "Versions coming later."
+                                    </div>
+                                }
+                                    .into_any(),
                             }}
                         </div>
-                        {move || match active_tab.get() {
-                            ProjectDetailsTab::About => {
-                                if editing_extended.get() {
-                                    view! {
-                                        <MarkdownEditor
-                                            value=draft_extended
-                                            on_input=Callback::new(move |value| set_draft_extended.set(value))
-                                            on_cancel=Callback::new(move |_| cancel_edit_extended())
-                                            on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
-                                            maxlength=MAX_EXTENDED_DESC_LENGTH
-                                            editor_class="min-h-[20rem] font-mono text-sm"
-                                        />
-                                    }
-                                        .into_any()
-                                } else {
-                                    view! {
-                                        <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
-                                            <MarkdownView source=extended_desc.get() />
-                                        </div>
-                                    }
-                                        .into_any()
-                                }
-                            }
-                            ProjectDetailsTab::Viewer3d => view! {
-                                <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 flex items-center justify-center text-base-content/50 text-sm">
-                                    "3D viewer coming later."
-                                </div>
-                            }
-                                .into_any(),
-                            ProjectDetailsTab::Versions => view! {
-                                <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 flex items-center justify-center text-base-content/50 text-sm">
-                                    "Versions coming later."
-                                </div>
-                            }
-                                .into_any(),
-                        }}
-                    </div>
 
-                    <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
+                        <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
 
-                    <div class="space-y-4 max-h-[45vh] overflow-y-auto xl:max-h-none xl:overflow-visible pr-1 xl:pr-0">
-                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                            <EditableChipSection
-                                title="Supported platforms"
-                                aria_label="Supported platforms"
-                                items=platforms.get()
-                                all_items=crate::metadata::platforms::Platform::all().to_vec()
-                                editing=editing_platforms.into()
-                                editable=is_editable
-                                on_start_edit=Callback::new(move |_| start_edit_platforms())
-                                on_cancel=Callback::new(move |_| cancel_edit_platforms())
-                                on_toggle=toggle_platform
-                                on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
-                                on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
-                                label_fn=crate::metadata::platforms::platform_label
-                                color_fn=crate::metadata::platforms::platform_color
-                                selected_items=draft_platforms.into()
-                                badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                            />
-                        </div>
+                        <div class="space-y-4">
+                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                <EditableChipSection
+                                    title="Supported platforms"
+                                    aria_label="Supported platforms"
+                                    items=platforms.get()
+                                    all_items=crate::metadata::platforms::Platform::all().to_vec()
+                                    editing=editing_platforms.into()
+                                    editable=is_editable
+                                    on_start_edit=Callback::new(move |_| start_edit_platforms())
+                                    on_cancel=Callback::new(move |_| cancel_edit_platforms())
+                                    on_toggle=toggle_platform
+                                    on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
+                                    on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
+                                    label_fn=crate::metadata::platforms::platform_label
+                                    color_fn=crate::metadata::platforms::platform_color
+                                    selected_items=draft_platforms.into()
+                                    badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                />
+                            </div>
 
-                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                            <EditableChipSection
-                                title="Tags"
-                                aria_label="Tags"
-                                items=tags.get()
-                                all_items=crate::metadata::tags::Tag::all().to_vec()
-                                editing=editing_tags.into()
-                                editable=is_editable
-                                on_start_edit=Callback::new(move |_| start_edit_tags())
-                                on_cancel=Callback::new(move |_| cancel_edit_tags())
-                                on_toggle=toggle_tag
-                                on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
-                                on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
-                                label_fn=crate::metadata::tags::tag_label
-                                color_fn=crate::metadata::tags::tag_color
-                                selected_items=draft_tags.into()
-                                badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                            />
-                        </div>
+                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                <EditableChipSection
+                                    title="Tags"
+                                    aria_label="Tags"
+                                    items=tags.get()
+                                    all_items=crate::metadata::tags::Tag::all().to_vec()
+                                    editing=editing_tags.into()
+                                    editable=is_editable
+                                    on_start_edit=Callback::new(move |_| start_edit_tags())
+                                    on_cancel=Callback::new(move |_| cancel_edit_tags())
+                                    on_toggle=toggle_tag
+                                    on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
+                                    on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
+                                    label_fn=crate::metadata::tags::tag_label
+                                    color_fn=crate::metadata::tags::tag_color
+                                    selected_items=draft_tags.into()
+                                    badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                />
+                            </div>
 
-                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
                             <div class="flex items-center justify-between">
                                 <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
                                 {is_editable.then(|| view! {
@@ -1140,6 +1141,7 @@ fn ProjectModalContent(
                                     }.into_any()
                                 }
                             }}
+                        </div>
                         </div>
                     </div>
                 </div>
