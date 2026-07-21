@@ -348,9 +348,34 @@ fn ProjectModalContent(
                         </button>
                     </p>
                 </div>
-                <div class="hidden sm:flex items-center gap-1.5 text-xs text-base-content/50 flex-shrink-0">
-                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
-                    <span>to close</span>
+                <div class="hidden sm:flex items-center gap-2 text-xs text-base-content/50 flex-shrink-0">
+                    {move || {
+                        if editing.get() {
+                            view! {
+                                <>
+                                    <button
+                                        type="button"
+                                        class="btn btn-ghost btn-xs"
+                                        on:click=move |_| cancel_edit()
+                                    >"Cancel"</button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary btn-xs"
+                                        on:click=move |_| commit_edit.run(draft.get())
+                                    >"Save"</button>
+                                </>
+                            }
+                                .into_any()
+                        } else {
+                            view! {
+                                <>
+                                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
+                                    <span>to close</span>
+                                </>
+                            }
+                                .into_any()
+                        }
+                    }}
                 </div>
             </div>
 
