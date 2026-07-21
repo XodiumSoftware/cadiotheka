@@ -136,7 +136,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             {role_label}
                         </span>
                     </div>
-                    <div class="flex items-center gap-2 text-xs text-base-content/60 whitespace-nowrap">
+                    <div class="flex flex-col gap-0.5 text-xs text-base-content/60">
                         <span class="flex items-center gap-1" title={format!("Email: {}", account.email)}>
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -144,7 +144,6 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             </svg>
                             <span>{account.email.clone()}</span>
                         </span>
-                        <span class="text-base-content/30">"•"</span>
                         <span class="flex items-center gap-1" title={format!("Joined: {}", format_time_full(account.created_at))}>
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="10" />
@@ -162,7 +161,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
             <hr class="border-base-content/10" />
             <div class="space-y-2 text-sm text-base-content/80">
                 <div class="flex items-start gap-2">
-                    <div class="flex-shrink-0 flex items-center bg-base-200 p-2 relative">
+                    <div class="flex-shrink-0 flex items-center bg-base-100 p-2 relative">
                         <CornerFrame
                             style="square"
                             black=true
