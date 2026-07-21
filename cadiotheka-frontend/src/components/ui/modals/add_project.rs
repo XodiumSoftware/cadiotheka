@@ -320,8 +320,6 @@ pub fn AddProjectModal() -> impl IntoView {
                                     <MarkdownEditor
                                         value=extended_desc
                                         on_input=Callback::new(move |value| set_extended_desc.set(value))
-                                        on_cancel=Callback::new(move |_| set_extended_desc.set(String::new()))
-                                        on_save=Callback::new(move |_| {})
                                         maxlength=5000
                                         editor_class="min-h-[12rem] font-mono text-sm"
                                     />

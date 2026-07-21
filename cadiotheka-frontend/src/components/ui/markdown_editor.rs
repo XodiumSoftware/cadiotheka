@@ -14,8 +14,8 @@ type SelectionTransform = dyn Fn(&str, usize, usize) -> (String, usize, usize);
 pub fn MarkdownEditor(
     #[prop(into)] value: Signal<String>,
     #[prop(into)] on_input: Callback<String>,
-    #[prop(into)] on_cancel: Callback<()>,
-    #[prop(into)] on_save: Callback<()>,
+    #[prop(into, optional)] on_cancel: Option<Callback<()>>,
+    #[prop(into, optional)] on_save: Option<Callback<()>>,
     maxlength: usize,
     #[prop(into, default = "min-h-[8rem]".to_string())] editor_class: String,
 ) -> impl IntoView {
@@ -284,23 +284,47 @@ pub fn MarkdownEditor(
                     }
                 }}
 
-                <div class="flex items-center justify-between gap-2">
-                    <span class="text-xs text-base-content/50">
-                        {move || format!("{}/{}", value.get().len(), maxlength)}
-                    </span>
-                    <div class="flex gap-2">
-                        <button
-                            type="button"
-                            class="btn btn-ghost btn-xs"
-                            on:click=move |_| on_cancel.run(())
-                        >"Cancel"</button>
-                        <button
-                            type="button"
-                            class="btn btn-primary btn-xs"
-                            on:click=move |_| on_save.run(())
-                        >"Save"</button>
-                    </div>
-                </div>
+                {move || {
+                    if on_cancel.is_some() && on_save.is_some() {
+                        view! {
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs text-base-content/50">
+                                    {move || format!("{}/{}", value.get().len(), maxlength)}
+                                </span>
+                                <div class="flex gap-2">
+                                    <button
+                                        type="button"
+                                        class="btn btn-ghost btn-xs"
+                                        on:click=move |_| {
+                                            if let Some(cb) = on_cancel {
+                                                cb.run(());
+                                            }
+                                        }
+                                    >"Cancel"</button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary btn-xs"
+                                        on:click=move |_| {
+                                            if let Some(cb) = on_save {
+                                                cb.run(());
+                                            }
+                                        }
+                                    >"Save"</button>
+                                </div>
+                            </div>
+                        }
+                            .into_any()
+                    } else {
+                        view! {
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs text-base-content/50">
+                                    {move || format!("{}/{}", value.get().len(), maxlength)}
+                                </span>
+                            </div>
+                        }
+                            .into_any()
+                    }
+                }}
             </div>
         </div>
     }
