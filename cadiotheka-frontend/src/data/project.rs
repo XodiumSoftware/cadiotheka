@@ -222,6 +222,56 @@ pub async fn create_project(project: &ProjectData) -> Option<ProjectData> {
     }
 }
 
+/// Updates a single field of an existing project via `PATCH /data/projects/:id`.
+///
+/// On success it returns the new title; on failure it logs to the console and
+/// returns `None`.
+pub async fn update_project_title(id: &str, title: String) -> Option<String> {
+    let url = api_url(&format!("/projects/{id}"));
+    let body = match serde_json::to_string(&serde_json::json!({ "title": title })) {
+        Ok(json) => json,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to serialize title update payload: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    let request = match gloo_net::http::Request::patch(&url)
+        .credentials(web_sys::RequestCredentials::Include)
+        .header("Content-Type", "application/json")
+        .body(body)
+    {
+        Ok(req) => req,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to build title update request: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    match request.send().await {
+        Ok(response) => {
+            if !response.ok() {
+                let status = response.status();
+                leptos::web_sys::console::error_1(
+                    &format!("Failed to update project title: HTTP {status}").into(),
+                );
+                return None;
+            }
+            Some(title)
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to update project title: {err:?}").into(),
+            );
+            None
+        }
+    }
+}
+
 /// Fetch projects from the backend API.
 ///
 /// On failure it logs to the browser console and returns an empty vector so

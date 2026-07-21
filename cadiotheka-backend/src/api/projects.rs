@@ -152,6 +152,40 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     Response::from_json(&created)
 }
 
+/// Partial payload for patching a project. All fields are optional; only the
+/// provided fields are updated.
+#[derive(Deserialize, Debug)]
+pub struct ProjectPatch {
+    title: Option<String>,
+}
+
+/// Partially updates an existing project, identified by the `:id` path parameter.
+/// Only the project owner or an admin may edit it.
+pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let account = require_account(&req, &ctx).await?;
+    let id = ctx.param("id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    if !can_edit_project(&account, &project) {
+        return Response::error("Forbidden", 403);
+    }
+
+    let patch: ProjectPatch = req.json().await?;
+    if let Some(title) = patch.title {
+        if title.len() > MAX_TITLE_LENGTH {
+            return Response::error("Title must be 100 characters or fewer", 400);
+        }
+        db(&ctx)?
+            .prepare("UPDATE projects SET title = ?1 WHERE id = ?2")
+            .bind(&[title.into(), id.into()])?
+            .run()
+            .await?;
+    }
+
+    Response::empty()
+}
+
 /// Replaces an existing project, identified by the `:id` path parameter.
 pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;

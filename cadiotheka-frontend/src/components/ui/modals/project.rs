@@ -2,10 +2,14 @@ use crate::components::cards::project::ProjectCardProperties;
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
-use crate::contexts::{AccountsContext, ProfileModalContext, ProjectModalContext};
-use crate::data::IconUrl;
+use crate::contexts::{
+    AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
+};
+use crate::data::{IconUrl, update_project_title};
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
+
+const MAX_TITLE_LENGTH: usize = 100;
 
 /// Modal dialog that displays detailed information about a selected project.
 #[component]
@@ -40,11 +44,63 @@ fn ProjectModalContent(
     #[prop(into)] card: ProjectCardProperties,
     #[prop(into)] on_close: Callback<()>,
 ) -> impl IntoView {
+    let current_user = CurrentUserContext::use_context();
+    let projects_ctx = ProjectsContext::use_context();
+    let modal = ProjectModalContext::use_context();
+    let is_editable = current_user
+        .account
+        .get()
+        .is_some_and(|me| me.id == card.author_id);
+
+    let (editing, set_editing) = signal(false);
+    let (draft, set_draft) = signal(card.title.clone());
+    let (title, set_title) = signal(card.title.clone());
+    let project_id = card.id.clone();
+
+    let start_edit = move |_| {
+        set_draft.set(title.get());
+        set_editing.set(true);
+    };
+
+    let cancel_edit = move || {
+        set_editing.set(false);
+    };
+
+    let commit_edit = {
+        let project_id = project_id.clone();
+        Callback::new(move |draft_value: String| {
+            let project_id = project_id.clone();
+            let set_title = set_title;
+            let set_editing = set_editing;
+            let modal_card = modal.set_card;
+            let set_projects = projects_ctx.set_projects;
+
+            leptos::task::spawn_local(async move {
+                if let Some(new_title) = update_project_title(&project_id, draft_value).await {
+                    set_title.set(new_title.clone());
+                    modal_card.update(|opt| {
+                        if let Some(card) = opt.as_mut() {
+                            card.title = new_title.clone();
+                        }
+                    });
+                    set_projects.update(|projects| {
+                        for project in projects.iter_mut() {
+                            if project.id == project_id {
+                                project.title = new_title.clone();
+                                break;
+                            }
+                        }
+                    });
+                }
+                set_editing.set(false);
+            });
+        })
+    };
+
     let letter = placeholder_letter(&card.title);
     let bg = placeholder_color(&card.title);
     let icon_url = card.icon_url.as_ref().map(|IconUrl(url)| url.clone());
     let icon_alt = format!("{} icon", card.title.clone());
-    let title = card.title.clone();
     let author = card.author.clone();
     let author_username = card.author_username.clone();
     let author_id = card.author_id.clone();
@@ -92,9 +148,65 @@ fn ProjectModalContent(
                         .into_any(),
                 }}}
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
-                    <h2 class="text-xl font-bold text-primary leading-tight truncate" title={title.clone()}>
-                        {title.clone()}
-                    </h2>
+                    {move || {
+                        if editing.get() {
+                            view! {
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        class="input input-sm input-bordered flex-1 text-base-content text-xl font-bold"
+                                        type="text"
+                                        maxlength=MAX_TITLE_LENGTH.to_string()
+                                        prop:value=draft.get()
+                                        on:input=move |ev| set_draft.set(event_target_value(&ev))
+                                        on:keyup=move |ev| {
+                                            match ev.key().as_str() {
+                                                "Enter" => commit_edit.run(draft.get()),
+                                                "Escape" => cancel_edit(),
+                                                _ => {}
+                                            }
+                                        }
+                                        autofocus
+                                    />
+                                    <span class="text-xs text-base-content/50 flex-shrink-0">
+                                        {move || format!("{}/{}", draft.get().len(), MAX_TITLE_LENGTH)}
+                                    </span>
+                                </div>
+                            }
+                            .into_any()
+                        } else {
+                            view! {
+                                <div class="flex items-center gap-2">
+                                    <h2
+                                        class="text-xl font-bold text-primary leading-tight truncate"
+                                        title={title.get()}
+                                    >
+                                        {title.get()}
+                                    </h2>
+                                    {is_editable.then(|| view! {
+                                        <button
+                                            type="button"
+                                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
+                                            aria-label="Edit project title"
+                                            on:click=start_edit
+                                        >
+                                            <svg
+                                                class="w-4 h-4 text-base-content/60"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                            </svg>
+                                        </button>
+                                    })}
+                                </div>
+                            }
+                            .into_any()
+                        }
+                    }}
                     <p class="text-base-content/70 text-sm">
                         by
                         <button
