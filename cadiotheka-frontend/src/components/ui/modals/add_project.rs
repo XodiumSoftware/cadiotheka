@@ -223,7 +223,7 @@ pub fn AddProjectModal() -> impl IntoView {
                     view! {
                         <form class="space-y-4 flex flex-col min-h-0 overflow-hidden" on:submit=on_submit>
                             <div class="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
-                                <div class="flex flex-col items-center gap-2">
+                                <div class="flex items-start gap-4">
                                     <button
                                         type="button"
                                         class="group relative flex-shrink-0 w-20 h-20 rounded overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary"
@@ -269,41 +269,40 @@ pub fn AddProjectModal() -> impl IntoView {
                                             </svg>
                                         </div>
                                     </button>
-                                    {move || {
-                                        show_icon_input.get().then(|| view! {
-                                            <input
-                                                type="text"
-                                                class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
-                                                placeholder="https://example.com/icon.svg"
-                                                prop:value=icon_url.get()
-                                                on:input=move |ev| set_icon_url.set(event_target_value(&ev))
-                                                disabled=move || is_submitting.get()
-                                            />
-                                        })
-                                    }}
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-base-content mb-1" for="add-project-title">
+                                    <div class="flex-1 min-w-0">
+                                        <label class="block text-sm font-medium text-base-content mb-1" for="add-project-title">
+                                            {move || {
+                                                let count = title.get().len();
+                                                format!("Title ({count}/100)")
+                                            }}
+                                        </label>
+                                        <input
+                                            node_ref=title_input_ref
+                                            id="add-project-title"
+                                            type="text"
+                                            class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                            on:input=move |ev| {
+                                                set_title.set(event_target_value(&ev));
+                                                set_errors.update(|errs| errs.title = None);
+                                            }
+                                            disabled=move || is_submitting.get()
+                                        />
+                                        {move || errors.get().title.map(|msg| view! {
+                                            <p class="text-error text-xs mt-1">{msg}</p>
+                                        })}
                                         {move || {
-                                            let count = title.get().len();
-                                            format!("Title ({count}/100)")
+                                            show_icon_input.get().then(|| view! {
+                                                <input
+                                                    type="text"
+                                                    class="input w-full mt-2 rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                                    placeholder="https://example.com/icon.svg"
+                                                    prop:value=icon_url.get()
+                                                    on:input=move |ev| set_icon_url.set(event_target_value(&ev))
+                                                    disabled=move || is_submitting.get()
+                                                />
+                                            })
                                         }}
-                                    </label>
-                                    <input
-                                        node_ref=title_input_ref
-                                        id="add-project-title"
-                                        type="text"
-                                        class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
-                                        on:input=move |ev| {
-                                            set_title.set(event_target_value(&ev));
-                                            set_errors.update(|errs| errs.title = None);
-                                        }
-                                        disabled=move || is_submitting.get()
-                                    />
-                                    {move || errors.get().title.map(|msg| view! {
-                                        <p class="text-error text-xs mt-1">{msg}</p>
-                                    })}
+                                    </div>
                                 </div>
 
                                 <div>
