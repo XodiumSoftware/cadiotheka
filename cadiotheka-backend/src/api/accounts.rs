@@ -87,6 +87,16 @@ async fn fetch_account_by_username(
     Ok(accounts.pop())
 }
 
+/// Profile information collected from an OAuth provider when creating a new
+/// account.
+pub struct OAuthProfile {
+    pub preferred_username: String,
+    pub display_name: String,
+    pub email: String,
+    pub avatar_url: Option<String>,
+    pub bio: String,
+}
+
 /// Inserts a new account from an OAuth login.
 ///
 /// The username is made unique by appending a short random suffix if the
@@ -95,25 +105,22 @@ pub async fn create_oauth_account(
     ctx: &RouteContext<()>,
     provider: &str,
     provider_id: &str,
-    preferred_username: &str,
-    display_name: &str,
-    email: &str,
-    avatar_url: Option<String>,
+    profile: OAuthProfile,
 ) -> Result<Account> {
     let id = uuid::Uuid::new_v4().to_string();
     let created_at = now_utc()
         .format(&time::format_description::well_known::Rfc3339)
         .map_err(|e| worker::Error::RustError(format!("failed to format timestamp: {e}")))?;
-    let username = unique_username(ctx, preferred_username).await?;
+    let username = unique_username(ctx, &profile.preferred_username).await?;
 
     let account = Account {
         id: id.clone(),
         username: username.clone(),
-        display_name: display_name.to_string(),
-        email: email.to_string(),
+        display_name: profile.display_name,
+        email: profile.email,
         role: "creator".to_string(),
-        bio: String::new(),
-        avatar_url,
+        bio: profile.bio,
+        avatar_url: profile.avatar_url,
         created_at,
         verified: 1,
         provider: provider.to_string(),

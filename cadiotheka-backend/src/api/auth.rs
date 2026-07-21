@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use worker::*;
 
-use crate::api::accounts::{Account, create_oauth_account, fetch_account_by_provider};
+use crate::api::accounts::{
+    Account, OAuthProfile, create_oauth_account, fetch_account_by_provider,
+};
 use crate::api::session::create_session;
 use crate::utils::{public_origin, query_param, rust_err};
 
@@ -330,10 +332,13 @@ async fn fetch_or_create_github_account(
         ctx,
         "github",
         &provider_id,
-        &user.login,
-        &user.name.unwrap_or_else(|| user.login.clone()),
-        &email,
-        user.avatar_url,
+        OAuthProfile {
+            preferred_username: user.login.clone(),
+            display_name: user.name.unwrap_or_else(|| user.login.clone()),
+            email,
+            avatar_url: user.avatar_url,
+            bio: user.bio.unwrap_or_default(),
+        },
     )
     .await
 }
@@ -364,10 +369,13 @@ async fn fetch_or_create_google_account(
         ctx,
         "google",
         &provider_id,
-        preferred_username,
-        &user.name.unwrap_or_else(|| preferred_username.to_string()),
-        &email,
-        user.picture,
+        OAuthProfile {
+            preferred_username: preferred_username.to_string(),
+            display_name: user.name.unwrap_or_else(|| preferred_username.to_string()),
+            email,
+            avatar_url: user.picture,
+            bio: String::new(),
+        },
     )
     .await
 }
@@ -388,6 +396,7 @@ struct GitHubUser {
     name: Option<String>,
     email: Option<String>,
     avatar_url: Option<String>,
+    bio: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
