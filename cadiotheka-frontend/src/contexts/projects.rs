@@ -1,4 +1,4 @@
-use crate::data::{ProjectData, fetch_projects};
+use crate::data::{ProjectData, fetch_projects, toggle_project_favorite};
 use leptos::prelude::*;
 
 /// Provides the list of projects fetched from the backend.
@@ -11,6 +11,12 @@ pub struct ProjectsContext {
 }
 
 impl ProjectsContext {
+    /// Toggle the current user's favorite status for a project and return the
+    /// updated project on success.
+    pub async fn toggle_favorite(id: &str) -> Option<ProjectData> {
+        toggle_project_favorite(id).await
+    }
+
     /// Provide an empty project list and kick off a fetch from `/data/projects`.
     pub fn provide() {
         let (projects, set_projects) = signal(Vec::new());

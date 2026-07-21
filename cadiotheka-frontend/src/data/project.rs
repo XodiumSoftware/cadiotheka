@@ -86,6 +86,22 @@ mod platform_json_string {
     }
 }
 
+/// Serde adapter for favorites stored as a JSON-text column.
+mod favorites_json_string {
+    use super::*;
+
+    pub fn serialize<S: Serializer>(value: &[String], serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Vec<String>, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        serde_json::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Data displayed on a project card.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct ProjectData {
@@ -112,8 +128,9 @@ pub struct ProjectData {
     pub supported_platforms: Vec<Platform>,
     /// Download count.
     pub downloads: u64,
-    /// Favorite count.
-    pub favorites: u64,
+    /// Account ids of users who have favorited the project.
+    #[serde(default, with = "favorites_json_string")]
+    pub favorites: Vec<String>,
     /// Official timestamp for when the project was published or updated.
     #[serde(with = "time::serde::rfc3339")]
     pub timestamp: time::OffsetDateTime,
@@ -141,7 +158,7 @@ fn now_utc() -> time::OffsetDateTime {
 
 /// Creates a new project payload for submission to the backend.
 ///
-/// The backend fills in `author`, `author_id`, `downloads`, and `favorites`,
+/// The backend fills in `author`, `author_id`, and `downloads`,
 /// so this function generates the remaining fields and leaves the computed
 /// ones empty or zeroed.
 pub fn new_project_payload(
@@ -162,7 +179,7 @@ pub fn new_project_payload(
         tags,
         supported_platforms,
         downloads: 0,
-        favorites: 0,
+        favorites: vec![],
         timestamp: now_utc(),
         icon_url: None,
     }
@@ -275,6 +292,55 @@ pub async fn update_project_extended_desc(id: &str, extended_desc: String) -> Op
 ///
 /// On success it returns the new icon URL (or `None` when cleared); on failure
 /// it logs to the console and returns `None`.
+pub async fn toggle_project_favorite(id: &str) -> Option<ProjectData> {
+    let url = api_url(&format!("/projects/{id}/favorites"));
+    let request = match gloo_net::http::Request::post(&url)
+        .credentials(web_sys::RequestCredentials::Include)
+        .body("")
+    {
+        Ok(req) => req,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to build favorite toggle request: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    match request.send().await {
+        Ok(response) => {
+            let status = response.status();
+            if !response.ok() {
+                let text = response.text().await.unwrap_or_default();
+                leptos::web_sys::console::error_1(
+                    &format!("Failed to toggle project favorite: HTTP {status}\n{text}").into(),
+                );
+                return None;
+            }
+
+            let text = response.text().await.unwrap_or_default();
+            match serde_json::from_str::<ProjectData>(&text) {
+                Ok(project) => Some(project),
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!(
+                            "Failed to parse toggled favorite response (status={status}): {err:?}\n{text}"
+                        )
+                        .into(),
+                    );
+                    None
+                }
+            }
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to toggle project favorite: {err:?}").into(),
+            );
+            None
+        }
+    }
+}
+
 pub async fn upload_project_icon(id: &str, file: web_sys::File) -> Option<IconUrl> {
     let url = api_url(&format!("/projects/{id}/icon"));
     let form = match web_sys::FormData::new() {
@@ -446,7 +512,10 @@ mod tests {
             tags: vec![Tag::Model3d, Tag::Vehicle],
             supported_platforms: vec![Platform::Blender, Platform::FreeCAD],
             downloads: 1200,
-            favorites: 84,
+            favorites: vec![
+                "11111111-1111-1111-1111-111111111111".to_owned(),
+                "22222222-2222-2222-2222-222222222222".to_owned(),
+            ],
             timestamp: datetime!(2026-07-07 14:30:00 UTC),
             icon_url: None,
         }
@@ -454,12 +523,13 @@ mod tests {
 
     #[test]
     fn project_deserializes_backend_json_string_columns() {
-        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","description":"A rugged mountain bike model ready for off-road adventures.","extended_desc":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","supported_platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":84,"timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","description":"A rugged mountain bike model ready for off-road adventures.","extended_desc":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","supported_platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).expect("backend JSON parses");
         assert_eq!(projects.len(), 1);
         assert_eq!(projects[0].title, "Mountain Bike");
         assert_eq!(projects[0].tags.len(), 5);
         assert_eq!(projects[0].supported_platforms.len(), 5);
+        assert_eq!(projects[0].favorites.len(), 2);
     }
 
     #[test]

@@ -210,7 +210,7 @@ mod tests {
             tags: tags.to_vec(),
             supported_platforms: platforms.to_vec(),
             downloads,
-            favorites,
+            favorites: vec!["favorite-user".to_owned(); favorites as usize],
             timestamp: datetime!(2024-01-15 12:00:00 UTC),
             icon_url: None,
         }

@@ -1,5 +1,6 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
+use crate::contexts::{CurrentUserContext, ProjectModalContext, ProjectsContext};
 use crate::data::{IconUrl, ProjectData};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
@@ -21,7 +22,7 @@ pub struct ProjectCardProperties {
     pub tags: Vec<Tag>,
     pub supported_platforms: Vec<Platform>,
     pub downloads: u64,
-    pub favorites: u64,
+    pub favorites: Vec<String>,
     pub timestamp: time::OffsetDateTime,
     pub icon_url: Option<IconUrl>,
 }
@@ -84,14 +85,14 @@ pub fn DownloadIcon() -> impl IntoView {
 }
 
 #[component]
-pub fn HeartIcon() -> impl IntoView {
+pub fn HeartIcon(#[prop(optional, into)] filled: Signal<bool>) -> impl IntoView {
     view! {
         <svg
             xmlns="http://www.w3.org/2000/svg"
             width="14"
             height="14"
             viewBox="0 0 24 24"
-            fill="none"
+            fill=move || if filled.get() { "currentColor" } else { "none" }
             stroke="currentColor"
             stroke-width="2"
             stroke-linecap="round"
@@ -131,13 +132,57 @@ pub fn ProjectCard(
     let letter = placeholder_letter(&props.title);
     let bg = placeholder_color(&props.title);
     let icon_url = props.icon_url.as_ref().map(|IconUrl(url)| url.clone());
+    let current_user = CurrentUserContext::use_context();
+    let projects_ctx = ProjectsContext::use_context();
+    let project_modal = ProjectModalContext::use_context();
+
     let downloads = props.downloads;
-    let favorites = props.favorites;
     let timestamp = props.timestamp;
+    let project_id = props.id.clone();
+    let project_id_for_button = props.id.clone();
+    let favorite_count = Signal::derive({
+        let project_id = project_id.clone();
+        move || {
+            projects_ctx
+                .projects
+                .get()
+                .into_iter()
+                .find(|project| project.id == project_id)
+                .map(|project| project.favorites.len())
+                .unwrap_or(0)
+        }
+    });
+    let is_favorited = Signal::derive({
+        let project_id = project_id.clone();
+        move || {
+            let Some(account) = current_user.account.get() else {
+                return false;
+            };
+            projects_ctx
+                .projects
+                .get()
+                .into_iter()
+                .find(|project| project.id == project_id)
+                .is_some_and(|project| {
+                    project
+                        .favorites
+                        .iter()
+                        .any(|user_id| user_id == &account.id)
+                })
+        }
+    });
 
     let card_title = props.title.clone();
     let card_author = props.author.clone();
     let card_author_username = props.author_username.clone();
+    let card_title_for_favorite_label = props.title.clone();
+    let favorite_aria_label = Signal::derive(move || {
+        if is_favorited.get() {
+            format!("Remove {} from favorites", card_title_for_favorite_label)
+        } else {
+            format!("Add {} to favorites", card_title_for_favorite_label)
+        }
+    });
     let card_title_for_icon_alt = card_title.clone();
     let icon_alt = Signal::derive(move || format!("{} icon", card_title_for_icon_alt.clone()));
     let card_title_for_aria = card_title.clone();
@@ -188,21 +233,71 @@ pub fn ProjectCard(
                                 }
                             }}
                             <div class="min-w-0 flex-1 flex flex-col gap-2">
-                                <h2 class="card-title text-primary text-base leading-tight">
-                                    <span class="truncate" title={card_title.clone()}>{card_title.clone()}</span>
-                                    <span class="text-base-content/60 font-normal">{" by "}</span>
-                                    <button
-                                        type="button"
-                                        class="text-base-content font-semibold truncate hover:text-primary hover:underline"
-                                        title={format!("@{}", card_author_username)}
-                                        on:click=move |ev| {
-                                            ev.stop_propagation();
-                                            on_author_click.run(());
-                                        }
-                                    >
-                                        {card_author.clone()}
-                                    </button>
-                                </h2>
+                                <div class="flex items-start gap-2">
+                                    <h2 class="card-title text-primary text-base leading-tight min-w-0 flex-1">
+                                        <span class="truncate" title={card_title.clone()}>{card_title.clone()}</span>
+                                        <span class="text-base-content/60 font-normal">{" by "}</span>
+                                        <button
+                                            type="button"
+                                            class="text-base-content font-semibold truncate hover:text-primary hover:underline"
+                                            title={format!("@{}", card_author_username)}
+                                            on:click=move |ev| {
+                                                ev.stop_propagation();
+                                                on_author_click.run(());
+                                            }
+                                        >
+                                            {card_author.clone()}
+                                        </button>
+                                    </h2>
+                                    <Show when=move || current_user.account.get().is_some()>
+                                        <button
+                                            type="button"
+                                            class=move || {
+                                                if is_favorited.get() {
+                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error"
+                                                } else {
+                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error"
+                                                }
+                                            }
+                                            aria-label=favorite_aria_label
+                                            title=move || {
+                                                if is_favorited.get() {
+                                                    "Remove favorite".to_string()
+                                                } else {
+                                                    "Add favorite".to_string()
+                                                }
+                                            }
+                                            on:click={
+                                                let project_id = project_id_for_button.clone();
+                                                move |ev| {
+                                                    ev.stop_propagation();
+                                                    let project_id = project_id.clone();
+                                                    let set_projects = projects_ctx.set_projects;
+                                                    let modal_set_card = project_modal.set_card;
+                                                    leptos::task::spawn_local(async move {
+                                                        if let Some(updated) = ProjectsContext::toggle_favorite(&project_id).await {
+                                                            let updated_for_modal = updated.clone();
+                                                            set_projects.update(|projects| {
+                                                                if let Some(project) = projects.iter_mut().find(|project| project.id == updated.id) {
+                                                                    *project = updated.clone();
+                                                                }
+                                                            });
+                                                            modal_set_card.update(|card| {
+                                                                if let Some(card) = card.as_mut()
+                                                                    && card.id == updated_for_modal.id
+                                                                {
+                                                                    card.favorites = updated_for_modal.favorites.clone();
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        >
+                                            <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
+                                        </button>
+                                    </Show>
+                                </div>
 
                                 <div class="flex flex-nowrap items-center gap-1 overflow-hidden">
                                     <OverflowRow
@@ -247,10 +342,10 @@ pub fn ProjectCard(
                             </span>
                             <span
                                 class="flex items-center gap-1"
-                                title={move || format!("{} favorites", format_number_full(favorites))}
+                                title={move || format!("{} favorites", format_number_full(favorite_count.get() as u64))}
                             >
-                                <HeartIcon />
-                                {move || format_number(favorites)}
+                                <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
+                                {move || format_number(favorite_count.get() as u64)}
                             </span>
                             <span
                                 class="flex items-center gap-1"
@@ -285,7 +380,7 @@ mod tests {
             tags: vec![Tag::Model3d],
             supported_platforms: vec![Platform::Blender],
             downloads: 1234,
-            favorites: 56,
+            favorites: vec!["user-1".to_owned(), "user-2".to_owned()],
             timestamp: time::macros::datetime!(2024-01-01 00:00:00 UTC),
             icon_url: Some(IconUrl("https://example.com/gear.svg".to_owned())),
         };

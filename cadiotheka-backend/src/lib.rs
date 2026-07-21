@@ -107,6 +107,10 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .post_async("/data/projects", api::projects::create_project)
         .get_async("/data/projects/:id", api::projects::read_project)
         .post_async(
+            "/data/projects/:id/favorites",
+            api::projects::toggle_project_favorite,
+        )
+        .post_async(
             "/data/projects/:id/icon",
             api::projects::upload_project_icon,
         )

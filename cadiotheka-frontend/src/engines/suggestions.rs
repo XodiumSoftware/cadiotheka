@@ -193,7 +193,7 @@ mod tests {
             tags: vec![Tag::Parametric, Tag::Model3d],
             supported_platforms: vec![Platform::Blender, Platform::FreeCAD],
             downloads: 100,
-            favorites: 10,
+            favorites: vec!["favorite-user".to_owned(); 10],
             timestamp: datetime!(2024-06-01 10:00:00 UTC),
             icon_url: None,
         }

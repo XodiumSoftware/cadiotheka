@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS projects (
     tags TEXT NOT NULL DEFAULT '[]',
     supported_platforms TEXT NOT NULL DEFAULT '[]',
     downloads INTEGER NOT NULL DEFAULT 0,
-    favorites INTEGER NOT NULL DEFAULT 0,
+    favorites TEXT NOT NULL DEFAULT '[]',
     timestamp TEXT NOT NULL,
     icon_url TEXT
 );

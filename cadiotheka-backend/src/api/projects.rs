@@ -48,7 +48,8 @@ pub struct Project {
     #[serde(with = "json_string")]
     pub supported_platforms: Vec<String>,
     pub downloads: u64,
-    pub favorites: u64,
+    #[serde(with = "json_string")]
+    pub favorites: Vec<String>,
     pub timestamp: String,
     pub icon_url: Option<String>,
 }
@@ -68,7 +69,8 @@ pub struct ProjectPayload {
     #[serde(with = "json_string")]
     pub supported_platforms: Vec<String>,
     pub downloads: u64,
-    pub favorites: u64,
+    #[serde(with = "json_string")]
+    pub favorites: Vec<String>,
     pub timestamp: String,
     pub icon_url: Option<String>,
 }
@@ -129,6 +131,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
     let platforms =
         serde_json::to_string(&payload.supported_platforms).unwrap_or_else(|_| "[]".to_string());
+    let favorites = serde_json::to_string(&payload.favorites).unwrap_or_else(|_| "[]".to_string());
 
     db(&ctx)?
         .prepare(
@@ -146,7 +149,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             tags.into(),
             platforms.into(),
             (payload.downloads as f64).into(),
-            (payload.favorites as f64).into(),
+            favorites.into(),
             payload.timestamp.into(),
             js_option(payload.icon_url),
         ])?
@@ -243,6 +246,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
     let platforms =
         serde_json::to_string(&payload.supported_platforms).unwrap_or_else(|_| "[]".to_string());
+    let favorites = serde_json::to_string(&project.favorites).unwrap_or_else(|_| "[]".to_string());
 
     db(&ctx)?
         .prepare(
@@ -260,7 +264,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             tags.into(),
             platforms.into(),
             (payload.downloads as f64).into(),
-            (payload.favorites as f64).into(),
+            favorites.into(),
             payload.timestamp.into(),
             js_option(payload.icon_url),
             id.into(),
@@ -389,6 +393,36 @@ fn can_edit_project(account: &Account, project: &Project) -> bool {
     account.role == "admin" || account.id == project.author_id
 }
 
+pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let account = require_account(&req, &ctx).await?;
+    let id = ctx.param("id").cloned().unwrap_or_default();
+    let mut project = fetch_project(&ctx, &id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+
+    if let Some(index) = project
+        .favorites
+        .iter()
+        .position(|user_id| user_id == &account.id)
+    {
+        project.favorites.remove(index);
+    } else {
+        project.favorites.push(account.id.clone());
+    }
+
+    let favorites = serde_json::to_string(&project.favorites).unwrap_or_else(|_| "[]".to_string());
+    db(&ctx)?
+        .prepare("UPDATE projects SET favorites = ?1 WHERE id = ?2")
+        .bind(&[favorites.into(), project.id.clone().into()])?
+        .run()
+        .await?;
+
+    let updated = fetch_project(&ctx, &project.id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("updated project not found".into()))?;
+    Response::from_json(&updated)
+}
+
 /// Fetches a single project by id, returning `None` when no row matches.
 async fn fetch_project(ctx: &RouteContext<()>, id: &str) -> Result<Option<Project>> {
     let result = db(ctx)?
@@ -432,7 +466,7 @@ mod tests {
             tags: vec![],
             supported_platforms: vec![],
             downloads: 0,
-            favorites: 0,
+            favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
             icon_url: None,
         }
@@ -450,7 +484,7 @@ mod tests {
             tags: vec![],
             supported_platforms: vec![],
             downloads: 0,
-            favorites: 0,
+            favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
             icon_url: None,
         }
