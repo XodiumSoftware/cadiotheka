@@ -2,6 +2,7 @@ use crate::components::cards::project::ProjectCardProperties;
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
+use crate::components::ui::project_icon_picker::ProjectIconPicker;
 use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
 };
@@ -9,7 +10,6 @@ use crate::data::{
     AccountRole, IconUrl, update_project_extended_desc, update_project_icon_url,
     update_project_title,
 };
-use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 
 const MAX_TITLE_LENGTH: usize = 100;
@@ -195,7 +195,6 @@ fn ProjectModalContent(
         })
     };
 
-    let icon_alt = format!("{} icon", card.title.clone());
     let author = card.author.clone();
     let author_username = card.author_username.clone();
     let author_id = card.author_id.clone();
@@ -221,61 +220,17 @@ fn ProjectModalContent(
         <div class="space-y-4 flex flex-col min-h-0">
             <div class="flex items-start gap-4">
                 {move || {
-                    let icon_alt = icon_alt.clone();
-                    let current_url = icon_url
-                        .get()
-                        .as_ref()
-                        .map(|IconUrl(url)| url.clone())
-                        .unwrap_or_default();
-                    let current_url_for_set = current_url.clone();
-                    let current_url_for_empty = current_url.clone();
-                    let current_url_for_img = current_url.clone();
-                    let letter = placeholder_letter(&title.get());
-                    let bg = placeholder_color(&title.get());
                     view! {
-                        <button
-                            type="button"
-                            class="group relative flex-shrink-0 w-16 h-16 rounded overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary"
-                            aria-label="Edit project icon"
-                            on:click=move |_| {
-                                set_draft_icon_url.set(current_url_for_set.clone());
+                        <ProjectIconPicker
+                            icon_url={move || icon_url.get()}
+                            title=move || title.get()
+                            editable={Signal::derive(move || is_editable)}
+                            on_click=move |_| {
+                                set_draft_icon_url.set(icon_url.get().as_ref().map(|IconUrl(url)| url.clone()).unwrap_or_default());
                                 set_editing_icon.update(|v| *v = !*v);
                             }
-                        >
-                            {if current_url_for_empty.trim().is_empty() {
-                                view! {
-                                    <div
-                                        class={format!("w-full h-full flex items-center justify-center text-white font-bold text-xl {}", bg)}
-                                        aria-hidden="true"
-                                    >
-                                        {letter}
-                                    </div>
-                                }
-                                    .into_any()
-                            } else {
-                                view! {
-                                    <img
-                                        src={current_url_for_img}
-                                        alt={icon_alt}
-                                        class="w-full h-full object-cover"
-                                    />
-                                }
-                                    .into_any()
-                            }}
-                            <div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
-                                <svg
-                                    class="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                                </svg>
-                            </div>
-                        </button>
+                            class="w-16 h-16"
+                        />
                     }
                         .into_any()
                 }}

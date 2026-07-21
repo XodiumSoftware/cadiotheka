@@ -1,11 +1,11 @@
 use crate::components::ui::modals::search::SearchModal;
+use crate::components::ui::project_icon_picker::ProjectIconPicker;
 use crate::contexts::{
     AddProjectModalContext, CurrentUserContext, LoginModalContext, ProjectsContext,
 };
-use crate::data::{create_project, new_project_payload};
+use crate::data::{IconUrl, create_project, new_project_payload};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
-use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -224,51 +224,16 @@ pub fn AddProjectModal() -> impl IntoView {
                         <form class="space-y-4 flex flex-col min-h-0 overflow-hidden" on:submit=on_submit>
                             <div class="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
                                 <div class="flex items-start gap-4">
-                                    <button
-                                        type="button"
-                                        class="group relative flex-shrink-0 w-20 h-20 rounded overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary"
-                                        aria-label="Set project icon"
-                                        on:click=move |_| set_show_icon_input.update(|v| *v = !*v)
-                                        disabled=move || is_submitting.get()
-                                    >
-                                        {move || {
+                                    <ProjectIconPicker
+                                        icon_url={move || {
                                             let url = icon_url.get();
-                                            let letter = placeholder_letter(&title.get());
-                                            let bg = placeholder_color(&title.get());
-                                            if url.trim().is_empty() {
-                                                view! {
-                                                    <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-2xl {}", bg)
-                                                        aria-hidden="true"
-                                                    >
-                                                        {letter}
-                                                    </div>
-                                                }
-                                                .into_any()
-                                            } else {
-                                                view! {
-                                                    <img
-                                                        src=url.clone()
-                                                        alt="Project icon preview"
-                                                        class="w-full h-full object-cover"
-                                                    />
-                                                }
-                                                .into_any()
-                                            }
+                                            if url.trim().is_empty() { None } else { Some(IconUrl(url)) }
                                         }}
-                                        <div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
-                                            <svg
-                                                class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            >
-                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                                            </svg>
-                                        </div>
-                                    </button>
+                                        title=move || title.get()
+                                        editable={Signal::derive(move || !is_submitting.get())}
+                                        on_click=move |_| set_show_icon_input.update(|v| *v = !*v)
+                                        class="w-20 h-20"
+                                    />
                                     <div class="flex-1 min-w-0">
                                         <label class="block text-sm font-medium text-base-content mb-1" for="add-project-title">
                                             {move || {
