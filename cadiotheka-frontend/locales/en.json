@@ -79,7 +79,7 @@
         "login_required": "Sign in to publish a new project.",
         "login_action": "Log in",
         "error_title_required": "A project title is required.",
-        "error_title_long": "Title must be 120 characters or fewer.",
+        "error_title_long": "Title must be 100 characters or fewer.",
         "error_description_required": "A short description is required.",
         "error_description_long": "Description must be 500 characters or fewer.",
         "error_tags_required": "Select at least one tag.",

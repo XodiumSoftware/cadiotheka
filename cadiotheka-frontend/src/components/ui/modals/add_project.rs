@@ -81,7 +81,7 @@ pub fn AddProjectModal() -> impl IntoView {
         let t = title.get();
         if t.trim().is_empty() {
             e.title = Some(t_string!(i18n, add_project.error_title_required).to_string());
-        } else if t.trim().len() > 120 {
+        } else if t.trim().len() > 100 {
             e.title = Some(t_string!(i18n, add_project.error_title_long).to_string());
         }
 

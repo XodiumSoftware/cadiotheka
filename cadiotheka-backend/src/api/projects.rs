@@ -8,6 +8,24 @@ use crate::utils::js_option;
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
 
+/// Maximum allowed length for a project title.
+const MAX_TITLE_LENGTH: usize = 100;
+/// Maximum allowed length for a project short description.
+const MAX_DESCRIPTION_LENGTH: usize = 500;
+
+/// Validates the project payload and returns an error message when a field
+/// exceeds its allowed length. The route handler turns this message into a
+/// `400 Bad Request` response.
+fn validate_project_payload(payload: &ProjectPayload) -> std::result::Result<(), &'static str> {
+    if payload.title.len() > MAX_TITLE_LENGTH {
+        return Err("Title must be 100 characters or fewer");
+    }
+    if payload.description.len() > MAX_DESCRIPTION_LENGTH {
+        return Err("Description must be 500 characters or fewer");
+    }
+    Ok(())
+}
+
 /// A Cadiotheka project stored in D1.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Project {
@@ -91,6 +109,9 @@ pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Respon
 pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
     let mut payload: ProjectPayload = req.json().await?;
+    if let Err(msg) = validate_project_payload(&payload) {
+        return Response::error(msg, 400);
+    }
     payload.author_id = account.id;
     payload.author = account.display_name;
     let project_id = payload.id.clone();
@@ -139,6 +160,9 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     }
 
     let mut payload: ProjectPayload = req.json().await?;
+    if let Err(msg) = validate_project_payload(&payload) {
+        return Response::error(msg, 400);
+    }
     payload.author_id = project.author_id;
     payload.author = project.author;
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
@@ -240,6 +264,48 @@ mod tests {
             timestamp: "2025-01-01T00:00:00Z".into(),
             icon_url: None,
         }
+    }
+
+    fn sample_payload() -> ProjectPayload {
+        ProjectPayload {
+            id: "proj-1".into(),
+            title: "Sample".into(),
+            author: "Author".into(),
+            author_id: "acc-1".into(),
+            description: "A short description.".into(),
+            extended_desc: "".into(),
+            tags: vec![],
+            supported_platforms: vec![],
+            downloads: 0,
+            favorites: 0,
+            timestamp: "2025-01-01T00:00:00Z".into(),
+            icon_url: None,
+        }
+    }
+
+    #[test]
+    fn payload_with_valid_title_and_description_passes() {
+        assert!(validate_project_payload(&sample_payload()).is_ok());
+    }
+
+    #[test]
+    fn payload_with_long_title_fails() {
+        let mut payload = sample_payload();
+        payload.title = "a".repeat(101);
+        assert_eq!(
+            validate_project_payload(&payload),
+            Err("Title must be 100 characters or fewer")
+        );
+    }
+
+    #[test]
+    fn payload_with_long_description_fails() {
+        let mut payload = sample_payload();
+        payload.description = "a".repeat(501);
+        assert_eq!(
+            validate_project_payload(&payload),
+            Err("Description must be 500 characters or fewer")
+        );
     }
 
     #[test]
