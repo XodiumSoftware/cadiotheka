@@ -28,14 +28,13 @@ pub fn ProjectModal() -> impl IntoView {
         <SearchModal
             open=modal.open
             on_close=on_close
+            container_class="w-full max-w-6xl max-h-[90vh] flex flex-col"
         >
             {move || {
                 let maybe_card = modal.card.get();
                 match maybe_card {
                     Some(card) => view! {
-                        <div class="w-[min(92vw,72rem)] max-w-[72rem] max-h-[88vh] flex flex-col">
-                            <ProjectModalContent card=card on_close=on_close />
-                        </div>
+                        <ProjectModalContent card=card on_close=on_close />
                     }
                         .into_any(),
                     None => view! {
@@ -656,42 +655,46 @@ fn ProjectModalContent(
             <hr class="border-base-content/10" />
 
             <div class="overflow-y-auto flex-1 min-h-0 py-2">
-                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)] gap-6 items-start">
+                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start">
                     <div class="min-w-0 space-y-4">
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <h3 class="text-sm font-semibold text-base-content">"About"</h3>
-                                {is_editable.then(|| view! {
-                                    <EditIconButton
-                                        aria_label="Edit extended description"
-                                        on_click=Callback::new(move |_| start_edit_extended())
-                                    />
-                                })}
+                        <div class="flex items-center justify-between gap-3 border-b border-base-content/10 pb-2">
+                            <div class="tabs tabs-border">
+                                <button type="button" class="tab tab-active">"About"</button>
+                                <button type="button" class="tab" disabled>"3D viewer"</button>
+                                <button type="button" class="tab" disabled>"Versions"</button>
                             </div>
-                            {move || {
-                                if editing_extended.get() {
-                                    view! {
-                                        <MarkdownEditor
-                                            value=draft_extended
-                                            on_input=Callback::new(move |value| set_draft_extended.set(value))
-                                            on_cancel=Callback::new(move |_| cancel_edit_extended())
-                                            on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
-                                            maxlength=MAX_EXTENDED_DESC_LENGTH
-                                            editor_class="min-h-[20rem] font-mono text-sm"
-                                        />
-                                    }
-                                        .into_any()
-                                } else {
-                                    view! {
-                                        <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
-                                            <MarkdownView source=extended_desc.get() />
-                                        </div>
-                                    }
-                                        .into_any()
-                                }
-                            }}
+                            {is_editable.then(|| view! {
+                                <EditIconButton
+                                    aria_label="Edit extended description"
+                                    on_click=Callback::new(move |_| start_edit_extended())
+                                />
+                            })}
                         </div>
+                        {move || {
+                            if editing_extended.get() {
+                                view! {
+                                    <MarkdownEditor
+                                        value=draft_extended
+                                        on_input=Callback::new(move |value| set_draft_extended.set(value))
+                                        on_cancel=Callback::new(move |_| cancel_edit_extended())
+                                        on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
+                                        maxlength=MAX_EXTENDED_DESC_LENGTH
+                                        editor_class="min-h-[20rem] font-mono text-sm"
+                                    />
+                                }
+                                    .into_any()
+                            } else {
+                                view! {
+                                    <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
+                                        <MarkdownView source=extended_desc.get() />
+                                    </div>
+                                }
+                                    .into_any()
+                            }
+                        }}
                     </div>
+
+                    <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
 
                     <div class="space-y-4">
                         <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
@@ -738,19 +741,17 @@ fn ProjectModalContent(
                             </div>
                             <button
                                 type="button"
-                                class="w-full text-left rounded-none border border-base-content/10 px-3 py-2 hover:border-primary/40 hover:bg-base-100/40 transition-colors"
+                                class="font-semibold text-base-content hover:text-primary hover:underline text-left"
                                 title={format!("@{}", author_username)}
                                 on:click=open_author_profile
                             >
-                                <div class="text-sm font-semibold text-base-content">{author.clone()}</div>
-                                <div class="text-xs text-base-content/50">{format!("@{}", author_username)}</div>
+                                {author.clone()}
+                                <span class="ml-1 text-xs font-normal text-base-content/50">{format!("@{}", author_username)}</span>
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <hr class="border-base-content/10" />
         </div>
     }
 }

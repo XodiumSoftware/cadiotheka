@@ -10,6 +10,8 @@ pub fn SearchModal(
     #[prop(into)] open: Signal<bool>,
     #[prop(into)] on_close: Callback<()>,
     #[prop(into, default = Callback::new(|_| {}))] on_inner_click: Callback<()>,
+    #[prop(into, default = "w-full max-w-lg max-h-[80vh] flex flex-col".to_string())]
+    container_class: String,
     children: Children,
 ) -> impl IntoView {
     let children_view = children();
@@ -79,7 +81,7 @@ pub fn SearchModal(
                 }
             }
         >
-            <div class="w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div class=container_class>
                 <div class="block p-2 bg-base-100 border-2 border-primary overflow-hidden">
                     <CornerFrame style="square" class="w-full">
                         <div class="h-full rounded-none p-6 overflow-hidden flex flex-col">
