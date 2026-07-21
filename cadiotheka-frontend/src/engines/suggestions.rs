@@ -79,7 +79,7 @@ pub fn from_cards(cards: &[ProjectData], include_sort: bool, needle: &str) -> Ve
 
     for card in cards {
         titles.insert(card.title.clone());
-        authors.insert(card.author.clone());
+        authors.insert(card.author_username.clone());
         for tag in &card.tags {
             tags.insert(tag.label().to_owned());
         }
@@ -185,8 +185,9 @@ mod tests {
         ProjectData {
             id: "c3d4e5f6-a7b8-9012-cdef-123456789012".to_owned(),
             title: "Sample Gear".to_owned(),
-            author: "TestAuthor".to_owned(),
+            author: "Test Author".to_owned(),
             author_id: "d4e5f6a7-b8c9-0123-def1-234567890123".to_owned(),
+            author_username: "testauthor".to_owned(),
             description: "A sample gear.".to_owned(),
             extended_desc: "A sample gear with *extended* markdown description.".to_owned(),
             tags: vec![Tag::Parametric, Tag::Model3d],
@@ -257,7 +258,7 @@ mod tests {
             .collect();
 
         assert_eq!(plain, vec!["Sample Gear"]);
-        assert_eq!(authors, vec!["TestAuthor"]);
+        assert_eq!(authors, vec!["testauthor"]);
         assert!(filters.contains(&"Parametric".to_owned()));
         assert!(filters.contains(&"3D Model".to_owned()));
         assert!(filters.contains(&"Blender".to_owned()));

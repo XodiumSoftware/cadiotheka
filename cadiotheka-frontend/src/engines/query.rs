@@ -248,9 +248,9 @@ mod tests {
 
     #[test]
     fn parse_author_filter_borrows_slice() {
-        let query = "screw @author:ZenFlow";
+        let query = "screw @author:zenflow";
         let parsed = parse_query(query);
         assert_eq!(parsed.filter, vec!["screw"]);
-        assert_eq!(parsed.author, Some("ZenFlow"));
+        assert_eq!(parsed.author, Some("zenflow"));
     }
 }

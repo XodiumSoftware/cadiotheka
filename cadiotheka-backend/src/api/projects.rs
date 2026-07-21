@@ -6,7 +6,7 @@ use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::utils::js_option;
 
-const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
+const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
 
 /// Maximum allowed length for a project title.
 const MAX_TITLE_LENGTH: usize = 100;
@@ -33,6 +33,7 @@ pub struct Project {
     pub title: String,
     pub author: String,
     pub author_id: String,
+    pub author_username: String,
     pub description: String,
     pub extended_desc: String,
     #[serde(with = "json_string")]
@@ -52,6 +53,7 @@ pub struct ProjectPayload {
     pub title: String,
     pub author: String,
     pub author_id: String,
+    pub author_username: String,
     pub description: String,
     pub extended_desc: String,
     #[serde(with = "json_string")]
@@ -114,6 +116,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     }
     payload.author_id = account.id;
     payload.author = account.display_name;
+    payload.author_username = account.username;
     let project_id = payload.id.clone();
 
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
@@ -122,14 +125,15 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO projects (id, title, author, author_id, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            "INSERT INTO projects (id, title, author, author_id, author_username, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
         )
         .bind(&[
             payload.id.into(),
             payload.title.into(),
             payload.author.into(),
             payload.author_id.into(),
+            payload.author_username.into(),
             payload.description.into(),
             payload.extended_desc.into(),
             tags.into(),
@@ -165,6 +169,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     }
     payload.author_id = project.author_id;
     payload.author = project.author;
+    payload.author_username = project.author_username;
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
     let platforms =
         serde_json::to_string(&payload.supported_platforms).unwrap_or_else(|_| "[]".to_string());
@@ -172,13 +177,14 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     db(&ctx)?
         .prepare(
             "UPDATE projects \
-             SET title = ?1, author = ?2, author_id = ?3, description = ?4, extended_desc = ?5, tags = ?6, supported_platforms = ?7, downloads = ?8, favorites = ?9, timestamp = ?10, icon_url = ?11 \
-             WHERE id = ?12",
+             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, description = ?5, extended_desc = ?6, tags = ?7, supported_platforms = ?8, downloads = ?9, favorites = ?10, timestamp = ?11, icon_url = ?12 \
+             WHERE id = ?13",
         )
         .bind(&[
             payload.title.into(),
             payload.author.into(),
             payload.author_id.into(),
+            payload.author_username.into(),
             payload.description.into(),
             payload.extended_desc.into(),
             tags.into(),
@@ -255,6 +261,7 @@ mod tests {
             title: "Sample".into(),
             author: "Author".into(),
             author_id: author_id.into(),
+            author_username: "author".into(),
             description: "".into(),
             extended_desc: "".into(),
             tags: vec![],
@@ -272,6 +279,7 @@ mod tests {
             title: "Sample".into(),
             author: "Author".into(),
             author_id: "acc-1".into(),
+            author_username: "author".into(),
             description: "A short description.".into(),
             extended_desc: "".into(),
             tags: vec![],

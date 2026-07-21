@@ -93,10 +93,12 @@ pub struct ProjectData {
     pub id: String,
     /// Project title.
     pub title: String,
-    /// Author or creator name.
+    /// Author or creator display name.
     pub author: String,
     /// Author account identifier.
     pub author_id: String,
+    /// Author username (used for `@author:` filtering and links).
+    pub author_username: String,
     /// Short description of the content.
     pub description: String,
     /// Extended markdown description shown in the project detail modal.
@@ -145,6 +147,7 @@ pub fn new_project_payload(
         title,
         author: String::new(),
         author_id: String::new(),
+        author_username: String::new(),
         description,
         extended_desc,
         tags,
@@ -265,6 +268,7 @@ mod tests {
             title: "Mountain Bike".to_owned(),
             author: "TrailBlazer".to_owned(),
             author_id: "8af81bd9-b70a-4d64-89e9-83bbc4e0297d".to_owned(),
+            author_username: "trailblazer".to_owned(),
             description: "A rugged mountain bike model ready for off-road adventures.".to_owned(),
             extended_desc: "Extended description.".to_owned(),
             tags: vec![Tag::Model3d, Tag::Vehicle],
@@ -278,7 +282,7 @@ mod tests {
 
     #[test]
     fn project_deserializes_backend_json_string_columns() {
-        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","description":"A rugged mountain bike model ready for off-road adventures.","extended_desc":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","supported_platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":84,"timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","description":"A rugged mountain bike model ready for off-road adventures.","extended_desc":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","supported_platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":84,"timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).expect("backend JSON parses");
         assert_eq!(projects.len(), 1);
         assert_eq!(projects[0].title, "Mountain Bike");

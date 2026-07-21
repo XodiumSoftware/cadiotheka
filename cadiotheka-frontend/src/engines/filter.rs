@@ -94,7 +94,7 @@ impl SearchEngine {
 
         if let Some(author) = author
             && !card
-                .author
+                .author_username
                 .to_lowercase()
                 .starts_with(author.to_lowercase().as_str())
         {
@@ -174,9 +174,11 @@ mod tests {
     use crate::metadata::tags::Tag;
     use time::macros::datetime;
 
+    #[allow(clippy::too_many_arguments)]
     fn card(
         title: &str,
         author: &str,
+        author_username: &str,
         description: &str,
         tags: &[Tag],
         platforms: &[Platform],
@@ -202,6 +204,7 @@ mod tests {
                 0,
                 0
             ),
+            author_username: author_username.to_owned(),
             description: description.to_owned(),
             extended_desc: format!("Extended markdown summary for {}.", title),
             tags: tags.to_vec(),
@@ -218,6 +221,7 @@ mod tests {
             card(
                 "Parametric Screw",
                 "ZenFlow",
+                "zenflow",
                 "A fully parametric screw model.",
                 &[Tag::Parametric, Tag::Model3d],
                 &[Platform::Blender, Platform::FreeCAD, Platform::Fusion360],
@@ -227,6 +231,7 @@ mod tests {
             card(
                 "Workshop Bench",
                 "MakerJoe",
+                "makerjoe",
                 "Sturdy bench for the garage.",
                 &[Tag::Furniture, Tag::Fabrication, Tag::Diy],
                 &[Platform::SketchUp],
@@ -236,6 +241,7 @@ mod tests {
             card(
                 "PCB Holder",
                 "ZenFlow",
+                "zenflow",
                 "Holder for KiCad projects.",
                 &[Tag::Electronics, Tag::Tooling],
                 &[Platform::KiCad],
@@ -283,10 +289,10 @@ mod tests {
     #[test]
     fn author_filter_limits_results() {
         let engine = engine();
-        let parsed = parse_query("@author:zen");
+        let parsed = parse_query("@author:zenflow");
         let results = engine.search(&parsed);
         assert_eq!(results.len(), 2);
-        assert!(results.iter().all(|c| c.author == "ZenFlow"));
+        assert!(results.iter().all(|c| c.author_username == "zenflow"));
     }
 
     #[test]
@@ -344,7 +350,7 @@ mod tests {
         assert!(
             suggestions
                 .iter()
-                .any(|s| { s.kind == SuggestionKind::Author && s.text == "ZenFlow" })
+                .any(|s| { s.kind == SuggestionKind::Author && s.text == "zenflow" })
         );
         assert!(
             suggestions
