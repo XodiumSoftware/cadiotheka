@@ -569,15 +569,6 @@ fn ProjectModalContent(
                         }
                     }}
                     <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <h3 class="text-sm font-semibold text-base-content">"Short description"</h3>
-                            {is_editable.then(|| view! {
-                                <EditIconButton
-                                    aria_label="Edit short description"
-                                    on_click=Callback::new(move |_| start_edit_description())
-                                />
-                            })}
-                        </div>
                         {move || {
                             if editing_description.get() {
                                 view! {
@@ -616,7 +607,15 @@ fn ProjectModalContent(
                                     .into_any()
                             } else {
                                 view! {
-                                    <p class="text-base-content/70 text-sm whitespace-pre-wrap">{description.get()}</p>
+                                    <div class="flex items-start gap-2">
+                                        <p class="flex-1 min-w-0 text-base-content/70 text-sm whitespace-pre-wrap">{description.get()}</p>
+                                        {is_editable.then(|| view! {
+                                            <EditIconButton
+                                                aria_label="Edit short description"
+                                                on_click=Callback::new(move |_| start_edit_description())
+                                            />
+                                        })}
+                                    </div>
                                 }
                                     .into_any()
                             }
