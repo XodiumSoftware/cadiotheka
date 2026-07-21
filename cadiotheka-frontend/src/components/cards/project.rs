@@ -237,12 +237,12 @@ pub fn ProjectCard(
                             <div class="min-w-0 flex-1 flex flex-col gap-2">
                                 <div class="flex items-start gap-2">
                                     <h2 class="card-title text-primary text-base leading-tight min-w-0 flex-1">
-                                        <span class="truncate" title={card_title.clone()}>{card_title.clone()}</span>
+                                        <span class="truncate tooltip tooltip-top" data-tip={card_title.clone()}>{card_title.clone()}</span>
                                         <span class="text-base-content/60 font-normal">{" by "}</span>
                                         <button
                                             type="button"
-                                            class="text-base-content font-semibold truncate hover:text-primary hover:underline"
-                                            title={format!("@{}", card_author_username)}
+                                            class="text-base-content font-semibold truncate hover:text-primary hover:underline tooltip tooltip-top"
+                                            data-tip={format!("@{}", card_author_username)}
                                             on:click=move |ev| {
                                                 ev.stop_propagation();
                                                 on_author_click.run(());
@@ -288,8 +288,8 @@ pub fn ProjectCard(
 
                         <div class="flex items-center gap-4 text-base-content/60 text-sm">
                             <span
-                                class="flex items-center gap-1"
-                                title={move || format!("{} downloads", format_number_full(downloads))}
+                                class="flex items-center gap-1 tooltip tooltip-top"
+                                data-tip={move || format!("{} downloads", format_number_full(downloads))}
                             >
                                 <DownloadIcon />
                                 {move || format_number(downloads)}
@@ -298,15 +298,15 @@ pub fn ProjectCard(
                                 class=move || {
                                     if current_user.account.get().is_some() {
                                         if is_favorited.get() {
-                                            "flex items-center gap-1 cursor-pointer select-none text-error hover:text-base-content/50"
+                                            "flex items-center gap-1 cursor-pointer select-none text-error hover:text-base-content/50 tooltip tooltip-top"
                                         } else {
-                                            "flex items-center gap-1 cursor-pointer select-none text-base-content/50 hover:text-error"
+                                            "flex items-center gap-1 cursor-pointer select-none text-base-content/50 hover:text-error tooltip tooltip-top"
                                         }
                                     } else {
-                                        "flex items-center gap-1 select-none"
+                                        "flex items-center gap-1 select-none tooltip tooltip-top"
                                     }
                                 }
-                                title={move || format!("{} favorites", format_number_full(favorite_count.get() as u64))}
+                                data-tip={move || format!("{} favorites", format_number_full(favorite_count.get() as u64))}
                                 aria-label=favorite_aria_label
                                 role=move || if current_user.account.get().is_some() { "button" } else { "" }
                                 tabindex=move || if current_user.account.get().is_some() { "0" } else { "-1" }
@@ -341,8 +341,8 @@ pub fn ProjectCard(
                                 {move || format_number(favorite_count.get() as u64)}
                             </span>
                             <span
-                                class="flex items-center gap-1"
-                                title={move || format!("Updated {}", format_time_full(timestamp))}
+                                class="flex items-center gap-1 tooltip tooltip-top"
+                                data-tip={move || format!("Updated {}", format_time_full(timestamp))}
                             >
                                 <ClockIcon />
                                 {move || format_time_ago(timestamp)}

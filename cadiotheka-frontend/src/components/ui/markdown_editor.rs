@@ -362,8 +362,8 @@ fn ToolbarButton(
     view! {
         <button
             type="button"
-            class="btn btn-ghost btn-xs min-h-0 h-7 px-2"
-            title=label
+            class="btn btn-ghost btn-xs min-h-0 h-7 px-2 tooltip tooltip-top"
+            data-tip=label
             aria-label=label
             on:click=move |_| on_click.run(())
         >

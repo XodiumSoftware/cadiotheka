@@ -66,8 +66,8 @@ fn avatar_button(account: &AccountData, class: Option<String>) -> impl IntoView 
     let url = account.avatar_url.clone();
     view! {
         <div
-            class=format!("{} border border-base-content/10 overflow-hidden flex items-center justify-center text-white font-bold text-lg {}", size_class, avatar_bg)
-            title=display_name.clone()
+            class=format!("{} border border-base-content/10 overflow-hidden flex items-center justify-center text-white font-bold text-lg tooltip tooltip-top {}", size_class, avatar_bg)
+            data-tip=display_name.clone()
             aria-label=avatar_alt.clone()
         >
             {url.map(|url| {
@@ -687,8 +687,8 @@ fn ProjectModalContent(
                         } else {
                             view! {
                                 <h2
-                                    class="text-xl font-bold text-primary leading-tight truncate"
-                                    title={title.get()}
+                                    class="text-xl font-bold text-primary leading-tight truncate tooltip tooltip-top"
+                                    data-tip={title.get()}
                                 >
                                     {title.get()}
                                 </h2>
@@ -772,9 +772,9 @@ fn ProjectModalContent(
                         type="button"
                         class=move || {
                             if is_favorited.get() {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50"
+                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50 tooltip tooltip-top"
                             } else {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error"
+                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error tooltip tooltip-top"
                             }
                         }
                         aria-label=move || {
@@ -784,7 +784,7 @@ fn ProjectModalContent(
                                 format!("Add {} to favorites", title.get())
                             }
                         }
-                        title=move || {
+                        data-tip=move || {
                             if is_favorited.get() {
                                 "Remove favorite".to_string()
                             } else {
@@ -967,8 +967,8 @@ fn ProjectModalContent(
                                                             {avatar_button(&account, None)}
                                                             <button
                                                                 type="button"
-                                                                class="absolute inset-0 flex items-center justify-center bg-error/80 opacity-0 group-hover:opacity-100 transition-opacity text-white"
-                                                                title={format!("Remove {}", display_name)}
+                                                                class="absolute inset-0 flex items-center justify-center bg-error/80 opacity-0 group-hover:opacity-100 transition-opacity text-white tooltip tooltip-top"
+                                                                data-tip={format!("Remove {}", display_name)}
                                                                 aria-label={format!("Remove {}", display_name)}
                                                                 on:click=move |_| remove_collaborator.run(account_id.clone())
                                                             >
@@ -981,9 +981,9 @@ fn ProjectModalContent(
                                                 }).collect_view()}
                                                 <button
                                                     type="button"
-                                                    class="w-12 h-12 border border-dashed border-base-content/30 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors"
+                                                    class="w-12 h-12 border border-dashed border-base-content/30 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors tooltip tooltip-top"
                                                     aria-label="Add collaborator"
-                                                    title="Add collaborator"
+                                                    data-tip="Add collaborator"
                                                     on:click=move |_| set_add_open.set(true)
                                                 >
                                                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
