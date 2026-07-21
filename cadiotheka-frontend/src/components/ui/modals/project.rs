@@ -109,7 +109,6 @@ where
                                 {all_items.iter().cloned().map(|item| {
                                     let item_for_class = item.clone();
                                     let item_for_aria = item.clone();
-                                    let item_for_click = item.clone();
                                     view! {
                                         <button
                                             type="button"
@@ -124,7 +123,10 @@ where
                                                     }
                                                 )
                                             }
-                                            on:click=move |_| on_toggle.run(item_for_click.clone())
+                                            on:click={
+                                                let item = item.clone();
+                                                move |_| on_toggle.run(item.clone())
+                                            }
                                             aria-pressed=move || selected_items.get().contains(&item_for_aria).to_string()
                                         >
                                             {label_fn(&item)}
@@ -226,7 +228,7 @@ fn ProjectModalContent(
         set_editing_tags.set(false);
     };
 
-    let toggle_tag = move |tag: crate::metadata::tags::Tag| {
+    let toggle_tag = Callback::new(move |tag: crate::metadata::tags::Tag| {
         set_draft_tags.update(|tags| {
             if let Some(pos) = tags.iter().position(|t| *t == tag) {
                 tags.remove(pos);
@@ -234,7 +236,7 @@ fn ProjectModalContent(
                 tags.push(tag);
             }
         });
-    };
+    });
 
     let start_edit_platforms = move || {
         set_draft_platforms.set(supported_platforms.get());
@@ -245,7 +247,7 @@ fn ProjectModalContent(
         set_editing_platforms.set(false);
     };
 
-    let toggle_platform = move |platform: crate::metadata::platforms::Platform| {
+    let toggle_platform = Callback::new(move |platform: crate::metadata::platforms::Platform| {
         set_draft_platforms.update(|platforms| {
             if let Some(pos) = platforms.iter().position(|p| *p == platform) {
                 platforms.remove(pos);
@@ -253,7 +255,7 @@ fn ProjectModalContent(
                 platforms.push(platform);
             }
         });
-    };
+    });
 
     let start_edit_extended = move || {
         set_draft_extended.set(extended_desc.get());
@@ -626,7 +628,7 @@ fn ProjectModalContent(
                                 editable=is_editable
                                 on_start_edit=Callback::new(move |_| start_edit_tags())
                                 on_cancel=Callback::new(move |_| cancel_edit_tags())
-                                on_toggle=Callback::new(move |tag| toggle_tag(tag))
+                                on_toggle=toggle_tag
                                 on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
                                 label_fn=crate::metadata::tags::tag_label
                                 color_fn=crate::metadata::tags::tag_color
@@ -661,7 +663,7 @@ fn ProjectModalContent(
                     editable=is_editable
                     on_start_edit=Callback::new(move |_| start_edit_platforms())
                     on_cancel=Callback::new(move |_| cancel_edit_platforms())
-                    on_toggle=Callback::new(move |platform| toggle_platform(platform))
+                    on_toggle=toggle_platform
                     on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
                     label_fn=crate::metadata::platforms::platform_label
                     color_fn=crate::metadata::platforms::platform_color
