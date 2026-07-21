@@ -5,12 +5,16 @@ use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
 };
-use crate::data::{AccountRole, IconUrl, update_project_icon_url, update_project_title};
+use crate::data::{
+    AccountRole, IconUrl, update_project_extended_desc, update_project_icon_url,
+    update_project_title,
+};
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 
 const MAX_TITLE_LENGTH: usize = 100;
 const MAX_ICON_URL_LENGTH: usize = 500;
+const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
 
 /// Modal dialog that displays detailed information about a selected project.
 #[component]
@@ -64,7 +68,11 @@ fn ProjectModalContent(
             .unwrap_or_default(),
     );
     let (icon_url, set_icon_url) = signal(card.icon_url.clone());
+    let (editing_extended, set_editing_extended) = signal(false);
+    let (draft_extended, set_draft_extended) = signal(card.extended_desc.clone());
+    let (extended_desc, set_extended_desc) = signal(card.extended_desc.clone());
     let project_id = card.id.clone();
+    let _project_id_for_start_edit = project_id.clone();
 
     let start_edit = move |_| {
         set_draft.set(title.get());
@@ -126,6 +134,48 @@ fn ProjectModalContent(
         set_editing.set(false);
     };
 
+    let start_edit_extended = move || {
+        set_draft_extended.set(extended_desc.get());
+        set_editing_extended.set(true);
+    };
+
+    let cancel_edit_extended = move || {
+        set_editing_extended.set(false);
+    };
+
+    let commit_edit_extended = {
+        let project_id = project_id.clone();
+        Callback::new(move |draft_value: String| {
+            let project_id = project_id.clone();
+            let set_extended_desc = set_extended_desc;
+            let set_editing_extended = set_editing_extended;
+            let modal_card = modal.set_card;
+            let set_projects = projects_ctx.set_projects;
+
+            leptos::task::spawn_local(async move {
+                if let Some(new_extended) =
+                    update_project_extended_desc(&project_id, draft_value).await
+                {
+                    set_extended_desc.set(new_extended.clone());
+                    modal_card.update(|opt| {
+                        if let Some(card) = opt.as_mut() {
+                            card.extended_desc = new_extended.clone();
+                        }
+                    });
+                    set_projects.update(|projects| {
+                        for project in projects.iter_mut() {
+                            if project.id == project_id {
+                                project.extended_desc = new_extended.clone();
+                                break;
+                            }
+                        }
+                    });
+                }
+                set_editing_extended.set(false);
+            });
+        })
+    };
+
     let commit_edit = {
         let project_id = project_id.clone();
         Callback::new(move |draft_value: String| {
@@ -178,7 +228,6 @@ fn ProjectModalContent(
             }
         }
     };
-    let extended_desc = card.extended_desc.clone();
     let tags = card.tags.clone();
     let platforms = card.supported_platforms.clone();
 
@@ -372,8 +421,72 @@ fn ProjectModalContent(
                     .into_any())}
 
                 <div>
-                    <h3 class="text-sm font-semibold text-base-content mb-1">Description</h3>
-                    <MarkdownView source=extended_desc />
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="text-sm font-semibold text-base-content">"Description"</h3>
+                        {is_editable.then(|| view! {
+                            <button
+                                type="button"
+                                class="btn btn-ghost btn-xs p-1 h-auto min-h-0"
+                                aria-label="Edit extended description"
+                                on:click=move |_| start_edit_extended()
+                            >
+                                <svg
+                                    class="w-4 h-4 text-base-content/60"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                </svg>
+                            </button>
+                        })}
+                    </div>
+                    {move || {
+                        if editing_extended.get() {
+                            view! {
+                                <div class="space-y-2">
+                                    <textarea
+                                        class="textarea w-full min-h-[8rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                        maxlength=MAX_EXTENDED_DESC_LENGTH.to_string()
+                                        prop:value=draft_extended.get()
+                                        on:input=move |ev| set_draft_extended.set(event_target_value(&ev))
+                                        on:keyup=move |ev| {
+                                            if ev.key().as_str() == "Escape" {
+                                                cancel_edit_extended();
+                                            }
+                                        }
+                                        autofocus
+                                    ></textarea>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs text-base-content/50">
+                                            {move || format!("{}/{}", draft_extended.get().len(), MAX_EXTENDED_DESC_LENGTH)}
+                                        </span>
+                                        <div class="flex gap-2">
+                                            <button
+                                                type="button"
+                                                class="btn btn-ghost btn-xs"
+                                                on:click=move |_| cancel_edit_extended()
+                                            >"Cancel"</button>
+                                            <button
+                                                type="button"
+                                                class="btn btn-primary btn-xs"
+                                                on:click=move |_| commit_edit_extended.run(draft_extended.get())
+                                            >"Save"</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                                .into_any()
+                        } else {
+                            view! {
+                                <MarkdownView source=extended_desc.get() />
+                            }
+                                .into_any()
+                        }
+                    }}
                 </div>
             </div>
 

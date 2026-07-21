@@ -14,6 +14,8 @@ const MAX_TITLE_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 500;
 /// Maximum allowed length for a project icon URL.
 const MAX_ICON_URL_LENGTH: usize = 500;
+/// Maximum allowed length for a project's extended markdown description.
+const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
 
 /// Validates the project payload and returns an error message when a field
 /// exceeds its allowed length. The route handler turns this message into a
@@ -160,6 +162,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 pub struct ProjectPatch {
     title: Option<String>,
     icon_url: Option<Option<String>>,
+    extended_desc: Option<String>,
 }
 
 /// Partially updates an existing project, identified by the `:id` path parameter.
@@ -195,7 +198,18 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         }
         db(&ctx)?
             .prepare("UPDATE projects SET icon_url = ?1 WHERE id = ?2")
-            .bind(&[js_option(icon_url), id.into()])?
+            .bind(&[js_option(icon_url), id.clone().into()])?
+            .run()
+            .await?;
+    }
+
+    if let Some(extended_desc) = patch.extended_desc {
+        if extended_desc.len() > MAX_EXTENDED_DESC_LENGTH {
+            return Response::error("Extended description must be 5000 characters or fewer", 400);
+        }
+        db(&ctx)?
+            .prepare("UPDATE projects SET extended_desc = ?1 WHERE id = ?2")
+            .bind(&[extended_desc.into(), id.into()])?
             .run()
             .await?;
     }

@@ -243,6 +243,26 @@ pub async fn update_project_title(id: &str, title: String) -> Option<String> {
     Some(title)
 }
 
+/// Updates the extended description of an existing project via `PATCH /data/projects/:id`.
+///
+/// On success it returns the new extended description; on failure it logs to the
+/// console and returns `None`.
+pub async fn update_project_extended_desc(id: &str, extended_desc: String) -> Option<String> {
+    let url = api_url(&format!("/projects/{id}"));
+    let body = match serde_json::to_string(&serde_json::json!({ "extended_desc": extended_desc })) {
+        Ok(json) => json,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to serialize extended description update payload: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    patch_project(&url, body, "extended description").await?;
+    Some(extended_desc)
+}
+
 /// Updates the icon URL of an existing project via `PATCH /data/projects/:id`.
 ///
 /// On success it returns the new icon URL (or `None` when cleared); on failure
