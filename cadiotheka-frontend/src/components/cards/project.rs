@@ -217,13 +217,13 @@ pub fn ProjectCard(
                                         <img
                                             src={url}
                                             alt=icon_alt
-                                            class="flex-shrink-0 w-10 h-10 rounded object-cover"
+                                            class="flex-shrink-0 w-10 h-10 object-cover"
                                             loading="lazy"
                                         />
                                     }
                                         .into_any(),
                                     None => view! {
-                                        <div class=format!("flex-shrink-0 w-10 h-10 rounded flex items-center justify-center text-white font-bold {}", bg)
+                                        <div class=format!("flex-shrink-0 w-10 h-10 flex items-center justify-center text-white font-bold {}", bg)
                                             aria-hidden="true"
                                         >
                                             {letter.clone()}
