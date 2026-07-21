@@ -251,54 +251,6 @@ pub fn ProjectCard(
                                             {card_author.clone()}
                                         </button>
                                     </h2>
-                                    <Show when=move || current_user.account.get().is_some()>
-                                        <button
-                                            type="button"
-                                            class=move || {
-                                                if is_favorited.get() {
-                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error"
-                                                } else {
-                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error"
-                                                }
-                                            }
-                                            aria-label=favorite_aria_label
-                                            title=move || {
-                                                if is_favorited.get() {
-                                                    "Remove favorite".to_string()
-                                                } else {
-                                                    "Add favorite".to_string()
-                                                }
-                                            }
-                                            on:click={
-                                                let project_id = project_id_for_button.clone();
-                                                move |ev| {
-                                                    ev.stop_propagation();
-                                                    let project_id = project_id.clone();
-                                                    let set_projects = projects_ctx.set_projects;
-                                                    let modal_set_card = project_modal.set_card;
-                                                    leptos::task::spawn_local(async move {
-                                                        if let Some(updated) = ProjectsContext::toggle_favorite(&project_id).await {
-                                                            let updated_for_modal = updated.clone();
-                                                            set_projects.update(|projects| {
-                                                                if let Some(project) = projects.iter_mut().find(|project| project.id == updated.id) {
-                                                                    *project = updated.clone();
-                                                                }
-                                                            });
-                                                            modal_set_card.update(|card| {
-                                                                if let Some(card) = card.as_mut()
-                                                                    && card.id == updated_for_modal.id
-                                                                {
-                                                                    card.favorites = updated_for_modal.favorites.clone();
-                                                                }
-                                                            });
-                                                        }
-                                                    });
-                                                }
-                                            }
-                                        >
-                                            <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
-                                        </button>
-                                    </Show>
                                 </div>
 
                                 <div class="flex flex-nowrap items-center gap-1 overflow-hidden">
@@ -343,8 +295,47 @@ pub fn ProjectCard(
                                 {move || format_number(downloads)}
                             </span>
                             <span
-                                class="flex items-center gap-1"
+                                class=move || {
+                                    if current_user.account.get().is_some() {
+                                        if is_favorited.get() {
+                                            "flex items-center gap-1 cursor-pointer select-none text-error"
+                                        } else {
+                                            "flex items-center gap-1 cursor-pointer select-none hover:text-error"
+                                        }
+                                    } else {
+                                        "flex items-center gap-1 select-none"
+                                    }
+                                }
                                 title={move || format!("{} favorites", format_number_full(favorite_count.get() as u64))}
+                                aria-label=favorite_aria_label
+                                role=move || if current_user.account.get().is_some() { "button" } else { "" }
+                                tabindex=move || if current_user.account.get().is_some() { "0" } else { "-1" }
+                                on:click=move |ev: leptos::web_sys::MouseEvent| {
+                                    if current_user.account.get().is_none() {
+                                        return;
+                                    }
+                                    ev.stop_propagation();
+                                    let project_id = project_id_for_button.clone();
+                                    let set_projects = projects_ctx.set_projects;
+                                    let modal_set_card = project_modal.set_card;
+                                    leptos::task::spawn_local(async move {
+                                        if let Some(updated) = ProjectsContext::toggle_favorite(&project_id).await {
+                                            let updated_for_modal = updated.clone();
+                                            set_projects.update(|projects| {
+                                                if let Some(project) = projects.iter_mut().find(|project| project.id == updated.id) {
+                                                    *project = updated.clone();
+                                                }
+                                            });
+                                            modal_set_card.update(|card| {
+                                                if let Some(card) = card.as_mut()
+                                                    && card.id == updated_for_modal.id
+                                                {
+                                                    card.favorites = updated_for_modal.favorites.clone();
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
                             >
                                 <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
                                 {move || format_number(favorite_count.get() as u64)}
