@@ -26,6 +26,8 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     view! {
         <section id="projects" class={format!("relative py-16 sm:py-20 px-6 flex-1 flex flex-col {}", class)}>
             <FadeOverlay />
+            <FadeOverlay position="spotlight-top" height="96" />
+            <FadeOverlay position="spotlight-bottom" height="96" />
             <div
                 class=move || {
                     if layout.wide.get() {
