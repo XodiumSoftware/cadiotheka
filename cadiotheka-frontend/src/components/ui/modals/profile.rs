@@ -142,7 +142,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                     <div class="flex items-center gap-2">
                         <button
                             type="button"
-                            class="text-left group cursor-pointer tooltip tooltip-top"
+                            class="text-left group cursor-pointer tooltip tooltip-bottom"
                             data-tip={format!("@{}", username)}
                             aria-label={format!("Copy username @{}", username)}
                             on:click=copy_username
