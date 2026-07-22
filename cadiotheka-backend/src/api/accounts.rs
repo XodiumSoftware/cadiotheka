@@ -5,7 +5,7 @@ use crate::DB_BINDING;
 use crate::api::session::require_account;
 use crate::utils::{js_option, now_utc};
 
-const SELECT_ACCOUNT_COLUMNS: &str = "SELECT id, username, display_name, email, role, bio, avatar_url, created_at, verified, provider, provider_id FROM accounts";
+const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.provider, a.provider_id FROM accounts a";
 
 /// A Cadiotheka account stored in D1.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -46,9 +46,9 @@ fn db(ctx: &RouteContext<()>) -> Result<D1Database> {
 }
 
 /// Fetches a single account by id, returning `None` when no row matches.
-async fn fetch_account(ctx: &RouteContext<()>, id: &str) -> Result<Option<Account>> {
+pub async fn fetch_account(ctx: &RouteContext<()>, id: &str) -> Result<Option<Account>> {
     let result = db(ctx)?
-        .prepare(format!("{SELECT_ACCOUNT_COLUMNS} WHERE id = ?1"))
+        .prepare(format!("{SELECT_ACCOUNT_COLUMNS} WHERE a.id = ?1"))
         .bind(&[id.into()])?
         .all()
         .await?;
@@ -57,6 +57,9 @@ async fn fetch_account(ctx: &RouteContext<()>, id: &str) -> Result<Option<Accoun
 }
 
 /// Fetches a single account by its OAuth provider and provider id.
+///
+/// Looks up linked providers first, then falls back to legacy accounts that
+/// only have a single provider stored on the row itself.
 pub async fn fetch_account_by_provider(
     ctx: &RouteContext<()>,
     provider: &str,
@@ -64,13 +67,82 @@ pub async fn fetch_account_by_provider(
 ) -> Result<Option<Account>> {
     let result = db(ctx)?
         .prepare(format!(
-            "{SELECT_ACCOUNT_COLUMNS} WHERE provider = ?1 AND provider_id = ?2"
+            "{SELECT_ACCOUNT_COLUMNS} JOIN account_providers ap ON a.id = ap.account_id WHERE ap.provider = ?1 AND ap.provider_id = ?2"
         ))
         .bind(&[provider.into(), provider_id.into()])?
         .all()
         .await?;
     let mut accounts: Vec<Account> = result.results::<Account>()?;
+    if accounts.is_empty() {
+        let result = db(ctx)?
+            .prepare(format!(
+                "{SELECT_ACCOUNT_COLUMNS} WHERE a.provider = ?1 AND a.provider_id = ?2"
+            ))
+            .bind(&[provider.into(), provider_id.into()])?
+            .all()
+            .await?;
+        accounts = result.results::<Account>()?;
+    }
     Ok(accounts.pop())
+}
+
+/// Returns the list of provider names linked to the given account.
+pub async fn fetch_linked_providers(
+    ctx: &RouteContext<()>,
+    account_id: &str,
+) -> Result<Vec<String>> {
+    #[derive(Deserialize)]
+    struct Row {
+        provider: String,
+    }
+
+    let result = db(ctx)?
+        .prepare("SELECT provider FROM account_providers WHERE account_id = ?1 ORDER BY created_at")
+        .bind(&[account_id.into()])?
+        .all()
+        .await?;
+    let rows: Vec<Row> = result.results::<Row>()?;
+    Ok(rows.into_iter().map(|r| r.provider).collect())
+}
+
+/// Links an OAuth provider identity to an existing account.
+///
+/// Returns an error if the provider identity is already linked to a different
+/// account.
+pub async fn link_oauth_account(
+    ctx: &RouteContext<()>,
+    account_id: &str,
+    provider: &str,
+    provider_id: &str,
+) -> Result<()> {
+    let existing = fetch_account_by_provider(ctx, provider, provider_id).await?;
+    if let Some(account) = existing {
+        if account.id != account_id {
+            return Err(worker::Error::RustError(
+                "provider already linked to another account".into(),
+            ));
+        }
+        return Ok(());
+    }
+
+    let created_at = now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .map_err(|e| worker::Error::RustError(format!("failed to format timestamp: {e}")))?;
+
+    db(ctx)?
+        .prepare(
+            "INSERT INTO account_providers (account_id, provider, provider_id, created_at) VALUES (?1, ?2, ?3, ?4)",
+        )
+        .bind(&[
+            account_id.into(),
+            provider.into(),
+            provider_id.into(),
+            created_at.into(),
+        ])?
+        .run()
+        .await?;
+
+    Ok(())
 }
 
 /// Fetches a single account by username, returning `None` when no row matches.
@@ -79,7 +151,7 @@ async fn fetch_account_by_username(
     username: &str,
 ) -> Result<Option<Account>> {
     let result = db(ctx)?
-        .prepare(format!("{SELECT_ACCOUNT_COLUMNS} WHERE username = ?1"))
+        .prepare(format!("{SELECT_ACCOUNT_COLUMNS} WHERE a.username = ?1"))
         .bind(&[username.into()])?
         .all()
         .await?;
@@ -133,7 +205,7 @@ pub async fn create_oauth_account(
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         )
         .bind(&[
-            id.into(),
+            id.clone().into(),
             username.into(),
             account.display_name.clone().into(),
             account.email.clone().into(),
@@ -144,6 +216,21 @@ pub async fn create_oauth_account(
             account.verified.into(),
             account.provider.clone().into(),
             account.provider_id.clone().into(),
+        ])?
+        .run()
+        .await?;
+
+    // Store the primary provider identity in the linked-providers table as well
+    // so all lookups go through the same path.
+    db(ctx)?
+        .prepare(
+            "INSERT INTO account_providers (account_id, provider, provider_id, created_at) VALUES (?1, ?2, ?3, ?4)",
+        )
+        .bind(&[
+            id.into(),
+            account.provider.clone().into(),
+            account.provider_id.clone().into(),
+            account.created_at.clone().into(),
         ])?
         .run()
         .await?;
@@ -187,7 +274,7 @@ fn sanitize_username(login: &str) -> String {
     out
 }
 
-/// Responds with a JSON array of all accounts.
+/// Returns a list of all accounts.
 pub async fn list_accounts(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let result = db(&ctx)?.prepare(SELECT_ACCOUNT_COLUMNS).all().await?;
     let accounts: Vec<Account> = result.results::<Account>()?;
@@ -201,6 +288,14 @@ pub async fn read_account(_req: Request, ctx: RouteContext<()>) -> Result<Respon
         Some(account) => Response::from_json(&account),
         None => Response::error("Not found", 404),
     }
+}
+
+/// Responds with the OAuth providers linked to the currently authenticated
+/// account as a JSON array of provider names.
+pub async fn list_linked_providers(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let account = require_account(&req, &ctx).await?;
+    let providers = fetch_linked_providers(&ctx, &account.id).await?;
+    Response::from_json(&serde_json::json!({ "providers": providers }))
 }
 
 /// Creates a new account from the request body. Restricted to admins.

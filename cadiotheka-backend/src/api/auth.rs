@@ -8,9 +8,10 @@ use std::borrow::Cow;
 use worker::*;
 
 use crate::api::accounts::{
-    Account, OAuthProfile, create_oauth_account, fetch_account_by_provider,
+    Account, OAuthProfile, create_oauth_account, fetch_account, fetch_account_by_provider,
+    link_oauth_account,
 };
-use crate::api::session::create_session;
+use crate::api::session::{create_session, read_session};
 use crate::utils::{public_origin, query_param, rust_err};
 
 const AUTH_KV_BINDING: &str = "AUTH";
@@ -64,6 +65,7 @@ struct OAuthState {
     provider: Provider,
     pkce_verifier: String,
     redirect_to: String,
+    link_account_id: Option<String>,
 }
 
 fn oauth_client(ctx: &RouteContext<()>, provider: Provider) -> Result<BasicClient> {
@@ -85,7 +87,8 @@ pub async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Respons
                 .map(|(_, value)| value.into_owned())
         })
         .unwrap_or_else(|| "/".to_string());
-    let url = login_url(req, ctx, Provider::GitHub, &redirect_to).await?;
+    let link_account_id = read_session(&req, &ctx).await?.map(|a| a.id);
+    let url = login_url(req, ctx, Provider::GitHub, &redirect_to, link_account_id).await?;
     Response::from_json(&serde_json::json!({ "url": url }))
 }
 
@@ -99,7 +102,8 @@ pub async fn google_login(req: Request, ctx: RouteContext<()>) -> Result<Respons
                 .map(|(_, value)| value.into_owned())
         })
         .unwrap_or_else(|| "/".to_string());
-    let url = login_url(req, ctx, Provider::Google, &redirect_to).await?;
+    let link_account_id = read_session(&req, &ctx).await?.map(|a| a.id);
+    let url = login_url(req, ctx, Provider::Google, &redirect_to, link_account_id).await?;
     Response::from_json(&serde_json::json!({ "url": url }))
 }
 
@@ -108,6 +112,7 @@ async fn login_url(
     ctx: RouteContext<()>,
     provider: Provider,
     redirect_to: &str,
+    link_account_id: Option<String>,
 ) -> Result<String> {
     let client = oauth_client(&ctx, provider)?
         .set_auth_uri(AuthUrl::new(provider.auth_url().to_string()).map_err(rust_err)?);
@@ -137,6 +142,7 @@ async fn login_url(
         provider,
         pkce_verifier: verifier.secret().clone(),
         redirect_to: redirect_to.to_string(),
+        link_account_id,
     };
 
     kv(&ctx)?
@@ -183,7 +189,17 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
     kv(&ctx)?.delete(&key).await?;
 
     let token = exchange_code(&ctx, provider, code, state.pkce_verifier, &req).await?;
-    let account = fetch_or_create_account(&ctx, provider, &token).await?;
+
+    let account = if let Some(account_id) = state.link_account_id {
+        let (provider_id, _profile) = fetch_provider_profile(&ctx, provider, &token).await?;
+        link_oauth_account(&ctx, &account_id, provider.as_str(), &provider_id).await?;
+        fetch_account(&ctx, &account_id)
+            .await?
+            .ok_or_else(|| rust_err("account to link not found"))?
+    } else {
+        fetch_or_create_account(&ctx, provider, &token).await?
+    };
+
     let cookie = create_session(&ctx, &account, &req).await?;
 
     let redirect_to = html_escape(&state.redirect_to);
@@ -289,16 +305,30 @@ async fn fetch_or_create_account(
     provider: Provider,
     access_token: &str,
 ) -> Result<Account> {
+    let (provider_id, profile) = fetch_provider_profile(ctx, provider, access_token).await?;
+
+    if let Some(account) = fetch_account_by_provider(ctx, provider.as_str(), &provider_id).await? {
+        return Ok(account);
+    }
+
+    create_oauth_account(ctx, provider.as_str(), &provider_id, profile).await
+}
+
+async fn fetch_provider_profile(
+    ctx: &RouteContext<()>,
+    provider: Provider,
+    access_token: &str,
+) -> Result<(String, OAuthProfile)> {
     match provider {
-        Provider::GitHub => fetch_or_create_github_account(ctx, access_token).await,
-        Provider::Google => fetch_or_create_google_account(ctx, access_token).await,
+        Provider::GitHub => fetch_github_profile(ctx, access_token).await,
+        Provider::Google => fetch_google_profile(ctx, access_token).await,
     }
 }
 
-async fn fetch_or_create_github_account(
-    ctx: &RouteContext<()>,
+async fn fetch_github_profile(
+    _ctx: &RouteContext<()>,
     access_token: &str,
-) -> Result<Account> {
+) -> Result<(String, OAuthProfile)> {
     let headers = Headers::new();
     headers.set("Authorization", &format!("Bearer {access_token}"))?;
     headers.set("Accept", "application/vnd.github+json")?;
@@ -323,30 +353,21 @@ async fn fetch_or_create_github_account(
         .unwrap_or_default();
 
     let provider_id = user.id.to_string();
+    let profile = OAuthProfile {
+        preferred_username: user.login.clone(),
+        display_name: user.name.unwrap_or_else(|| user.login.clone()),
+        email,
+        avatar_url: user.avatar_url,
+        bio: user.bio.unwrap_or_default(),
+    };
 
-    if let Some(account) = fetch_account_by_provider(ctx, "github", &provider_id).await? {
-        return Ok(account);
-    }
-
-    create_oauth_account(
-        ctx,
-        "github",
-        &provider_id,
-        OAuthProfile {
-            preferred_username: user.login.clone(),
-            display_name: user.name.unwrap_or_else(|| user.login.clone()),
-            email,
-            avatar_url: user.avatar_url,
-            bio: user.bio.unwrap_or_default(),
-        },
-    )
-    .await
+    Ok((provider_id, profile))
 }
 
-async fn fetch_or_create_google_account(
-    ctx: &RouteContext<()>,
+async fn fetch_google_profile(
+    _ctx: &RouteContext<()>,
     access_token: &str,
-) -> Result<Account> {
+) -> Result<(String, OAuthProfile)> {
     let headers = Headers::new();
     headers.set("Authorization", &format!("Bearer {access_token}"))?;
 
@@ -358,26 +379,17 @@ async fn fetch_or_create_google_account(
 
     let provider_id = user.sub;
     let email = user.email.clone().unwrap_or_default();
-
-    if let Some(account) = fetch_account_by_provider(ctx, "google", &provider_id).await? {
-        return Ok(account);
-    }
-
     let preferred_username = email.split('@').next().unwrap_or("user");
 
-    create_oauth_account(
-        ctx,
-        "google",
-        &provider_id,
-        OAuthProfile {
-            preferred_username: preferred_username.to_string(),
-            display_name: user.name.unwrap_or_else(|| preferred_username.to_string()),
-            email,
-            avatar_url: user.picture,
-            bio: String::new(),
-        },
-    )
-    .await
+    let profile = OAuthProfile {
+        preferred_username: preferred_username.to_string(),
+        display_name: user.name.unwrap_or_else(|| preferred_username.to_string()),
+        email,
+        avatar_url: user.picture,
+        bio: String::new(),
+    };
+
+    Ok((provider_id, profile))
 }
 
 async fn fetch_json<T: serde::de::DeserializeOwned>(req: Request) -> Result<T> {

@@ -2,7 +2,10 @@ use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::toast::Toast;
 use crate::contexts::{CurrentUserContext, ProfileModalContext};
-use crate::utils::{format_time_full, placeholder_color, placeholder_letter};
+use crate::utils::{
+    encode_redirect_url, format_time_full, login_url, placeholder_color, placeholder_letter,
+};
+use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use web_sys::window;
@@ -111,6 +114,46 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
 
     let dismiss_toast = Callback::new(move |_| set_toast_visible.set(false));
 
+    let (linked_providers, set_linked_providers) = signal::<Vec<String>>(Vec::new());
+
+    Effect::new(move |_| {
+        if modal.open.get() && is_editable {
+            leptos::task::spawn_local(async move {
+                let providers = crate::contexts::current_user::fetch_linked_providers().await;
+                set_linked_providers.set(providers);
+            });
+        }
+    });
+
+    let start_link_oauth = move |provider: &'static str| {
+        leptos::task::spawn_local(async move {
+            let url = encode_redirect_url(&login_url(provider));
+            let Ok(resp) = Request::get(&url)
+                .credentials(web_sys::RequestCredentials::Include)
+                .send()
+                .await
+            else {
+                return;
+            };
+            let Ok(parsed) = resp.json::<AuthUrlResponse>().await else {
+                return;
+            };
+            if let Some(window) = web_sys::window() {
+                let _ = window.location().set_href(&parsed.url);
+            }
+        });
+    };
+
+    let is_connected = move |provider: &str| {
+        linked_providers.get().contains(&provider.to_string()) || account.provider == provider
+    };
+
+    let is_github_connected = Memo::new({
+        let is_connected = is_connected.clone();
+        move |_| is_connected("github")
+    });
+    let is_google_connected = Memo::new(move |_| is_connected("google"));
+
     view! {
         <Toast
             message=Signal::derive(move || "Copied username to clipboard".to_string())
@@ -187,9 +230,10 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             class="h-full w-full flex items-center justify-center"
                         >
                             <h2 class="text-lg font-bold tracking-tight text-transparent bg-base-100 bg-clip-text flex flex-col items-center justify-center leading-none">
-                                <span>"B"</span>
+                                <span>"L"</span>
                                 <span>"I"</span>
-                                <span>"O"</span>
+                                <span>"N"</span>
+                                <span>"K"</span>
                             </h2>
                         </CornerFrame>
                     </div>
@@ -281,7 +325,76 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                         }
                     }}
                 </div>
+
+                {if is_editable {
+                    Some(view! {
+                        <div class="flex items-stretch gap-2">
+                            <div class="flex-shrink-0 flex bg-surface-light p-1 relative w-8">
+                                <CornerFrame
+                                    style="square"
+                                    black=true
+                                    class="h-full w-full flex items-center justify-center"
+                                >
+                                    <h2 class="text-lg font-bold tracking-tight text-transparent bg-base-100 bg-clip-text flex flex-col items-center justify-center leading-none">
+                                        <span>"L"</span>
+                                        <span>"I"</span>
+                                        <span>"N"</span>
+                                        <span>"K"</span>
+                                    </h2>
+                                </CornerFrame>
+                            </div>
+                            <div class="flex items-center gap-2 flex-1 border border-base-content/20 rounded-none p-2">
+                                <button
+                                    type="button"
+                                    class=move || {
+                                        let connected = is_github_connected.get();
+                                        let base = "btn btn-sm flex-1 flex items-center justify-center gap-2 rounded-none";
+                                        if connected {
+                                            format!("{} btn-ghost btn-disabled opacity-60", base)
+                                        } else {
+                                            format!("{} btn-outline hover:btn-primary", base)
+                                        }
+                                    }
+                                    disabled=move || is_github_connected.get()
+                                    on:click=move |_| start_link_oauth("github")
+                                >
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/>
+                                    </svg>
+                                    {move || if is_github_connected.get() { "GitHub connected" } else { "Connect GitHub" }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class=move || {
+                                        let connected = is_google_connected.get();
+                                        let base = "btn btn-sm flex-1 flex items-center justify-center gap-2 rounded-none";
+                                        if connected {
+                                            format!("{} btn-ghost btn-disabled opacity-60", base)
+                                        } else {
+                                            format!("{} btn-outline hover:btn-primary", base)
+                                        }
+                                    }
+                                    disabled=move || is_google_connected.get()
+                                    on:click=move |_| start_link_oauth("google")
+                                >
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <text x="12" y="16" text-anchor="middle" font-size="12" fill="currentColor" stroke="none">"G"</text>
+                                    </svg>
+                                    {move || if is_google_connected.get() { "Google connected" } else { "Connect Google" }}
+                                </button>
+                            </div>
+                        </div>
+                    })
+                } else {
+                    None
+                }}
             </div>
         </div>
     }
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct AuthUrlResponse {
+    url: String,
 }

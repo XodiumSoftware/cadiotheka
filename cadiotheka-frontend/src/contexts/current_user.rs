@@ -89,6 +89,56 @@ struct MeResponse {
     account: AccountData,
 }
 
+/// Fetch the OAuth provider names linked to the currently authenticated
+/// account. Returns an empty vector when the user is not logged in or the
+/// request fails.
+pub async fn fetch_linked_providers() -> Vec<String> {
+    let url = auth_url("/linked-providers");
+    match Request::get(&url)
+        .credentials(RequestCredentials::Include)
+        .send()
+        .await
+    {
+        Ok(response) if response.ok() => {
+            let body = response.text().await.unwrap_or_default();
+            match serde_json::from_str::<LinkedProvidersResponse>(&body) {
+                Ok(parsed) => parsed.providers,
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!(
+                            "Failed to parse linked providers response from {url}: {err:?} (body={body:?})"
+                        )
+                        .into(),
+                    );
+                    Vec::new()
+                }
+            }
+        }
+        Ok(response) if response.status() == 401 => Vec::new(),
+        Ok(response) => {
+            leptos::web_sys::console::error_1(
+                &format!(
+                    "Failed to fetch linked providers from {url}: HTTP {}",
+                    response.status()
+                )
+                .into(),
+            );
+            Vec::new()
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to fetch linked providers from {url}: {err:?}").into(),
+            );
+            Vec::new()
+        }
+    }
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct LinkedProvidersResponse {
+    providers: Vec<String>,
+}
+
 /// Maximum length for a user-written bio, matching GitHub's profile bio limit.
 const MAX_BIO_LENGTH: usize = 160;
 
