@@ -342,16 +342,16 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                     </h2>
                                 </CornerFrame>
                             </div>
-                            <div class="flex items-stretch gap-0 flex-1 border border-base-content/20 rounded-none overflow-hidden">
+                            <div class="flex items-stretch gap-2 flex-1">
                                 <button
                                     type="button"
                                     class=move || {
                                         let connected = is_github_connected.get();
-                                        let base = "btn btn-sm flex-1 flex items-center justify-center gap-2 rounded-none border-0";
+                                        let base = "btn btn-sm flex-1 flex items-center justify-center gap-2 rounded-none border border-base-content/20 h-auto min-h-0 py-2";
                                         if connected {
                                             format!("{} btn-ghost btn-disabled opacity-60 cursor-default", base)
                                         } else {
-                                            format!("{} btn-outline hover:btn-primary border-r border-base-content/20", base)
+                                            format!("{} btn-outline hover:btn-primary", base)
                                         }
                                     }
                                     disabled=move || is_github_connected.get()
@@ -366,7 +366,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                     type="button"
                                     class=move || {
                                         let connected = is_google_connected.get();
-                                        let base = "btn btn-sm flex-1 flex items-center justify-center gap-2 rounded-none border-0";
+                                        let base = "btn btn-sm flex-1 flex items-center justify-center gap-2 rounded-none border border-base-content/20 h-auto min-h-0 py-2";
                                         if connected {
                                             format!("{} btn-ghost btn-disabled opacity-60 cursor-default", base)
                                         } else {
