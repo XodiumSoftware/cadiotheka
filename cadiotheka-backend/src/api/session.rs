@@ -315,6 +315,36 @@ mod tests {
     use super::*;
 
     #[test]
+    fn session_signature_roundtrips() {
+        let secret = "test-secret";
+        let id = "session-id";
+        let sig = sign(secret, id).unwrap();
+        assert!(verify_signature(secret, id, &sig).unwrap());
+    }
+
+    #[test]
+    fn session_signature_rejects_wrong_secret() {
+        let id = "session-id";
+        let sig = sign("correct-secret", id).unwrap();
+        assert!(!verify_signature("wrong-secret", id, &sig).unwrap());
+    }
+
+    #[test]
+    fn session_cookie_is_base64_encoded_json() {
+        let id = "session-id".to_string();
+        let sig = "session-sig".to_string();
+        let cookie = SessionCookie { id, sig };
+        let json = serde_json::to_string(&cookie).unwrap();
+        let encoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&json);
+        let decoded = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(&encoded)
+            .unwrap();
+        let parsed: SessionCookie = serde_json::from_slice(&decoded).unwrap();
+        assert_eq!(parsed.id, cookie.id);
+        assert_eq!(parsed.sig, cookie.sig);
+    }
+
+    #[test]
     fn https_origin_detected() {
         assert!(is_https_origin("https://cadiotheka.com"));
         assert!(!is_https_origin("http://localhost:8080"));
