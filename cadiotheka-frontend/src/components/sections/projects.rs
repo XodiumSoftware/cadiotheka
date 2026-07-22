@@ -245,6 +245,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                         view! {
                             <div
                                 node_ref=grid_ref
+                                aria-label="Projects"
                                 class=move || {
                                     if layout.wide.get() {
                                         "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-stretch"

@@ -14,7 +14,7 @@ serde_json = "1"
 fuzzy-matcher = "0.3.7"
 js-sys = "0.3"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
-web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "HtmlInputElement", "Node", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry", "File", "FileList", "Blob", "Url", "FormData", "Window", "Navigator", "Clipboard"] }
+web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "HtmlInputElement", "Node", "NodeList", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry", "File", "FileList", "Blob", "Url", "FormData", "Window", "Navigator", "Clipboard"] }
 console_error_panic_hook = "0.1.7"
 urlencoding = "2.1"
 uuid = { version = "1.11", features = ["v4", "serde", "js"] }

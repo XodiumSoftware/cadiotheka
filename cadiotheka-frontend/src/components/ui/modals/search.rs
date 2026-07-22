@@ -4,6 +4,26 @@ use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys;
 
+const FOCUSABLE_SELECTORS: &str = "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex=\"-1\"])";
+
+/// Returns the list of currently focusable elements inside `container`, ordered
+/// by their position in the document.
+fn focusable_elements(container: &web_sys::Element) -> Vec<web_sys::HtmlElement> {
+    container
+        .query_selector_all(FOCUSABLE_SELECTORS)
+        .ok()
+        .map(|nodes: web_sys::NodeList| {
+            (0..nodes.length())
+                .filter_map(|i| {
+                    nodes
+                        .item(i)
+                        .and_then(|n: web_sys::Node| n.dyn_into::<web_sys::HtmlElement>().ok())
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// A reusable modal dialog with a search-modal visual style.
 #[component]
 pub fn SearchModal(
@@ -16,6 +36,7 @@ pub fn SearchModal(
 ) -> impl IntoView {
     let children_view = children();
     let backdrop_ref: NodeRef<leptos::html::Div> = NodeRef::new();
+    let panel_ref: NodeRef<leptos::html::Div> = NodeRef::new();
 
     Effect::new(move |_| {
         if !open.get() {
@@ -77,7 +98,36 @@ pub fn SearchModal(
                 }
             }
         >
-            <div class=container_class>
+            <div
+                class=container_class
+                node_ref=panel_ref
+                role="dialog"
+                aria-modal="true"
+                aria-label="Search"
+                on:keydown=move |ev: web_sys::KeyboardEvent| {
+                    if ev.key().eq_ignore_ascii_case("tab") {
+                        let Some(panel) = panel_ref.get() else { return };
+                        let focusable = focusable_elements(&panel);
+                        if focusable.is_empty() {
+                            return;
+                        }
+                        let active = leptos::web_sys::window()
+                            .and_then(|w| w.document())
+                            .and_then(|d| d.active_element())
+                            .and_then(|el| el.dyn_into::<web_sys::HtmlElement>().ok());
+                        let first = focusable.first();
+                        let last = focusable.last();
+                        let shift = ev.shift_key();
+                        if (!shift && active.as_ref() == last)
+                            || (shift && active.as_ref() == first)
+                        {
+                            ev.prevent_default();
+                            let target = if shift { last } else { first };
+                            target.map(|el| el.focus().ok());
+                        }
+                    }
+                }
+            >
                 <div class="block p-2 bg-base-100 border-2 border-primary h-full flex flex-col">
                     <CornerFrame style="square" class="w-full h-full">
                         <div class="h-full rounded-none p-6 flex flex-col">
