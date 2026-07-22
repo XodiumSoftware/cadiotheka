@@ -207,7 +207,7 @@ pub fn ProjectCard(
             class=move || {
                 let base = "btn-lift hover:border-primary block h-full p-2 cursor-pointer transition-all";
                 if focused.get() {
-                    format!("{} ring-2 ring-primary ring-offset-2 ring-offset-base-100", base)
+                    format!("{} border-primary", base)
                 } else {
                     base.to_string()
                 }
