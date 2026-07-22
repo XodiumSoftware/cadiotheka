@@ -191,6 +191,7 @@ pub fn new_project_payload(
 /// Submits a new project to the backend API.
 /// Outcome of attempting to create a project on the backend.
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum ProjectCreationResult {
     /// The project was created successfully.
     Created(ProjectData),

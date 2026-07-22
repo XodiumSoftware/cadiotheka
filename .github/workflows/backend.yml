@@ -79,6 +79,7 @@ jobs:
         name: Run Lint
         run: |
           cargo clippy --all-targets --all-features -- -D warnings
+          cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
           cargo fmt --all -- --check
         shell: bash
 
