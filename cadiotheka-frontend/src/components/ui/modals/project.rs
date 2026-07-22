@@ -1064,7 +1064,7 @@ fn ProjectModalContent(
                                                             let accounts = selectable_accounts.get();
                                                             if accounts.is_empty() {
                                                                 view! {
-                                                                    <p class="text-sm text-base-content/50 py-2">"No users found."</p>
+                                                                    <p class="text-sm text-error py-2">"No users found."</p>
                                                                 }.into_any()
                                                             } else {
                                                                 view! {
