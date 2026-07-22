@@ -104,10 +104,12 @@ jobs:
     if: |
       !contains(github.event.head_commit.message, '[ci-skip]') &&
       !contains(github.event.pull_request.title, '[ci-skip]')
-    needs: [lint]
     runs-on: ubuntu-latest
     environment:
       name: "${{ github.ref_name }}"
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
     steps:
       - id: checkout
         name: Checkout
@@ -138,13 +140,15 @@ jobs:
         name: Run tests
         run: cargo test --lib
         shell: bash
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
 
   build:
     name: Build
     if: |
       !contains(github.event.head_commit.message, '[ci-skip]') &&
       !contains(github.event.pull_request.title, '[ci-skip]')
-    needs: [lint, test]
     runs-on: ubuntu-latest
     environment:
       name: "${{ github.ref_name }}"
@@ -211,7 +215,7 @@ jobs:
     if: |
       !contains(github.event.head_commit.message, '[ci-skip]') &&
       !contains(github.event.pull_request.title, '[ci-skip]')
-    needs: [build]
+    needs: [lint, test, build]
     runs-on: ubuntu-latest
     environment:
       name: "${{ github.ref_name }}"
