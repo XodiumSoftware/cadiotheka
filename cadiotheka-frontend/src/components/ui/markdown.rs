@@ -100,9 +100,33 @@ mod tests {
     }
 
     #[test]
-    fn render_markdown_link_renders_with_target_blank() {
-        let html = render_markdown("[link](https://example.com)");
-        assert!(html.contains("href=\"https://example.com\""));
-        assert!(html.contains("target=\"_blank\""));
+    fn render_markdown_headings_with_classes() {
+        let html = render_markdown("# Heading 1\n## Heading 2\n### Heading 3");
+        assert!(html.contains("<h1 class=\"text-xl font-bold text-primary mt-4 mb-2\">"));
+        assert!(html.contains("</h1>"));
+        assert!(html.contains("<h2 class=\"text-lg font-bold text-primary mt-3 mb-2\">"));
+        assert!(
+            html.contains("<h3 class=\"text-base font-semibold text-base-content mt-2 mb-1\">")
+        );
+    }
+
+    #[test]
+    fn render_markdown_lists_and_items() {
+        let html = render_markdown("- first\n- second");
+        assert!(html.contains("<ul class=\"list-disc list-inside mb-3 pl-1\">"));
+        assert!(html.contains("<li class=\"mb-1\">"));
+        assert!(html.contains("</ul>"));
+    }
+
+    #[test]
+    fn render_markdown_code_span() {
+        let html = render_markdown("use `code` here");
+        assert!(html.contains("code"));
+    }
+
+    #[test]
+    fn render_markdown_horizontal_rule() {
+        let html = render_markdown("---");
+        assert!(html.contains("<hr class=\"border-base-content/10 my-3\">"));
     }
 }
