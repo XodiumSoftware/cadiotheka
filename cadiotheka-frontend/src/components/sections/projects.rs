@@ -99,17 +99,10 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         }
 
         let next = match ev.key().as_str() {
-            "ArrowRight" => Some((current + 1).min(item_count - 1)),
-            "ArrowLeft" => Some(current.saturating_sub(1)),
-            "ArrowDown" => {
-                let target = current + cols;
-                if target < item_count {
-                    Some(target)
-                } else {
-                    Some(item_count - 1)
-                }
-            }
-            "ArrowUp" => current.checked_sub(cols),
+            "ArrowRight" => Some((current + 1) % item_count),
+            "ArrowLeft" => Some((current + item_count - 1) % item_count),
+            "ArrowDown" => Some((current + cols) % item_count),
+            "ArrowUp" => Some((current + item_count - cols % item_count) % item_count),
             "Home" => Some(0),
             "End" => Some(item_count - 1),
             _ => None,
