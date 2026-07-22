@@ -1497,15 +1497,11 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                             view! {
                                                 <button
                                                     type="button"
-                                                    class="group w-full flex flex-col items-center justify-center gap-2 py-2 text-error hover:text-error-content transition-colors"
+                                                    class="btn btn-outline btn-error w-full flex items-center justify-center gap-2"
                                                     on:click=move |_| set_show_delete_confirm.set(true)
                                                 >
-                                                    {warning_icon("w-6 h-6")}
-                                                    <span class="font-semibold text-sm">{"Danger zone"}</span>
-                                                    <span class="text-xs text-error/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                                        {trash_icon("w-3.5 h-3.5")}
-                                                        {"Click to delete project"}
-                                                    </span>
+                                                    {trash_icon("w-4 h-4")}
+                                                    <span>{"Delete project"}</span>
                                                 </button>
                                             }
                                                 .into_any()
