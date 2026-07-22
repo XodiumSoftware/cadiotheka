@@ -143,36 +143,33 @@ pub fn ProjectCard(
     let timestamp = props.timestamp;
     let project_id = props.id.clone();
     let project_id_for_button = props.id.clone();
-    let favorite_count = Signal::derive({
+    let live_project = Memo::new({
         let project_id = project_id.clone();
-        move || {
+        move |_| {
             projects_ctx
                 .projects
                 .get()
                 .into_iter()
                 .find(|project| project.id == project_id)
-                .map(|project| project.favorites.len())
-                .unwrap_or(0)
         }
     });
-    let is_favorited = Signal::derive({
-        let project_id = project_id.clone();
-        move || {
-            let Some(account) = current_user.account.get() else {
-                return false;
-            };
-            projects_ctx
-                .projects
-                .get()
-                .into_iter()
-                .find(|project| project.id == project_id)
-                .is_some_and(|project| {
-                    project
-                        .favorites
-                        .iter()
-                        .any(|user_id| user_id == &account.id)
-                })
-        }
+
+    let favorite_count = Signal::derive(move || {
+        live_project
+            .get()
+            .map(|project| project.favorites.len())
+            .unwrap_or(0)
+    });
+    let is_favorited = Signal::derive(move || {
+        let Some(account) = current_user.account.get() else {
+            return false;
+        };
+        live_project.get().is_some_and(|project| {
+            project
+                .favorites
+                .iter()
+                .any(|user_id| user_id == &account.id)
+        })
     });
 
     let card_title = props.title.clone();
