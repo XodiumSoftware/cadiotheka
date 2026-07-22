@@ -92,7 +92,8 @@ html {
         box-shadow 0.1s ease;
 }
 
-.btn-lift:hover {
+.btn-lift:hover,
+.btn-lift-selected {
     transform: translate(-2px, -2px);
     box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 0.8);
 }
