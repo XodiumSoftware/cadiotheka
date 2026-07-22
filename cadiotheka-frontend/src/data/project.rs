@@ -615,6 +615,35 @@ async fn patch_project(url: &str, body: String, field_name: &str) -> Option<()> 
     }
 }
 
+/// Deletes a project via `DELETE /data/projects/:id`.
+///
+/// Returns `true` if the deletion succeeded, otherwise logs the error and
+/// returns `false`.
+pub async fn delete_project(id: &str) -> bool {
+    let url = api_url(&format!("/projects/{id}"));
+    match gloo_net::http::Request::delete(&url)
+        .credentials(web_sys::RequestCredentials::Include)
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if !response.ok() {
+                let status = response.status();
+                leptos::web_sys::console::error_1(
+                    &format!("Failed to delete project: HTTP {status}").into(),
+                );
+                false
+            } else {
+                true
+            }
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(&format!("Failed to delete project: {err:?}").into());
+            false
+        }
+    }
+}
+
 /// Fetch projects from the backend API.
 ///
 /// On failure it logs to the browser console and returns an empty vector so

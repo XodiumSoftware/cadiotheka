@@ -9,9 +9,9 @@ use crate::contexts::{
     SearchContext,
 };
 use crate::data::{
-    AccountData, AccountRole, update_project_collaborators, update_project_description,
-    update_project_extended_desc, update_project_platforms, update_project_tags,
-    update_project_title, upload_project_icon,
+    AccountData, AccountRole, delete_project, fetch_projects, update_project_collaborators,
+    update_project_description, update_project_extended_desc, update_project_platforms,
+    update_project_tags, update_project_title, upload_project_icon,
 };
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
@@ -85,6 +85,46 @@ fn avatar_button(account: &AccountData, class: Option<String>) -> impl IntoView 
     }
 }
 
+fn trash_icon(class: &'static str) -> impl IntoView {
+    view! {
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class=class
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M3 6h18" />
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+        </svg>
+    }
+}
+
+fn warning_icon(class: &'static str) -> impl IntoView {
+    view! {
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class=class
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+    }
+}
+
 fn edit_pencil_icon(class: &'static str) -> impl IntoView {
     view! {
         <svg
@@ -102,10 +142,10 @@ fn edit_pencil_icon(class: &'static str) -> impl IntoView {
 }
 
 #[component]
-fn EditableChipSection<T>(
-    title: &'static str,
-    aria_label: &'static str,
-    items: Vec<T>,
+fn EditableChipSection<T: Clone + PartialEq + Send + Sync + 'static>(
+    #[allow(unused_variables)] title: &'static str,
+    #[allow(unused_variables)] aria_label: &'static str,
+    #[allow(unused_variables)] items: Vec<T>,
     all_items: Vec<T>,
     editing: Signal<bool>,
     on_cancel: Callback<()>,
@@ -116,10 +156,7 @@ fn EditableChipSection<T>(
     color_fn: fn(&T) -> &'static str,
     selected_items: Signal<Vec<T>>,
     badge_class: &'static str,
-) -> impl IntoView
-where
-    T: Clone + PartialEq + Send + Sync + 'static,
-{
+) -> impl IntoView {
     view! {
         <div class="space-y-3">
             <h3 class="text-sm font-semibold text-base-content">{title}</h3>
@@ -245,7 +282,34 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
 
     let (edit_mode, set_edit_mode) = signal(false);
 
+    let (show_delete_confirm, set_show_delete_confirm) = signal(false);
+    let (delete_confirm_input, set_delete_confirm_input) = signal(String::new());
+    let (is_deleting, set_is_deleting) = signal(false);
+    let can_delete =
+        Signal::derive(move || delete_confirm_input.get().trim() == title.get().trim());
+
     let project_id = card.id.clone();
+
+    let delete_project_click = {
+        let project_id = project_id.clone();
+        let set_projects = projects_ctx.set_projects;
+        Callback::new(move |_| {
+            let project_id = project_id.clone();
+            let set_projects = set_projects;
+            leptos::task::spawn_local(async move {
+                set_is_deleting.set(true);
+                let success = delete_project(&project_id).await;
+                set_is_deleting.set(false);
+                if success {
+                    set_delete_confirm_input.set(String::new());
+                    set_show_delete_confirm.set(false);
+                    let refreshed = fetch_projects().await;
+                    set_projects.set(refreshed);
+                    modal.close();
+                }
+            });
+        })
+    };
 
     let start_edit_title = move || {
         set_draft_title.set(title.get());
@@ -1360,6 +1424,102 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                             </div>
                         </div>
                     </div>
+
+                    {move || {
+                        if is_editable.get() && edit_mode.get() {
+                            view! {
+                                <div class="border border-error/30 bg-error/10 p-4 space-y-3">
+                                    <div class="flex items-start gap-3">
+                                        {warning_icon("w-5 h-5 text-error flex-shrink-0 mt-0.5")}
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-semibold text-error">{"Danger zone"}</p>
+                                            <p class="text-sm text-base-content/80">
+                                                {"Deleting this project cannot be undone. Type the project name below to confirm."}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {move || {
+                                        if show_delete_confirm.get() {
+                                            view! {
+                                                <div class="space-y-3">
+                                                    <label class="block text-sm text-base-content" for="delete-confirm-input">
+                                                        {"Type "}
+                                                        <span class="font-semibold text-error">{title.get()}</span>
+                                                        {" to confirm"}
+                                                    </label>
+                                                    <input
+                                                        id="delete-confirm-input"
+                                                        type="text"
+                                                        class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-error focus:outline-none"
+                                                        placeholder={title.get()}
+                                                        prop:value=delete_confirm_input.get()
+                                                        on:input=move |ev| set_delete_confirm_input.set(event_target_value(&ev))
+                                                        disabled=move || is_deleting.get()
+                                                    />
+                                                    <div class="flex justify-end gap-2">
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-ghost btn-xs"
+                                                            on:click=move |_| {
+                                                                set_show_delete_confirm.set(false);
+                                                                set_delete_confirm_input.set(String::new());
+                                                            }
+                                                            disabled=move || is_deleting.get()
+                                                        >
+                                                            {"Cancel"}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-error btn-xs"
+                                                            on:click=move |_| delete_project_click.run(())
+                                                            disabled=move || !can_delete.get() || is_deleting.get()
+                                                        >
+                                                            {move || if is_deleting.get() {
+                                                                view! {
+                                                                    <span class="flex items-center gap-2">
+                                                                        <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                        <span>{"Deleting..."}</span>
+                                                                    </span>
+                                                                }
+                                                                    .into_any()
+                                                            } else {
+                                                                view! {
+                                                                    <span class="flex items-center gap-1">
+                                                                        {trash_icon("w-3.5 h-3.5")}
+                                                                        <span>{"Delete project"}</span>
+                                                                    </span>
+                                                                }
+                                                                    .into_any()
+                                                            }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            }
+                                                .into_any()
+                                        } else {
+                                            view! {
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-outline btn-error btn-xs"
+                                                    on:click=move |_| set_show_delete_confirm.set(true)
+                                                >
+                                                    <span class="flex items-center gap-1">
+                                                        {trash_icon("w-3.5 h-3.5")}
+                                                        <span>{"Delete project"}</span>
+                                                    </span>
+                                                </button>
+                                            }
+                                                .into_any()
+                                        }
+                                    }}
+                                </div>
+                            }
+                                .into_any()
+                        } else {
+                            ().into_any()
+                        }
+                    }}
                 </div>
             </div>
         </div>
