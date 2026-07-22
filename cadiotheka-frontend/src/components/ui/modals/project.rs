@@ -660,7 +660,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
 
     view! {
         <div class="flex flex-col h-full min-h-0 overflow-hidden gap-4">
-            <div class="flex items-start gap-4 relative">
+            <div class="flex items-start gap-4 relative p-2 pr-3">
                 <div class="relative flex-shrink-0">
                     <input
                         node_ref=icon_input_ref
