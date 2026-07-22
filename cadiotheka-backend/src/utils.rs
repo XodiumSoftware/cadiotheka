@@ -1,5 +1,14 @@
 use worker::*;
 
+/// Builds a JSON error response with the given message and HTTP status.
+///
+/// The response body has the shape `{"error": "message"}`. This is used
+/// instead of `Response::error` so the frontend can reliably parse error
+/// payloads as JSON.
+pub fn error_response(message: &str, status: u16) -> Result<Response> {
+    Ok(Response::from_json(&serde_json::json!({ "error": message }))?.with_status(status))
+}
+
 /// Wraps an error value into a `worker::Error::RustError`.
 pub fn rust_err<E: std::fmt::Display>(err: E) -> worker::Error {
     worker::Error::RustError(err.to_string())

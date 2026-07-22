@@ -3,7 +3,7 @@ use worker::*;
 
 use crate::DB_BINDING;
 use crate::api::session::require_account;
-use crate::utils::{js_option, now_utc};
+use crate::utils::{error_response, js_option, now_utc};
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified FROM accounts a";
 
@@ -307,7 +307,7 @@ pub async fn read_account(_req: Request, ctx: RouteContext<()>) -> Result<Respon
     let id = ctx.param("id").cloned().unwrap_or_default();
     match fetch_account(&ctx, &id).await? {
         Some(account) => Response::from_json(&account),
-        None => Response::error("Not found", 404),
+        None => error_response("Not found", 404),
     }
 }
 
@@ -331,7 +331,7 @@ pub async fn unlink_provider(req: Request, ctx: RouteContext<()>) -> Result<Resp
 pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
     if account.role != "admin" {
-        return Response::error("Forbidden", 403);
+        return error_response("Forbidden", 403);
     }
 
     let payload: AccountPayload = req.json().await?;
@@ -361,7 +361,7 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
 pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
     if account.role != "admin" {
-        return Response::error("Forbidden", 403);
+        return error_response("Forbidden", 403);
     }
 
     let id = ctx.param("id").cloned().unwrap_or_default();
@@ -393,7 +393,7 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
 pub async fn delete_account(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
     if account.role != "admin" {
-        return Response::error("Forbidden", 403);
+        return error_response("Forbidden", 403);
     }
 
     let id = ctx.param("id").cloned().unwrap_or_default();

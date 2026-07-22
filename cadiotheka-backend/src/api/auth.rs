@@ -12,7 +12,7 @@ use crate::api::accounts::{
     link_oauth_account,
 };
 use crate::api::session::{create_session, read_session};
-use crate::utils::{public_origin, query_param, rust_err};
+use crate::utils::{error_response, public_origin, query_param, rust_err};
 
 const AUTH_KV_BINDING: &str = "AUTH";
 const OAUTH_STATE_TTL_SECONDS: u64 = 10 * 60;
@@ -183,7 +183,7 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
     let state: OAuthState = serde_json::from_str(&value).map_err(rust_err)?;
 
     if state.provider != provider {
-        return Response::error("invalid provider", 400);
+        return error_response("invalid provider", 400);
     }
 
     kv(&ctx)?.delete(&key).await?;

@@ -5,7 +5,9 @@ use sha2::Sha256;
 use worker::*;
 
 use crate::api::accounts::{Account, fetch_account};
-use crate::utils::{is_https_request, public_origin, rust_err, safe_redirect_target};
+use crate::utils::{
+    error_response, is_https_request, public_origin, rust_err, safe_redirect_target,
+};
 
 const AUTH_KV_BINDING: &str = "AUTH";
 const SESSION_COOKIE_NAME_PREFIX: &str = "__Host-session";
@@ -233,7 +235,7 @@ pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Respon
     let payload: UpdatePayload = req.json().await?;
 
     if payload.bio.len() > MAX_BIO_LENGTH {
-        return Response::error("Bio must be 160 characters or fewer", 400);
+        return error_response("Bio must be 160 characters or fewer", 400);
     }
 
     let db = ctx.env.d1(crate::DB_BINDING)?;
@@ -250,7 +252,7 @@ pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Respon
 pub async fn me(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     match read_session(&req, &ctx).await? {
         Some(account) => Response::from_json(&serde_json::json!({ "account": account })),
-        None => Response::error("Unauthorized", 401),
+        None => error_response("Unauthorized", 401),
     }
 }
 

@@ -5,7 +5,7 @@ use crate::DB_BINDING;
 use crate::ICONS_R2_BINDING;
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
-use crate::utils::js_option;
+use crate::utils::{error_response, js_option};
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
 
@@ -121,7 +121,7 @@ pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Respon
     let id = ctx.param("id").cloned().unwrap_or_default();
     match fetch_project(&ctx, &id).await? {
         Some(project) => Response::from_json(&project),
-        None => Response::error("Not found", 404),
+        None => error_response("Not found", 404),
     }
 }
 
@@ -199,13 +199,13 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return Response::error("Forbidden", 403);
+        return error_response("Forbidden", 403);
     }
 
     let patch: ProjectPatch = req.json().await?;
     if let Some(title) = patch.title {
         if title.len() > MAX_TITLE_LENGTH {
-            return Response::error("Title must be 100 characters or fewer", 400);
+            return error_response("Title must be 100 characters or fewer", 400);
         }
         db(&ctx)?
             .prepare("UPDATE projects SET title = ?1 WHERE id = ?2")
@@ -217,10 +217,10 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
     if let Some(icon_key) = patch.icon_key {
         if let Some(ref key) = icon_key {
             if key.len() > MAX_ICON_KEY_LENGTH {
-                return Response::error("Icon key must be 200 characters or fewer", 400);
+                return error_response("Icon key must be 200 characters or fewer", 400);
             }
             if !key.starts_with("icons/") {
-                return Response::error("Invalid icon key", 400);
+                return error_response("Invalid icon key", 400);
             }
         }
         db(&ctx)?
@@ -232,7 +232,7 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
 
     if let Some(description) = patch.description {
         if description.len() > MAX_DESCRIPTION_LENGTH {
-            return Response::error("Description must be 500 characters or fewer", 400);
+            return error_response("Description must be 500 characters or fewer", 400);
         }
         db(&ctx)?
             .prepare("UPDATE projects SET description = ?1 WHERE id = ?2")
@@ -272,7 +272,7 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
 
     if let Some(extended_desc) = patch.extended_desc {
         if extended_desc.len() > MAX_EXTENDED_DESC_LENGTH {
-            return Response::error("Extended description must be 5000 characters or fewer", 400);
+            return error_response("Extended description must be 5000 characters or fewer", 400);
         }
         db(&ctx)?
             .prepare("UPDATE projects SET extended_desc = ?1 WHERE id = ?2")
@@ -292,7 +292,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return Response::error("Forbidden", 403);
+        return error_response("Forbidden", 403);
     }
 
     let mut payload: ProjectPayload = req.json().await?;
@@ -347,7 +347,7 @@ pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Respo
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return Response::error("Forbidden", 403);
+        return error_response("Forbidden", 403);
     }
 
     db(&ctx)?
@@ -392,20 +392,20 @@ pub async fn upload_project_icon(mut req: Request, ctx: RouteContext<()>) -> Res
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return Response::error("Forbidden", 403);
+        return error_response("Forbidden", 403);
     }
 
     let form_data = req.form_data().await?;
     let file = match form_data.get("icon") {
         Some(FormEntry::File(file)) => file,
         _ => {
-            return Response::error("missing icon file", 400);
+            return error_response("missing icon file", 400);
         }
     };
 
     let bytes = file.bytes().await?;
     if bytes.len() > MAX_ICON_SIZE_BYTES {
-        return Response::error("Icon must be 5 MiB or smaller", 413);
+        return error_response("Icon must be 5 MiB or smaller", 413);
     }
 
     let content_type = icon_content_type(&bytes)
@@ -442,14 +442,14 @@ pub async fn serve_icon(_req: Request, ctx: RouteContext<()>) -> Result<Response
     let project_id = ctx.param("project_id").cloned().unwrap_or_default();
     let icon_id = ctx.param("icon_id").cloned().unwrap_or_default();
     if project_id.is_empty() || icon_id.is_empty() {
-        return Response::error("Invalid icon key", 400);
+        return error_response("Invalid icon key", 400);
     }
     let key = format!("icons/{project_id}/{icon_id}");
 
     let object = icons_bucket(&ctx)?.get(&key).execute().await?;
 
     let Some(object) = object else {
-        return Response::error("Not found", 404);
+        return error_response("Not found", 404);
     };
 
     let http_metadata = object.http_metadata();
