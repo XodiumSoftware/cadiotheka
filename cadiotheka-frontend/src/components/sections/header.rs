@@ -147,6 +147,7 @@ pub fn Header() -> impl IntoView {
 
     let current_user_ctx = CurrentUserContext::use_context();
     let login_modal_ctx = LoginModalContext::use_context();
+    let profile_modal_ctx = ProfileModalContext::use_context();
 
     let focus_avatar = Callback::new(move |_| {
         if let Some(btn) = avatar_button_ref.get() {
@@ -156,12 +157,11 @@ pub fn Header() -> impl IntoView {
 
     let activate_menu_item = Callback::new(move |idx: usize| {
         set_account_menu_open.set(false);
-        let current_user = CurrentUserContext::use_context();
-        let Some(account) = current_user.account.get_untracked() else {
+        let Some(account) = current_user_ctx.account.get_untracked() else {
             return;
         };
         match idx {
-            0 => ProfileModalContext::use_context().open(account),
+            0 => profile_modal_ctx.open(account),
             1 => {
                 let author_query = format!("@author:{}", account.username);
                 search.set_query.set(author_query);
@@ -663,7 +663,7 @@ pub fn Header() -> impl IntoView {
                                                         <button
                                                             type="button"
                                                             class=move || {
-                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between";
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3";
                                                                 if active_menu_index.get() == 0 {
                                                                     format!("{} bg-base-content/10", base)
                                                                 } else {
@@ -678,14 +678,14 @@ pub fn Header() -> impl IntoView {
                                                             on:click=move |_| activate_menu_item.run(0)
                                                         >
                                                             <span>"Profile"</span>
-                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-base-content/30 bg-base-content/10 text-base-content shadow-kbd text-xs font-sans" aria-hidden="true">"Alt + 1"</kbd>
+                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd" aria-hidden="true">"Alt + 1"</kbd>
                                                         </button>
                                                     </li>
                                                     <li role="none">
                                                         <button
                                                             type="button"
                                                             class=move || {
-                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between";
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3";
                                                                 if active_menu_index.get() == 1 {
                                                                     format!("{} bg-base-content/10", base)
                                                                 } else {
@@ -700,14 +700,14 @@ pub fn Header() -> impl IntoView {
                                                             on:click=move |_| activate_menu_item.run(1)
                                                         >
                                                             <span>"My projects"</span>
-                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-base-content/30 bg-base-content/10 text-base-content shadow-kbd text-xs font-sans" aria-hidden="true">"Alt + 2"</kbd>
+                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd" aria-hidden="true">"Alt + 2"</kbd>
                                                         </button>
                                                     </li>
                                                     <li role="none">
                                                         <button
                                                             type="button"
                                                             class=move || {
-                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between";
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3";
                                                                 if active_menu_index.get() == 2 {
                                                                     format!("{} bg-base-content/10", base)
                                                                 } else {
@@ -722,14 +722,14 @@ pub fn Header() -> impl IntoView {
                                                             on:click=move |_| activate_menu_item.run(2)
                                                         >
                                                             <span>"My favorites"</span>
-                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-base-content/30 bg-base-content/10 text-base-content shadow-kbd text-xs font-sans" aria-hidden="true">"Alt + 3"</kbd>
+                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd" aria-hidden="true">"Alt + 3"</kbd>
                                                         </button>
                                                     </li>
                                                     <li role="none">
                                                         <button
                                                             type="button"
                                                             class=move || {
-                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 text-error flex items-center justify-between";
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 text-error font-semibold flex items-center justify-between gap-3";
                                                                 if active_menu_index.get() == 3 {
                                                                     format!("{} bg-base-content/10", base)
                                                                 } else {
@@ -744,7 +744,7 @@ pub fn Header() -> impl IntoView {
                                                             on:click=move |_| activate_menu_item.run(3)
                                                         >
                                                             <span>"Log out"</span>
-                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-base-content/30 bg-base-content/10 text-base-content shadow-kbd text-xs font-sans" aria-hidden="true">"Alt + L"</kbd>
+                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd" aria-hidden="true">"Alt + L"</kbd>
                                                         </button>
                                                     </li>
                                                 </ul>
