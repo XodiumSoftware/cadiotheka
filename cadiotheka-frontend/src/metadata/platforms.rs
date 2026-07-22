@@ -59,17 +59,17 @@ impl Platform {
     /// Returns a Tailwind-compatible CSS color class for this platform.
     pub const fn color(&self) -> &'static str {
         match self {
-            Self::Blender => "text-orange-500",
-            Self::FreeCAD => "text-blue-500",
-            Self::SketchUp => "text-red-500",
-            Self::Fusion360 => "text-yellow-500",
-            Self::KiCad => "text-green-500",
-            Self::AutoCAD => "text-red-800",
-            Self::SolidWorks => "text-red-600",
-            Self::Onshape => "text-gray-500",
-            Self::Tinkercad => "text-cyan-500",
-            Self::Step => "text-gray-400",
-            Self::Mesh => "text-gray-300",
+            Self::Blender => "text-orange-700",
+            Self::FreeCAD => "text-blue-700",
+            Self::SketchUp => "text-red-700",
+            Self::Fusion360 => "text-yellow-700",
+            Self::KiCad => "text-green-700",
+            Self::AutoCAD => "text-red-900",
+            Self::SolidWorks => "text-red-800",
+            Self::Onshape => "text-gray-700",
+            Self::Tinkercad => "text-cyan-700",
+            Self::Step => "text-gray-600",
+            Self::Mesh => "text-gray-600",
         }
     }
 

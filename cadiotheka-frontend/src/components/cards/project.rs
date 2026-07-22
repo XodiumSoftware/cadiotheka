@@ -272,7 +272,7 @@ pub fn ProjectCard(
                                             .collect::<Vec<_>>()}
                                         max_visible=2
                                         tooltip_position="tooltip-bottom"
-                                        badge_class="badge badge-xs badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
+                                        badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 whitespace-nowrap"
                                     />
                                     {(!tags.is_empty() && !platforms.is_empty()).then(|| {
                                         view! {
