@@ -271,13 +271,14 @@ pub fn ProjectCard(
                                     </h2>
                                 </div>
 
-                                <div class="flex flex-nowrap items-center gap-1 overflow-hidden">
+                                <div class="flex flex-nowrap items-center gap-1">
                                     <OverflowRow
                                         items={tags
                                             .iter()
                                             .map(|tag| OverflowItem::new(tag.label(), tag.color()))
                                             .collect::<Vec<_>>()}
                                         max_visible=2
+                                        tooltip_position="tooltip-bottom"
                                         badge_class="badge badge-xs badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
                                     />
                                     {(!tags.is_empty() && !platforms.is_empty()).then(|| {
@@ -292,6 +293,7 @@ pub fn ProjectCard(
                                             .map(|platform| OverflowItem::new(platform.label(), platform.color()))
                                             .collect::<Vec<_>>()}
                                         max_visible=1
+                                        tooltip_position="tooltip-bottom"
                                         badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 whitespace-nowrap"
                                     />
                                 </div>
