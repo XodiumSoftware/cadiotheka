@@ -21,11 +21,6 @@ pub fn MarkdownEditor(
     #[prop(into, default = "min-h-[8rem]".to_string())] editor_class: String,
 ) -> impl IntoView {
     let (tab, set_tab) = signal(MarkdownEditorTab::Write);
-
-    let (history, set_history) = signal(Vec::<String>::new());
-    let (history_index, set_history_index) = signal(0usize);
-    let history_read: Signal<Vec<String>> = history.into();
-    let history_index_read: Signal<usize> = history_index.into();
     let (last_selection, set_last_selection) = signal((0usize, 0usize));
     let textarea_class = Signal::derive({
         let editor_class = editor_class.clone();
@@ -49,46 +44,12 @@ pub fn MarkdownEditor(
         }
     });
 
-    let push_history = {
-        let history_index = history_index_read;
-        let history = history_read;
-        move |next: String| {
-            let next = next.replace('\r', "");
-            set_history.update(|history| {
-                let idx = history_index.get_untracked();
-                if history.len() > idx + 1 {
-                    history.truncate(idx + 1);
-                }
-                if history.last() != Some(&next) {
-                    history.push(next.clone());
-                    if history.len() > 100 {
-                        history.remove(0);
-                    }
-                }
-            });
-            let new_idx = history_index
-                .get_untracked()
-                .saturating_add(1)
-                .min(history.get_untracked().len().saturating_sub(1));
-            set_history_index.set(new_idx);
-        }
-    };
-
-    Effect::new(move |_| {
-        let initial = value.get();
-        if !initial.is_empty() && history_read.get_untracked().is_empty() {
-            set_history.set(vec![initial.replace('\r', "")]);
-            set_history_index.set(0);
-        }
-    });
-
     let with_selection = move |f: &SelectionTransform| {
         let current = value.get_untracked();
         let (start, end) = last_selection.get_untracked();
         let (next, new_start, new_end) =
             f(&current, start.min(current.len()), end.min(current.len()));
         let next = next.replace('\r', "");
-        push_history(next.clone());
         on_input.run(next.clone());
         set_last_selection.set((new_start.min(next.len()), new_end.min(next.len())));
         if let Some(textarea) = textarea_ref.get() {
@@ -226,7 +187,6 @@ pub fn MarkdownEditor(
                                             textarea.selection_end().unwrap_or_default().unwrap_or(0) as usize,
                                         ));
                                     }
-                                    push_history(next.clone());
                                     on_input.run(next);
                                 }
                                 on:keydown=move |ev| {
@@ -234,60 +194,7 @@ pub fn MarkdownEditor(
                                         ev.prevent_default();
                                         let current = value.get_untracked();
                                         let next = format!("{current}    ").replace('\r', "");
-                                        push_history(next.clone());
                                         on_input.run(next);
-                                    }
-                                    let ctrl = ev.ctrl_key() || ev.meta_key();
-                                    if ctrl && ev.key().eq_ignore_ascii_case("z") {
-                                        ev.prevent_default();
-                                        let idx = history_index.get_untracked();
-                                        if idx > 0 {
-                                            let current_len = value.get_untracked().len();
-                                            let target = history.get_untracked()[idx - 1].clone();
-                                            let target_len = target.len();
-                                            let (start, end) = last_selection.get_untracked();
-                                            let new_start = start.min(target_len);
-                                            let new_end = if end == current_len || end > target_len {
-                                                target_len
-                                            } else {
-                                                end.min(target_len)
-                                            };
-                                            set_last_selection.set((new_start, new_end));
-                                            set_history_index.set(idx - 1);
-                                            on_input.run(target);
-                                            if let Some(textarea) = textarea_ref.get() {
-                                                let _ = textarea.set_selection_start(Some(new_start as u32));
-                                                let _ = textarea.set_selection_end(Some(new_end as u32));
-                                            }
-                                        }
-                                    }
-                                    if ctrl
-                                        && (ev.key().eq_ignore_ascii_case("y")
-                                            || (ev.shift_key()
-                                                && ev.key().eq_ignore_ascii_case("z")))
-                                    {
-                                        ev.prevent_default();
-                                        let idx = history_index.get_untracked();
-                                        let history_len = history.get_untracked().len();
-                                        if idx + 1 < history_len {
-                                            let current_len = value.get_untracked().len();
-                                            let target = history.get_untracked()[idx + 1].clone();
-                                            let target_len = target.len();
-                                            let (start, end) = last_selection.get_untracked();
-                                            let new_start = start.min(target_len);
-                                            let new_end = if end == current_len || end > target_len {
-                                                target_len
-                                            } else {
-                                                end.min(target_len)
-                                            };
-                                            set_last_selection.set((new_start, new_end));
-                                            set_history_index.set(idx + 1);
-                                            on_input.run(target);
-                                            if let Some(textarea) = textarea_ref.get() {
-                                                let _ = textarea.set_selection_start(Some(new_start as u32));
-                                                let _ = textarea.set_selection_end(Some(new_end as u32));
-                                            }
-                                        }
                                     }
                                 }
                             ></textarea>
