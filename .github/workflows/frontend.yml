@@ -126,6 +126,10 @@ jobs:
         run: rustup target add wasm32-unknown-unknown
         shell: bash
 
+      - id: run_sccache_cache
+        name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.10
+
       - id: cache_dependencies
         name: Cache dependencies
         uses: actions/cache@v6.1.0
