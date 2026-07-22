@@ -1422,98 +1422,98 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     }
                                 }}
                             </div>
+
+                            {move || {
+                                if is_editable.get() && edit_mode.get() {
+                                    view! {
+                                        <div class="border border-error/30 bg-error/10 p-4">
+                                            {move || {
+                                                if show_delete_confirm.get() {
+                                                    view! {
+                                                        <div class="space-y-3">
+                                                            <div class="flex items-start gap-3">
+                                                                {warning_icon("w-5 h-5 text-error flex-shrink-0 mt-0.5")}
+                                                                <div class="flex-1 min-w-0">
+                                                                    <p class="text-sm font-semibold text-error">{"Danger zone"}</p>
+                                                                    <p class="text-sm text-base-content/80">
+                                                                        {"Deleting this project cannot be undone. Type "}
+                                                                        <span class="font-semibold text-error">{title.get()}</span>
+                                                                        {" to confirm."}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <input
+                                                                id="delete-confirm-input"
+                                                                type="text"
+                                                                class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-error focus:outline-none"
+                                                                placeholder={title.get()}
+                                                                prop:value=delete_confirm_input.get()
+                                                                on:input=move |ev| set_delete_confirm_input.set(event_target_value(&ev))
+                                                                disabled=move || is_deleting.get()
+                                                            />
+                                                            <div class="flex justify-end gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    class="btn btn-ghost btn-xs"
+                                                                    on:click=move |_| {
+                                                                        set_show_delete_confirm.set(false);
+                                                                        set_delete_confirm_input.set(String::new());
+                                                                    }
+                                                                    disabled=move || is_deleting.get()
+                                                                >
+                                                                    {"Cancel"}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    class="btn btn-error btn-xs"
+                                                                    on:click=move |_| delete_project_click.run(())
+                                                                    disabled=move || !can_delete.get() || is_deleting.get()
+                                                                >
+                                                                    {move || if is_deleting.get() {
+                                                                        view! {
+                                                                            <span class="flex items-center gap-2">
+                                                                                <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                                <span>{"Deleting..."}</span>
+                                                                            </span>
+                                                                        }
+                                                                            .into_any()
+                                                                    } else {
+                                                                        view! {
+                                                                            <span class="flex items-center gap-1">
+                                                                                {trash_icon("w-3.5 h-3.5")}
+                                                                                <span>{"Delete"}</span>
+                                                                            </span>
+                                                                        }
+                                                                            .into_any()
+                                                                    }}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                        .into_any()
+                                                } else {
+                                                    view! {
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-outline btn-error w-full flex items-center justify-center gap-2"
+                                                            on:click=move |_| set_show_delete_confirm.set(true)
+                                                        >
+                                                            {trash_icon("w-4 h-4")}
+                                                            <span>{"Delete project"}</span>
+                                                        </button>
+                                                    }
+                                                        .into_any()
+                                                }
+                                            }}
+                                        </div>
+                                    }
+                                        .into_any()
+                                } else {
+                                    ().into_any()
+                                }
+                            }}
                         </div>
                     </div>
-
-                    {move || {
-                        if is_editable.get() && edit_mode.get() {
-                            view! {
-                                <div class="border border-error/30 bg-error/10 p-4">
-                                    {move || {
-                                        if show_delete_confirm.get() {
-                                            view! {
-                                                <div class="space-y-3">
-                                                    <div class="flex items-start gap-3">
-                                                        {warning_icon("w-5 h-5 text-error flex-shrink-0 mt-0.5")}
-                                                        <div class="flex-1 min-w-0">
-                                                            <p class="text-sm font-semibold text-error">{"Danger zone"}</p>
-                                                            <p class="text-sm text-base-content/80">
-                                                                {"Deleting this project cannot be undone. Type "}
-                                                                <span class="font-semibold text-error">{title.get()}</span>
-                                                                {" to confirm."}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <input
-                                                        id="delete-confirm-input"
-                                                        type="text"
-                                                        class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-error focus:outline-none"
-                                                        placeholder={title.get()}
-                                                        prop:value=delete_confirm_input.get()
-                                                        on:input=move |ev| set_delete_confirm_input.set(event_target_value(&ev))
-                                                        disabled=move || is_deleting.get()
-                                                    />
-                                                    <div class="flex justify-end gap-2">
-                                                        <button
-                                                            type="button"
-                                                            class="btn btn-ghost btn-xs"
-                                                            on:click=move |_| {
-                                                                set_show_delete_confirm.set(false);
-                                                                set_delete_confirm_input.set(String::new());
-                                                            }
-                                                            disabled=move || is_deleting.get()
-                                                        >
-                                                            {"Cancel"}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            class="btn btn-error btn-xs"
-                                                            on:click=move |_| delete_project_click.run(())
-                                                            disabled=move || !can_delete.get() || is_deleting.get()
-                                                        >
-                                                            {move || if is_deleting.get() {
-                                                                view! {
-                                                                    <span class="flex items-center gap-2">
-                                                                        <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                                                        <span>{"Deleting..."}</span>
-                                                                    </span>
-                                                                }
-                                                                    .into_any()
-                                                            } else {
-                                                                view! {
-                                                                    <span class="flex items-center gap-1">
-                                                                        {trash_icon("w-3.5 h-3.5")}
-                                                                        <span>{"Delete"}</span>
-                                                                    </span>
-                                                                }
-                                                                    .into_any()
-                                                            }}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            }
-                                                .into_any()
-                                        } else {
-                                            view! {
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-outline btn-error w-full flex items-center justify-center gap-2"
-                                                    on:click=move |_| set_show_delete_confirm.set(true)
-                                                >
-                                                    {trash_icon("w-4 h-4")}
-                                                    <span>{"Delete project"}</span>
-                                                </button>
-                                            }
-                                                .into_any()
-                                        }
-                                    }}
-                                </div>
-                            }
-                                .into_any()
-                        } else {
-                            ().into_any()
-                        }
-                    }}
                 </div>
             </div>
         </div>
