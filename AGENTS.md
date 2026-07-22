@@ -115,6 +115,7 @@ cadiotheka/
 - Backend `DB_BINDING` is a single `pub(crate) const` in `cadiotheka-backend/src/lib.rs` reused by API modules.
 - Tags and platforms are stored as JSON arrays in D1 and deserialize into the frontend enums via `serde(rename)`.
 - `verified` columns are stored as SQLite integers (`0`/`1`), not booleans, because D1 returns them as numbers.
+- **Do not add `//` inline comments.** Use `///` doc comments (or `//!` module docs) to explain intent; keep the code itself self-documenting.
 
 ## Testing
 

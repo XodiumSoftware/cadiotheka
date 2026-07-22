@@ -401,7 +401,8 @@ pub async fn upload_project_icon(mut req: Request, ctx: RouteContext<()>) -> Res
     let content_type = icon_content_type(&bytes)
         .ok_or_else(|| worker::Error::RustError("Icon must be PNG, JPEG, or WebP".into()))?;
 
-    let key = format!("icons/{id}/{}", uuid::Uuid::new_v4());
+    let old_key = project.icon_url.clone();
+    let key = format!("icons/{id}/icon");
     let http_metadata = HttpMetadata {
         content_type: Some(content_type.to_string()),
         ..Default::default()
@@ -418,6 +419,10 @@ pub async fn upload_project_icon(mut req: Request, ctx: RouteContext<()>) -> Res
         .bind(&[key.clone().into(), id.into()])?
         .run()
         .await?;
+
+    if let Some(old_key) = old_key.filter(|k| k != &key) {
+        let _ = icons_bucket(&ctx)?.delete(&old_key).await;
+    }
 
     Response::from_json(&serde_json::json!({ "icon_key": key, "content_type": content_type }))
 }
