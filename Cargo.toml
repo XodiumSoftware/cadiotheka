@@ -9,6 +9,10 @@ license = "AGPL-3.0"
 [workspace.lints.rust]
 unsafe_code = "forbid"
 
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+
 [profile.release]
 opt-level = "z"
 lto = true

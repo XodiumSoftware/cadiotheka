@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+
 /// Name of the D1 binding configured in `wrangler.toml`.
 pub(crate) const DB_BINDING: &str = "DB";
 /// Name of the R2 binding configured in `wrangler.toml` for project icons.
