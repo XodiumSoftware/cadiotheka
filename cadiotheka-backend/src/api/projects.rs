@@ -504,8 +504,6 @@ mod tests {
             avatar_url: None,
             created_at: "2025-01-01T00:00:00Z".into(),
             verified: 1,
-            provider: "seed".into(),
-            provider_id: "seed_acc-1".into(),
         }
     }
 

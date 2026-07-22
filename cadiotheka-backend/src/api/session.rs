@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use worker::*;
 
-use crate::api::accounts::{Account, fetch_account_by_provider};
+use crate::api::accounts::{Account, fetch_account};
 use crate::utils::{is_https_request, public_origin, rust_err, safe_redirect_target};
 
 const AUTH_KV_BINDING: &str = "AUTH";
@@ -16,8 +16,6 @@ const SESSION_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionData {
     account_id: String,
-    provider: String,
-    provider_id: String,
 }
 
 /// A signed session cookie value.
@@ -102,8 +100,6 @@ pub async fn create_session(
     let sig = sign(&secret, &id)?;
     let data = SessionData {
         account_id: account.id.clone(),
-        provider: account.provider.clone(),
-        provider_id: account.provider_id.clone(),
     };
 
     kv(ctx)?
@@ -205,7 +201,7 @@ pub async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Result<Optio
         }
     };
 
-    let account = fetch_account_by_provider(ctx, &data.provider, &data.provider_id).await?;
+    let account = fetch_account(ctx, &data.account_id).await?;
     if account.is_none() {
         console_log!("read_session: no account found for session");
     }

@@ -222,21 +222,20 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
             </div>
             <hr class="border-base-content/10" />
             <div class="space-y-2 text-sm text-base-content/80">
-                <div class="flex items-stretch gap-2">
-                    <div class="flex-shrink-0 flex bg-surface-light p-1 relative w-8">
-                        <CornerFrame
-                            style="square"
-                            black=true
-                            class="h-full w-full flex items-center justify-center"
-                        >
-                            <h2 class="text-lg font-bold tracking-tight text-transparent bg-base-100 bg-clip-text flex flex-col items-center justify-center leading-none">
-                                <span>"L"</span>
-                                <span>"I"</span>
-                                <span>"N"</span>
-                                <span>"K"</span>
-                            </h2>
-                        </CornerFrame>
-                    </div>
+            <div class="flex items-stretch gap-2">
+                <div class="flex-shrink-0 flex bg-surface-light p-1 relative w-8">
+                    <CornerFrame
+                        style="square"
+                        black=true
+                        class="h-full w-full flex items-center justify-center"
+                    >
+                        <h2 class="text-lg font-bold tracking-tight text-transparent bg-base-100 bg-clip-text flex flex-col items-center justify-center leading-none">
+                            <span>"B"</span>
+                            <span>"I"</span>
+                            <span>"O"</span>
+                        </h2>
+                    </CornerFrame>
+                </div>
                     {move || {
                         if editing.get() {
                             view! {

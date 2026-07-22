@@ -5,7 +5,7 @@ use crate::DB_BINDING;
 use crate::api::session::require_account;
 use crate::utils::{js_option, now_utc};
 
-const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.provider, a.provider_id FROM accounts a";
+const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified FROM accounts a";
 
 /// A Cadiotheka account stored in D1.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -20,8 +20,6 @@ pub struct Account {
     pub created_at: String,
     /// D1 stores booleans as integers, so this field is an `i32` instead of a `bool`.
     pub verified: i32,
-    pub provider: String,
-    pub provider_id: String,
 }
 
 /// Payload used to create or update an account.
@@ -36,8 +34,6 @@ pub struct AccountPayload {
     pub avatar_url: Option<String>,
     pub created_at: String,
     pub verified: i32,
-    pub provider: String,
-    pub provider_id: String,
 }
 
 /// Returns the D1 database binding configured for this worker.
@@ -57,9 +53,6 @@ pub async fn fetch_account(ctx: &RouteContext<()>, id: &str) -> Result<Option<Ac
 }
 
 /// Fetches a single account by its OAuth provider and provider id.
-///
-/// Looks up linked providers first, then falls back to legacy accounts that
-/// only have a single provider stored on the row itself.
 pub async fn fetch_account_by_provider(
     ctx: &RouteContext<()>,
     provider: &str,
@@ -73,16 +66,6 @@ pub async fn fetch_account_by_provider(
         .all()
         .await?;
     let mut accounts: Vec<Account> = result.results::<Account>()?;
-    if accounts.is_empty() {
-        let result = db(ctx)?
-            .prepare(format!(
-                "{SELECT_ACCOUNT_COLUMNS} WHERE a.provider = ?1 AND a.provider_id = ?2"
-            ))
-            .bind(&[provider.into(), provider_id.into()])?
-            .all()
-            .await?;
-        accounts = result.results::<Account>()?;
-    }
     Ok(accounts.pop())
 }
 
@@ -193,16 +176,14 @@ pub async fn create_oauth_account(
         role: "creator".to_string(),
         bio: profile.bio,
         avatar_url: profile.avatar_url,
-        created_at,
+        created_at: created_at.clone(),
         verified: 1,
-        provider: provider.to_string(),
-        provider_id: provider_id.to_string(),
     };
 
     db(ctx)?
         .prepare(
-            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified, provider, provider_id) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         )
         .bind(&[
             id.clone().into(),
@@ -214,23 +195,19 @@ pub async fn create_oauth_account(
             js_option(account.avatar_url.clone()),
             account.created_at.clone().into(),
             account.verified.into(),
-            account.provider.clone().into(),
-            account.provider_id.clone().into(),
         ])?
         .run()
         .await?;
 
-    // Store the primary provider identity in the linked-providers table as well
-    // so all lookups go through the same path.
     db(ctx)?
         .prepare(
             "INSERT INTO account_providers (account_id, provider, provider_id, created_at) VALUES (?1, ?2, ?3, ?4)",
         )
         .bind(&[
             id.into(),
-            account.provider.clone().into(),
-            account.provider_id.clone().into(),
-            account.created_at.clone().into(),
+            provider.into(),
+            provider_id.into(),
+            created_at.into(),
         ])?
         .run()
         .await?;
@@ -308,8 +285,8 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let payload: AccountPayload = req.json().await?;
     db(&ctx)?
         .prepare(
-            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified, provider, provider_id) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         )
         .bind(&[
             payload.id.into(),
@@ -321,8 +298,6 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
             js_option(payload.avatar_url),
             payload.created_at.into(),
             payload.verified.into(),
-            payload.provider.into(),
-            payload.provider_id.into(),
         ])?
         .run()
         .await?;
@@ -342,8 +317,8 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
     db(&ctx)?
         .prepare(
             "UPDATE accounts \
-             SET username = ?1, display_name = ?2, email = ?3, role = ?4, bio = ?5, avatar_url = ?6, created_at = ?7, verified = ?8, provider = ?9, provider_id = ?10 \
-             WHERE id = ?11",
+             SET username = ?1, display_name = ?2, email = ?3, role = ?4, bio = ?5, avatar_url = ?6, created_at = ?7, verified = ?8 \
+             WHERE id = ?9",
         )
         .bind(&[
             payload.username.into(),
@@ -354,8 +329,6 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
             js_option(payload.avatar_url),
             payload.created_at.into(),
             payload.verified.into(),
-            payload.provider.into(),
-            payload.provider_id.into(),
             id.into(),
         ])?
         .run()
