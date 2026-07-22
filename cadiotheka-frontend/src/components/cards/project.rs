@@ -131,7 +131,6 @@ pub fn ProjectCard(
     #[prop(into)] on_click: Callback<()>,
     #[prop(into)] on_author_click: Callback<()>,
     #[prop(into)] focused: Signal<bool>,
-    #[prop(into)] on_key_down: Callback<leptos::web_sys::KeyboardEvent>,
 ) -> impl IntoView {
     let letter = placeholder_letter(&props.title);
     let bg = placeholder_color(&props.title);
@@ -215,12 +214,9 @@ pub fn ProjectCard(
             }
             on:click=move |_| on_click.run(())
             on:keydown=move |ev: leptos::web_sys::KeyboardEvent| {
-                match ev.key().as_str() {
-                    "Enter" | " " => {
-                        ev.prevent_default();
-                        on_click.run(());
-                    }
-                    _ => on_key_down.run(ev),
+                if matches!(ev.key().as_str(), "Enter" | " ") {
+                    ev.prevent_default();
+                    on_click.run(());
                 }
             }
             role="button"

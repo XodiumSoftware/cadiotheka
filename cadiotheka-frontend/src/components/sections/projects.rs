@@ -8,6 +8,7 @@ use crate::contexts::{
 use crate::data::ProjectData;
 use crate::engines::SearchEngine;
 use crate::ui::effects::section_fade::FadeOverlay;
+use crate::utils::window_event_listener;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -142,6 +143,46 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                 .dyn_into::<leptos::web_sys::HtmlElement>()
                 .map(|html| html.focus());
         }
+    });
+
+    Effect::new(move |_| {
+        let grid_ref = grid_ref;
+        let handle_grid_keydown = handle_grid_keydown;
+        window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
+            if ev.default_prevented() {
+                return;
+            }
+
+            let Some(window) = leptos::web_sys::window() else {
+                return;
+            };
+            let Some(document) = window.document() else {
+                return;
+            };
+            let Some(active) = document.active_element() else {
+                return;
+            };
+
+            let inside_grid = grid_ref
+                .get()
+                .map(|grid| grid.contains(Some(&active)))
+                .unwrap_or(false);
+            let on_body = active
+                .dyn_ref::<leptos::web_sys::HtmlElement>()
+                .map(|el| el.tag_name().eq_ignore_ascii_case("body"))
+                .unwrap_or(false);
+
+            if !inside_grid && !on_body {
+                return;
+            }
+
+            match ev.key().as_str() {
+                "ArrowRight" | "ArrowLeft" | "ArrowDown" | "ArrowUp" | "Home" | "End" => {
+                    handle_grid_keydown.run(ev);
+                }
+                _ => {}
+            }
+        });
     });
 
     view! {
@@ -286,7 +327,6 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                         profile_modal.open(account);
                                                     }
                                                 }
-                                                on_key_down=move |ev| handle_grid_keydown.run(ev)
                                             />
                                         }
                                     })
