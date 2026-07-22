@@ -1434,7 +1434,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                         <div class="flex-1 min-w-0">
                                             <p class="text-sm font-semibold text-error">{"Danger zone"}</p>
                                             <p class="text-sm text-base-content/80">
-                                                {"Deleting this project cannot be undone. Type the project name below to confirm."}
+                                                {"Deleting this project cannot be undone."}
                                             </p>
                                         </div>
                                     </div>
