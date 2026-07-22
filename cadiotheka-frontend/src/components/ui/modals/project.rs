@@ -1075,7 +1075,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     view! {
                                         <button
                                             type="button"
-                                            class="group relative text-left w-full rounded-none border border-base-content/20 p-4 hover:border-primary transition-colors cursor-pointer"
+                                            class="group relative text-left w-full rounded-none border border-base-content/10 bg-base-200/20 p-4 hover:border-primary transition-colors cursor-pointer"
                                             aria-label="Edit supported platforms"
                                             on:click=move |_| start_edit_platforms()
                                         >
@@ -1151,7 +1151,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     view! {
                                         <button
                                             type="button"
-                                            class="group relative text-left w-full rounded-none border border-base-content/20 p-4 hover:border-primary transition-colors cursor-pointer"
+                                            class="group relative text-left w-full rounded-none border border-base-content/10 bg-base-200/20 p-4 hover:border-primary transition-colors cursor-pointer"
                                             aria-label="Edit tags"
                                             on:click=move |_| start_edit_tags()
                                         >
@@ -1349,7 +1349,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                         view! {
                                             <button
                                                 type="button"
-                                                class="group relative text-left w-full rounded-none border border-base-content/20 p-4 hover:border-primary transition-colors cursor-pointer"
+                                                class="group relative text-left w-full rounded-none border border-base-content/10 bg-base-200/20 p-4 hover:border-primary transition-colors cursor-pointer"
                                                 aria-label="Edit authors"
                                                 on:click=move |_| start_edit_collaborators()
                                             >
