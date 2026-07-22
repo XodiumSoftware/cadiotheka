@@ -4,7 +4,9 @@ use crate::components::ui::project_icon_picker::ProjectIconPicker;
 use crate::contexts::{
     AddProjectModalContext, CurrentUserContext, LoginModalContext, ProjectsContext,
 };
-use crate::data::{IconUrl, create_project, new_project_payload, upload_project_icon};
+use crate::data::{
+    IconUrl, ProjectCreationResult, create_project, new_project_payload, upload_project_icon,
+};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use leptos::prelude::*;
@@ -148,7 +150,7 @@ pub fn AddProjectModal() -> impl IntoView {
             let result = create_project(&payload).await;
 
             match result {
-                Some(created) => {
+                ProjectCreationResult::Created(created) => {
                     if let Some(file) = selected_icon_file_value
                         && upload_project_icon(&created.id, file).await.is_none()
                     {
@@ -166,13 +168,29 @@ pub fn AddProjectModal() -> impl IntoView {
                     modal.close();
                     reset_form();
                 }
-                None => {
-                    set_submit_error.set(Some(
-                        "Could not add the project. Please try again.".to_string(),
-                    ));
+                ProjectCreationResult::ValidationErrors(field_errors) => {
+                    set_is_submitting.set(false);
+                    let mut form_errors = FormErrors::default();
+                    if let Some(msg) = field_errors.get("title").cloned() {
+                        form_errors.title = Some(msg);
+                    }
+                    if let Some(msg) = field_errors.get("description").cloned() {
+                        form_errors.description = Some(msg);
+                    }
+                    set_errors.set(form_errors);
+                    if !field_errors.contains_key("title")
+                        && !field_errors.contains_key("description")
+                    {
+                        set_submit_error.set(Some(
+                            "The project could not be created. Please check your input and try again.".to_string(),
+                        ));
+                    }
+                }
+                ProjectCreationResult::Failed(msg) => {
+                    set_is_submitting.set(false);
+                    set_submit_error.set(Some(msg));
                 }
             }
-            set_is_submitting.set(false);
         });
     };
 

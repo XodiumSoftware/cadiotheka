@@ -2,6 +2,7 @@ use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use crate::utils::api_url;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::collections::HashMap;
 
 /// A URL pointing to a project's icon asset.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -188,11 +189,30 @@ pub fn new_project_payload(
 }
 
 /// Submits a new project to the backend API.
+/// Outcome of attempting to create a project on the backend.
+#[derive(Debug)]
+pub enum ProjectCreationResult {
+    /// The project was created successfully.
+    Created(ProjectData),
+    /// The backend rejected one or more fields; map keys are field names.
+    ValidationErrors(HashMap<String, String>),
+    /// A network, serialization, or unexpected server failure occurred.
+    Failed(String),
+}
+
+/// Response body returned by the backend when project validation fails.
+#[derive(Debug, Deserialize)]
+struct ValidationErrorResponse {
+    errors: HashMap<String, String>,
+}
+
+/// Creates a new project on the backend.
 ///
-/// Sends a `POST /data/projects` request with credentials so the session
-/// cookie is included. On success the created project is returned; on failure
-/// `None` is returned and the error is logged to the browser console.
-pub async fn create_project(project: &ProjectData) -> Option<ProjectData> {
+/// Returns [`ProjectCreationResult::Created`] on success,
+/// [`ProjectCreationResult::ValidationErrors`] when the backend reports field
+/// validation failures, and [`ProjectCreationResult::Failed`] for all other
+/// errors.
+pub async fn create_project(project: &ProjectData) -> ProjectCreationResult {
     let url = api_url("/projects");
     let body = match serde_json::to_string(project) {
         Ok(json) => json,
@@ -200,7 +220,9 @@ pub async fn create_project(project: &ProjectData) -> Option<ProjectData> {
             leptos::web_sys::console::error_1(
                 &format!("Failed to serialize project payload: {err:?}").into(),
             );
-            return None;
+            return ProjectCreationResult::Failed(
+                "Failed to prepare project data. Please try again.".to_string(),
+            );
         }
     };
 
@@ -214,24 +236,38 @@ pub async fn create_project(project: &ProjectData) -> Option<ProjectData> {
             leptos::web_sys::console::error_1(
                 &format!("Failed to build project creation request: {err:?}").into(),
             );
-            return None;
+            return ProjectCreationResult::Failed(
+                "Could not start the request. Please try again.".to_string(),
+            );
         }
     };
 
     match request.send().await {
         Ok(response) => {
             let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            if status == 400 {
+                if let Ok(parsed) = serde_json::from_str::<ValidationErrorResponse>(&text)
+                    && !parsed.errors.is_empty()
+                {
+                    return ProjectCreationResult::ValidationErrors(parsed.errors);
+                }
+                return ProjectCreationResult::Failed(
+                    "The project could not be created. Please check your input and try again."
+                        .to_string(),
+                );
+            }
             if !response.ok() {
-                let text = response.text().await.unwrap_or_default();
                 leptos::web_sys::console::error_1(
                     &format!("Failed to create project: HTTP {status}\n{text}").into(),
                 );
-                return None;
+                return ProjectCreationResult::Failed(
+                    "Could not add the project. Please try again.".to_string(),
+                );
             }
 
-            let text = response.text().await.unwrap_or_default();
             match serde_json::from_str::<ProjectData>(&text) {
-                Ok(data) => Some(data),
+                Ok(data) => ProjectCreationResult::Created(data),
                 Err(err) => {
                     leptos::web_sys::console::error_1(
                         &format!(
@@ -239,13 +275,17 @@ pub async fn create_project(project: &ProjectData) -> Option<ProjectData> {
                         )
                         .into(),
                     );
-                    None
+                    ProjectCreationResult::Failed(
+                        "Project was created, but the response could not be read.".to_string(),
+                    )
                 }
             }
         }
         Err(err) => {
             leptos::web_sys::console::error_1(&format!("Failed to create project: {err:?}").into());
-            None
+            ProjectCreationResult::Failed(
+                "Could not add the project. Please try again.".to_string(),
+            )
         }
     }
 }

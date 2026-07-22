@@ -20,17 +20,23 @@ const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
 /// Maximum allowed size for an uploaded project icon, in bytes.
 const MAX_ICON_SIZE_BYTES: usize = 5 * 1024 * 1024; // 5 MiB
 
-/// Validates the project payload and returns an error message when a field
-/// exceeds its allowed length. The route handler turns this message into a
-/// `400 Bad Request` response.
-fn validate_project_payload(payload: &ProjectPayload) -> std::result::Result<(), &'static str> {
+/// Validates the project payload and returns a map of field names to error
+/// messages. An empty map means the payload is valid.
+fn validate_project_payload(payload: &ProjectPayload) -> std::collections::HashMap<String, String> {
+    let mut errors = std::collections::HashMap::new();
     if payload.title.len() > MAX_TITLE_LENGTH {
-        return Err("Title must be 100 characters or fewer");
+        errors.insert(
+            "title".to_string(),
+            "Title must be 100 characters or fewer".to_string(),
+        );
     }
     if payload.description.len() > MAX_DESCRIPTION_LENGTH {
-        return Err("Description must be 500 characters or fewer");
+        errors.insert(
+            "description".to_string(),
+            "Description must be 500 characters or fewer".to_string(),
+        );
     }
-    Ok(())
+    errors
 }
 
 /// A Cadiotheka project stored in D1.
@@ -124,8 +130,10 @@ pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Respon
 pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
     let mut payload: ProjectPayload = req.json().await?;
-    if let Err(msg) = validate_project_payload(&payload) {
-        return Response::error(msg, 400);
+    let validation_errors = validate_project_payload(&payload);
+    if !validation_errors.is_empty() {
+        let body = serde_json::json!({ "errors": validation_errors });
+        return Ok(Response::from_json(&body)?.with_status(400));
     }
     payload.author_id = account.id;
     payload.author = account.display_name;
@@ -288,8 +296,10 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     }
 
     let mut payload: ProjectPayload = req.json().await?;
-    if let Err(msg) = validate_project_payload(&payload) {
-        return Response::error(msg, 400);
+    let validation_errors = validate_project_payload(&payload);
+    if !validation_errors.is_empty() {
+        let body = serde_json::json!({ "errors": validation_errors });
+        return Ok(Response::from_json(&body)?.with_status(400));
     }
     payload.author_id = project.author_id;
     payload.author = project.author;
@@ -559,16 +569,17 @@ mod tests {
 
     #[test]
     fn payload_with_valid_title_and_description_passes() {
-        assert!(validate_project_payload(&sample_payload()).is_ok());
+        assert!(validate_project_payload(&sample_payload()).is_empty());
     }
 
     #[test]
     fn payload_with_long_title_fails() {
         let mut payload = sample_payload();
         payload.title = "a".repeat(101);
+        let errors = validate_project_payload(&payload);
         assert_eq!(
-            validate_project_payload(&payload),
-            Err("Title must be 100 characters or fewer")
+            errors.get("title"),
+            Some(&"Title must be 100 characters or fewer".to_string())
         );
     }
 
@@ -576,9 +587,10 @@ mod tests {
     fn payload_with_long_description_fails() {
         let mut payload = sample_payload();
         payload.description = "a".repeat(501);
+        let errors = validate_project_payload(&payload);
         assert_eq!(
-            validate_project_payload(&payload),
-            Err("Description must be 500 characters or fewer")
+            errors.get("description"),
+            Some(&"Description must be 500 characters or fewer".to_string())
         );
     }
 
