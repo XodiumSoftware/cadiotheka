@@ -280,8 +280,11 @@ pub fn Header() -> impl IntoView {
                 })
                 .unwrap_or(true);
             if should_close {
+                let was_open = account_menu_open.get_untracked();
                 set_account_menu_open.set(false);
-                focus_avatar.run(());
+                if was_open {
+                    focus_avatar.run(());
+                }
             }
         });
         let _ = listener;
