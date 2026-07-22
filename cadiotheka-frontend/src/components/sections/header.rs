@@ -184,9 +184,6 @@ pub fn Header() -> impl IntoView {
         }
     });
 
-    // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Alt+1/2/3 trigger
-    // the corresponding account-menu action when authenticated, Alt+L logs out (or
-    // opens the login modal when not authenticated), and Escape closes open menus.
     Effect::new(move |_| {
         let current_user = current_user_ctx;
         let login_modal = login_modal_ctx;
@@ -265,8 +262,6 @@ pub fn Header() -> impl IntoView {
         });
     });
 
-    // Close the account menu when clicking outside of it and return focus to the
-    // avatar button.
     Effect::new(move |_| {
         let menu = account_menu_ref.get();
         let listener = window_event_listener::<web_sys::MouseEvent, _>("click", move |ev| {
@@ -290,7 +285,6 @@ pub fn Header() -> impl IntoView {
         let _ = listener;
     });
 
-    // Scroll listener for backdrop blur. Registered once; removed on unmount.
     Effect::new(move |_| {
         window_event_listener::<web_sys::Event, _>("scroll", move |_ev| {
             let scrolled = web_sys::window()
@@ -300,7 +294,6 @@ pub fn Header() -> impl IntoView {
         });
     });
 
-    // Move focus inside the account menu when it opens or the active item changes.
     Effect::new(move |_| {
         let open = account_menu_open.get();
         let idx = active_menu_index.get();
@@ -322,7 +315,6 @@ pub fn Header() -> impl IntoView {
         });
     });
 
-    // Arrow-key navigation for the account menu while it is open.
     Effect::new(move |_| {
         if !account_menu_open.get() {
             return;
@@ -363,8 +355,6 @@ pub fn Header() -> impl IntoView {
         });
     });
 
-    // Focus the search input whenever the modal opens, but not on every
-    // re-render while it remains open.
     let was_search_open = RwSignal::new(false);
     Effect::new(move |_| {
         let open = search_open.get();
@@ -383,7 +373,6 @@ pub fn Header() -> impl IntoView {
         });
     });
 
-    // Scroll the keyboard-selected suggestion into view whenever it changes.
     Effect::new(move |_| {
         if let Some(idx) = keyboard_index.get() {
             let id = format!("search-suggestion-{idx}");

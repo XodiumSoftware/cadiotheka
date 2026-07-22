@@ -105,8 +105,6 @@ pub fn safe_redirect_target(is_https: bool, url: &url::Url, param: &str) -> Opti
         format_port(parsed.port())
     );
 
-    // Reject URLs with userinfo. Only reject non-default ports for origins
-    // other than localhost, since explicit ports are expected in local dev.
     let is_localhost = host == "localhost";
     if parsed.username() != ""
         || parsed.password().is_some()

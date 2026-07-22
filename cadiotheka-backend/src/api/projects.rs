@@ -346,8 +346,6 @@ pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Respo
         .run()
         .await?;
 
-    // Best-effort cleanup of the project's icon from R2. The project row is
-    // already gone, so a failure here is logged but does not fail the request.
     if let Some(icon_key) = project.icon_url
         && let Err(err) = icons_bucket(&ctx)?.delete(&icon_key).await
     {

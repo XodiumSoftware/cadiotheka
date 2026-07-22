@@ -157,8 +157,6 @@ pub async fn unlink_oauth_account(
         .run()
         .await?;
 
-    // Update the account's primary provider if the unlinked one was primary.
-    // The primary provider is the oldest linked provider for the account.
     let providers = fetch_linked_providers(ctx, account_id).await?;
     let mut providers_iter = providers.iter();
     let first_provider = providers_iter.next();
@@ -276,7 +274,6 @@ async fn unique_username(ctx: &RouteContext<()>, preferred: &str) -> Result<Stri
         return Ok(candidate);
     }
 
-    // Extremely unlikely collision: try once more with a different suffix.
     let suffix: u32 = rand::random();
     Ok(format!("{}_{suffix:08x}", &base[..base.len().min(24)]))
 }

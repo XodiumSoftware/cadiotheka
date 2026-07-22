@@ -37,7 +37,6 @@ pub fn AddProjectModal() -> impl IntoView {
     let projects_ctx = ProjectsContext::use_context();
     let on_close = move |_| modal.close();
 
-    // Form fields
     let title_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let desc_input_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
     let icon_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
@@ -70,7 +69,6 @@ pub fn AddProjectModal() -> impl IntoView {
         }
     };
 
-    // Reset the form whenever the modal opens so stale data isn't shown.
     Effect::new(move |_| {
         if modal.open.get() {
             reset_form();

@@ -17,8 +17,6 @@ pub fn SearchModal(
     let children_view = children();
     let backdrop_ref: NodeRef<leptos::html::Div> = NodeRef::new();
 
-    // Close the modal when the user presses Escape. The listener is only
-    // registered while the modal is open and removed immediately when it closes.
     Effect::new(move |_| {
         if !open.get() {
             return;
@@ -47,8 +45,6 @@ pub fn SearchModal(
         }
     });
 
-    // Ensure the body scroll lock is released if the modal is unmounted while
-    // still open.
     leptos::prelude::on_cleanup(move || {
         if let Some(body) = leptos::web_sys::window()
             .and_then(|w| w.document())

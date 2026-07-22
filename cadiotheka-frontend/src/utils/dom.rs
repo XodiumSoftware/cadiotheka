@@ -18,9 +18,6 @@ where
         }
     }) as Box<dyn FnMut(_)>);
 
-    // Transfer the closure to JavaScript ownership. The listener is removed in
-    // `on_cleanup`; once detached, the JS function becomes unreachable and is
-    // collected, freeing the associated Rust closure.
     let function: js_sys::Function = closure.as_ref().unchecked_ref::<js_sys::Function>().clone();
     if let Err(err) = window.add_event_listener_with_callback(event, &function) {
         leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(

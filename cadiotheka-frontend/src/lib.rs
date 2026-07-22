@@ -1,6 +1,5 @@
 mod app;
 
-// Layout sections
 pub mod components {
     pub mod sections {
         pub mod footer;

@@ -347,7 +347,6 @@ mod tests {
         let engine = engine();
         let parsed = parse_query("@sort:newest:descending");
         let results = engine.search(&parsed);
-        // All timestamps are identical in the fixture, so order is preserved by sort stability.
         assert_eq!(results.len(), 3);
     }
 
@@ -402,7 +401,6 @@ mod tests {
     #[test]
     fn filter_matches_substring_tokens() {
         let engine = engine();
-        // "3D Model" should match #model even though the label starts with "3D".
         let parsed = parse_query("#model");
         let results = engine.search(&parsed);
         assert!(
@@ -410,7 +408,6 @@ mod tests {
             "#model should match the 3D Model tag"
         );
 
-        // "Fusion 360" should match #fusion (and #360).
         let parsed = parse_query("#fusion");
         let results = engine.search(&parsed);
         assert!(
@@ -434,7 +431,6 @@ mod tests {
         let parsed = parse_query("");
         let results = engine.search(&parsed);
         assert_eq!(results.len(), 3);
-        // References should point to the engine's owned cards.
         assert!(std::ptr::eq(results[0], &engine.cards[0]));
     }
 }

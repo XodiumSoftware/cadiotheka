@@ -141,9 +141,6 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
     match result {
         Ok(resp) => {
-            // Auth routes that return JSON (login URL endpoints and /auth/*) need CORS
-            // headers so the frontend can read the response. Redirects and data routes are
-            // handled separately.
             let is_redirect = (300..400).contains(&resp.status_code());
             if is_data_route || is_login_route || (!is_redirect && path.starts_with("/auth/")) {
                 add_cors_headers(resp, &origin)

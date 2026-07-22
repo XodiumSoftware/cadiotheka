@@ -20,7 +20,6 @@ mod tag_json_string {
         let strings: Vec<String> = value
             .iter()
             .map(|v| {
-                // Emit the raw enum rename value, not a quoted JSON string.
                 serde_json::to_value(v)
                     .map_err(serde::ser::Error::custom)
                     .and_then(|val| match val {
@@ -58,7 +57,6 @@ mod platform_json_string {
         let strings: Vec<String> = value
             .iter()
             .map(|v| {
-                // Emit the raw enum rename value, not a quoted JSON string.
                 serde_json::to_value(v)
                     .map_err(serde::ser::Error::custom)
                     .and_then(|val| match val {

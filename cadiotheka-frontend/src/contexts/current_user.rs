@@ -220,8 +220,6 @@ mod tests {
 
     #[test]
     fn context_starts_unauthenticated() {
-        // Signals must be created inside a reactive runtime, so this just
-        // validates the placeholder behavior.
         let placeholder = AccountData::placeholder();
         assert!(placeholder.id.is_empty());
     }

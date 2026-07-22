@@ -29,8 +29,6 @@ pub fn LoginModal() -> impl IntoView {
     let modal = LoginModalContext::use_context();
     let on_close = move |_| modal.close();
 
-    // Keyboard shortcuts: Alt+1 triggers GitHub login, Alt+2 triggers Google
-    // login, but only while the modal is open.
     Effect::new(move |_| {
         let modal = modal;
         window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
