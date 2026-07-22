@@ -656,14 +656,14 @@ pub fn Header() -> impl IntoView {
                                             Some(view! {
                                                 <ul
                                                     id="account-menu"
-                                                    class="absolute right-0 top-full mt-2 w-48 bg-base-100 border-2 border-base-content/80 shadow-lg z-50 py-1"
+                                                    class="absolute right-0 top-full mt-2 min-w-48 w-max max-w-xs bg-base-100 border-2 border-base-content/80 shadow-lg z-50 py-1"
                                                     role="menu"
                                                 >
                                                     <li role="none">
                                                         <button
                                                             type="button"
                                                             class=move || {
-                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3";
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3 whitespace-nowrap";
                                                                 if active_menu_index.get() == 0 {
                                                                     format!("{} bg-base-content/10", base)
                                                                 } else {
@@ -685,7 +685,7 @@ pub fn Header() -> impl IntoView {
                                                         <button
                                                             type="button"
                                                             class=move || {
-                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3";
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3 whitespace-nowrap";
                                                                 if active_menu_index.get() == 1 {
                                                                     format!("{} bg-base-content/10", base)
                                                                 } else {
@@ -707,7 +707,7 @@ pub fn Header() -> impl IntoView {
                                                         <button
                                                             type="button"
                                                             class=move || {
-                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3";
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3 whitespace-nowrap";
                                                                 if active_menu_index.get() == 2 {
                                                                     format!("{} bg-base-content/10", base)
                                                                 } else {
@@ -729,7 +729,7 @@ pub fn Header() -> impl IntoView {
                                                         <button
                                                             type="button"
                                                             class=move || {
-                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 text-error font-semibold flex items-center justify-between gap-3";
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 text-error font-semibold flex items-center justify-between gap-3 whitespace-nowrap";
                                                                 if active_menu_index.get() == 3 {
                                                                     format!("{} bg-base-content/10", base)
                                                                 } else {
