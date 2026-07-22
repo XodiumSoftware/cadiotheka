@@ -3,7 +3,7 @@ use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::project_icon_picker::ProjectIconPicker;
-use crate::components::ui::toggle::ToggleSlider;
+
 use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
     SearchContext,
@@ -756,8 +756,15 @@ fn ProjectModalContent(
                 </div>
                 <div class="hidden sm:flex items-center gap-2 text-xs flex-shrink-0">
                     {is_editable.then(|| view! {
-                        <div
-                            class="hidden sm:inline-flex items-center gap-2 tooltip tooltip-bottom"
+                        <button
+                            type="button"
+                            class=move || {
+                                if edit_mode.get() {
+                                    "btn btn-ghost btn-xs h-auto min-h-0 text-primary hover:text-base-content tooltip tooltip-bottom"
+                                } else {
+                                    "btn btn-ghost btn-xs h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                }
+                            }
                             data-tip=move || {
                                 if edit_mode.get() {
                                     "Exit edit mode".to_string()
@@ -772,15 +779,10 @@ fn ProjectModalContent(
                                     "Enter edit mode"
                                 }
                             }
+                            on:click=move |_| toggle_edit_mode(())
                         >
                             <svg
-                                class=move || {
-                                    if edit_mode.get() {
-                                        "w-4 h-4 text-primary"
-                                    } else {
-                                        "w-4 h-4 text-base-content/50"
-                                    }
-                                }
+                                class="w-4 h-4"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -791,16 +793,8 @@ fn ProjectModalContent(
                             >
                                 <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
                             </svg>
-                            <ToggleSlider
-                                checked=Signal::derive(move || edit_mode.get())
-                                on_change=Callback::new(move |checked: bool| {
-                                    let current = edit_mode.get_untracked();
-                                    if checked != current {
-                                        toggle_edit_mode(());
-                                    }
-                                })
-                            />
-                        </div>
+                            {move || if edit_mode.get() { "Done" } else { "Edit" }}
+                        </button>
                     })}
                     <button
                         type="button"
