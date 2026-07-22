@@ -875,7 +875,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                         <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
                         <span>{move || favorite_count.get().to_string()}</span>
                     </button>
-                    {move || (is_editable.get() && edit_mode.get()).then(|| view! {
+                    {move || is_editable.get().then(|| view! {
                     <button
                         type="button"
                         class=move || {
