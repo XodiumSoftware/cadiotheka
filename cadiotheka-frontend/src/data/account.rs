@@ -139,6 +139,40 @@ mod tests {
     }
 
     #[test]
+    fn account_role_serializes_to_snake_case() {
+        assert_eq!(
+            serde_json::to_string(&AccountRole::Creator).unwrap(),
+            "\"creator\""
+        );
+        assert_eq!(
+            serde_json::to_string(&AccountRole::Admin).unwrap(),
+            "\"admin\""
+        );
+    }
+
+    #[test]
+    fn account_deserializes_missing_optional_fields_with_defaults() {
+        let json = r#"{"id":"acc-1","username":"user","display_name":"User","email":"u@example.com","role":"creator","created_at":"2025-01-01T00:00:00Z"}"#;
+        let account: AccountData = serde_json::from_str(json).unwrap();
+        assert_eq!(account.id, "acc-1");
+        assert!(account.bio.is_empty());
+        assert!(account.project_ids.is_empty());
+        assert_eq!(account.verified, 0);
+        assert!(account.provider.is_empty());
+        assert!(account.provider_id.is_empty());
+        assert!(account.avatar_url.is_none());
+    }
+
+    #[test]
+    fn account_verified_integer_roundtrips() {
+        let account = sample_account();
+        let json = serde_json::to_string(&account).unwrap();
+        assert!(json.contains("\"verified\":1"));
+        let decoded: AccountData = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded.verified, 1);
+    }
+
+    #[test]
     fn placeholder_account_is_empty() {
         let account = AccountData::placeholder();
         assert!(account.id.is_empty());

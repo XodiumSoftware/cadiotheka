@@ -774,6 +774,31 @@ mod tests {
         assert_eq!(decoded, url);
     }
 
+    #[test]
+    fn project_serializes_json_string_columns_for_backend() {
+        let project = sample_project();
+        let value = serde_json::to_value(&project).unwrap();
+        let tags = value.get("tags").unwrap().as_str().unwrap();
+        let platforms = value.get("supported_platforms").unwrap().as_str().unwrap();
+        let favorites = value.get("favorites").unwrap().as_str().unwrap();
+        let collaborators = value.get("collaborator_ids").unwrap().as_str().unwrap();
+        assert!(tags.starts_with('[') && tags.ends_with(']'));
+        assert!(platforms.starts_with('[') && platforms.ends_with(']'));
+        assert!(favorites.starts_with('[') && favorites.ends_with(']'));
+        assert!(collaborators.starts_with('[') && collaborators.ends_with(']'));
+    }
+
+    #[test]
+    fn project_deserializes_empty_json_string_columns() {
+        let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","description":"D","extended_desc":"E","tags":"[]","supported_platforms":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let projects: Vec<ProjectData> = serde_json::from_str(json).unwrap();
+        assert_eq!(projects.len(), 1);
+        assert!(projects[0].tags.is_empty());
+        assert!(projects[0].supported_platforms.is_empty());
+        assert!(projects[0].favorites.is_empty());
+        assert!(projects[0].collaborator_ids.is_empty());
+    }
+
     /// Validates that known tags and platforms serialize and deserialize
     /// correctly. This catches stale enum definitions.
     #[test]
