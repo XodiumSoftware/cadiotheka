@@ -39,6 +39,15 @@ pub fn MarkdownEditor(
         }
     });
     let textarea_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
+    // Sync the initial value into the textarea only once on mount. Setting
+    // prop:value reactively on every keystroke resets the DOM element and can
+    // blur/deselect the field in Leptos CSR.
+    let initial_value = value.get_untracked();
+    Effect::new(move |_| {
+        if let Some(textarea) = textarea_ref.get() {
+            textarea.set_value(&initial_value);
+        }
+    });
 
     let push_history = {
         let history_index = history_index_read;
@@ -209,7 +218,6 @@ pub fn MarkdownEditor(
                                 node_ref=textarea_ref
                                 class=textarea_class
                                 maxlength=maxlength.to_string()
-                                prop:value=value.get()
                                 on:input=move |ev| {
                                     let next = event_target_value(&ev).replace('\r', "");
                                     if let Some(textarea) = event_target_textarea(&ev) {
@@ -282,7 +290,6 @@ pub fn MarkdownEditor(
                                         }
                                     }
                                 }
-                                autofocus
                             ></textarea>
                         }
                             .into_any()

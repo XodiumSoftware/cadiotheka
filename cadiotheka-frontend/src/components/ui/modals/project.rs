@@ -203,6 +203,8 @@ fn ProjectModalContent(
     let (editing, set_editing) = signal(false);
     let (draft, set_draft) = signal(card.title.clone());
     let (title, set_title) = signal(card.title.clone());
+    let title_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
+    let description_input_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
     let icon_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (icon_url, set_icon_url) = signal(card.icon_url.clone());
     let (editing_description, set_editing_description) = signal(false);
@@ -595,22 +597,40 @@ fn ProjectModalContent(
     let platforms = supported_platforms;
 
     let save_all_changes = Callback::new(move |_| {
-        commit_edit.run(draft.get_untracked());
-        commit_edit_description.run(draft_description.get_untracked());
+        let draft_title = title_input_ref
+            .get()
+            .map(|i| i.value())
+            .unwrap_or_else(|| draft.get_untracked());
+        let draft_description = description_input_ref
+            .get()
+            .map(|t| t.value())
+            .unwrap_or_else(|| draft_description.get_untracked());
+        commit_edit.run(draft_title);
+        commit_edit_description.run(draft_description);
         commit_edit_extended.run(draft_extended.get_untracked());
         commit_edit_tags.run(draft_tags.get_untracked());
         commit_edit_platforms.run(draft_platforms.get_untracked());
         commit_edit_collaborators.run(draft_collaborator_ids.get_untracked());
+        set_draft.set(title.get_untracked());
+        set_draft_description.set(description.get_untracked());
         set_edit_mode.set(false);
     });
 
     let cancel_all_changes = Callback::new(move |_| {
-        set_draft.set(title.get_untracked());
-        set_draft_description.set(description.get_untracked());
+        let current_title = title.get_untracked();
+        let current_description = description.get_untracked();
+        set_draft.set(current_title.clone());
+        set_draft_description.set(current_description.clone());
         set_draft_extended.set(extended_desc.get_untracked());
         set_draft_platforms.set(supported_platforms.get_untracked());
         set_draft_tags.set(tags.get_untracked());
         set_draft_collaborator_ids.set(collaborator_ids.get_untracked());
+        if let Some(input) = title_input_ref.get() {
+            input.set_value(&current_title);
+        }
+        if let Some(textarea) = description_input_ref.get() {
+            textarea.set_value(&current_description);
+        }
         set_editing.set(false);
         set_editing_description.set(false);
         set_editing_extended.set(false);
@@ -668,8 +688,10 @@ fn ProjectModalContent(
                                 <div class="space-y-2">
                                     <div class="flex items-center gap-2">
                                         <input
+                                            node_ref=title_input_ref
                                             class=move || {
-                                                let at_max = draft.get().len() >= MAX_TITLE_LENGTH;
+                                                let value = title_input_ref.get().map(|i| i.value()).unwrap_or_default();
+                                                let at_max = value.len() >= MAX_TITLE_LENGTH;
                                                 format!(
                                                     "input input-sm input-bordered flex-1 text-base-content text-xl font-bold {}",
                                                     if at_max { "hover:border-error" } else { "" }
@@ -677,8 +699,7 @@ fn ProjectModalContent(
                                             }
                                             type="text"
                                             maxlength=MAX_TITLE_LENGTH.to_string()
-                                            prop:value=draft.get()
-                                            on:input=move |ev| set_draft.set(event_target_value(&ev))
+                                            value=draft.get_untracked()
                                             on:keyup=move |ev| {
                                                 match ev.key().as_str() {
                                                     "Enter" => save_all_changes.run(()),
@@ -686,16 +707,19 @@ fn ProjectModalContent(
                                                     _ => {}
                                                 }
                                             }
-                                            autofocus
                                         />
                                         <span class=move || {
-                                            if draft.get().len() >= MAX_TITLE_LENGTH {
+                                            let value = title_input_ref.get().map(|i| i.value()).unwrap_or_default();
+                                            if value.len() >= MAX_TITLE_LENGTH {
                                                 "text-xs text-error flex-shrink-0"
                                             } else {
                                                 "text-xs text-base-content/50 flex-shrink-0"
                                             }
                                         }>
-                                            {move || format!("{}/{}", draft.get().len(), MAX_TITLE_LENGTH)}
+                                            {move || {
+                                                let value = title_input_ref.get().map(|i| i.value()).unwrap_or_default();
+                                                format!("{}/{}", value.len(), MAX_TITLE_LENGTH)
+                                            }}
                                         </span>
                                     </div>
                                 </div>
@@ -719,32 +743,36 @@ fn ProjectModalContent(
                                 view! {
                                     <div class="space-y-2">
                                         <textarea
-                                            class=move || {
-                                                let at_max = draft_description.get().len() >= MAX_DESCRIPTION_LENGTH;
-                                                format!(
-                                                    "textarea w-full min-h-[5rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {}",
-                                                    if at_max { "hover:border-error" } else { "" }
-                                                )
-                                            }
-                                            maxlength=MAX_DESCRIPTION_LENGTH.to_string()
-                                            prop:value=draft_description.get()
-                                            on:input=move |ev| set_draft_description.set(event_target_value(&ev))
-                                            on:keyup=move |ev| {
-                                                if ev.key().as_str() == "Escape" {
-                                                    cancel_all_changes.run(());
-                                                }
-                                            }
-                                            autofocus
-                                        ></textarea>
+                                                    node_ref=description_input_ref
+                                                    class=move || {
+                                                        let value = description_input_ref.get().map(|t| t.value()).unwrap_or_default();
+                                                        let at_max = value.len() >= MAX_DESCRIPTION_LENGTH;
+                                                        format!(
+                                                            "textarea w-full min-h-[5rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {}",
+                                                            if at_max { "hover:border-error" } else { "" }
+                                                        )
+                                                    }
+                                                    maxlength=MAX_DESCRIPTION_LENGTH.to_string()
+                                                    prop:value=draft_description.get_untracked()
+                                                    on:keyup=move |ev| {
+                                                        if ev.key().as_str() == "Escape" {
+                                                            cancel_all_changes.run(());
+                                                        }
+                                                    }
+                                                ></textarea>
                                         <div class="flex items-center justify-between">
                                             <span class=move || {
-                                                if draft_description.get().len() >= MAX_DESCRIPTION_LENGTH {
+                                                let value = description_input_ref.get().map(|t| t.value()).unwrap_or_default();
+                                                if value.len() >= MAX_DESCRIPTION_LENGTH {
                                                     "text-xs text-error"
                                                 } else {
                                                     "text-xs text-base-content/50"
                                                 }
                                             }>
-                                                {move || format!("{}/{}", draft_description.get().len(), MAX_DESCRIPTION_LENGTH)}
+                                                {move || {
+                                                    let value = description_input_ref.get().map(|t| t.value()).unwrap_or_default();
+                                                    format!("{}/{}", value.len(), MAX_DESCRIPTION_LENGTH)
+                                                }}
                                             </span>
                                         </div>
                                     </div>
