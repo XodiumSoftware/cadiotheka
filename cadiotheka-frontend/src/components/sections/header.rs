@@ -363,18 +363,24 @@ pub fn Header() -> impl IntoView {
         });
     });
 
-    // Focus the search input whenever the modal opens.
+    // Focus the search input whenever the modal opens, but not on every
+    // re-render while it remains open.
+    let was_search_open = RwSignal::new(false);
     Effect::new(move |_| {
-        if search_open.get() {
-            let input_ref = input_ref;
-            spawn_local(async move {
-                gloo_timers::future::sleep(Duration::from_millis(50)).await;
-                if let Some(input) = input_ref.get() {
-                    let _ = input.focus();
-                    input.select();
-                }
-            });
+        let open = search_open.get();
+        let just_opened = open && !was_search_open.get_untracked();
+        was_search_open.set(open);
+        if !just_opened {
+            return;
         }
+        let input_ref = input_ref;
+        spawn_local(async move {
+            gloo_timers::future::sleep(Duration::from_millis(50)).await;
+            if let Some(input) = input_ref.get() {
+                let _ = input.focus();
+                input.select();
+            }
+        });
     });
 
     // Scroll the keyboard-selected suggestion into view whenever it changes.
