@@ -129,6 +129,10 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             "/auth/linked-providers",
             api::accounts::list_linked_providers,
         )
+        .delete_async(
+            "/auth/linked-providers/:provider",
+            api::accounts::unlink_provider,
+        )
         .get_async("/auth/me", api::session::me)
         .put_async("/auth/me", api::session::update_me)
         .get_async("/auth/logout", api::session::logout)

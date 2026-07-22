@@ -134,6 +134,36 @@ pub async fn fetch_linked_providers() -> Vec<String> {
     }
 }
 
+/// Unlinks an OAuth provider from the currently authenticated account.
+///
+/// Returns `true` if the provider was successfully unlinked.
+pub async fn unlink_provider(provider: &str) -> bool {
+    let url = auth_url(&format!("/linked-providers/{provider}"));
+    match Request::delete(&url)
+        .credentials(RequestCredentials::Include)
+        .send()
+        .await
+    {
+        Ok(response) if response.ok() => true,
+        Ok(response) => {
+            leptos::web_sys::console::error_1(
+                &format!(
+                    "Failed to unlink provider at {url}: HTTP {}",
+                    response.status()
+                )
+                .into(),
+            );
+            false
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to unlink provider at {url}: {err:?}").into(),
+            );
+            false
+        }
+    }
+}
+
 #[derive(serde::Deserialize, Debug)]
 struct LinkedProvidersResponse {
     providers: Vec<String>,

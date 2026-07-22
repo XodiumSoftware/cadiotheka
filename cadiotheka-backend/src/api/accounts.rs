@@ -128,6 +128,53 @@ pub async fn link_oauth_account(
     Ok(())
 }
 
+/// Unlinks an OAuth provider from the given account.
+///
+/// The provider that was used to create the account cannot be unlinked if it is
+/// the only remaining provider, otherwise the account would become unaccessible.
+/// Returns an error when the provider is not linked or is the sole provider.
+pub async fn unlink_oauth_account(
+    ctx: &RouteContext<()>,
+    account_id: &str,
+    provider: &str,
+) -> Result<()> {
+    let linked = fetch_linked_providers(ctx, account_id).await?;
+    let position = linked.iter().position(|p| p == provider);
+
+    let Some(_position) = position else {
+        return Err(worker::Error::RustError("provider not linked".into()));
+    };
+
+    if linked.len() == 1 {
+        return Err(worker::Error::RustError(
+            "cannot unlink the only sign-in provider".into(),
+        ));
+    }
+
+    db(ctx)?
+        .prepare("DELETE FROM account_providers WHERE account_id = ?1 AND provider = ?2")
+        .bind(&[account_id.into(), provider.into()])?
+        .run()
+        .await?;
+
+    // Update the account's primary provider if the unlinked one was primary.
+    // The primary provider is the oldest linked provider for the account.
+    let providers = fetch_linked_providers(ctx, account_id).await?;
+    let mut providers_iter = providers.iter();
+    let first_provider = providers_iter.next();
+    if first_provider == Some(&provider.to_string())
+        && let Some(new_primary) = providers_iter.next()
+    {
+        db(ctx)?
+            .prepare("UPDATE accounts SET provider = ?1 WHERE id = ?2")
+            .bind(&[new_primary.into(), account_id.into()])?
+            .run()
+            .await?;
+    }
+
+    Ok(())
+}
+
 /// Fetches a single account by username, returning `None` when no row matches.
 async fn fetch_account_by_username(
     ctx: &RouteContext<()>,
@@ -273,6 +320,14 @@ pub async fn list_linked_providers(req: Request, ctx: RouteContext<()>) -> Resul
     let account = require_account(&req, &ctx).await?;
     let providers = fetch_linked_providers(&ctx, &account.id).await?;
     Response::from_json(&serde_json::json!({ "providers": providers }))
+}
+
+/// Unlinks an OAuth provider from the currently authenticated account.
+pub async fn unlink_provider(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let account = require_account(&req, &ctx).await?;
+    let provider = ctx.param("provider").cloned().unwrap_or_default();
+    crate::api::accounts::unlink_oauth_account(&ctx, &account.id, &provider).await?;
+    Response::empty()
 }
 
 /// Creates a new account from the request body. Restricted to admins.
