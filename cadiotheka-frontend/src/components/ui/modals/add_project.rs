@@ -269,40 +269,51 @@ pub fn AddProjectModal() -> impl IntoView {
                                     <div class="flex-1 min-w-0">
                                         <label
                                             class=move || {
-                                                if title.get().len() >= 100 {
+                                                if errors.get().title.is_some() {
                                                     "block text-sm font-medium text-error mb-1"
+                                                } else if title.get().len() >= 100 {
+                                                    "block text-sm font-medium text-warning mb-1"
                                                 } else {
                                                     "block text-sm font-medium text-base-content mb-1"
                                                 }
                                             }
                                             for="add-project-title"
                                         >
-                                            <span class="text-error mr-1">"*"</span>
-                                            {move || {
-                                                let count = title.get().len();
-                                                format!("Title ({count}/100)")
-                                            }}
+                                                <span class="text-error mr-1">"*"</span>
+                                                {move || {
+                                                    let count = title.get().len();
+                                                    format!("Title ({count}/100)")
+                                                }}
                                         </label>
-                                        <input
-                                            node_ref=title_input_ref
-                                            id="add-project-title"
-                                            type="text"
-                                            class=move || {
-                                                let at_max = title.get().len() >= 100;
-                                                format!(
-                                                    "input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {}",
-                                                    if at_max { "hover:border-error" } else { "" }
-                                                )
-                                            }
-                                            on:input=move |ev| {
-                                                set_title.set(event_target_value(&ev));
-                                                set_errors.update(|errs| errs.title = None);
-                                            }
-                                            disabled=move || is_submitting.get()
-                                        />
-                                        {move || errors.get().title.map(|msg| view! {
-                                            <p class="text-error text-xs mt-1">{msg}</p>
-                                        })}
+                                            <input
+                                                node_ref=title_input_ref
+                                                id="add-project-title"
+                                                type="text"
+                                                class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none validator"
+                                                required
+                                                maxlength="100"
+                                                placeholder="Project title"
+                                                on:input=move |ev| {
+                                                    set_title.set(event_target_value(&ev));
+                                                    set_errors.update(|errs| errs.title = None);
+                                                }
+                                                disabled=move || is_submitting.get()
+                                            />
+                                            {move || {
+                                                let errs = errors.get();
+                                                let base = "validator-hint text-error text-xs mt-1";
+                                                if let Some(msg) = errs.title {
+                                                    Some(view! {
+                                                        <p class=base>{msg}</p>
+                                                    })
+                                                } else if title.get().len() >= 100 {
+                                                    Some(view! {
+                                                        <p class=base>{"Title must be 100 characters or fewer.".to_string()}</p>
+                                                    })
+                                                } else {
+                                                    None
+                                                }
+                                            }}
 
                                     </div>
                                 </div>
@@ -310,8 +321,10 @@ pub fn AddProjectModal() -> impl IntoView {
                                 <div>
                                     <label
                                         class=move || {
-                                            if description.get().len() >= 500 {
+                                            if errors.get().description.is_some() {
                                                 "block text-sm font-medium text-error mb-1"
+                                            } else if description.get().len() >= 500 {
+                                                "block text-sm font-medium text-warning mb-1"
                                             } else {
                                                 "block text-sm font-medium text-base-content mb-1"
                                             }
@@ -327,22 +340,31 @@ pub fn AddProjectModal() -> impl IntoView {
                                     <textarea
                                         node_ref=desc_input_ref
                                         id="add-project-description"
-                                        class=move || {
-                                            let at_max = description.get().len() >= 500;
-                                            format!(
-                                                "textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none min-h-[4rem] {}",
-                                                if at_max { "hover:border-error" } else { "" }
-                                            )
-                                        }
+                                        class="textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none min-h-[4rem] validator"
+                                        required
+                                        maxlength="500"
+                                        placeholder="Short project description"
                                         on:input=move |ev| {
                                             set_description.set(event_target_value(&ev));
                                             set_errors.update(|errs| errs.description = None);
                                         }
                                         disabled=move || is_submitting.get()
                                     ></textarea>
-                                    {move || errors.get().description.map(|msg| view! {
-                                        <p class="text-error text-xs mt-1">{msg}</p>
-                                    })}
+                                    {move || {
+                                        let errs = errors.get();
+                                        let base = "validator-hint text-error text-xs mt-1";
+                                        if let Some(msg) = errs.description {
+                                            Some(view! {
+                                                <p class=base>{msg}</p>
+                                            })
+                                        } else if description.get().len() >= 500 {
+                                            Some(view! {
+                                                <p class=base>{"Description must be 500 characters or fewer.".to_string()}</p>
+                                            })
+                                        } else {
+                                            None
+                                        }
+                                    }}
                                 </div>
 
                                 <div>
