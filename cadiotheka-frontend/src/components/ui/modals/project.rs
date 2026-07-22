@@ -810,8 +810,8 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                 .into_any()
                         } else {
                             view! {
-                                <div class="flex items-start gap-2">
-                                    <p class="text-base-content/70 text-sm whitespace-pre-wrap flex-1">{description.get()}</p>
+                                <div class="flex items-center gap-2">
+                                    <p class="text-base-content/70 text-sm whitespace-pre-wrap">{description.get()}</p>
                                     {move || is_editable.get().then(|| view! {
                                         <button
                                             type="button"
