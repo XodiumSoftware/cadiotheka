@@ -19,6 +19,10 @@ const MAX_ICON_KEY_LENGTH: usize = 200;
 const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
 /// Maximum allowed size for an uploaded project icon, in bytes.
 const MAX_ICON_SIZE_BYTES: usize = 5 * 1024 * 1024; // 5 MiB
+/// Minimum allowed width or height for an uploaded icon, in pixels.
+const MIN_ICON_DIMENSION: u32 = 64;
+/// Maximum allowed width or height for an uploaded icon, in pixels.
+const MAX_ICON_DIMENSION: u32 = 2048;
 
 /// Validates the project payload and returns a map of field names to error
 /// messages. An empty map means the payload is valid.
@@ -386,6 +390,47 @@ fn icon_content_type(bytes: &[u8]) -> Option<&'static str> {
     }
 }
 
+/// Reads image dimensions from PNG or JPEG magic bytes without pulling in a
+/// full image parsing dependency.
+fn icon_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
+    if bytes.starts_with(b"\x89PNG\r\n\x1a\n") && bytes.len() >= 24 {
+        let width = u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]);
+        let height = u32::from_be_bytes([bytes[20], bytes[21], bytes[22], bytes[23]]);
+        return Some((width, height));
+    }
+
+    if bytes.starts_with(&[0xff, 0xd8, 0xff]) {
+        let mut i = 2;
+        while i + 9 < bytes.len() {
+            if bytes[i] != 0xff {
+                i += 1;
+                continue;
+            }
+            let marker = bytes[i + 1];
+            if marker == 0xd9 || marker == 0xd8 {
+                i += 2;
+                continue;
+            }
+            if i + 4 >= bytes.len() {
+                break;
+            }
+            let segment_length = u16::from_be_bytes([bytes[i + 2], bytes[i + 3]]) as usize;
+            if segment_length < 2 {
+                break;
+            }
+            // SOF0 (baseline) and SOF2 (progressive) markers contain dimensions.
+            if (marker == 0xc0 || marker == 0xc2) && i + 9 < bytes.len() {
+                let height = u16::from_be_bytes([bytes[i + 5], bytes[i + 6]]) as u32;
+                let width = u16::from_be_bytes([bytes[i + 7], bytes[i + 8]]) as u32;
+                return Some((width, height));
+            }
+            i += 2 + segment_length;
+        }
+    }
+
+    None
+}
+
 /// Handles a multipart upload of a project icon, validates it, stores it in R2,
 /// and updates the project's `icon_url` column with the R2 object key.
 pub async fn upload_project_icon(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
@@ -416,6 +461,21 @@ pub async fn upload_project_icon(mut req: Request, ctx: RouteContext<()>) -> Res
 
     let content_type = icon_content_type(&bytes)
         .ok_or_else(|| worker::Error::RustError("Icon must be PNG, JPEG, or WebP".into()))?;
+
+    if let Some((width, height)) = icon_dimensions(&bytes) {
+        if width < MIN_ICON_DIMENSION
+            || height < MIN_ICON_DIMENSION
+            || width > MAX_ICON_DIMENSION
+            || height > MAX_ICON_DIMENSION
+        {
+            return error_response(
+                "Icon dimensions must be between 64x64 and 2048x2048 pixels",
+                400,
+            );
+        }
+    } else {
+        return error_response("Could not read icon dimensions", 400);
+    }
 
     let old_key = project.icon_url.clone();
     let key = format!("icons/{id}/icon");
