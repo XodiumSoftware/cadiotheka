@@ -38,7 +38,7 @@ pub fn ProjectModal() -> impl IntoView {
         <SearchModal
             open=modal.open
             on_close=on_close
-            container_class="w-full max-w-6xl max-h-[90vh] flex flex-col"
+            container_class="w-full max-w-6xl h-full max-h-[90vh] flex flex-col"
         >
             {move || {
                 let maybe_card = modal.card.get();
@@ -592,7 +592,7 @@ fn ProjectModalContent(
     let platforms = supported_platforms;
 
     view! {
-        <div class="space-y-4 flex flex-col min-h-0 overflow-hidden">
+        <div class="flex flex-col h-full min-h-0 overflow-hidden gap-4">
             <div class="flex items-start gap-4 relative">
                 <div class="relative flex-shrink-0">
                     <input
