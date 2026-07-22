@@ -42,7 +42,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     let search = SearchContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
 
-    let (focused_index, set_focused_index) = signal::<Option<usize>>(None);
+    let (focused_index, set_focused_index) = signal::<Option<usize>>(Some(0));
 
     let filtered = Memo::new(move |_| {
         let query = search.query.get();
@@ -233,20 +233,18 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                             >
                                 {move || {
                                     if query_active {
-                                        let index = 0;
-                                        let focused = focused_index.get() == Some(index);
                                         Some(view! {
                                             <button
                                                 type="button"
                                                 class=move || {
                                                     let base = "group btn-lift flex flex-col items-center justify-center h-full w-full bg-white hover:border-primary hover:text-primary border-2 border-base-content/80 p-2 text-left";
-                                                    if focused {
+                                                    if focused_index.get() == Some(0) {
                                                         format!("{} ring-2 ring-primary ring-offset-2 ring-offset-base-100", base)
                                                     } else {
                                                         base.to_string()
                                                     }
                                                 }
-                                                tabindex=move || if focused { "0" } else { "-1" }
+                                                tabindex=move || if focused_index.get() == Some(0) { "0" } else { "-1" }
                                                 on:keydown=move |ev| handle_grid_keydown.run(ev)
                                                 on:click=move |_| search.set_query.set(String::new())
                                             >
