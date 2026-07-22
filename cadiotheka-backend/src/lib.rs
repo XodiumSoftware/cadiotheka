@@ -8,6 +8,26 @@ pub(crate) const ICONS_R2_BINDING: &str = "PI";
 /// Origins allowed to call the API from a browser.
 const ALLOWED_ORIGINS: &[&str] = &["https://cadiotheka.com", "https://www.cadiotheka.com"];
 
+/// Backend route paths.
+pub(crate) mod routes {
+    pub(crate) const AUTH_PREFIX: &str = "/auth/";
+    pub(crate) const ACCOUNTS: &str = "/data/accounts";
+    pub(crate) const ACCOUNT: &str = "/data/accounts/:id";
+    pub(crate) const PROJECTS: &str = "/data/projects";
+    pub(crate) const PROJECT: &str = "/data/projects/:id";
+    pub(crate) const PROJECT_FAVORITES: &str = "/data/projects/:id/favorites";
+    pub(crate) const PROJECT_ICON: &str = "/data/projects/:id/icon";
+    pub(crate) const ICONS: &str = "/data/icons/:project_id/:icon_id";
+    pub(crate) const LOGIN_GITHUB: &str = "/login/github";
+    pub(crate) const AUTH_GITHUB_CALLBACK: &str = "/auth/github/callback";
+    pub(crate) const LOGIN_GOOGLE: &str = "/login/google";
+    pub(crate) const AUTH_GOOGLE_CALLBACK: &str = "/auth/google/callback";
+    pub(crate) const AUTH_LINKED_PROVIDERS: &str = "/auth/linked-providers";
+    pub(crate) const AUTH_LINKED_PROVIDER: &str = "/auth/linked-providers/:provider";
+    pub(crate) const AUTH_ME: &str = "/auth/me";
+    pub(crate) const AUTH_LOGOUT: &str = "/auth/logout";
+}
+
 mod utils;
 
 mod api {
@@ -100,51 +120,45 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let is_login_route = path.starts_with("/login/");
 
     let result = router
-        .get_async("/data/accounts", api::accounts::list_accounts)
-        .post_async("/data/accounts", api::accounts::create_account)
-        .get_async("/data/accounts/:id", api::accounts::read_account)
-        .put_async("/data/accounts/:id", api::accounts::update_account)
-        .delete_async("/data/accounts/:id", api::accounts::delete_account)
-        .get_async("/data/projects", api::projects::list_projects)
-        .post_async("/data/projects", api::projects::create_project)
-        .get_async("/data/projects/:id", api::projects::read_project)
+        .get_async(routes::ACCOUNTS, api::accounts::list_accounts)
+        .post_async(routes::ACCOUNTS, api::accounts::create_account)
+        .get_async(routes::ACCOUNT, api::accounts::read_account)
+        .put_async(routes::ACCOUNT, api::accounts::update_account)
+        .delete_async(routes::ACCOUNT, api::accounts::delete_account)
+        .get_async(routes::PROJECTS, api::projects::list_projects)
+        .post_async(routes::PROJECTS, api::projects::create_project)
+        .get_async(routes::PROJECT, api::projects::read_project)
         .post_async(
-            "/data/projects/:id/favorites",
+            routes::PROJECT_FAVORITES,
             api::projects::toggle_project_favorite,
         )
-        .post_async(
-            "/data/projects/:id/icon",
-            api::projects::upload_project_icon,
-        )
+        .post_async(routes::PROJECT_ICON, api::projects::upload_project_icon)
+        .get_async(routes::ICONS, api::projects::serve_icon)
+        .patch_async(routes::PROJECT, api::projects::patch_project)
+        .put_async(routes::PROJECT, api::projects::update_project)
+        .delete_async(routes::PROJECT, api::projects::delete_project)
+        .get_async(routes::LOGIN_GITHUB, api::auth::github_login)
+        .get_async(routes::AUTH_GITHUB_CALLBACK, api::auth::github_callback)
+        .get_async(routes::LOGIN_GOOGLE, api::auth::google_login)
+        .get_async(routes::AUTH_GOOGLE_CALLBACK, api::auth::google_callback)
         .get_async(
-            "/data/icons/:project_id/:icon_id",
-            api::projects::serve_icon,
-        )
-        .patch_async("/data/projects/:id", api::projects::patch_project)
-        .put_async("/data/projects/:id", api::projects::update_project)
-        .delete_async("/data/projects/:id", api::projects::delete_project)
-        .get_async("/login/github", api::auth::github_login)
-        .get_async("/auth/github/callback", api::auth::github_callback)
-        .get_async("/login/google", api::auth::google_login)
-        .get_async("/auth/google/callback", api::auth::google_callback)
-        .get_async(
-            "/auth/linked-providers",
+            routes::AUTH_LINKED_PROVIDERS,
             api::accounts::list_linked_providers,
         )
-        .delete_async(
-            "/auth/linked-providers/:provider",
-            api::accounts::unlink_provider,
-        )
-        .get_async("/auth/me", api::session::me)
-        .put_async("/auth/me", api::session::update_me)
-        .get_async("/auth/logout", api::session::logout)
+        .delete_async(routes::AUTH_LINKED_PROVIDER, api::accounts::unlink_provider)
+        .get_async(routes::AUTH_ME, api::session::me)
+        .put_async(routes::AUTH_ME, api::session::update_me)
+        .get_async(routes::AUTH_LOGOUT, api::session::logout)
         .run(req, env)
         .await;
 
     match result {
         Ok(resp) => {
             let is_redirect = (300..400).contains(&resp.status_code());
-            if is_data_route || is_login_route || (!is_redirect && path.starts_with("/auth/")) {
+            if is_data_route
+                || is_login_route
+                || (!is_redirect && path.starts_with(routes::AUTH_PREFIX))
+            {
                 add_cors_headers(resp, &origin)
             } else {
                 Ok(resp)

@@ -112,9 +112,12 @@ async fn login_url(
         .set_auth_uri(AuthUrl::new(provider.auth_url().to_string()).map_err(rust_err)?);
 
     let redirect_uri = RedirectUrl::new(format!(
-        "{}/auth/{}/callback",
+        "{}{}",
         public_origin(&req),
-        provider.as_str()
+        match provider {
+            Provider::GitHub => crate::routes::AUTH_GITHUB_CALLBACK,
+            Provider::Google => crate::routes::AUTH_GOOGLE_CALLBACK,
+        }
     ))
     .map_err(rust_err)?;
 
@@ -245,7 +248,14 @@ async fn exchange_code(
     let client_id = ctx.env.secret(provider.credentials().0)?.to_string();
     let client_secret = ctx.env.secret(provider.credentials().1)?.to_string();
 
-    let redirect_uri = format!("{}/auth/{}/callback", public_origin(req), provider.as_str());
+    let redirect_uri = format!(
+        "{}{}",
+        public_origin(req),
+        match provider {
+            Provider::GitHub => crate::routes::AUTH_GITHUB_CALLBACK,
+            Provider::Google => crate::routes::AUTH_GOOGLE_CALLBACK,
+        }
+    );
 
     let body = serde_urlencoded::to_string([
         ("grant_type", "authorization_code"),
