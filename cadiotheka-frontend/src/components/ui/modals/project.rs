@@ -1428,26 +1428,22 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                     {move || {
                         if is_editable.get() && edit_mode.get() {
                             view! {
-                                <div class="border border-error/30 bg-error/10 p-4 space-y-3">
-                                    <div class="flex items-start gap-3">
-                                        {warning_icon("w-5 h-5 text-error flex-shrink-0 mt-0.5")}
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-semibold text-error">{"Danger zone"}</p>
-                                            <p class="text-sm text-base-content/80">
-                                                {"Deleting this project cannot be undone."}
-                                            </p>
-                                        </div>
-                                    </div>
-
+                                <div class="border border-error/30 bg-error/10 p-4">
                                     {move || {
                                         if show_delete_confirm.get() {
                                             view! {
                                                 <div class="space-y-3">
-                                                    <label class="block text-sm text-base-content" for="delete-confirm-input">
-                                                        {"Type "}
-                                                        <span class="font-semibold text-error">{title.get()}</span>
-                                                        {" to confirm"}
-                                                    </label>
+                                                    <div class="flex items-start gap-3">
+                                                        {warning_icon("w-5 h-5 text-error flex-shrink-0 mt-0.5")}
+                                                        <div class="flex-1 min-w-0">
+                                                            <p class="text-sm font-semibold text-error">{"Danger zone"}</p>
+                                                            <p class="text-sm text-base-content/80">
+                                                                {"Deleting this project cannot be undone. Type "}
+                                                                <span class="font-semibold text-error">{title.get()}</span>
+                                                                {" to confirm."}
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                     <input
                                                         id="delete-confirm-input"
                                                         type="text"
@@ -1501,12 +1497,14 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                             view! {
                                                 <button
                                                     type="button"
-                                                    class="btn btn-outline btn-error btn-xs"
+                                                    class="group w-full flex flex-col items-center justify-center gap-2 py-2 text-error hover:text-error-content transition-colors"
                                                     on:click=move |_| set_show_delete_confirm.set(true)
                                                 >
-                                                    <span class="flex items-center gap-1">
+                                                    {warning_icon("w-6 h-6")}
+                                                    <span class="font-semibold text-sm">{"Danger zone"}</span>
+                                                    <span class="text-xs text-error/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                                                         {trash_icon("w-3.5 h-3.5")}
-                                                        <span>{"Delete project"}</span>
+                                                        {"Click to delete project"}
                                                     </span>
                                                 </button>
                                             }
