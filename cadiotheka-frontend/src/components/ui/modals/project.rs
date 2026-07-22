@@ -243,6 +243,8 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     let icon_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (icon_url, set_icon_url) = signal(card.icon_url.clone());
 
+    let (edit_mode, set_edit_mode) = signal(false);
+
     let project_id = card.id.clone();
 
     let start_edit_title = move || {
@@ -303,6 +305,19 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     let cancel_edit_collaborators = move || {
         set_draft_collaborator_ids.set(collaborator_ids.get());
         set_editing_collaborators.set(false);
+    };
+
+    let toggle_edit_mode = move || {
+        let next = !edit_mode.get();
+        set_edit_mode.set(next);
+        if !next {
+            cancel_edit_title();
+            cancel_edit_description();
+            cancel_edit_tags();
+            cancel_edit_platforms();
+            cancel_edit_extended();
+            cancel_edit_collaborators();
+        }
     };
 
     let commit_edit_title = {
@@ -672,7 +687,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                             <ProjectIconPicker
                                 icon_url={move || icon_url.get()}
                                 title=move || title.get()
-                                editable={Signal::derive(move || is_editable.get())}
+                                editable={Signal::derive(move || is_editable.get() && edit_mode.get())}
                                 on_click=move |_| {
                                     if let Some(input) = icon_input_ref.get() {
                                         input.click();
@@ -744,8 +759,8 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                         data-tip={title.get()}
                                     >
                                         {title.get()}
-                                    </h2>
-                                    {move || is_editable.get().then(|| view! {
+                                        </h2>
+                                        {move || (is_editable.get() && edit_mode.get()).then(|| view! {
                                         <button
                                             type="button"
                                             class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary"
@@ -812,7 +827,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                             view! {
                                 <div class="flex items-center gap-2">
                                     <p class="text-base-content/70 text-sm whitespace-pre-wrap">{description.get()}</p>
-                                    {move || is_editable.get().then(|| view! {
+                                    {move || (is_editable.get() && edit_mode.get()).then(|| view! {
                                         <button
                                             type="button"
                                             class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary flex-shrink-0"
@@ -860,7 +875,24 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                         <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
                         <span>{move || favorite_count.get().to_string()}</span>
                     </button>
-                    <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
+                    {move || (is_editable.get() && edit_mode.get()).then(|| view! {
+                    <button
+                        type="button"
+                        class=move || {
+                            if edit_mode.get() {
+                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-primary tooltip tooltip-bottom"
+                            } else {
+                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                            }
+                        }
+                        aria-label=move || if edit_mode.get() { "Leave edit mode" } else { "Enter edit mode" }
+                        data-tip=move || if edit_mode.get() { "Done editing" } else { "Edit project" }
+                        on:click=move |_| toggle_edit_mode()
+                    >
+                        {edit_pencil_icon("w-4 h-4")}
+                    </button>
+                }.into_any())}
+                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
                     <span class="text-base-content/50">to close</span>
                 </div>
             </div>
@@ -907,7 +939,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     } else {
                                         view! {
                                             {move || {
-                                                if is_editable.get() {
+                                                if is_editable.get() && edit_mode.get() {
                                                     view! {
                                                         <button
                                                             type="button"
@@ -978,7 +1010,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     } else {
                                         view! {
                                             {move || {
-                                                if is_editable.get() {
+                                                if is_editable.get() && edit_mode.get() {
                                                     view! {
                                                         <button
                                                             type="button"
@@ -1058,7 +1090,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     } else {
                                         view! {
                                             {move || {
-                                                if is_editable.get() {
+                                                if is_editable.get() && edit_mode.get() {
                                                     view! {
                                                         <button
                                                             type="button"
@@ -1261,7 +1293,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                     .cloned()
                                                     .collect::<Vec<_>>();
 
-                                                if is_editable.get() {
+                                                if is_editable.get() && edit_mode.get() {
                                                     let collaborators = current_collaborators.clone();
                                                     view! {
                                                         <button
