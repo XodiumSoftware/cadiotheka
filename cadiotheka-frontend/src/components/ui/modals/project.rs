@@ -1049,11 +1049,10 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                         <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
 
                         <div class="space-y-4">
-                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                                <h3 class="text-sm font-semibold text-base-content mb-3">"Supported platforms"</h3>
-                                {move || {
-                                    if editing_platforms.get() {
-                                        view! {
+                            {move || {
+                                if editing_platforms.get() {
+                                    view! {
+                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
                                             <EditableChipSection
                                                 title="Supported platforms"
                                                 aria_label="Supported platforms"
@@ -1069,71 +1068,67 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                 selected_items=draft_platforms.into()
                                                 badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
                                             />
-                                        }
-                                            .into_any()
-                                    } else {
-                                        view! {
-                                            {move || {
-                                                if is_editable.get() && edit_mode.get() {
+                                        </div>
+                                    }
+                                        .into_any()
+                                } else if is_editable.get() && edit_mode.get() {
+                                    view! {
+                                        <button
+                                            type="button"
+                                            class="group relative text-left w-full rounded-none border border-base-content/20 p-4 hover:border-primary transition-colors cursor-pointer"
+                                            aria-label="Edit supported platforms"
+                                            on:click=move |_| start_edit_platforms()
+                                        >
+                                            <span class="text-sm font-semibold text-base-content mb-3 block">"Supported platforms"</span>
+                                            <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
+                                                {supported_platforms.get().iter().map(|item| {
+                                                    view! {
+                                                        <span class=format!(
+                                                            "badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap {}",
+                                                            crate::metadata::platforms::platform_color(item)
+                                                        )>
+                                                            {crate::metadata::platforms::platform_label(item)}
+                                                        </span>
+                                                    }
+                                                }).collect_view()}
+                                            </div>
+                                            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {edit_pencil_icon("w-5 h-5 text-primary")}
+                                            </div>
+                                        </button>
+                                    }
+                                        .into_any()
+                                } else {
+                                    view! {
+                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                            <h3 class="text-sm font-semibold text-base-content mb-3">"Supported platforms"</h3>
+                                            <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
+                                                {supported_platforms.get().iter().map(|item| {
+                                                    let item_for_click = *item;
                                                     view! {
                                                         <button
                                                             type="button"
-                                                            class="group relative text-left w-full border border-base-content/20 rounded-none p-2 hover:border-primary transition-colors cursor-pointer"
-                                                            aria-label="Edit supported platforms"
-                                                            on:click=move |_| start_edit_platforms()
+                                                            class=format!(
+                                                                "badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer {}",
+                                                                crate::metadata::platforms::platform_color(item)
+                                                            )
+                                                            on:click=move |_| apply_filter.run(crate::metadata::platforms::platform_label(&item_for_click).to_string())
                                                         >
-                                                            <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                                                {supported_platforms.get().iter().map(|item| {
-                                                                    view! {
-                                                                        <span class=format!(
-                                                                            "badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap {}",
-                                                                            crate::metadata::platforms::platform_color(item)
-                                                                        )>
-                                                                            {crate::metadata::platforms::platform_label(item)}
-                                                                        </span>
-                                                                    }
-                                                                }).collect_view()}
-                                                            </div>
-                                                            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                {edit_pencil_icon("w-5 h-5 text-primary")}
-                                                            </div>
+                                                            {crate::metadata::platforms::platform_label(item)}
                                                         </button>
                                                     }
-                                                        .into_any()
-                                                } else {
-                                                    view! {
-                                                        <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                                            {supported_platforms.get().iter().map(|item| {
-                                                                let item_for_click = *item;
-                                                                view! {
-                                                                    <button
-                                                                        type="button"
-                                                                        class=format!(
-                                                                            "badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer {}",
-                                                                            crate::metadata::platforms::platform_color(item)
-                                                                        )
-                                                                        on:click=move |_| apply_filter.run(crate::metadata::platforms::platform_label(&item_for_click).to_string())
-                                                                    >
-                                                                        {crate::metadata::platforms::platform_label(item)}
-                                                                    </button>
-                                                                }
-                                                            }).collect_view()}
-                                                        </div>
-                                                    }
-                                                        .into_any()
-                                                }
-                                            }}
-                                        }
-                                            .into_any()
+                                                }).collect_view()}
+                                            </div>
+                                        </div>
                                     }
-                                }}
-                            </div>
+                                        .into_any()
+                                }
+                            }}
 
-                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                                <h3 class="text-sm font-semibold text-base-content mb-3">"Tags"</h3>
-                                {move || {
-                                    if editing_tags.get() {
-                                        view! {
+                            {move || {
+                                if editing_tags.get() {
+                                    view! {
+                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
                                             <EditableChipSection
                                                 title="Tags"
                                                 aria_label="Tags"
@@ -1149,279 +1144,272 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                 selected_items=draft_tags.into()
                                                 badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
                                             />
-                                        }
-                                            .into_any()
-                                    } else {
-                                        view! {
-                                            {move || {
-                                                if is_editable.get() && edit_mode.get() {
+                                        </div>
+                                    }
+                                        .into_any()
+                                } else if is_editable.get() && edit_mode.get() {
+                                    view! {
+                                        <button
+                                            type="button"
+                                            class="group relative text-left w-full rounded-none border border-base-content/20 p-4 hover:border-primary transition-colors cursor-pointer"
+                                            aria-label="Edit tags"
+                                            on:click=move |_| start_edit_tags()
+                                        >
+                                            <span class="text-sm font-semibold text-base-content mb-3 block">"Tags"</span>
+                                            <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
+                                                {tags.get().iter().map(|item| {
+                                                    view! {
+                                                        <span class=format!(
+                                                            "badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap {}",
+                                                            crate::metadata::tags::tag_color(item)
+                                                        )>
+                                                            {crate::metadata::tags::tag_label(item)}
+                                                        </span>
+                                                    }
+                                                }).collect_view()}
+                                            </div>
+                                            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {edit_pencil_icon("w-5 h-5 text-primary")}
+                                            </div>
+                                        </button>
+                                    }
+                                        .into_any()
+                                } else {
+                                    view! {
+                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                            <h3 class="text-sm font-semibold text-base-content mb-3">"Tags"</h3>
+                                            <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
+                                                {tags.get().iter().map(|item| {
+                                                    let item_for_click = *item;
                                                     view! {
                                                         <button
                                                             type="button"
-                                                            class="group relative text-left w-full border border-base-content/20 rounded-none p-2 hover:border-primary transition-colors cursor-pointer"
-                                                            aria-label="Edit tags"
-                                                            on:click=move |_| start_edit_tags()
+                                                            class=format!(
+                                                                "badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer {}",
+                                                                crate::metadata::tags::tag_color(item)
+                                                            )
+                                                            on:click=move |_| apply_filter.run(crate::metadata::tags::tag_label(&item_for_click).to_string())
                                                         >
-                                                            <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
-                                                                {tags.get().iter().map(|item| {
-                                                                    view! {
-                                                                        <span class=format!(
-                                                                            "badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap {}",
-                                                                            crate::metadata::tags::tag_color(item)
-                                                                        )>
-                                                                            {crate::metadata::tags::tag_label(item)}
-                                                                        </span>
-                                                                    }
-                                                                }).collect_view()}
-                                                            </div>
-                                                            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                {edit_pencil_icon("w-5 h-5 text-primary")}
-                                                            </div>
+                                                            {crate::metadata::tags::tag_label(item)}
                                                         </button>
                                                     }
-                                                        .into_any()
-                                                } else {
+                                                }).collect_view()}
+                                            </div>
+                                        </div>
+                                    }
+                                        .into_any()
+                                }
+                            }}
+
+                            {move || {
+                                let all_accounts = accounts.accounts.get();
+                                let author_id = author_id.clone();
+
+                                if editing_collaborators.get() {
+                                    let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
+                                    let all_accounts_for_select = all_accounts.clone();
+                                    let (add_open, set_add_open) = signal(false);
+                                    let add_open_signal = Signal::derive(move || add_open.get());
+                                    let draft_query = RwSignal::new(String::new());
+                                    let selectable_accounts = Memo::new(move |_| {
+                                        let query = draft_query.get().to_lowercase();
+                                        let excluded_ids: std::collections::HashSet<String> = std::iter::once(author_id.clone())
+                                            .chain(draft_collaborator_ids.get().into_iter())
+                                            .collect();
+                                        all_accounts_for_select
+                                            .clone()
+                                            .into_iter()
+                                            .filter(|account| !excluded_ids.contains(&account.id))
+                                            .filter(|account| {
+                                                query.is_empty()
+                                                    || account.username.to_lowercase().contains(&query)
+                                                    || account.display_name.to_lowercase().contains(&query)
+                                            })
+                                            .collect::<Vec<_>>()
+                                    });
+
+                                    view! {
+                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                                            <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
+                                            <div class="flex flex-wrap gap-2 items-center">
+                                                {owner_account.as_ref().map(|account| {
+                                                    let account = account.clone();
                                                     view! {
-                                                        <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
-                                                            {tags.get().iter().map(|item| {
-                                                                let item_for_click = *item;
-                                                                view! {
-                                                                    <button
-                                                                        type="button"
-                                                                        class=format!(
-                                                                            "badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer {}",
-                                                                            crate::metadata::tags::tag_color(item)
-                                                                        )
-                                                                        on:click=move |_| apply_filter.run(crate::metadata::tags::tag_label(&item_for_click).to_string())
-                                                                    >
-                                                                        {crate::metadata::tags::tag_label(item)}
-                                                                    </button>
-                                                                }
-                                                            }).collect_view()}
+                                                        {avatar_button(&account, None)}
+                                                    }
+                                                })}
+                                                {draft_collaborator_ids.get().into_iter().filter_map(|id| {
+                                                    let all_accounts = all_accounts.clone();
+                                                    all_accounts.iter().find(|account| account.id == id).cloned()
+                                                }).map(|account| {
+                                                    let account_id = account.id.clone();
+                                                    let display_name = account.display_name.clone();
+                                                    view! {
+                                                        <div class="relative group">
+                                                            {avatar_button(&account, None)}
+                                                            <button
+                                                                type="button"
+                                                                class="absolute inset-0 flex items-center justify-center bg-error/80 opacity-0 group-hover:opacity-100 transition-opacity text-white tooltip tooltip-top"
+                                                                data-tip={format!("Remove {}", display_name)}
+                                                                aria-label={format!("Remove {}", display_name)}
+                                                                on:click=move |_| remove_collaborator.run(account_id.clone())
+                                                            >
+                                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                                </svg>
+                                                            </button>
                                                         </div>
                                                     }
-                                                        .into_any()
-                                                }
-                                            }}
-                                        }
-                                            .into_any()
-                                    }
-                                }}
-                            </div>
+                                                }).collect_view()}
+                                                <button
+                                                    type="button"
+                                                    class="w-12 h-12 border border-dashed border-base-content/30 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors tooltip tooltip-top"
+                                                    aria-label="Add collaborator"
+                                                    data-tip="Add collaborator"
+                                                    on:click=move |_| set_add_open.set(true)
+                                                >
+                                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div class="flex justify-end gap-2">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-ghost btn-xs"
+                                                    on:click=move |_| cancel_edit_collaborators()
+                                                >"Cancel"</button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-primary btn-xs"
+                                                    on:click=move |_| commit_edit_collaborators.run(draft_collaborator_ids.get())
+                                                >"Save"</button>
+                                            </div>
+                                            <SearchModal
+                                                open=add_open_signal
+                                                on_close=Callback::new(move |_| set_add_open.set(false))
+                                            >
+                                                <div class="space-y-3">
+                                                    <h3 class="text-sm font-semibold text-base-content">"Add collaborator"</h3>
+                                                    <input
+                                                        type="text"
+                                                        class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                                        placeholder="Search users..."
+                                                        prop:value=draft_query.get()
+                                                        on:input=move |ev| draft_query.set(event_target_value(&ev))
+                                                    />
+                                                    <div class="max-h-60 overflow-y-auto space-y-1">
+                                                        {move || {
+                                                            let accounts = selectable_accounts.get();
+                                                            if accounts.is_empty() {
+                                                                view! {
+                                                                    <p class="text-sm text-error py-2">"No users found."</p>
+                                                                }.into_any()
+                                                            } else {
+                                                                view! {
+                                                                    <div class="flex flex-wrap gap-2">
+                                                                        {accounts.into_iter().map(|account| {
+                                                                            let account_id = account.id.clone();
+                                                                            let display_name = account.display_name.clone();
+                                                                            view! {
+                                                                                <button
+                                                                                    type="button"
+                                                                                    class="flex items-center gap-2 px-2 py-1 border border-base-content/10 hover:border-primary/40 transition-colors"
+                                                                                    on:click=move |_| {
+                                                                                        add_collaborator.run(account_id.clone());
+                                                                                        set_add_open.set(false);
+                                                                                    }
+                                                                                >
+                                                                                    {avatar_button(&account, Some("w-8 h-8".to_string()))}
+                                                                                    <span class="text-sm text-base-content">{display_name.clone()}</span>
+                                                                                    <span class="text-xs text-base-content/50">{format!("@{}", account.username)}</span>
+                                                                                </button>
+                                                                            }
+                                                                        }).collect_view()}
+                                                                    </div>
+                                                                }.into_any()
+                                                            }
+                                                        }}
+                                                    </div>
+                                                </div>
+                                            </SearchModal>
+                                        </div>
+                                    }.into_any()
+                                } else {
+                                    let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
+                                    let current_collaborators = all_accounts
+                                        .iter()
+                                        .filter(|account| collaborator_ids.get().contains(&account.id))
+                                        .cloned()
+                                        .collect::<Vec<_>>();
 
-                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
-                                <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
-                                {move || {
-                                    let all_accounts = accounts.accounts.get();
-                                    let author_id = author_id.clone();
-
-                                    if editing_collaborators.get() {
-                                        let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
-                                        let all_accounts_for_select = all_accounts.clone();
-                                        let (add_open, set_add_open) = signal(false);
-                                        let add_open_signal = Signal::derive(move || add_open.get());
-                                        let draft_query = RwSignal::new(String::new());
-                                        let selectable_accounts = Memo::new(move |_| {
-                                            let query = draft_query.get().to_lowercase();
-                                            let excluded_ids: std::collections::HashSet<String> = std::iter::once(author_id.clone())
-                                                .chain(draft_collaborator_ids.get().into_iter())
-                                                .collect();
-                                            all_accounts_for_select
-                                                .clone()
-                                                .into_iter()
-                                                .filter(|account| !excluded_ids.contains(&account.id))
-                                                .filter(|account| {
-                                                    query.is_empty()
-                                                        || account.username.to_lowercase().contains(&query)
-                                                        || account.display_name.to_lowercase().contains(&query)
-                                                })
-                                                .collect::<Vec<_>>()
-                                        });
-
+                                    if is_editable.get() && edit_mode.get() {
+                                        let collaborators = current_collaborators.clone();
                                         view! {
-                                            <div class="space-y-3">
-                                                <div class="flex flex-wrap gap-2 items-center">
+                                            <button
+                                                type="button"
+                                                class="group relative text-left w-full rounded-none border border-base-content/20 p-4 hover:border-primary transition-colors cursor-pointer"
+                                                aria-label="Edit authors"
+                                                on:click=move |_| start_edit_collaborators()
+                                            >
+                                                <span class="text-sm font-semibold text-base-content mb-3 block">"Authors"</span>
+                                                <div class="flex flex-wrap gap-2">
                                                     {owner_account.as_ref().map(|account| {
                                                         let account = account.clone();
                                                         view! {
                                                             {avatar_button(&account, None)}
                                                         }
                                                     })}
-                                                    {draft_collaborator_ids.get().into_iter().filter_map(|id| {
-                                                        let all_accounts = all_accounts.clone();
-                                                        all_accounts.iter().find(|account| account.id == id).cloned()
-                                                    }).map(|account| {
-                                                        let account_id = account.id.clone();
-                                                        let display_name = account.display_name.clone();
+                                                    {collaborators.into_iter().map(|account| {
                                                         view! {
-                                                            <div class="relative group">
-                                                                {avatar_button(&account, None)}
-                                                                <button
-                                                                    type="button"
-                                                                    class="absolute inset-0 flex items-center justify-center bg-error/80 opacity-0 group-hover:opacity-100 transition-opacity text-white tooltip tooltip-top"
-                                                                    data-tip={format!("Remove {}", display_name)}
-                                                                    aria-label={format!("Remove {}", display_name)}
-                                                                    on:click=move |_| remove_collaborator.run(account_id.clone())
-                                                                >
-                                                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                        <line x1="5" y1="12" x2="19" y2="12" />
-                                                                    </svg>
-                                                                </button>
-                                                            </div>
+                                                            {avatar_button(&account, None)}
                                                         }
                                                     }).collect_view()}
-                                                    <button
-                                                        type="button"
-                                                        class="w-12 h-12 border border-dashed border-base-content/30 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors tooltip tooltip-top"
-                                                        aria-label="Add collaborator"
-                                                        data-tip="Add collaborator"
-                                                        on:click=move |_| set_add_open.set(true)
-                                                    >
-                                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                            <line x1="12" y1="5" x2="12" y2="19" />
-                                                            <line x1="5" y1="12" x2="19" y2="12" />
-                                                        </svg>
-                                                    </button>
                                                 </div>
-                                                <div class="flex justify-end gap-2">
-                                                    <button
-                                                        type="button"
-                                                        class="btn btn-ghost btn-xs"
-                                                        on:click=move |_| cancel_edit_collaborators()
-                                                    >"Cancel"</button>
-                                                    <button
-                                                        type="button"
-                                                        class="btn btn-primary btn-xs"
-                                                        on:click=move |_| commit_edit_collaborators.run(draft_collaborator_ids.get())
-                                                    >"Save"</button>
+                                                <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {edit_pencil_icon("w-5 h-5 text-primary")}
                                                 </div>
-                                                <SearchModal
-                                                    open=add_open_signal
-                                                    on_close=Callback::new(move |_| set_add_open.set(false))
-                                                >
-                                                    <div class="space-y-3">
-                                                        <h3 class="text-sm font-semibold text-base-content">"Add collaborator"</h3>
-                                                        <input
-                                                            type="text"
-                                                            class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
-                                                            placeholder="Search users..."
-                                                            prop:value=draft_query.get()
-                                                            on:input=move |ev| draft_query.set(event_target_value(&ev))
-                                                        />
-                                                        <div class="max-h-60 overflow-y-auto space-y-1">
-                                                            {move || {
-                                                                let accounts = selectable_accounts.get();
-                                                                if accounts.is_empty() {
-                                                                    view! {
-                                                                        <p class="text-sm text-error py-2">"No users found."</p>
-                                                                    }.into_any()
-                                                                } else {
-                                                                    view! {
-                                                                        <div class="flex flex-wrap gap-2">
-                                                                            {accounts.into_iter().map(|account| {
-                                                                                let account_id = account.id.clone();
-                                                                                let display_name = account.display_name.clone();
-                                                                                view! {
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        class="flex items-center gap-2 px-2 py-1 border border-base-content/10 hover:border-primary/40 transition-colors"
-                                                                                        on:click=move |_| {
-                                                                                            add_collaborator.run(account_id.clone());
-                                                                                            set_add_open.set(false);
-                                                                                        }
-                                                                                    >
-                                                                                        {avatar_button(&account, Some("w-8 h-8".to_string()))}
-                                                                                        <span class="text-sm text-base-content">{display_name.clone()}</span>
-                                                                                        <span class="text-xs text-base-content/50">{format!("@{}", account.username)}</span>
-                                                                                    </button>
-                                                                                }
-                                                                            }).collect_view()}
-                                                                        </div>
-                                                                    }.into_any()
-                                                                }
-                                                            }}
-                                                        </div>
-                                                    </div>
-                                                </SearchModal>
-                                            </div>
+                                            </button>
                                         }.into_any()
                                     } else {
+                                        let collaborators = current_collaborators.clone();
                                         view! {
-                                            {move || {
-                                                let all_accounts = accounts.accounts.get();
-                                                let author_id = author_id.clone();
-                                                let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
-                                                let current_collaborators = all_accounts
-                                                    .iter()
-                                                    .filter(|account| collaborator_ids.get().contains(&account.id))
-                                                    .cloned()
-                                                    .collect::<Vec<_>>();
-
-                                                if is_editable.get() && edit_mode.get() {
-                                                    let collaborators = current_collaborators.clone();
-                                                    view! {
-                                                        <button
-                                                            type="button"
-                                                            class="group relative text-left w-full border border-base-content/20 rounded-none p-2 hover:border-primary transition-colors cursor-pointer"
-                                                            aria-label="Edit collaborators"
-                                                            on:click=move |_| start_edit_collaborators()
-                                                        >
-                                                            <div class="flex flex-wrap gap-2">
-                                                                {owner_account.as_ref().map(|account| {
-                                                                    let account = account.clone();
-                                                                    view! {
-                                                                        {avatar_button(&account, None)}
-                                                                    }
-                                                                })}
-                                                                {collaborators.into_iter().map(|account| {
-                                                                    view! {
-                                                                        {avatar_button(&account, None)}
-                                                                    }
-                                                                }).collect_view()}
-                                                            </div>
-                                                            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                {edit_pencil_icon("w-5 h-5 text-primary")}
-                                                            </div>
-                                                        </button>
-                                                    }.into_any()
-                                                } else {
-                                                    let collaborators = current_collaborators.clone();
-                                                    view! {
-                                                        <div class="flex flex-wrap gap-2">
-                                                            {owner_account.as_ref().map(|account| {
-                                                                let account_for_click = account.clone();
-                                                                view! {
-                                                                    <button
-                                                                        type="button"
-                                                                        on:click=move |_| {
-                                                                            profile_modal.open(account_for_click.clone());
-                                                                        }
-                                                                    >
-                                                                        {avatar_button(account, None)}
-                                                                    </button>
+                                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                                                <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
+                                                <div class="flex flex-wrap gap-2">
+                                                    {owner_account.as_ref().map(|account| {
+                                                        let account_for_click = account.clone();
+                                                        view! {
+                                                            <button
+                                                                type="button"
+                                                                on:click=move |_| {
+                                                                    profile_modal.open(account_for_click.clone());
                                                                 }
-                                                            })}
-                                                            {collaborators.into_iter().map(|account| {
-                                                                let account_for_click = account.clone();
-                                                                view! {
-                                                                    <button
-                                                                        type="button"
-                                                                        on:click=move |_| {
-                                                                            profile_modal.open(account_for_click.clone());
-                                                                        }
-                                                                    >
-                                                                        {avatar_button(&account, None)}
-                                                                    </button>
+                                                            >
+                                                                {avatar_button(account, None)}
+                                                            </button>
+                                                        }
+                                                    })}
+                                                    {collaborators.into_iter().map(|account| {
+                                                        let account_for_click = account.clone();
+                                                        view! {
+                                                            <button
+                                                                type="button"
+                                                                on:click=move |_| {
+                                                                    profile_modal.open(account_for_click.clone());
                                                                 }
-                                                            }).collect_view()}
-                                                        </div>
-                                                    }.into_any()
-                                                }
-                                            }}
+                                                            >
+                                                                {avatar_button(&account, None)}
+                                                            </button>
+                                                        }
+                                                    }).collect_view()}
+                                                </div>
+                                            </div>
                                         }.into_any()
                                     }
-                                }}
-                            </div>
+                                }
+                            }}
 
                             {move || {
                                 if is_editable.get() && edit_mode.get() {
