@@ -114,6 +114,11 @@ jobs:
         with:
           toolchain: stable
 
+      - id: install_wasm_target
+        name: Install WASM Target
+        run: rustup target add wasm32-unknown-unknown
+        shell: bash
+
       - id: run_sccache_cache
         name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.10
