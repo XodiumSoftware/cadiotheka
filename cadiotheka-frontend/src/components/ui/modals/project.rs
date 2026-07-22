@@ -9,9 +9,8 @@ use crate::contexts::{
     SearchContext,
 };
 use crate::data::{
-    AccountData, AccountRole, update_project_collaborators, update_project_description,
-    update_project_extended_desc, update_project_platforms, update_project_tags,
-    update_project_title, upload_project_icon,
+    AccountData, AccountRole, ProjectPatch, update_project, update_project_platforms,
+    update_project_tags, upload_project_icon,
 };
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
@@ -193,10 +192,15 @@ fn ProjectModalContent(
     let modal = ProjectModalContext::use_context();
     let profile_modal = ProfileModalContext::use_context();
     let search = SearchContext::use_context();
-    let is_editable = current_user
-        .account
-        .get()
-        .is_some_and(|me| me.role == AccountRole::Admin || me.id == card.author_id);
+    let is_editable = Signal::derive({
+        let author_id = card.author_id.clone();
+        move || {
+            current_user
+                .account
+                .get()
+                .is_some_and(|me| me.role == AccountRole::Admin || me.id == author_id)
+        }
+    });
 
     let (active_tab, set_active_tab) = signal(ProjectDetailsTab::About);
     let (edit_mode, set_edit_mode) = signal(false);
@@ -391,39 +395,6 @@ fn ProjectModalContent(
         })
     };
 
-    let commit_edit_description = {
-        let project_id = project_id.clone();
-        Callback::new(move |draft_value: String| {
-            let project_id = project_id.clone();
-            let set_description = set_description;
-            let set_editing_description = set_editing_description;
-            let modal_card = modal.set_card;
-            let set_projects = projects_ctx.set_projects;
-
-            leptos::task::spawn_local(async move {
-                if let Some(new_description) =
-                    update_project_description(&project_id, draft_value).await
-                {
-                    set_description.set(new_description.clone());
-                    modal_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.description = new_description.clone();
-                        }
-                    });
-                    set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.description = new_description.clone();
-                                break;
-                            }
-                        }
-                    });
-                }
-                set_editing_description.set(false);
-            });
-        })
-    };
-
     let commit_edit_tags = {
         let project_id = project_id.clone();
         Callback::new(move |draft_value: Vec<crate::metadata::tags::Tag>| {
@@ -490,103 +461,6 @@ fn ProjectModalContent(
         )
     };
 
-    let commit_edit_extended = {
-        let project_id = project_id.clone();
-        Callback::new(move |draft_value: String| {
-            let project_id = project_id.clone();
-            let set_extended_desc = set_extended_desc;
-            let set_editing_extended = set_editing_extended;
-            let modal_card = modal.set_card;
-            let set_projects = projects_ctx.set_projects;
-
-            leptos::task::spawn_local(async move {
-                if let Some(new_extended) =
-                    update_project_extended_desc(&project_id, draft_value).await
-                {
-                    set_extended_desc.set(new_extended.clone());
-                    modal_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.extended_desc = new_extended.clone();
-                        }
-                    });
-                    set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.extended_desc = new_extended.clone();
-                                break;
-                            }
-                        }
-                    });
-                }
-                set_editing_extended.set(false);
-            });
-        })
-    };
-
-    let commit_edit_collaborators = {
-        let project_id = project_id.clone();
-        Callback::new(move |draft_value: Vec<String>| {
-            let project_id = project_id.clone();
-            let set_collaborator_ids = set_collaborator_ids;
-            let set_editing_collaborators = set_editing_collaborators;
-            let modal_card = modal.set_card;
-            let set_projects = projects_ctx.set_projects;
-
-            leptos::task::spawn_local(async move {
-                if let Some(new_collaborator_ids) =
-                    update_project_collaborators(&project_id, draft_value).await
-                {
-                    set_collaborator_ids.set(new_collaborator_ids.clone());
-                    modal_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.collaborator_ids = new_collaborator_ids.clone();
-                        }
-                    });
-                    set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.collaborator_ids = new_collaborator_ids.clone();
-                                break;
-                            }
-                        }
-                    });
-                }
-                set_editing_collaborators.set(false);
-            });
-        })
-    };
-
-    let commit_edit = {
-        let project_id = project_id.clone();
-        Callback::new(move |draft_value: String| {
-            let project_id = project_id.clone();
-            let set_title = set_title;
-            let set_editing = set_editing;
-            let modal_card = modal.set_card;
-            let set_projects = projects_ctx.set_projects;
-
-            leptos::task::spawn_local(async move {
-                if let Some(new_title) = update_project_title(&project_id, draft_value).await {
-                    set_title.set(new_title.clone());
-                    modal_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.title = new_title.clone();
-                        }
-                    });
-                    set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.title = new_title.clone();
-                                break;
-                            }
-                        }
-                    });
-                }
-                set_editing.set(false);
-            });
-        })
-    };
-
     let author_id = card.author_id.clone();
     let accounts = AccountsContext::use_context();
 
@@ -605,15 +479,128 @@ fn ProjectModalContent(
             .get()
             .map(|t| t.value())
             .unwrap_or_else(|| draft_description.get_untracked());
-        commit_edit.run(draft_title);
-        commit_edit_description.run(draft_description);
-        commit_edit_extended.run(draft_extended.get_untracked());
-        commit_edit_tags.run(draft_tags.get_untracked());
-        commit_edit_platforms.run(draft_platforms.get_untracked());
-        commit_edit_collaborators.run(draft_collaborator_ids.get_untracked());
-        set_draft.set(title.get_untracked());
-        set_draft_description.set(description.get_untracked());
-        set_edit_mode.set(false);
+        let draft_extended = draft_extended.get_untracked();
+        let draft_tags = draft_tags.get_untracked();
+        let draft_platforms = draft_platforms.get_untracked();
+        let draft_collaborators = draft_collaborator_ids.get_untracked();
+
+        let current_title = title.get_untracked();
+        let current_description = description.get_untracked();
+        let current_extended = extended_desc.get_untracked();
+        let current_tags = tags.get_untracked();
+        let current_platforms = supported_platforms.get_untracked();
+        let current_collaborators = collaborator_ids.get_untracked();
+
+        let patch = ProjectPatch {
+            title: if draft_title != current_title {
+                Some(draft_title.clone())
+            } else {
+                None
+            },
+            description: if draft_description != current_description {
+                Some(draft_description.clone())
+            } else {
+                None
+            },
+            extended_desc: if draft_extended != current_extended {
+                Some(draft_extended.clone())
+            } else {
+                None
+            },
+            tags: if draft_tags != current_tags {
+                Some(draft_tags.clone())
+            } else {
+                None
+            },
+            supported_platforms: if draft_platforms != current_platforms {
+                Some(draft_platforms.clone())
+            } else {
+                None
+            },
+            collaborator_ids: if draft_collaborators != current_collaborators {
+                Some(draft_collaborators.clone())
+            } else {
+                None
+            },
+            icon_key: None,
+        };
+
+        let set_title = set_title;
+        let set_description = set_description;
+        let set_extended_desc = set_extended_desc;
+        let set_tags = set_tags;
+        let set_supported_platforms = set_supported_platforms;
+        let set_collaborator_ids = set_collaborator_ids;
+        let set_draft = set_draft;
+        let set_draft_description = set_draft_description;
+        let set_draft_extended = set_draft_extended;
+        let set_draft_tags = set_draft_tags;
+        let set_draft_platforms = set_draft_platforms;
+        let set_draft_collaborator_ids = set_draft_collaborator_ids;
+        let set_editing = set_editing;
+        let set_editing_description = set_editing_description;
+        let set_editing_extended = set_editing_extended;
+        let set_editing_platforms = set_editing_platforms;
+        let set_editing_tags = set_editing_tags;
+        let set_editing_collaborators = set_editing_collaborators;
+        let set_edit_mode = set_edit_mode;
+        let modal_card = modal.set_card;
+        let set_projects = projects_ctx.set_projects;
+        let project_id = project_id.clone();
+
+        leptos::task::spawn_local(async move {
+            if update_project(&project_id, patch).await {
+                set_title.set(draft_title.clone());
+                set_description.set(draft_description.clone());
+                set_extended_desc.set(draft_extended.clone());
+                set_tags.set(draft_tags.clone());
+                set_supported_platforms.set(draft_platforms.clone());
+                set_collaborator_ids.set(draft_collaborators.clone());
+                modal_card.update(|opt| {
+                    if let Some(card) = opt.as_mut() {
+                        card.title = draft_title.clone();
+                        card.description = draft_description.clone();
+                        card.extended_desc = draft_extended.clone();
+                        card.tags = draft_tags.clone();
+                        card.supported_platforms = draft_platforms.clone();
+                        card.collaborator_ids = draft_collaborators.clone();
+                    }
+                });
+                set_projects.update(|projects| {
+                    for project in projects.iter_mut() {
+                        if project.id == project_id {
+                            project.title = draft_title.clone();
+                            project.description = draft_description.clone();
+                            project.extended_desc = draft_extended.clone();
+                            project.tags = draft_tags.clone();
+                            project.supported_platforms = draft_platforms.clone();
+                            project.collaborator_ids = draft_collaborators.clone();
+                            break;
+                        }
+                    }
+                });
+            } else {
+                set_draft.set(current_title.clone());
+                set_draft_description.set(current_description.clone());
+                set_draft_extended.set(current_extended.clone());
+                set_draft_tags.set(current_tags.clone());
+                set_draft_platforms.set(current_platforms.clone());
+                set_draft_collaborator_ids.set(current_collaborators.clone());
+                if let Some(input) = title_input_ref.get() {
+                    input.set_value(&current_title);
+                }
+                if let Some(textarea) = description_input_ref.get() {
+                    textarea.set_value(&current_description);
+                }
+            }
+            set_editing.set(false);
+            set_editing_description.set(false);
+            set_editing_extended.set(false);
+            set_editing_platforms.set(false);
+            set_editing_tags.set(false);
+            set_editing_collaborators.set(false);
+            set_edit_mode.set(false);
+        });
     });
 
     let cancel_all_changes = Callback::new(move |_| {
@@ -669,7 +656,7 @@ fn ProjectModalContent(
                             <ProjectIconPicker
                                 icon_url={move || icon_url.get()}
                                 title=move || title.get()
-                                editable={Signal::derive(move || is_editable && edit_mode.get())}
+                                editable={Signal::derive(move || is_editable.get() && edit_mode.get())}
                                 on_click=move |_| {
                                     if let Some(input) = icon_input_ref.get() {
                                         input.click();
@@ -788,7 +775,7 @@ fn ProjectModalContent(
                     </div>
                 </div>
                 <div class="hidden sm:flex items-center gap-2 text-xs flex-shrink-0">
-                    {is_editable.then(|| view! {
+                    {move || is_editable.get().then(|| view! {
                         {move || if edit_mode.get() { view! {
                             <button
                                 type="button"

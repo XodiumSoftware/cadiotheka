@@ -381,6 +381,68 @@ pub async fn update_project_collaborators(
     Some(collaborator_ids)
 }
 
+/// Partial project update payload. Only fields with a value are sent to the
+/// backend; `None` values are omitted from the JSON body.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct ProjectPatch {
+    pub title: Option<String>,
+    pub icon_key: Option<Option<String>>,
+    pub description: Option<String>,
+    pub tags: Option<Vec<Tag>>,
+    pub supported_platforms: Option<Vec<Platform>>,
+    pub collaborator_ids: Option<Vec<String>>,
+    pub extended_desc: Option<String>,
+}
+
+/// Applies a partial update to an existing project via `PATCH /data/projects/:id`.
+///
+/// On success it returns `true`; on failure it logs to the console and returns
+/// `false`.
+pub async fn update_project(id: &str, patch: ProjectPatch) -> bool {
+    let url = api_url(&format!("/projects/{id}"));
+    let body = match serde_json::to_string(&patch) {
+        Ok(json) => json,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to serialize project update payload: {err:?}").into(),
+            );
+            return false;
+        }
+    };
+
+    match gloo_net::http::Request::patch(&url)
+        .credentials(web_sys::RequestCredentials::Include)
+        .header("Content-Type", "application/json")
+        .body(body)
+    {
+        Ok(request) => match request.send().await {
+            Ok(response) => {
+                if !response.ok() {
+                    let status = response.status();
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to update project: HTTP {status}").into(),
+                    );
+                    false
+                } else {
+                    true
+                }
+            }
+            Err(err) => {
+                leptos::web_sys::console::error_1(
+                    &format!("Failed to update project: {err:?}").into(),
+                );
+                false
+            }
+        },
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to build project update request: {err:?}").into(),
+            );
+            false
+        }
+    }
+}
+
 /// Updates the icon URL of an existing project via `PATCH /data/projects/:id`.
 ///
 /// On success it returns the new icon URL (or `None` when cleared); on failure
