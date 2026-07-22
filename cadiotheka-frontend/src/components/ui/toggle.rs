@@ -128,29 +128,31 @@ pub fn ToggleSliderWithSlashLabel(
     let input_id = "layout-toggle-slash";
 
     view! {
-        <label
-            for=input_id
-            class="hidden sm:inline-flex items-center cursor-pointer select-none gap-2"
-        >
+        <div class="hidden sm:inline-flex items-center select-none gap-2">
             <span class="text-sm font-medium text-base-content/60">
                 <span class=move || if checked.get() { "text-base-content/40" } else { "text-base-content" }>{move || label_left.get()}</span>
-                <span class="mx-0.5">/</span>
+                <span class="mx-0.5">"/"</span>
                 <span class=move || if checked.get() { "text-base-content" } else { "text-base-content/40" }>{move || label_right.get()}</span>
             </span>
 
-            <input
-                id=input_id
-                type="checkbox"
-                class="sr-only peer"
-                prop:checked=move || checked.get()
-                on:change=move |ev| {
-                    if let Some(input) = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok()) {
-                        on_change.run(input.checked());
+            <label
+                for=input_id
+                class="inline-flex items-center cursor-pointer"
+            >
+                <input
+                    id=input_id
+                    type="checkbox"
+                    class="sr-only peer"
+                    prop:checked=move || checked.get()
+                    on:change=move |ev| {
+                        if let Some(input) = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok()) {
+                            on_change.run(input.checked());
+                        }
                     }
-                }
-            />
+                />
 
-            <div class="relative w-11 h-6 bg-base-300 rounded-full peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-base-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div class="relative w-11 h-6 bg-base-300 rounded-full peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-base-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
 
             {shortcut_hint.map(|hint| {
                 view! {
@@ -158,6 +160,6 @@ pub fn ToggleSliderWithSlashLabel(
                     <kbd class="hidden sm:inline-flex px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">{move || hint.get()}</kbd>
                 }
             })}
-        </label>
+        </div>
     }
 }
