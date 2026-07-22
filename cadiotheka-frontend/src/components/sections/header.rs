@@ -110,6 +110,14 @@ pub fn Header() -> impl IntoView {
     let (selected_index, set_selected_index) = signal::<Option<usize>>(None);
     let (keyboard_index, set_keyboard_index) = signal::<Option<usize>>(None);
 
+    const ACCOUNT_MENU_ITEMS: usize = 4;
+    let avatar_button_ref: NodeRef<leptos::html::Button> = NodeRef::new();
+    let profile_ref: NodeRef<leptos::html::Button> = NodeRef::new();
+    let my_projects_ref: NodeRef<leptos::html::Button> = NodeRef::new();
+    let my_favorites_ref: NodeRef<leptos::html::Button> = NodeRef::new();
+    let logout_ref: NodeRef<leptos::html::Button> = NodeRef::new();
+    let (active_menu_index, set_active_menu_index) = signal(0usize);
+
     let projects_ctx = ProjectsContext::use_context();
 
     let suggestions = Memo::new(move |_| {
@@ -140,12 +148,53 @@ pub fn Header() -> impl IntoView {
     let current_user_ctx = CurrentUserContext::use_context();
     let login_modal_ctx = LoginModalContext::use_context();
 
-    // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Alt+L opens the
-    // login modal when not authenticated, and Escape closes open menus.
+    let focus_avatar = Callback::new(move |_| {
+        if let Some(btn) = avatar_button_ref.get() {
+            let _ = btn.focus();
+        }
+    });
+
+    let activate_menu_item = Callback::new(move |idx: usize| {
+        set_account_menu_open.set(false);
+        let current_user = CurrentUserContext::use_context();
+        let Some(account) = current_user.account.get_untracked() else {
+            return;
+        };
+        match idx {
+            0 => ProfileModalContext::use_context().open(account),
+            1 => {
+                let author_query = format!("@author:{}", account.username);
+                search.set_query.set(author_query);
+            }
+            2 => {
+                let favorites_query = format!("@favorited_by:{}", account.id);
+                search.set_query.set(favorites_query);
+            }
+            3 => {
+                if let Some(window) = leptos::web_sys::window() {
+                    let _ = window
+                        .location()
+                        .set_href(&encode_redirect_url(&auth_url("/logout")));
+                }
+            }
+            _ => {}
+        }
+        if idx != 3 {
+            focus_avatar.run(());
+        }
+    });
+
+    // Keyboard shortcuts: Alt+S opens search, Alt+C clears it, Alt+1/2/3 trigger
+    // the corresponding account-menu action when authenticated, Alt+L logs out (or
+    // opens the login modal when not authenticated), and Escape closes open menus.
     Effect::new(move |_| {
         let current_user = current_user_ctx;
         let login_modal = login_modal_ctx;
         window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
+            if ev.default_prevented() {
+                return;
+            }
+
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("s") {
                 ev.prevent_default();
                 set_search_open.set(true);
@@ -163,9 +212,38 @@ pub fn Header() -> impl IntoView {
                 return;
             }
 
+            if ev.alt_key()
+                && ev.key().eq_ignore_ascii_case("1")
+                && current_user.account.get_untracked().is_some()
+            {
+                ev.prevent_default();
+                activate_menu_item.run(0);
+                return;
+            }
+
+            if ev.alt_key()
+                && ev.key().eq_ignore_ascii_case("2")
+                && current_user.account.get_untracked().is_some()
+            {
+                ev.prevent_default();
+                activate_menu_item.run(1);
+                return;
+            }
+
+            if ev.alt_key()
+                && ev.key().eq_ignore_ascii_case("3")
+                && current_user.account.get_untracked().is_some()
+            {
+                ev.prevent_default();
+                activate_menu_item.run(2);
+                return;
+            }
+
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("l") {
                 ev.prevent_default();
-                if current_user.account.get_untracked().is_none() {
+                if current_user.account.get_untracked().is_some() {
+                    activate_menu_item.run(3);
+                } else {
                     login_modal.open();
                 }
                 return;
@@ -182,11 +260,13 @@ pub fn Header() -> impl IntoView {
             if account_menu_open.get_untracked() && ev.key().as_str() == "Escape" {
                 ev.prevent_default();
                 set_account_menu_open.set(false);
+                focus_avatar.run(());
             }
         });
     });
 
-    // Close the account menu when clicking outside of it.
+    // Close the account menu when clicking outside of it and return focus to the
+    // avatar button.
     Effect::new(move |_| {
         let menu = account_menu_ref.get();
         let listener = window_event_listener::<web_sys::MouseEvent, _>("click", move |ev| {
@@ -201,6 +281,7 @@ pub fn Header() -> impl IntoView {
                 .unwrap_or(true);
             if should_close {
                 set_account_menu_open.set(false);
+                focus_avatar.run(());
             }
         });
         let _ = listener;
@@ -213,6 +294,69 @@ pub fn Header() -> impl IntoView {
                 .map(|w| w.scroll_y().unwrap_or(0.0) > 0.0)
                 .unwrap_or(false);
             set_is_scrolled.set(scrolled);
+        });
+    });
+
+    // Move focus inside the account menu when it opens or the active item changes.
+    Effect::new(move |_| {
+        let open = account_menu_open.get();
+        let idx = active_menu_index.get();
+        if !open {
+            return;
+        }
+        spawn_local(async move {
+            gloo_timers::future::sleep(Duration::from_millis(10)).await;
+            let target = match idx {
+                0 => profile_ref.get(),
+                1 => my_projects_ref.get(),
+                2 => my_favorites_ref.get(),
+                3 => logout_ref.get(),
+                _ => None,
+            };
+            if let Some(el) = target {
+                let _ = el.focus();
+            }
+        });
+    });
+
+    // Arrow-key navigation for the account menu while it is open.
+    Effect::new(move |_| {
+        if !account_menu_open.get() {
+            return;
+        }
+        window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
+            if ev.default_prevented() {
+                return;
+            }
+            let last = ACCOUNT_MENU_ITEMS.saturating_sub(1);
+            match ev.key().as_str() {
+                "ArrowDown" => {
+                    ev.prevent_default();
+                    set_active_menu_index
+                        .update(|idx| *idx = if *idx >= last { 0 } else { *idx + 1 });
+                }
+                "ArrowUp" => {
+                    ev.prevent_default();
+                    set_active_menu_index
+                        .update(|idx| *idx = if *idx == 0 { last } else { *idx - 1 });
+                }
+                "Home" => {
+                    ev.prevent_default();
+                    set_active_menu_index.set(0);
+                }
+                "End" => {
+                    ev.prevent_default();
+                    set_active_menu_index.set(last);
+                }
+                "Enter" | " " => {
+                    ev.prevent_default();
+                    activate_menu_item.run(active_menu_index.get_untracked());
+                }
+                "Tab" => {
+                    set_account_menu_open.set(false);
+                }
+                _ => {}
+            }
         });
     });
 
@@ -472,9 +616,17 @@ pub fn Header() -> impl IntoView {
                                         type="button"
                                         class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden hover:border-base-content/30"
                                         aria-label="Open account menu"
+                                        aria-controls="account-menu"
                                         aria-expanded=move || account_menu_open.get().to_string()
                                         aria-haspopup="menu"
-                                        on:click=move |_| set_account_menu_open.update(|open| *open = !*open)
+                                        node_ref=avatar_button_ref
+                                        on:click=move |_| {
+                                            let will_open = !account_menu_open.get_untracked();
+                                            set_account_menu_open.set(will_open);
+                                            if will_open {
+                                                set_active_menu_index.set(0);
+                                            }
+                                        }
                                     >
                                         {move || {
                                             let username = account.username.clone();
@@ -503,65 +655,97 @@ pub fn Header() -> impl IntoView {
                                         if account_menu_open.get() {
                                             Some(view! {
                                                 <ul
+                                                    id="account-menu"
                                                     class="absolute right-0 top-full mt-2 w-48 bg-base-100 border-2 border-base-content/80 shadow-lg z-50 py-1"
                                                     role="menu"
                                                 >
                                                     <li role="none">
                                                         <button
                                                             type="button"
-                                                            class="w-full text-left px-4 py-2 hover:bg-base-content/10"
-                                                            role="menuitem"
-                                                            on:click=move |_| {
-                                                                set_account_menu_open.set(false);
-                                                                if let Some(account) = current_user.account.get() {
-                                                                    ProfileModalContext::use_context().open(account);
+                                                            class=move || {
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between";
+                                                                if active_menu_index.get() == 0 {
+                                                                    format!("{} bg-base-content/10", base)
+                                                                } else {
+                                                                    base.to_string()
                                                                 }
                                                             }
+                                                            role="menuitem"
+                                                            tabindex="-1"
+                                                            aria-keyshortcuts="Alt+1"
+                                                            node_ref=profile_ref
+                                                            on:mouseenter=move |_| set_active_menu_index.set(0)
+                                                            on:click=move |_| activate_menu_item.run(0)
                                                         >
-                                                            "Profile"
+                                                            <span>"Profile"</span>
+                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-base-content/30 bg-base-content/10 text-base-content shadow-kbd text-xs font-sans" aria-hidden="true">"Alt + 1"</kbd>
                                                         </button>
                                                     </li>
                                                     <li role="none">
                                                         <button
                                                             type="button"
-                                                            class="w-full text-left px-4 py-2 hover:bg-base-content/10"
-                                                            role="menuitem"
-                                                            on:click=move |_| {
-                                                                set_account_menu_open.set(false);
-                                                                if let Some(account) = current_user.account.get() {
-                                                                    let author_query = format!("@author:{}", account.username);
-                                                                    search.set_query.set(author_query);
+                                                            class=move || {
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between";
+                                                                if active_menu_index.get() == 1 {
+                                                                    format!("{} bg-base-content/10", base)
+                                                                } else {
+                                                                    base.to_string()
                                                                 }
                                                             }
+                                                            role="menuitem"
+                                                            tabindex="-1"
+                                                            aria-keyshortcuts="Alt+2"
+                                                            node_ref=my_projects_ref
+                                                            on:mouseenter=move |_| set_active_menu_index.set(1)
+                                                            on:click=move |_| activate_menu_item.run(1)
                                                         >
-                                                            "My projects"
+                                                            <span>"My projects"</span>
+                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-base-content/30 bg-base-content/10 text-base-content shadow-kbd text-xs font-sans" aria-hidden="true">"Alt + 2"</kbd>
                                                         </button>
                                                     </li>
                                                     <li role="none">
                                                         <button
                                                             type="button"
-                                                            class="w-full text-left px-4 py-2 hover:bg-base-content/10"
-                                                            role="menuitem"
-                                                            on:click=move |_| {
-                                                                set_account_menu_open.set(false);
-                                                                if let Some(account) = current_user.account.get() {
-                                                                    let favorites_query = format!("@favorited_by:{}", account.id);
-                                                                    search.set_query.set(favorites_query);
+                                                            class=move || {
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between";
+                                                                if active_menu_index.get() == 2 {
+                                                                    format!("{} bg-base-content/10", base)
+                                                                } else {
+                                                                    base.to_string()
                                                                 }
                                                             }
+                                                            role="menuitem"
+                                                            tabindex="-1"
+                                                            aria-keyshortcuts="Alt+3"
+                                                            node_ref=my_favorites_ref
+                                                            on:mouseenter=move |_| set_active_menu_index.set(2)
+                                                            on:click=move |_| activate_menu_item.run(2)
                                                         >
-                                                            "My favorites"
+                                                            <span>"My favorites"</span>
+                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-base-content/30 bg-base-content/10 text-base-content shadow-kbd text-xs font-sans" aria-hidden="true">"Alt + 3"</kbd>
                                                         </button>
                                                     </li>
                                                     <li role="none">
-                                                        <a
-                                                            href={encode_redirect_url(&auth_url("/logout"))}
-                                                            class="block w-full text-left px-4 py-2 hover:bg-base-content/10 text-error"
+                                                        <button
+                                                            type="button"
+                                                            class=move || {
+                                                                let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 text-error flex items-center justify-between";
+                                                                if active_menu_index.get() == 3 {
+                                                                    format!("{} bg-base-content/10", base)
+                                                                } else {
+                                                                    base.to_string()
+                                                                }
+                                                            }
                                                             role="menuitem"
-                                                            on:click=move |_| set_account_menu_open.set(false)
+                                                            tabindex="-1"
+                                                            aria-keyshortcuts="Alt+L"
+                                                            node_ref=logout_ref
+                                                            on:mouseenter=move |_| set_active_menu_index.set(3)
+                                                            on:click=move |_| activate_menu_item.run(3)
                                                         >
-                                                            "Log out"
-                                                        </a>
+                                                            <span>"Log out"</span>
+                                                            <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-base-content/30 bg-base-content/10 text-base-content shadow-kbd text-xs font-sans" aria-hidden="true">"Alt + L"</kbd>
+                                                        </button>
                                                     </li>
                                                 </ul>
                                             })
