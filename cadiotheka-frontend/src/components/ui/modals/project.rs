@@ -1483,7 +1483,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                                 view! {
                                                                     <span class="flex items-center gap-1">
                                                                         {trash_icon("w-3.5 h-3.5")}
-                                                                        <span>{"Delete project"}</span>
+                                                                        <span>{"Delete"}</span>
                                                                     </span>
                                                                 }
                                                                     .into_any()
