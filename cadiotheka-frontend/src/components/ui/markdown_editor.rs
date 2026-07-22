@@ -16,6 +16,7 @@ pub fn MarkdownEditor(
     #[prop(into)] on_input: Callback<String>,
     #[prop(into, optional)] on_cancel: Option<Callback<()>>,
     #[prop(into, optional)] on_save: Option<Callback<()>>,
+    #[prop(into, default = false)] hide_actions: bool,
     maxlength: usize,
     #[prop(into, default = "min-h-[8rem]".to_string())] editor_class: String,
 ) -> impl IntoView {
@@ -296,7 +297,7 @@ pub fn MarkdownEditor(
                 }}
 
                 {move || {
-                    if on_cancel.is_some() && on_save.is_some() {
+                    if !hide_actions && on_cancel.is_some() && on_save.is_some() {
                         view! {
                             <div class="flex items-center justify-between gap-2">
                                 <span class=move || {

@@ -100,6 +100,7 @@ fn EditableChipSection<T>(
     color_fn: fn(&T) -> &'static str,
     selected_items: Signal<Vec<T>>,
     badge_class: &'static str,
+    #[prop(default = false)] hide_actions: bool,
 ) -> impl IntoView
 where
     T: Clone + PartialEq + Send + Sync + 'static,
@@ -141,18 +142,20 @@ where
                                     }
                                 }).collect_view()}
                             </div>
-                            <div class="flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    class="btn btn-ghost btn-xs"
-                                    on:click=move |_| on_cancel.run(())
-                                >"Cancel"</button>
-                                <button
-                                    type="button"
-                                    class="btn btn-primary btn-xs"
-                                    on:click=move |_| on_save.run(current_selected.clone())
-                                >"Save"</button>
-                            </div>
+                            {(!hide_actions).then(|| view! {
+                                <div class="flex justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        class="btn btn-ghost btn-xs"
+                                        on:click=move |_| on_cancel.run(())
+                                    >"Cancel"</button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary btn-xs"
+                                        on:click=move |_| on_save.run(current_selected.clone())
+                                    >"Save"</button>
+                                </div>
+                            }.into_any())}
                         </div>
                     }
                         .into_any()
@@ -205,10 +208,10 @@ fn ProjectModalContent(
     let (editing_description, set_editing_description) = signal(false);
     let (draft_description, set_draft_description) = signal(card.description.clone());
     let (description, set_description) = signal(card.description.clone());
-    let (editing_tags, set_editing_tags) = signal(false);
+    let (_editing_tags, set_editing_tags) = signal(false);
     let (draft_tags, set_draft_tags) = signal(card.tags.clone());
     let (tags, set_tags) = signal(card.tags.clone());
-    let (editing_platforms, set_editing_platforms) = signal(false);
+    let (_editing_platforms, set_editing_platforms) = signal(false);
     let (draft_platforms, set_draft_platforms) = signal(card.supported_platforms.clone());
     let (supported_platforms, set_supported_platforms) = signal(card.supported_platforms.clone());
     let (editing_extended, set_editing_extended) = signal(false);
@@ -297,15 +300,15 @@ fn ProjectModalContent(
         }
     });
 
-    let cancel_edit = move || {
+    let _cancel_edit = move || {
         set_editing.set(false);
     };
 
-    let cancel_edit_description = move || {
+    let _cancel_edit_description = move || {
         set_editing_description.set(false);
     };
 
-    let cancel_edit_tags = move || {
+    let _cancel_edit_tags = move || {
         set_editing_tags.set(false);
     };
 
@@ -329,15 +332,15 @@ fn ProjectModalContent(
         });
     });
 
-    let cancel_edit_platforms = move || {
+    let _cancel_edit_platforms = move || {
         set_editing_platforms.set(false);
     };
 
-    let cancel_edit_extended = move || {
+    let _cancel_edit_extended = move || {
         set_editing_extended.set(false);
     };
 
-    let cancel_edit_collaborators = move || {
+    let _cancel_edit_collaborators = move || {
         set_editing_collaborators.set(false);
     };
 
@@ -591,6 +594,32 @@ fn ProjectModalContent(
     });
     let platforms = supported_platforms;
 
+    let save_all_changes = Callback::new(move |_| {
+        commit_edit.run(draft.get_untracked());
+        commit_edit_description.run(draft_description.get_untracked());
+        commit_edit_extended.run(draft_extended.get_untracked());
+        commit_edit_tags.run(draft_tags.get_untracked());
+        commit_edit_platforms.run(draft_platforms.get_untracked());
+        commit_edit_collaborators.run(draft_collaborator_ids.get_untracked());
+        set_edit_mode.set(false);
+    });
+
+    let cancel_all_changes = Callback::new(move |_| {
+        set_draft.set(title.get_untracked());
+        set_draft_description.set(description.get_untracked());
+        set_draft_extended.set(extended_desc.get_untracked());
+        set_draft_platforms.set(supported_platforms.get_untracked());
+        set_draft_tags.set(tags.get_untracked());
+        set_draft_collaborator_ids.set(collaborator_ids.get_untracked());
+        set_editing.set(false);
+        set_editing_description.set(false);
+        set_editing_extended.set(false);
+        set_editing_platforms.set(false);
+        set_editing_tags.set(false);
+        set_editing_collaborators.set(false);
+        set_edit_mode.set(false);
+    });
+
     view! {
         <div class="flex flex-col h-full min-h-0 overflow-hidden gap-4">
             <div class="flex items-start gap-4 relative">
@@ -652,8 +681,8 @@ fn ProjectModalContent(
                                             on:input=move |ev| set_draft.set(event_target_value(&ev))
                                             on:keyup=move |ev| {
                                                 match ev.key().as_str() {
-                                                    "Enter" => commit_edit.run(draft.get()),
-                                                    "Escape" => cancel_edit(),
+                                                    "Enter" => save_all_changes.run(()),
+                                                    "Escape" => cancel_all_changes.run(()),
                                                     _ => {}
                                                 }
                                             }
@@ -668,18 +697,6 @@ fn ProjectModalContent(
                                         }>
                                             {move || format!("{}/{}", draft.get().len(), MAX_TITLE_LENGTH)}
                                         </span>
-                                    </div>
-                                    <div class="flex justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            class="btn btn-ghost btn-xs"
-                                            on:click=move |_| cancel_edit()
-                                        >"Cancel"</button>
-                                        <button
-                                            type="button"
-                                            class="btn btn-primary btn-xs"
-                                            on:click=move |_| commit_edit.run(draft.get())
-                                        >"Save"</button>
                                     </div>
                                 </div>
                             }
@@ -714,7 +731,7 @@ fn ProjectModalContent(
                                             on:input=move |ev| set_draft_description.set(event_target_value(&ev))
                                             on:keyup=move |ev| {
                                                 if ev.key().as_str() == "Escape" {
-                                                    cancel_edit_description();
+                                                    cancel_all_changes.run(());
                                                 }
                                             }
                                             autofocus
@@ -729,18 +746,6 @@ fn ProjectModalContent(
                                             }>
                                                 {move || format!("{}/{}", draft_description.get().len(), MAX_DESCRIPTION_LENGTH)}
                                             </span>
-                                            <div class="flex gap-2">
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-ghost btn-xs"
-                                                    on:click=move |_| cancel_edit_description()
-                                                >"Cancel"</button>
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-primary btn-xs"
-                                                    on:click=move |_| commit_edit_description.run(draft_description.get())
-                                                >"Save"</button>
-                                            </div>
                                         </div>
                                     </div>
                                 }
@@ -756,45 +761,48 @@ fn ProjectModalContent(
                 </div>
                 <div class="hidden sm:flex items-center gap-2 text-xs flex-shrink-0">
                     {is_editable.then(|| view! {
-                        <button
-                            type="button"
-                            class=move || {
-                                if edit_mode.get() {
-                                    "btn btn-ghost btn-xs h-auto min-h-0 text-primary hover:text-base-content tooltip tooltip-bottom"
-                                } else {
-                                    "btn btn-ghost btn-xs h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
-                                }
-                            }
-                            data-tip=move || {
-                                if edit_mode.get() {
-                                    "Exit edit mode".to_string()
-                                } else {
-                                    "Enter edit mode".to_string()
-                                }
-                            }
-                            aria-label=move || {
-                                if edit_mode.get() {
-                                    "Exit edit mode"
-                                } else {
-                                    "Enter edit mode"
-                                }
-                            }
-                            on:click=move |_| toggle_edit_mode(())
-                        >
-                            <svg
-                                class="w-4 h-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
+                        {move || if edit_mode.get() { view! {
+                            <button
+                                type="button"
+                                class="btn btn-ghost btn-xs h-auto min-h-0 tooltip tooltip-bottom"
+                                data-tip="Cancel all changes"
+                                aria-label="Cancel all changes"
+                                on:click=move |_| cancel_all_changes.run(())
                             >
-                                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-                            </svg>
-                            {move || if edit_mode.get() { "Done" } else { "Edit" }}
-                        </button>
+                                "Cancel"
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-primary btn-xs h-auto min-h-0 tooltip tooltip-bottom"
+                                data-tip="Save all changes"
+                                aria-label="Save all changes"
+                                on:click=move |_| save_all_changes.run(())
+                            >
+                                "Save"
+                            </button>
+                        }.into_any() } else { view! {
+                            <button
+                                type="button"
+                                class="btn btn-ghost btn-xs h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                data-tip="Enter edit mode"
+                                aria-label="Enter edit mode"
+                                on:click=move |_| toggle_edit_mode(())
+                            >
+                                <svg
+                                    class="w-4 h-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                                </svg>
+                                "Edit"
+                            </button>
+                        }.into_any() }}
                     })}
                     <button
                         type="button"
@@ -864,10 +872,11 @@ fn ProjectModalContent(
                                             <MarkdownEditor
                                                 value=draft_extended
                                                 on_input=Callback::new(move |value| set_draft_extended.set(value))
-                                                on_cancel=Callback::new(move |_| cancel_edit_extended())
-                                                on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
+                                                on_cancel=Callback::new(move |_| cancel_all_changes.run(()))
+                                                on_save=Callback::new(move |_| save_all_changes.run(()))
                                                 maxlength=MAX_EXTENDED_DESC_LENGTH
                                                 editor_class="min-h-[20rem] font-mono text-sm"
+                                                hide_actions=true
                                             />
                                         }
                                             .into_any()
@@ -904,8 +913,8 @@ fn ProjectModalContent(
                                     aria_label="Supported platforms"
                                     items=platforms.get()
                                     all_items=crate::metadata::platforms::Platform::all().to_vec()
-                                    editing=editing_platforms.into()
-                                    on_cancel=Callback::new(move |_| cancel_edit_platforms())
+                                    editing=edit_mode.into()
+                                    on_cancel=Callback::new(move |_| cancel_all_changes.run(()))
                                     on_toggle=toggle_platform
                                     on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
                                     on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
@@ -913,6 +922,7 @@ fn ProjectModalContent(
                                     color_fn=crate::metadata::platforms::platform_color
                                     selected_items=draft_platforms.into()
                                     badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                    hide_actions=true
                                 />
                             </div>
 
@@ -922,8 +932,8 @@ fn ProjectModalContent(
                                     aria_label="Tags"
                                     items=tags.get()
                                     all_items=crate::metadata::tags::Tag::all().to_vec()
-                                    editing=editing_tags.into()
-                                    on_cancel=Callback::new(move |_| cancel_edit_tags())
+                                    editing=edit_mode.into()
+                                    on_cancel=Callback::new(move |_| cancel_all_changes.run(()))
                                     on_toggle=toggle_tag
                                     on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
                                     on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
@@ -931,6 +941,7 @@ fn ProjectModalContent(
                                     color_fn=crate::metadata::tags::tag_color
                                     selected_items=draft_tags.into()
                                     badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                    hide_actions=true
                                 />
                             </div>
 
@@ -1068,18 +1079,6 @@ fn ProjectModalContent(
                                                     </div>
                                                 </div>
                                             </SearchModal>
-                                            <div class="flex justify-end gap-2">
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-ghost btn-xs"
-                                                    on:click=move |_| cancel_edit_collaborators()
-                                                >"Cancel"</button>
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-primary btn-xs"
-                                                    on:click=move |_| commit_edit_collaborators.run(draft_collaborator_ids.get())
-                                                >"Save"</button>
-                                            </div>
                                         </div>
                                     }.into_any()
                                 } else {
