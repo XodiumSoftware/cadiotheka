@@ -12,7 +12,9 @@ use crate::api::accounts::{
     link_oauth_account,
 };
 use crate::api::session::{create_session, read_session};
-use crate::utils::{error_response, public_origin, query_param, rust_err};
+use crate::utils::{
+    error_response, is_https_request, public_origin, query_param, rust_err, safe_redirect_target,
+};
 
 const AUTH_KV_BINDING: &str = "AUTH";
 const OAUTH_STATE_TTL_SECONDS: u64 = 10 * 60;
@@ -81,11 +83,7 @@ pub async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Respons
     let redirect_to = req
         .url()
         .ok()
-        .and_then(|url| {
-            url.query_pairs()
-                .find(|(key, _)| key == "redirect_to")
-                .map(|(_, value)| value.into_owned())
-        })
+        .and_then(|url| safe_redirect_target(is_https_request(&req), &url, "redirect_to"))
         .unwrap_or_else(|| "/".to_string());
     let link_account_id = read_session(&req, &ctx).await?.map(|a| a.id);
     let url = login_url(req, ctx, Provider::GitHub, &redirect_to, link_account_id).await?;
@@ -96,11 +94,7 @@ pub async fn google_login(req: Request, ctx: RouteContext<()>) -> Result<Respons
     let redirect_to = req
         .url()
         .ok()
-        .and_then(|url| {
-            url.query_pairs()
-                .find(|(key, _)| key == "redirect_to")
-                .map(|(_, value)| value.into_owned())
-        })
+        .and_then(|url| safe_redirect_target(is_https_request(&req), &url, "redirect_to"))
         .unwrap_or_else(|| "/".to_string());
     let link_account_id = read_session(&req, &ctx).await?.map(|a| a.id);
     let url = login_url(req, ctx, Provider::Google, &redirect_to, link_account_id).await?;
