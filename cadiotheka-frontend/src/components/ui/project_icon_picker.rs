@@ -54,6 +54,7 @@ pub fn ProjectIconPicker(
                             src=url
                             alt=move || format!("{} icon", title.get())
                             class="w-full h-full object-cover rounded-[inherit]"
+                            loading="lazy"
                         />
                     }
                         .into_any()

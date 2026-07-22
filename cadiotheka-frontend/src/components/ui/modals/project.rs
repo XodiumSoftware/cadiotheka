@@ -72,7 +72,7 @@ fn avatar_button(account: &AccountData, class: Option<String>) -> impl IntoView 
         >
             {url.map(|url| {
                 view! {
-                    <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() />
+                    <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() loading="lazy" />
                 }
                     .into_any()
             }).unwrap_or_else(move || {

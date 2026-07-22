@@ -637,6 +637,7 @@ pub fn Header() -> impl IntoView {
                                                         class="w-full h-full object-cover"
                                                         src=url
                                                         alt=avatar_alt
+                                                        loading="lazy"
                                                     />
                                                 }
                                                 .into_any(),

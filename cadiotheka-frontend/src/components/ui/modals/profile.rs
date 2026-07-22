@@ -179,6 +179,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             src=url
                             alt=avatar_alt.clone()
                             aria-hidden="true"
+                            loading="lazy"
                         />
                     }
                         .into_any(),
