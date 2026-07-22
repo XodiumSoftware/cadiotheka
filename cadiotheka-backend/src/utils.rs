@@ -1,5 +1,13 @@
 use worker::*;
 
+/// KV binding used for rate-limit counters. Shared with the auth module so
+/// only one KV namespace is required.
+const RATE_LIMIT_KV_BINDING: &str = "AUTH";
+/// Sliding window duration for rate limiting, in seconds.
+const RATE_LIMIT_WINDOW_SECONDS: u64 = 60;
+/// Maximum requests allowed per window per client IP.
+const RATE_LIMIT_MAX_REQUESTS: u32 = 30;
+
 /// Builds a JSON error response with the given message and HTTP status.
 ///
 /// The response body has the shape `{"error": "message"}`. This is used
@@ -7,6 +15,58 @@ use worker::*;
 /// payloads as JSON.
 pub fn error_response(message: &str, status: u16) -> Result<Response> {
     Ok(Response::from_json(&serde_json::json!({ "error": message }))?.with_status(status))
+}
+
+/// Returns the best-effort client IP from Cloudflare/forwarded headers.
+fn client_ip(req: &Request) -> String {
+    req.headers()
+        .get("CF-Connecting-IP")
+        .ok()
+        .flatten()
+        .or_else(|| {
+            req.headers()
+                .get("X-Forwarded-For")
+                .ok()
+                .flatten()
+                .and_then(|value| value.split(',').next().map(str::trim).map(String::from))
+        })
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
+/// Checks whether the request is within the rate limit for the given namespace.
+///
+/// Returns `Ok(None)` when the request may proceed. Returns `Ok(Some(response))`
+/// with a `429 Too Many Requests` response when the limit is exceeded.
+pub async fn check_rate_limit(
+    req: &Request,
+    ctx: &RouteContext<()>,
+    namespace: &str,
+) -> Result<Option<Response>> {
+    let ip = client_ip(req);
+    let key = format!("rate_limit:{namespace}:{ip}");
+    let kv = ctx.env.kv(RATE_LIMIT_KV_BINDING)?;
+
+    let count: u32 = kv
+        .get(&key)
+        .text()
+        .await?
+        .and_then(|text| text.parse().ok())
+        .unwrap_or(0);
+
+    if count >= RATE_LIMIT_MAX_REQUESTS {
+        return Ok(Some(error_response(
+            "Rate limit exceeded. Please try again later.",
+            429,
+        )?));
+    }
+
+    let next = (count + 1).to_string();
+    kv.put(&key, &next)?
+        .expiration_ttl(RATE_LIMIT_WINDOW_SECONDS)
+        .execute()
+        .await?;
+
+    Ok(None)
 }
 
 /// Wraps an error value into a `worker::Error::RustError`.

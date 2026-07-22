@@ -13,7 +13,8 @@ use crate::api::accounts::{
 };
 use crate::api::session::{create_session, read_session};
 use crate::utils::{
-    error_response, is_https_request, public_origin, query_param, rust_err, safe_redirect_target,
+    check_rate_limit, error_response, is_https_request, public_origin, query_param, rust_err,
+    safe_redirect_target,
 };
 
 const AUTH_KV_BINDING: &str = "AUTH";
@@ -80,6 +81,9 @@ fn oauth_client(ctx: &RouteContext<()>, provider: Provider) -> Result<BasicClien
 }
 
 pub async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    if let Some(response) = check_rate_limit(&req, &ctx, "oauth_login").await? {
+        return Ok(response);
+    }
     let redirect_to = req
         .url()
         .ok()
@@ -91,6 +95,9 @@ pub async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Respons
 }
 
 pub async fn google_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    if let Some(response) = check_rate_limit(&req, &ctx, "oauth_login").await? {
+        return Ok(response);
+    }
     let redirect_to = req
         .url()
         .ok()
@@ -163,6 +170,9 @@ pub async fn google_callback(req: Request, ctx: RouteContext<()>) -> Result<Resp
 }
 
 async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Result<Response> {
+    if let Some(response) = check_rate_limit(&req, &ctx, "oauth_callback").await? {
+        return Ok(response);
+    }
     let url = req.url()?;
 
     let code = query_param(&url, "code").ok_or_else(|| rust_err("missing oauth code"))?;

@@ -5,7 +5,7 @@ use crate::DB_BINDING;
 use crate::ICONS_R2_BINDING;
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
-use crate::utils::{error_response, js_option};
+use crate::utils::{check_rate_limit, error_response, js_option};
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
 
@@ -128,6 +128,9 @@ pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Respon
 /// Creates a new project from the request body, attributing it to the
 /// authenticated user.
 pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    if let Some(response) = check_rate_limit(&req, &ctx, "project_create").await? {
+        return Ok(response);
+    }
     let account = require_account(&req, &ctx).await?;
     let mut payload: ProjectPayload = req.json().await?;
     let validation_errors = validate_project_payload(&payload);
@@ -386,6 +389,9 @@ fn icon_content_type(bytes: &[u8]) -> Option<&'static str> {
 /// Handles a multipart upload of a project icon, validates it, stores it in R2,
 /// and updates the project's `icon_url` column with the R2 object key.
 pub async fn upload_project_icon(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    if let Some(response) = check_rate_limit(&req, &ctx, "icon_upload").await? {
+        return Ok(response);
+    }
     let account = require_account(&req, &ctx).await?;
     let id = ctx.param("id").cloned().unwrap_or_default();
     let project = fetch_project(&ctx, &id)
