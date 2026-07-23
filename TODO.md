@@ -8,7 +8,7 @@ by established Rust crates.
 | 1 | Sanitized markdown renderer (`ammonia` + `pulldown-cmark`) | `cadiotheka-frontend/src/components/ui/markdown.rs` | Low | High | ✅ Done |
 | 2 | `html_escape` crate | `cadiotheka-frontend/src/components/ui/markdown.rs`, `cadiotheka-backend/src/api/auth.rs` | Low | Medium | ✅ Done |
 | 3 | `timeago` / `humantime` | `cadiotheka-frontend/src/utils/format.rs` | Low | Medium | ✅ Done |
-| 4 | `human_format` / `num-format` | `cadiotheka-frontend/src/utils/format.rs` | Low | Low-Medium |
+| 4 | `human_format` / `num-format` | `cadiotheka-frontend/src/utils/format.rs` | Low | Low-Medium | ✅ Done |
 | 5 | `imagesize` crate | `cadiotheka-backend/src/api/projects.rs` | Low | Medium |
 | 6 | `cookie` crate | `cadiotheka-backend/src/api/session.rs` | Medium | Medium |
 | 7 | `serde_qs` | `cadiotheka-backend/src/utils.rs` | Low | Low |

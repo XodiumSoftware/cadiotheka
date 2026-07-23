@@ -183,11 +183,13 @@ dependencies = [
  "fuzzy-matcher",
  "gloo-net",
  "gloo-timers",
+ "human_format",
  "js-sys",
  "leptos",
  "pulldown-cmark",
  "serde",
  "serde_json",
+ "thousands",
  "time",
  "timeago",
  "urlencoding",
@@ -762,6 +764,12 @@ dependencies = [
  "bytes",
  "http",
 ]
+
+[[package]]
+name = "human_format"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eaec953f16e5bcf6b8a3cb3aa959b17e5577dbd2693e94554c462c08be22624b"
 
 [[package]]
 name = "hydration_context"
@@ -2063,6 +2071,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "thousands"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bf63baf9f5039dadc247375c29eb13706706cfde997d0330d05aa63a77d8820"
 
 [[package]]
 name = "thread_local"

@@ -1,3 +1,5 @@
+use thousands::Separable;
+
 /// Strip a `-dirty` suffix from a Git SHA, if present.
 pub fn clean_sha(sha: &str) -> &str {
     sha.strip_suffix("-dirty").unwrap_or(sha)
@@ -15,25 +17,23 @@ pub fn placeholder_letter(title: &str) -> String {
 
 /// Formats a non-negative integer with SI suffixes for compact display.
 pub fn format_number(value: u64) -> String {
-    match value {
-        0..=999 => value.to_string(),
-        1_000..=999_999 => format!("{:.1}k", value as f64 / 1_000.0),
-        1_000_000..=999_999_999 => format!("{:.1}M", value as f64 / 1_000_000.0),
-        _ => format!("{:.1}B", value as f64 / 1_000_000_000.0),
+    if value < 1_000 {
+        return value.to_string();
     }
+
+    let mut scales = human_format::Scales::SI();
+    scales.with_suffixes(vec!["", "k", "M", "B"]);
+
+    human_format::Formatter::new()
+        .with_decimals(1)
+        .with_separator("")
+        .with_scales(scales)
+        .format(value as f64)
 }
 
 /// Returns the full integer with thousands separators (e.g. "1.234.567").
 pub fn format_number_full(value: u64) -> String {
-    let raw = value.to_string();
-    let mut result = String::new();
-    for (i, ch) in raw.chars().rev().enumerate() {
-        if i > 0 && i % 3 == 0 {
-            result.push('.');
-        }
-        result.push(ch);
-    }
-    result.chars().rev().collect()
+    value.separate_with_dots()
 }
 
 /// Returns a human-readable relative age string such as "2 weeks ago".
