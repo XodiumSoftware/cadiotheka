@@ -157,8 +157,7 @@ pub fn ProjectCard(
     let favorite_count = Signal::derive(move || {
         live_project
             .get()
-            .map(|project| project.favorites.len())
-            .unwrap_or(0)
+            .map_or(0, |project| project.favorites.len())
     });
     let is_favorited = Signal::derive(move || {
         let Some(account) = current_user.account.get() else {
@@ -178,9 +177,9 @@ pub fn ProjectCard(
     let card_title_for_favorite_label = props.title.clone();
     let favorite_aria_label = Signal::derive(move || {
         if is_favorited.get() {
-            format!("Remove {} from favorites", card_title_for_favorite_label)
+            format!("Remove {card_title_for_favorite_label} from favorites")
         } else {
-            format!("Add {} to favorites", card_title_for_favorite_label)
+            format!("Add {card_title_for_favorite_label} to favorites")
         }
     });
     let card_title_for_icon_alt = card_title.clone();
@@ -204,7 +203,7 @@ pub fn ProjectCard(
             class=move || {
                 let base = "btn-lift hover:border-primary block h-full p-2 cursor-pointer transition-all";
                 if focused.get() {
-                    format!("{} border-primary btn-lift-selected", base)
+                    format!("{base} border-primary btn-lift-selected")
                 } else {
                     base.to_string()
                 }
@@ -253,7 +252,7 @@ pub fn ProjectCard(
                                         <button
                                             type="button"
                                             class="text-base-content font-semibold truncate hover:text-primary hover:underline tooltip tooltip-top"
-                                            data-tip={format!("@{}", card_author_username)}
+                                            data-tip={format!("@{card_author_username}")}
                                             on:click=move |ev| {
                                                 ev.stop_propagation();
                                                 on_author_click.run(());
@@ -336,14 +335,14 @@ pub fn ProjectCard(
                                             let updated_for_modal = updated.clone();
                                             set_projects.update(|projects| {
                                                 if let Some(project) = projects.iter_mut().find(|project| project.id == updated.id) {
-                                                    *project = updated.clone();
+                                                    project.clone_from(&updated);
                                                 }
                                             });
                                             modal_set_card.update(|card| {
                                                 if let Some(card) = card.as_mut()
                                                     && card.id == updated_for_modal.id
                                                 {
-                                                    card.favorites = updated_for_modal.favorites.clone();
+                                                    card.favorites.clone_from(&updated_for_modal.favorites);
                                                 }
                                             });
                                         }

@@ -37,7 +37,7 @@ pub fn AddProjectModal() -> impl IntoView {
     let current_user = CurrentUserContext::use_context();
     let login_modal = LoginModalContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
-    let on_close = move |_| modal.close();
+    let on_close = move |()| modal.close();
 
     let title_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let desc_input_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
@@ -275,7 +275,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                         icon_url={move || selected_icon_preview.get().map(IconUrl)}
                                         title=move || title.get()
                                         editable={Signal::derive(move || !is_submitting.get())}
-                                        on_click=move |_| {
+                                        on_click=move |()| {
                                             if let Some(input) = icon_input_ref.get() {
                                                 input.click();
                                             }

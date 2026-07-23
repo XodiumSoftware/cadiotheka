@@ -56,7 +56,10 @@ fn group_and_filter_suggestions(suggestions: &[Suggestion]) -> Vec<SuggestionGro
 /// Applies a clicked suggestion to a query, replacing the partial token when
 /// completing a prefixed suggestion.
 fn apply_suggestion(query: &str, text: &str, kind: SuggestionKind) -> String {
-    let mut parts: Vec<String> = query.split_whitespace().map(|s| s.to_owned()).collect();
+    let mut parts: Vec<String> = query
+        .split_whitespace()
+        .map(std::borrow::ToOwned::to_owned)
+        .collect();
 
     match kind {
         SuggestionKind::Sort => {
@@ -67,19 +70,19 @@ fn apply_suggestion(query: &str, text: &str, kind: SuggestionKind) -> String {
             parts.push(text.to_owned());
         }
         SuggestionKind::Author => {
-            let replacement = format!("@author:{}", text);
+            let replacement = format!("@author:{text}");
             replace_last_token(&mut parts, replacement);
         }
         SuggestionKind::Filter => {
-            let replacement = format!("#{}", text);
+            let replacement = format!("#{text}");
             replace_last_token(&mut parts, replacement);
         }
         SuggestionKind::Plain => {
             let needs_space = !query.is_empty() && !query.ends_with(' ');
             if needs_space {
-                return format!("{} {}", query, text);
+                return format!("{query} {text}");
             }
-            return format!("{}{}", query, text);
+            return format!("{query}{text}");
         }
     }
 
@@ -149,7 +152,7 @@ pub fn Header() -> impl IntoView {
     let login_modal_ctx = LoginModalContext::use_context();
     let profile_modal_ctx = ProfileModalContext::use_context();
 
-    let focus_avatar = Callback::new(move |_| {
+    let focus_avatar = Callback::new(move |()| {
         if let Some(btn) = avatar_button_ref.get() {
             let _ = btn.focus();
         }
@@ -269,11 +272,9 @@ pub fn Header() -> impl IntoView {
             let menu = menu.clone();
             let should_close = target
                 .and_then(|t| t.dyn_into::<web_sys::Node>().ok())
-                .map(|target_node| {
-                    menu.map(|menu| !menu.contains(Some(&target_node)))
-                        .unwrap_or(true)
-                })
-                .unwrap_or(true);
+                .is_none_or(|target_node| {
+                    menu.is_none_or(|menu| !menu.contains(Some(&target_node)))
+                });
             if should_close {
                 let was_open = account_menu_open.get_untracked();
                 set_account_menu_open.set(false);
@@ -287,9 +288,7 @@ pub fn Header() -> impl IntoView {
 
     Effect::new(move |_| {
         window_event_listener::<web_sys::Event, _>("scroll", move |_ev| {
-            let scrolled = web_sys::window()
-                .map(|w| w.scroll_y().unwrap_or(0.0) > 0.0)
-                .unwrap_or(false);
+            let scrolled = web_sys::window().is_some_and(|w| w.scroll_y().unwrap_or(0.0) > 0.0);
             set_is_scrolled.set(scrolled);
         });
     });
@@ -411,8 +410,7 @@ pub fn Header() -> impl IntoView {
                 ev.prevent_default();
                 let new_idx = selected_index
                     .get_untracked()
-                    .map(|idx| (idx + 1) % flat.len())
-                    .unwrap_or(0);
+                    .map_or(0, |idx| (idx + 1) % flat.len());
                 set_selected_index.set(Some(new_idx));
                 set_keyboard_index.set(Some(new_idx));
             }
@@ -420,8 +418,9 @@ pub fn Header() -> impl IntoView {
                 ev.prevent_default();
                 let new_idx = selected_index
                     .get_untracked()
-                    .map(|idx| if idx == 0 { flat.len() - 1 } else { idx - 1 })
-                    .unwrap_or(flat.len() - 1);
+                    .map_or(flat.len() - 1, |idx| {
+                        if idx == 0 { flat.len() - 1 } else { idx - 1 }
+                    });
                 set_selected_index.set(Some(new_idx));
                 set_keyboard_index.set(Some(new_idx));
             }
@@ -664,7 +663,7 @@ pub fn Header() -> impl IntoView {
                                                             class=move || {
                                                                 let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3 whitespace-nowrap";
                                                                 if active_menu_index.get() == 0 {
-                                                                    format!("{} bg-base-content/10", base)
+                                                                    format!("{base} bg-base-content/10")
                                                                 } else {
                                                                     base.to_string()
                                                                 }
@@ -686,7 +685,7 @@ pub fn Header() -> impl IntoView {
                                                             class=move || {
                                                                 let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3 whitespace-nowrap";
                                                                 if active_menu_index.get() == 1 {
-                                                                    format!("{} bg-base-content/10", base)
+                                                                    format!("{base} bg-base-content/10")
                                                                 } else {
                                                                     base.to_string()
                                                                 }
@@ -708,7 +707,7 @@ pub fn Header() -> impl IntoView {
                                                             class=move || {
                                                                 let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3 whitespace-nowrap";
                                                                 if active_menu_index.get() == 2 {
-                                                                    format!("{} bg-base-content/10", base)
+                                                                    format!("{base} bg-base-content/10")
                                                                 } else {
                                                                     base.to_string()
                                                                 }
@@ -730,7 +729,7 @@ pub fn Header() -> impl IntoView {
                                                             class=move || {
                                                                 let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 text-error font-semibold flex items-center justify-between gap-3 whitespace-nowrap";
                                                                 if active_menu_index.get() == 3 {
-                                                                    format!("{} bg-base-content/10", base)
+                                                                    format!("{base} bg-base-content/10")
                                                                 } else {
                                                                     base.to_string()
                                                                 }
@@ -789,7 +788,7 @@ pub fn Header() -> impl IntoView {
 
             <SearchModal
                 open=Signal::from(search_open)
-                on_close=move |_| set_search_open.set(false)
+                on_close=move |()| set_search_open.set(false)
             >
                 <div class="space-y-0 flex flex-col min-h-0">
                     <div class="relative">
@@ -875,10 +874,9 @@ pub fn Header() -> impl IntoView {
                                                     let is_selected = selected == Some(global_index);
                                                     let text = suggestion.text.clone();
                                                     let label = match suggestion.kind {
-                                                        SuggestionKind::Sort => suggestion.text.clone(),
                                                         SuggestionKind::Author => format!("@author:{}", suggestion.text),
                                                         SuggestionKind::Filter => format!("#{}", suggestion.text),
-                                                        SuggestionKind::Plain => suggestion.text.clone(),
+                                                        SuggestionKind::Sort | SuggestionKind::Plain => suggestion.text.clone(),
                                                     };
                                                     let kind = suggestion.kind;
                                                     let item_class = if is_selected {

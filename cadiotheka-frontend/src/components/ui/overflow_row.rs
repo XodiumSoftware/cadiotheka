@@ -59,7 +59,7 @@ pub fn OverflowRow(
                         class=tooltip_class
                         data-tip={tooltip}
                     >
-                        {format!("+{}", overflow_count)}
+                        {format!("+{overflow_count}")}
                     </span>
                 }
                     .into_any()

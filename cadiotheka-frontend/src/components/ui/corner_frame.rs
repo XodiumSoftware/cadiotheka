@@ -20,7 +20,7 @@ pub fn CornerFrame(
     };
 
     view! {
-        <div class={format!("relative {}", class)}>
+        <div class={format!("relative {class}")}>
             <span class={format!("{corner_class} -top-2 -left-1")}>
                 {top_left}
             </span>

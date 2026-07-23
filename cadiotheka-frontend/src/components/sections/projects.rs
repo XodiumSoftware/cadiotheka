@@ -57,7 +57,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         let has_clear_button = !search.query.get().is_empty();
         set_focused_index.update(|idx| {
             let next = idx.and_then(|i| {
-                let max = if has_clear_button { 1 } else { 0 };
+                let max = usize::from(has_clear_button);
                 if i < max { Some(max) } else { Some(i) }
             });
             *idx = next;
@@ -93,7 +93,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
 
         let card_count = filtered.get().len();
         let has_clear_button = !search.query.get().is_empty();
-        let item_count = card_count + if has_clear_button { 1 } else { 0 };
+        let item_count = card_count + usize::from(has_clear_button);
         if item_count == 0 {
             return;
         }
@@ -130,7 +130,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         else {
             return;
         };
-        let item = children.item(index as u32);
+        let item = children.item(u32::try_from(index).unwrap_or(0));
         if let Some(el) = item {
             let _ = el
                 .dyn_into::<leptos::web_sys::HtmlElement>()
@@ -158,12 +158,10 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
 
             let inside_grid = grid_ref
                 .get()
-                .map(|grid| grid.contains(Some(&active)))
-                .unwrap_or(false);
+                .is_some_and(|grid| grid.contains(Some(&active)));
             let on_body = active
                 .dyn_ref::<leptos::web_sys::HtmlElement>()
-                .map(|el| el.tag_name().eq_ignore_ascii_case("body"))
-                .unwrap_or(false);
+                .is_some_and(|el| el.tag_name().eq_ignore_ascii_case("body"));
 
             if !inside_grid && !on_body {
                 return;
@@ -179,7 +177,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     });
 
     view! {
-        <section id="projects" class={format!("relative py-16 sm:py-20 px-6 flex-1 flex flex-col {}", class)}>
+        <section id="projects" class={format!("relative py-16 sm:py-20 px-6 flex-1 flex flex-col {class}")}>
             <FadeOverlay />
             <FadeOverlay position="spotlight-top" height="96" />
             <FadeOverlay position="spotlight-bottom" height="96" />
@@ -241,7 +239,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                     } else {
                         let query_active = !query.is_empty();
                         let has_clear_button = query_active;
-                        let card_offset = if has_clear_button { 1 } else { 0 };
+                        let card_offset = usize::from(has_clear_button);
                         view! {
                             <div
                                 node_ref=grid_ref
@@ -274,7 +272,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                 class=move || {
                                                     let base = "group btn-lift flex flex-col items-center justify-center h-full w-full bg-white hover:border-primary hover:text-primary border-2 border-base-content/80 p-2 text-left";
                                                     if focused_index.get() == Some(0) {
-                                                        format!("{} ring-2 ring-primary ring-offset-2 ring-offset-base-100", base)
+                                                        format!("{base} ring-2 ring-primary ring-offset-2 ring-offset-base-100")
                                                     } else {
                                                         base.to_string()
                                                     }
@@ -310,8 +308,8 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                             <ProjectCard
                                                 props=props
                                                 focused=Signal::derive(move || focused_index.get() == Some(index))
-                                                on_click=move |_| project_modal.open(project_for_modal.clone().into())
-                                                on_author_click=move |_| {
+                                                on_click=move |()| project_modal.open(project_for_modal.clone().into())
+                                                on_author_click=move |()| {
                                                     let account = accounts_ctx
                                                         .accounts
                                                         .get()

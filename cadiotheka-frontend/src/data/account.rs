@@ -37,7 +37,7 @@ pub struct AccountData {
     pub created_at: time::OffsetDateTime,
     /// Whether the account has been verified.
     ///
-    /// The backend stores this as a SQLite integer, so it is deserialized as
+    /// The backend stores this as a `SQLite` integer, so it is deserialized as
     /// an `i32` (0 = false, 1 = true).
     #[serde(default)]
     pub verified: i32,

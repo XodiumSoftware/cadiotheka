@@ -3,25 +3,25 @@
 /// Predefined platforms that a card may support.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
 pub enum Platform {
-    /// Blender (https://www.blender.org).
+    /// Blender (<https://www.blender.org>).
     #[serde(rename = "blender")]
     Blender,
-    /// FreeCAD (https://www.freecad.org).
+    /// `FreeCAD` (<https://www.freecad.org>).
     #[serde(rename = "freecad")]
     FreeCAD,
-    /// SketchUp (https://www.sketchup.com).
+    /// `SketchUp` (<https://www.sketchup.com>).
     #[serde(rename = "sketchup")]
     SketchUp,
     /// Autodesk Fusion 360.
     #[serde(rename = "fusion_360")]
     Fusion360,
-    /// KiCad (https://www.kicad.org).
+    /// `KiCad` (<https://www.kicad.org>).
     #[serde(rename = "kicad")]
     KiCad,
-    /// AutoCAD.
+    /// `AutoCAD`.
     #[serde(rename = "autocad")]
     AutoCAD,
-    /// SolidWorks.
+    /// `SolidWorks`.
     #[serde(rename = "solidworks")]
     SolidWorks,
     /// Onshape.
@@ -57,7 +57,7 @@ impl Platform {
     }
 
     /// Returns a Tailwind-compatible CSS color class for this platform.
-    pub const fn color(&self) -> &'static str {
+    pub const fn color(self) -> &'static str {
         match self {
             Self::Blender => "text-orange-700",
             Self::FreeCAD => "text-blue-700",
@@ -68,8 +68,7 @@ impl Platform {
             Self::SolidWorks => "text-red-800",
             Self::Onshape => "text-gray-700",
             Self::Tinkercad => "text-cyan-700",
-            Self::Step => "text-gray-600",
-            Self::Mesh => "text-gray-600",
+            Self::Step | Self::Mesh => "text-gray-600",
         }
     }
 

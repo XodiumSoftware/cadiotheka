@@ -15,7 +15,7 @@ const MAX_BIO_LENGTH: usize = 160;
 #[component]
 pub fn ProfileModal() -> impl IntoView {
     let modal = ProfileModalContext::use_context();
-    let on_close = move |_| modal.close();
+    let on_close = move |()| modal.close();
 
     view! {
         <SearchModal
@@ -84,7 +84,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
     let bg = placeholder_color(&account.username);
     let display_name = account.display_name.clone();
     let username = account.username.clone();
-    let avatar_alt = format!("{}'s avatar", display_name);
+    let avatar_alt = format!("{display_name}'s avatar");
     let role_label = move || match account.role {
         crate::data::AccountRole::Creator => "Creator".to_string(),
         crate::data::AccountRole::Admin => "Admin".to_string(),
@@ -112,7 +112,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
         }
     };
 
-    let dismiss_toast = Callback::new(move |_| set_toast_visible.set(false));
+    let dismiss_toast = Callback::new(move |()| set_toast_visible.set(false));
 
     let (linked_providers, set_linked_providers) = signal::<Vec<String>>(Vec::new());
 
@@ -197,8 +197,8 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                         <button
                             type="button"
                             class="text-left group cursor-pointer tooltip tooltip-bottom"
-                            data-tip={format!("@{}", username)}
-                            aria-label={format!("Copy username @{}", username)}
+                            data-tip={format!("@{username}")}
+                            aria-label={format!("Copy username @{username}")}
                             on:click=copy_username
                         >
                             <h2 class="text-xl font-bold text-primary leading-tight truncate group-hover:text-primary/80 transition-colors">
@@ -360,7 +360,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                         let connected = is_github_connected.get();
                                         let base = "relative btn btn-sm flex-1 flex items-center justify-center gap-2 rounded-none border border-base-content/20 h-auto min-h-0 py-2 btn-outline hover:btn-primary overflow-hidden group";
                                         if connected {
-                                            format!("{} btn-ghost", base)
+                                            format!("{base} btn-ghost")
                                         } else {
                                             base.to_string()
                                         }
@@ -404,7 +404,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                         let connected = is_google_connected.get();
                                         let base = "relative btn btn-sm flex-1 flex items-center justify-center gap-2 rounded-none border border-base-content/20 h-auto min-h-0 py-2 btn-outline hover:btn-primary overflow-hidden group";
                                         if connected {
-                                            format!("{} btn-ghost", base)
+                                            format!("{base} btn-ghost")
                                         } else {
                                             base.to_string()
                                         }

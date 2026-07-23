@@ -17,7 +17,7 @@ pub fn placeholder_color(title: &str) -> &'static str {
     let mut hasher = DefaultHasher::new();
     title.hash(&mut hasher);
     let hash = hasher.finish();
-    palette[(hash as usize) % palette.len()]
+    palette[usize::try_from(hash).unwrap_or(0) % palette.len()]
 }
 
 /// Return a Tailwind color class for a programming language name.

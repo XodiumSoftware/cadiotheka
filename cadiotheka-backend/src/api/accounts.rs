@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use worker::*;
+use worker::{D1Database, Request, Response, Result, RouteContext};
 
 use crate::DB_BINDING;
 use crate::api::session::require_account;

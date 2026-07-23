@@ -1,4 +1,4 @@
-use worker::*;
+use worker::{Request, Response, Result, RouteContext, wasm_bindgen};
 
 /// KV binding used for rate-limit counters. Shared with the auth module so
 /// only one KV namespace is required.
@@ -92,10 +92,7 @@ pub fn js_option(value: Option<String>) -> wasm_bindgen::JsValue {
 /// only way to obtain the current time in a Cloudflare Worker.
 pub fn now_utc() -> time::OffsetDateTime {
     let millis = worker::js_sys::Date::now();
-    let seconds = (millis / 1_000.0) as i64;
-    let nanos = ((millis % 1_000.0) * 1_000_000.0) as i32;
-    time::OffsetDateTime::from_unix_timestamp(seconds).unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
-        + time::Duration::nanoseconds(nanos.into())
+    time::OffsetDateTime::UNIX_EPOCH + time::Duration::seconds_f64(millis / 1_000.0)
 }
 
 /// Returns a public origin for the request, preferring the `X-Forwarded-Host`
@@ -128,8 +125,7 @@ pub fn public_origin(req: &Request) -> String {
         .unwrap_or_else(|| {
             req.url()
                 .ok()
-                .map(|url| url.scheme().to_string())
-                .unwrap_or_else(|| "https".to_string())
+                .map_or_else(|| "https".to_string(), |url| url.scheme().to_string())
         });
     format!("{proto}://{host}")
 }
@@ -209,10 +205,7 @@ fn format_port(port: Option<u16>) -> String {
 
 /// Returns whether a request was made over HTTPS based on its URL scheme.
 pub fn is_https_request(req: &Request) -> bool {
-    req.url()
-        .ok()
-        .map(|u| u.scheme() == "https")
-        .unwrap_or(true)
+    req.url().ok().is_none_or(|u| u.scheme() == "https")
 }
 
 #[cfg(test)]

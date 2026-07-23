@@ -27,7 +27,7 @@ async fn start_oauth(provider: &str) {
 #[component]
 pub fn LoginModal() -> impl IntoView {
     let modal = LoginModalContext::use_context();
-    let on_close = move |_| modal.close();
+    let on_close = move |()| modal.close();
 
     Effect::new(move |_| {
         let modal = modal;

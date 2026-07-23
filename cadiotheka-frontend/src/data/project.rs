@@ -15,7 +15,7 @@ pub struct IconUrl(pub String);
 /// that JSON string into a list of strings and then deserializes each string
 /// into a strongly-typed [`Tag`] via `serde(rename)`.
 mod tag_json_string {
-    use super::*;
+    use super::{Deserialize, Deserializer, Serializer, Tag};
 
     pub fn serialize<S: Serializer>(value: &[Tag], serializer: S) -> Result<S::Ok, S::Error> {
         let strings: Vec<String> = value
@@ -52,7 +52,7 @@ mod tag_json_string {
 /// parses that JSON string into a list of strings and then deserializes each
 /// string into a strongly-typed [`Platform`] via `serde(rename)`.
 mod platform_json_string {
-    use super::*;
+    use super::{Deserialize, Deserializer, Platform, Serializer};
 
     pub fn serialize<S: Serializer>(value: &[Platform], serializer: S) -> Result<S::Ok, S::Error> {
         let strings: Vec<String> = value
@@ -87,7 +87,7 @@ mod platform_json_string {
 
 /// Serde adapter for favorites stored as a JSON-text column.
 mod favorites_json_string {
-    use super::*;
+    use super::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S: Serializer>(value: &[String], serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
@@ -152,10 +152,7 @@ where
 /// Returns the current UTC time using the JavaScript `Date` API.
 fn now_utc() -> time::OffsetDateTime {
     let millis = js_sys::Date::now();
-    let seconds = (millis / 1_000.0) as i64;
-    let nanos = ((millis % 1_000.0) * 1_000_000.0) as i32;
-    time::OffsetDateTime::from_unix_timestamp(seconds).unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
-        + time::Duration::nanoseconds(nanos.into())
+    time::OffsetDateTime::UNIX_EPOCH + time::Duration::seconds_f64(millis / 1_000.0)
 }
 
 /// Creates a new project payload for submission to the backend.
@@ -456,14 +453,14 @@ pub async fn update_project(id: &str, patch: ProjectPatch) -> bool {
     {
         Ok(request) => match request.send().await {
             Ok(response) => {
-                if !response.ok() {
+                if response.ok() {
+                    true
+                } else {
                     let status = response.status();
                     leptos::web_sys::console::error_1(
                         &format!("Failed to update project: HTTP {status}").into(),
                     );
                     false
-                } else {
-                    true
                 }
             }
             Err(err) => {
@@ -536,6 +533,11 @@ pub async fn toggle_project_favorite(id: &str) -> Option<ProjectData> {
 }
 
 pub async fn upload_project_icon(id: &str, file: web_sys::File) -> Option<IconUrl> {
+    #[derive(Deserialize)]
+    struct UploadResponse {
+        icon_key: String,
+    }
+
     let url = api_url(&format!("/projects/{id}/icon"));
     let form = match web_sys::FormData::new() {
         Ok(form) => form,
@@ -566,11 +568,6 @@ pub async fn upload_project_icon(id: &str, file: web_sys::File) -> Option<IconUr
             return None;
         }
     };
-
-    #[derive(Deserialize)]
-    struct UploadResponse {
-        icon_key: String,
-    }
 
     match request.send().await {
         Ok(response) => {
@@ -666,14 +663,14 @@ pub async fn delete_project(id: &str) -> bool {
         .await
     {
         Ok(response) => {
-            if !response.ok() {
+            if response.ok() {
+                true
+            } else {
                 let status = response.status();
                 leptos::web_sys::console::error_1(
                     &format!("Failed to delete project: HTTP {status}").into(),
                 );
                 false
-            } else {
-                true
             }
         }
         Err(err) => {

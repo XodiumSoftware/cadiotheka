@@ -37,7 +37,10 @@ mod api {
     pub mod session;
 }
 
-use worker::*;
+use worker::{
+    Context, Env, Headers, Method, Request, Response, ResponseBody, ResponseBuilder, Result,
+    Router, event,
+};
 
 /// Adds CORS headers to a response so the frontend (served from a different
 /// origin) can read the JSON body.
@@ -45,35 +48,18 @@ use worker::*;
 /// Some response types (notably redirects created with `Response::redirect`)
 /// have immutable headers. In that case the original response is returned
 /// unchanged.
-fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Response> {
+fn add_cors_headers(mut resp: Response, origin: &str) -> Response {
     {
         let headers = resp.headers_mut();
-        if headers.set("Access-Control-Allow-Origin", origin).is_err() {
-            return Ok(resp);
-        }
-        if headers
-            .set(
-                "Access-Control-Allow-Methods",
-                "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-            )
-            .is_err()
-        {
-            return Ok(resp);
-        }
-        if headers
-            .set("Access-Control-Allow-Headers", "Content-Type")
-            .is_err()
-        {
-            return Ok(resp);
-        }
-        if headers
-            .set("Access-Control-Allow-Credentials", "true")
-            .is_err()
-        {
-            return Ok(resp);
-        }
+        let _ = headers.set("Access-Control-Allow-Origin", origin);
+        let _ = headers.set(
+            "Access-Control-Allow-Methods",
+            "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+        );
+        let _ = headers.set("Access-Control-Allow-Headers", "Content-Type");
+        let _ = headers.set("Access-Control-Allow-Credentials", "true");
     }
-    Ok(resp)
+    resp
 }
 
 /// Responds to CORS preflight requests.
@@ -159,7 +145,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 || is_login_route
                 || (!is_redirect && path.starts_with(routes::AUTH_PREFIX))
             {
-                add_cors_headers(resp, &origin)
+                Ok(add_cors_headers(resp, &origin))
             } else {
                 Ok(resp)
             }

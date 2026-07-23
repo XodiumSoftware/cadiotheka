@@ -36,7 +36,7 @@ impl SearchEngine {
     /// Returning `&ProjectData` avoids cloning the owned project data on every
     /// search, which matters as the catalog grows.
     pub fn search<'a>(&'a self, parsed: &ParsedQuery) -> Vec<&'a ProjectData> {
-        let query = parsed.filter.to_vec().join(" ").to_lowercase();
+        let query = parsed.filter.clone().join(" ").to_lowercase();
 
         let mut scored: Vec<(i64, &ProjectData)> = self
             .cards
@@ -132,7 +132,7 @@ impl SearchEngine {
         let needle = needle.to_lowercase();
         label
             .split(|c: char| !c.is_alphanumeric())
-            .map(|token| token.to_lowercase())
+            .map(str::to_lowercase)
             .any(|token| token.contains(&needle))
     }
 
@@ -166,7 +166,7 @@ impl SearchEngine {
         let platforms = card
             .supported_platforms
             .iter()
-            .map(|platform| platform.label())
+            .map(super::super::metadata::platforms::Platform::label)
             .collect::<Vec<_>>()
             .join(" ");
         format!(

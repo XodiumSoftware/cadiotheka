@@ -3,7 +3,9 @@ use cookie::{Cookie, SameSite};
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
-use worker::*;
+use worker::{
+    Headers, KvStore, Request, Response, ResponseBuilder, Result, RouteContext, console_log,
+};
 
 use crate::api::accounts::{Account, fetch_account};
 use crate::utils::{
@@ -76,7 +78,9 @@ fn build_session_cookie(name: &str, encoded: &str, is_https: bool) -> String {
         SameSite::Lax
     };
     Cookie::build((name, encoded))
-        .max_age(time::Duration::seconds(SESSION_TTL_SECONDS as i64))
+        .max_age(time::Duration::seconds(
+            i64::try_from(SESSION_TTL_SECONDS).unwrap_or(i64::MAX),
+        ))
         .path("/")
         .http_only(true)
         .secure(is_https)
@@ -141,15 +145,12 @@ pub async fn create_session(
 /// up in KV, and returns the associated account. Returns `None` if there is
 /// no session or it is invalid/expired.
 pub async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Result<Option<Account>> {
-    let cookie_header = match req.headers().get("Cookie")? {
-        Some(value) => value,
-        None => {
-            console_log!(
-                "read_session: no Cookie header present (origin={})",
-                public_origin(req)
-            );
-            return Ok(None);
-        }
+    let Some(cookie_header) = req.headers().get("Cookie")? else {
+        console_log!(
+            "read_session: no Cookie header present (origin={})",
+            public_origin(req)
+        );
+        return Ok(None);
     };
 
     let is_https = is_https_origin(&public_origin(req));
@@ -166,32 +167,23 @@ pub async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Result<Optio
         .find(|cookie| cookie.name() == cookie_name)
         .map(|cookie| cookie.value().to_owned());
 
-    let encoded = match encoded {
-        Some(value) => value,
-        None => {
-            console_log!(
-                "read_session: cookie {} not found in: {}",
-                cookie_name,
-                cookie_header
-            );
-            return Ok(None);
-        }
+    let Some(encoded) = encoded else {
+        console_log!(
+            "read_session: cookie {} not found in: {}",
+            cookie_name,
+            cookie_header
+        );
+        return Ok(None);
     };
 
-    let decoded = match base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(encoded) {
-        Ok(bytes) => bytes,
-        Err(_) => {
-            console_log!("read_session: failed to base64-decode session cookie");
-            return Ok(None);
-        }
+    let Ok(decoded) = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(encoded) else {
+        console_log!("read_session: failed to base64-decode session cookie");
+        return Ok(None);
     };
 
-    let cookie: SessionCookie = match serde_json::from_slice(&decoded) {
-        Ok(cookie) => cookie,
-        Err(_) => {
-            console_log!("read_session: failed to parse session cookie JSON");
-            return Ok(None);
-        }
+    let Ok(cookie) = serde_json::from_slice::<SessionCookie>(&decoded) else {
+        console_log!("read_session: failed to parse session cookie JSON");
+        return Ok(None);
     };
 
     let secret = session_secret(ctx)?;
@@ -200,20 +192,14 @@ pub async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Result<Optio
         return Ok(None);
     }
 
-    let value = match kv(ctx)?.get(&cookie.id).text().await? {
-        Some(value) => value,
-        None => {
-            console_log!("read_session: session id not found in KV");
-            return Ok(None);
-        }
+    let Some(value) = kv(ctx)?.get(&cookie.id).text().await? else {
+        console_log!("read_session: session id not found in KV");
+        return Ok(None);
     };
 
-    let data: SessionData = match serde_json::from_str(&value) {
-        Ok(data) => data,
-        Err(_) => {
-            console_log!("read_session: failed to parse session data from KV");
-            return Ok(None);
-        }
+    let Ok(data) = serde_json::from_str::<SessionData>(&value) else {
+        console_log!("read_session: failed to parse session data from KV");
+        return Ok(None);
     };
 
     let account = fetch_account(ctx, &data.account_id).await?;
@@ -222,6 +208,9 @@ pub async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Result<Optio
     }
     Ok(account)
 }
+
+/// Maximum length for a user-written bio, matching GitHub's profile bio limit.
+const MAX_BIO_LENGTH: usize = 160;
 
 /// Requires a valid session and returns the authenticated account. Returns 401
 /// if the request is not authenticated.
@@ -232,19 +221,17 @@ pub async fn require_account(req: &Request, ctx: &RouteContext<()>) -> Result<Ac
     }
 }
 
-/// Maximum length for a user-written bio, matching GitHub's profile bio limit.
-const MAX_BIO_LENGTH: usize = 160;
-
 /// Updates the currently authenticated account.
 ///
 /// Accepts a JSON body with the fields the user is allowed to edit themselves.
 /// Currently only `bio` is supported.
 pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
     #[derive(Deserialize)]
     struct UpdatePayload {
         bio: String,
     }
+
+    let account = require_account(&req, &ctx).await?;
     let payload: UpdatePayload = req.json().await?;
 
     if payload.bio.len() > MAX_BIO_LENGTH {
@@ -285,11 +272,8 @@ pub async fn logout(req: Request, ctx: RouteContext<()>) -> Result<Response> {
         .and_then(|url| safe_redirect_target(is_https, &url, "redirect_to"))
         .unwrap_or_else(|| public_origin(&req));
 
-    let cookie_header = match req.headers().get("Cookie")? {
-        Some(value) => value,
-        None => {
-            return build_logout_response(redirect_to, cookie_name, is_https);
-        }
+    let Some(cookie_header) = req.headers().get("Cookie")? else {
+        return build_logout_response(redirect_to, cookie_name, is_https);
     };
 
     let encoded = Cookie::split_parse(&cookie_header)
@@ -310,6 +294,7 @@ pub async fn logout(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     build_logout_response(redirect_to, cookie_name, is_https)
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn build_logout_response(origin: String, cookie_name: &str, is_https: bool) -> Result<Response> {
     let headers = Headers::new();
     headers.set("Set-Cookie", &build_clear_cookie(cookie_name, is_https))?;

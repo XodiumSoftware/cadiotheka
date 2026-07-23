@@ -50,8 +50,8 @@ pub fn MarkdownEditor(
         on_input.run(next.clone());
         set_last_selection.set((new_start.min(next.len()), new_end.min(next.len())));
         if let Some(textarea) = textarea_ref.get() {
-            let _ = textarea.set_selection_start(Some(new_start as u32));
-            let _ = textarea.set_selection_end(Some(new_end as u32));
+            let _ = textarea.set_selection_start(Some(u32::try_from(new_start).unwrap_or(0)));
+            let _ = textarea.set_selection_end(Some(u32::try_from(new_end).unwrap_or(0)));
         }
     };
 
@@ -141,28 +141,28 @@ pub fn MarkdownEditor(
                 </div>
 
                 <div class="flex items-center gap-1 flex-wrap text-base-content/70">
-                    <ToolbarButton label="Bold" on_click=Callback::new(move |_| apply_wrap("**", "**"))>
+                    <ToolbarButton label="Bold" on_click=Callback::new(move |()| apply_wrap("**", "**"))>
                         "B"
                     </ToolbarButton>
-                    <ToolbarButton label="Italic" on_click=Callback::new(move |_| apply_wrap("*", "*"))>
+                    <ToolbarButton label="Italic" on_click=Callback::new(move |()| apply_wrap("*", "*"))>
                         "I"
                     </ToolbarButton>
-                    <ToolbarButton label="Heading" on_click=Callback::new(move |_| insert_snippet("## Heading"))>
+                    <ToolbarButton label="Heading" on_click=Callback::new(move |()| insert_snippet("## Heading"))>
                         "H"
                     </ToolbarButton>
-                    <ToolbarButton label="Code" on_click=Callback::new(move |_| apply_wrap("`", "`"))>
+                    <ToolbarButton label="Code" on_click=Callback::new(move |()| apply_wrap("`", "`"))>
                         "<>"
                     </ToolbarButton>
-                    <ToolbarButton label="Link" on_click=Callback::new(move |_| insert_snippet("[label](https://example.com)"))>
+                    <ToolbarButton label="Link" on_click=Callback::new(move |()| insert_snippet("[label](https://example.com)"))>
                         "🔗"
                     </ToolbarButton>
-                    <ToolbarButton label="Bullet list" on_click=Callback::new(move |_| apply_line_prefix("- "))>
+                    <ToolbarButton label="Bullet list" on_click=Callback::new(move |()| apply_line_prefix("- "))>
                         "•"
                     </ToolbarButton>
-                    <ToolbarButton label="Numbered list" on_click=Callback::new(move |_| insert_snippet("1. Item\n2. Item"))>
+                    <ToolbarButton label="Numbered list" on_click=Callback::new(move |()| insert_snippet("1. Item\n2. Item"))>
                         "1."
                     </ToolbarButton>
-                    <ToolbarButton label="Task list" on_click=Callback::new(move |_| insert_snippet("- [ ] Task"))>
+                    <ToolbarButton label="Task list" on_click=Callback::new(move |()| insert_snippet("- [ ] Task"))>
                         "☑"
                     </ToolbarButton>
                 </div>

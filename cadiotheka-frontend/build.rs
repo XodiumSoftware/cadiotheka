@@ -8,8 +8,7 @@ fn main() {
     let (git_sha, git_available) = match git_output {
         Ok(output) if output.status.success() => {
             let sha = String::from_utf8(output.stdout)
-                .map(|s| s.trim().to_string())
-                .unwrap_or_else(|_| "unknown".to_string());
+                .map_or_else(|_| "unknown".to_string(), |s| s.trim().to_string());
             (sha, true)
         }
         _ => {

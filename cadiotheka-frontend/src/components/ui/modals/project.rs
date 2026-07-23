@@ -32,7 +32,7 @@ enum ProjectDetailsTab {
 #[component]
 pub fn ProjectModal() -> impl IntoView {
     let modal = ProjectModalContext::use_context();
-    let on_close = move |_| modal.close();
+    let on_close = move |()| modal.close();
 
     view! {
         <SearchModal
@@ -59,7 +59,7 @@ pub fn ProjectModal() -> impl IntoView {
 
 fn avatar_button(account: &AccountData, class: Option<String>) -> impl IntoView + use<> {
     let display_name = account.display_name.clone();
-    let avatar_alt = format!("{}'s avatar", display_name);
+    let avatar_alt = format!("{display_name}'s avatar");
     let avatar_letter = placeholder_letter(&display_name);
     let avatar_bg = placeholder_color(&display_name);
     let size_class = class.unwrap_or_else(|| "w-12 h-12".to_string());
@@ -70,14 +70,14 @@ fn avatar_button(account: &AccountData, class: Option<String>) -> impl IntoView 
             data-tip=display_name.clone()
             aria-label=avatar_alt.clone()
         >
-            {url.map(|url| {
-                view! {
-                    <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() loading="lazy" />
-                }
-                    .into_any()
-            }).unwrap_or_else(move || {
+            {url.map_or_else(move || {
                 view! {
                     <span>{avatar_letter.clone()}</span>
+                }
+                    .into_any()
+            }, |url| {
+                view! {
+                    <img class="w-full h-full object-cover" src=url alt=avatar_alt.clone() loading="lazy" />
                 }
                     .into_any()
             })}
@@ -293,7 +293,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     let delete_project_click = {
         let project_id = project_id.clone();
         let set_projects = projects_ctx.set_projects;
-        Callback::new(move |_| {
+        Callback::new(move |()| {
             let project_id = project_id.clone();
             let set_projects = set_projects;
             leptos::task::spawn_local(async move {
@@ -400,13 +400,13 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                     set_draft_title.set(new_title.clone());
                     modal_card.update(|opt| {
                         if let Some(card) = opt.as_mut() {
-                            card.title = new_title.clone();
+                            card.title.clone_from(&new_title);
                         }
                     });
                     set_projects.update(|projects| {
                         for project in projects.iter_mut() {
                             if project.id == project_id {
-                                project.title = new_title.clone();
+                                project.title.clone_from(&new_title);
                                 break;
                             }
                         }
@@ -435,13 +435,13 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                     set_draft_description.set(new_description.clone());
                     modal_card.update(|opt| {
                         if let Some(card) = opt.as_mut() {
-                            card.description = new_description.clone();
+                            card.description.clone_from(&new_description);
                         }
                     });
                     set_projects.update(|projects| {
                         for project in projects.iter_mut() {
                             if project.id == project_id {
-                                project.description = new_description.clone();
+                                project.description.clone_from(&new_description);
                                 break;
                             }
                         }
@@ -470,13 +470,13 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                     set_draft_extended.set(new_extended.clone());
                     modal_card.update(|opt| {
                         if let Some(card) = opt.as_mut() {
-                            card.extended_desc = new_extended.clone();
+                            card.extended_desc.clone_from(&new_extended);
                         }
                     });
                     set_projects.update(|projects| {
                         for project in projects.iter_mut() {
                             if project.id == project_id {
-                                project.extended_desc = new_extended.clone();
+                                project.extended_desc.clone_from(&new_extended);
                                 break;
                             }
                         }
@@ -503,13 +503,13 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                     set_draft_tags.set(new_tags.clone());
                     modal_card.update(|opt| {
                         if let Some(card) = opt.as_mut() {
-                            card.tags = new_tags.clone();
+                            card.tags.clone_from(&new_tags);
                         }
                     });
                     set_projects.update(|projects| {
                         for project in projects.iter_mut() {
                             if project.id == project_id {
-                                project.tags = new_tags.clone();
+                                project.tags.clone_from(&new_tags);
                                 break;
                             }
                         }
@@ -539,13 +539,13 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                         set_draft_platforms.set(new_platforms.clone());
                         modal_card.update(|opt| {
                             if let Some(card) = opt.as_mut() {
-                                card.supported_platforms = new_platforms.clone();
+                                card.supported_platforms.clone_from(&new_platforms);
                             }
                         });
                         set_projects.update(|projects| {
                             for project in projects.iter_mut() {
                                 if project.id == project_id {
-                                    project.supported_platforms = new_platforms.clone();
+                                    project.supported_platforms.clone_from(&new_platforms);
                                     break;
                                 }
                             }
@@ -574,13 +574,13 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                     set_draft_collaborator_ids.set(new_ids.clone());
                     modal_card.update(|opt| {
                         if let Some(card) = opt.as_mut() {
-                            card.collaborator_ids = new_ids.clone();
+                            card.collaborator_ids.clone_from(&new_ids);
                         }
                     });
                     set_projects.update(|projects| {
                         for project in projects.iter_mut() {
                             if project.id == project_id {
-                                project.collaborator_ids = new_ids.clone();
+                                project.collaborator_ids.clone_from(&new_ids);
                                 break;
                             }
                         }
@@ -624,7 +624,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
         let project_id = card.id.clone();
         let set_projects = projects_ctx.set_projects;
         let modal_set_card = modal.set_card;
-        Callback::new(move |_| {
+        Callback::new(move |()| {
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
                 if let Some(updated) = ProjectsContext::toggle_favorite(&project_id).await {
@@ -640,7 +640,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                         if let Some(card) = card.as_mut()
                             && card.id == updated_for_modal.id
                         {
-                            card.favorites = updated_for_modal.favorites.clone();
+                            card.favorites.clone_from(&updated_for_modal.favorites);
                         }
                     });
                 }
@@ -673,8 +673,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                 .get()
                 .into_iter()
                 .find(|project| project.id == project_id)
-                .map(|project| project.favorites.len())
-                .unwrap_or(card.favorites.len())
+                .map_or(card.favorites.len(), |project| project.favorites.len())
         }
     });
 
@@ -752,7 +751,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                 icon_url={move || icon_url.get()}
                                 title=move || title.get()
                                 editable={Signal::derive(move || is_editable.get() && edit_mode.get())}
-                                on_click=move |_| {
+                                on_click=move |()| {
                                     if let Some(input) = icon_input_ref.get() {
                                         input.click();
                                     }
@@ -993,8 +992,8 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                             <MarkdownEditor
                                                 value=draft_extended
                                                 on_input=Callback::new(move |value| set_draft_extended.set(value))
-                                                on_cancel=Callback::new(move |_| cancel_edit_extended())
-                                                on_save=Callback::new(move |_| commit_edit_extended.run(draft_extended.get()))
+                                                on_cancel=Callback::new(move |()| cancel_edit_extended())
+                                                on_save=Callback::new(move |()| commit_edit_extended.run(draft_extended.get()))
                                                 maxlength=MAX_EXTENDED_DESC_LENGTH
                                                 editor_class="min-h-[20rem] font-mono text-sm"
                                             />
@@ -1059,7 +1058,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                 items=supported_platforms.get()
                                                 all_items=crate::metadata::platforms::Platform::all().to_vec()
                                                 editing=editing_platforms.into()
-                                                on_cancel=Callback::new(move |_| cancel_edit_platforms())
+                                                on_cancel=Callback::new(move |()| cancel_edit_platforms())
                                                 on_toggle=toggle_platform
                                                 on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
                                                 on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
@@ -1135,7 +1134,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                 items=tags.get()
                                                 all_items=crate::metadata::tags::Tag::all().to_vec()
                                                 editing=editing_tags.into()
-                                                on_cancel=Callback::new(move |_| cancel_edit_tags())
+                                                on_cancel=Callback::new(move |()| cancel_edit_tags())
                                                 on_toggle=toggle_tag
                                                 on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
                                                 on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
@@ -1250,8 +1249,8 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                             <button
                                                                 type="button"
                                                                 class="absolute inset-0 flex items-center justify-center bg-error/80 opacity-0 group-hover:opacity-100 transition-opacity text-white tooltip tooltip-top"
-                                                                data-tip={format!("Remove {}", display_name)}
-                                                                aria-label={format!("Remove {}", display_name)}
+                                                                data-tip={format!("Remove {display_name}")}
+                                                                aria-label={format!("Remove {display_name}")}
                                                                 on:click=move |_| remove_collaborator.run(account_id.clone())
                                                             >
                                                                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1288,7 +1287,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                             </div>
                                             <SearchModal
                                                 open=add_open_signal
-                                                on_close=Callback::new(move |_| set_add_open.set(false))
+                                                on_close=Callback::new(move |()| set_add_open.set(false))
                                             >
                                                 <div class="space-y-3">
                                                     <h3 class="text-sm font-semibold text-base-content">"Add collaborator"</h3>

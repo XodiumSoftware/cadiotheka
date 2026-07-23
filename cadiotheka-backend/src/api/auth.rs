@@ -5,7 +5,10 @@ use oauth2::{
 };
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use worker::*;
+use worker::{
+    Fetch, Headers, KvStore, Method, Request, RequestInit, Response, ResponseBody, ResponseBuilder,
+    Result, RouteContext, wasm_bindgen,
+};
 
 use crate::api::accounts::{
     Account, OAuthProfile, create_oauth_account, fetch_account, fetch_account_by_provider,
@@ -27,35 +30,35 @@ enum Provider {
 }
 
 impl Provider {
-    fn as_str(&self) -> &'static str {
+    fn as_str(self) -> &'static str {
         match self {
             Self::GitHub => "github",
             Self::Google => "google",
         }
     }
 
-    fn credentials(&self) -> (&'static str, &'static str) {
+    fn credentials(self) -> (&'static str, &'static str) {
         match self {
             Self::GitHub => ("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"),
             Self::Google => ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
         }
     }
 
-    fn auth_url(&self) -> &'static str {
+    fn auth_url(self) -> &'static str {
         match self {
             Self::GitHub => "https://github.com/login/oauth/authorize",
             Self::Google => "https://accounts.google.com/o/oauth2/v2/auth",
         }
     }
 
-    fn token_url(&self) -> &'static str {
+    fn token_url(self) -> &'static str {
         match self {
             Self::GitHub => "https://github.com/login/oauth/access_token",
             Self::Google => "https://oauth2.googleapis.com/token",
         }
     }
 
-    fn scopes(&self) -> &'static [&'static str] {
+    fn scopes(self) -> &'static [&'static str] {
         match self {
             Self::GitHub => &["read:user", "user:email"],
             Self::Google => &["openid", "email", "profile"],

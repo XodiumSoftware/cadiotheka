@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
-use worker::*;
+use worker::{
+    Bucket, D1Database, FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext,
+    console_log,
+};
 
 use crate::DB_BINDING;
 use crate::ICONS_R2_BINDING;
@@ -154,6 +157,9 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let collaborator_ids =
         serde_json::to_string(&payload.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
 
+    #[allow(clippy::cast_precision_loss)]
+    let downloads_value = payload.downloads as f64;
+
     db(&ctx)?
         .prepare(
             "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url) \
@@ -170,7 +176,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             payload.extended_desc.into(),
             tags.into(),
             platforms.into(),
-            (payload.downloads as f64).into(),
+            downloads_value.into(),
             favorites.into(),
             payload.timestamp.into(),
             js_option(payload.icon_url),
@@ -187,6 +193,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 /// Partial payload for patching a project. All fields are optional; only the
 /// provided fields are updated.
 #[derive(Deserialize, Debug)]
+#[allow(clippy::option_option)]
 pub struct ProjectPatch {
     title: Option<String>,
     icon_key: Option<Option<String>>,
@@ -319,6 +326,9 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let collaborator_ids =
         serde_json::to_string(&payload.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
 
+    #[allow(clippy::cast_precision_loss)]
+    let downloads_value = payload.downloads as f64;
+
     db(&ctx)?
         .prepare(
             "UPDATE projects \
@@ -335,7 +345,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             payload.extended_desc.into(),
             tags.into(),
             platforms.into(),
-            (payload.downloads as f64).into(),
+            downloads_value.into(),
             favorites.into(),
             payload.timestamp.into(),
             js_option(payload.icon_url),
@@ -390,9 +400,12 @@ fn icon_content_type(bytes: &[u8]) -> Option<&'static str> {
 /// Reads image dimensions from PNG, JPEG, or WebP headers without loading the
 /// entire file.
 fn icon_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
-    imagesize::blob_size(bytes)
-        .ok()
-        .map(|size| (size.width as u32, size.height as u32))
+    imagesize::blob_size(bytes).ok().and_then(|size| {
+        Some((
+            u32::try_from(size.width).ok()?,
+            u32::try_from(size.height).ok()?,
+        ))
+    })
 }
 
 /// Handles a multipart upload of a project icon, validates it, stores it in R2,
@@ -411,11 +424,8 @@ pub async fn upload_project_icon(mut req: Request, ctx: RouteContext<()>) -> Res
     }
 
     let form_data = req.form_data().await?;
-    let file = match form_data.get("icon") {
-        Some(FormEntry::File(file)) => file,
-        _ => {
-            return error_response("missing icon file", 400);
-        }
+    let Some(FormEntry::File(file)) = form_data.get("icon") else {
+        return error_response("missing icon file", 400);
     };
 
     let bytes = file.bytes().await?;

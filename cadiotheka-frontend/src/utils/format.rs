@@ -24,11 +24,14 @@ pub fn format_number(value: u64) -> String {
     let mut scales = human_format::Scales::SI();
     scales.with_suffixes(vec!["", "k", "M", "B"]);
 
+    #[allow(clippy::cast_precision_loss)]
+    let value_f64 = value as f64;
+
     human_format::Formatter::new()
         .with_decimals(1)
         .with_separator("")
         .with_scales(scales)
-        .format(value as f64)
+        .format(value_f64)
 }
 
 /// Returns the full integer with thousands separators (e.g. "1.234.567").
@@ -53,6 +56,7 @@ pub fn format_time_full(timestamp: time::OffsetDateTime) -> String {
 /// produce confusing output such as "-5 seconds ago".
 fn format_duration_ago(duration: time::Duration) -> String {
     let seconds = duration.max(time::Duration::ZERO).whole_seconds();
+    #[allow(clippy::cast_sign_loss)]
     let std_duration = std::time::Duration::from_secs(seconds as u64);
 
     timeago::Formatter::new().too_low("0").convert(std_duration)
@@ -61,10 +65,7 @@ fn format_duration_ago(duration: time::Duration) -> String {
 /// Returns the current UTC time using the JavaScript `Date` API.
 fn now_utc() -> time::OffsetDateTime {
     let millis = js_sys::Date::now();
-    let seconds = (millis / 1_000.0) as i64;
-    let nanos = ((millis % 1_000.0) * 1_000_000.0) as i32;
-    time::OffsetDateTime::from_unix_timestamp(seconds).unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
-        + time::Duration::nanoseconds(nanos.into())
+    time::OffsetDateTime::UNIX_EPOCH + time::Duration::seconds_f64(millis / 1_000.0)
 }
 
 #[cfg(test)]
