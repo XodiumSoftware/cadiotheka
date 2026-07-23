@@ -390,45 +390,12 @@ fn icon_content_type(bytes: &[u8]) -> Option<&'static str> {
     }
 }
 
-/// Reads image dimensions from PNG or JPEG magic bytes without pulling in a
-/// full image parsing dependency.
+/// Reads image dimensions from PNG, JPEG, or WebP headers without loading the
+/// entire file.
 fn icon_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
-    if bytes.starts_with(b"\x89PNG\r\n\x1a\n") && bytes.len() >= 24 {
-        let width = u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]);
-        let height = u32::from_be_bytes([bytes[20], bytes[21], bytes[22], bytes[23]]);
-        return Some((width, height));
-    }
-
-    if bytes.starts_with(&[0xff, 0xd8, 0xff]) {
-        let mut i = 2;
-        while i + 9 < bytes.len() {
-            if bytes[i] != 0xff {
-                i += 1;
-                continue;
-            }
-            let marker = bytes[i + 1];
-            if marker == 0xd9 || marker == 0xd8 {
-                i += 2;
-                continue;
-            }
-            if i + 4 >= bytes.len() {
-                break;
-            }
-            let segment_length = u16::from_be_bytes([bytes[i + 2], bytes[i + 3]]) as usize;
-            if segment_length < 2 {
-                break;
-            }
-            // SOF0 (baseline) and SOF2 (progressive) markers contain dimensions.
-            if (marker == 0xc0 || marker == 0xc2) && i + 9 < bytes.len() {
-                let height = u16::from_be_bytes([bytes[i + 5], bytes[i + 6]]) as u32;
-                let width = u16::from_be_bytes([bytes[i + 7], bytes[i + 8]]) as u32;
-                return Some((width, height));
-            }
-            i += 2 + segment_length;
-        }
-    }
-
-    None
+    imagesize::blob_size(bytes)
+        .ok()
+        .map(|size| (size.width as u32, size.height as u32))
 }
 
 /// Handles a multipart upload of a project icon, validates it, stores it in R2,

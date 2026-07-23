@@ -24,6 +24,7 @@ hex = "0.4"
 oauth2 = { version = "5.0", default-features = false }
 wasm-bindgen = "0.2.126"
 html-escape = "0.2"
+imagesize = { version = "0.15", default-features = false, features = ["jpeg", "png", "webp"] }
 
 [lints]
 workspace = true
