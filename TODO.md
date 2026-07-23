@@ -11,7 +11,7 @@ by established Rust crates.
 | 4 | `human_format` / `num-format` | `cadiotheka-frontend/src/utils/format.rs` | Low | Low-Medium | ✅ Done |
 | 5 | `imagesize` crate | `cadiotheka-backend/src/api/projects.rs` | Low | Medium | ✅ Done |
 | 6 | `cookie` crate | `cadiotheka-backend/src/api/session.rs` | Medium | Medium |
-| 7 | `serde_qs` | `cadiotheka-backend/src/utils.rs` | Low | Low |
+| 7 | `serde_qs` | `cadiotheka-backend/src/utils.rs` | Low | Low | ✅ Done |
 | 8 | OIDC discovery (`openidconnect`) | `cadiotheka-backend/src/api/auth.rs` | Medium | Low |
 
 ## Notes

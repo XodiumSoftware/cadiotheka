@@ -13,7 +13,7 @@ use crate::api::accounts::{
 };
 use crate::api::session::{create_session, read_session};
 use crate::utils::{
-    check_rate_limit, error_response, is_https_request, public_origin, query_param, rust_err,
+    check_rate_limit, error_response, is_https_request, public_origin, rust_err,
     safe_redirect_target,
 };
 
@@ -169,17 +169,22 @@ pub async fn google_callback(req: Request, ctx: RouteContext<()>) -> Result<Resp
     callback(req, ctx, Provider::Google).await
 }
 
+#[derive(Debug, Deserialize)]
+struct CallbackQuery {
+    code: String,
+    state: String,
+}
+
 async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Result<Response> {
     if let Some(response) = check_rate_limit(&req, &ctx, "oauth_callback").await? {
         return Ok(response);
     }
     let url = req.url()?;
 
-    let code = query_param(&url, "code").ok_or_else(|| rust_err("missing oauth code"))?;
+    let query: CallbackQuery =
+        serde_qs::from_str(url.query().unwrap_or_default()).map_err(rust_err)?;
 
-    let state = query_param(&url, "state").ok_or_else(|| rust_err("missing oauth state"))?;
-
-    let key = format!("oauth_state:{state}");
+    let key = format!("oauth_state:{}", query.state);
 
     let value = kv(&ctx)?
         .get(&key)
@@ -195,7 +200,7 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
 
     kv(&ctx)?.delete(&key).await?;
 
-    let token = exchange_code(&ctx, provider, code, state.pkce_verifier, &req).await?;
+    let token = exchange_code(&ctx, provider, query.code, state.pkce_verifier, &req).await?;
 
     let account = if let Some(account_id) = state.link_account_id {
         let (provider_id, _profile) = fetch_provider_profile(&ctx, provider, &token).await?;

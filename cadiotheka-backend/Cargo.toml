@@ -26,6 +26,7 @@ wasm-bindgen = "0.2.126"
 html-escape = "0.2"
 imagesize = { version = "0.15", default-features = false, features = ["jpeg", "png", "webp"] }
 infer = { version = "0.22", default-features = false }
+serde_qs = "0.15"
 
 [lints]
 workspace = true

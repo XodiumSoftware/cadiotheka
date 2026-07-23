@@ -167,6 +167,7 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
+ "serde_qs",
  "serde_urlencoded",
  "sha2",
  "time",
