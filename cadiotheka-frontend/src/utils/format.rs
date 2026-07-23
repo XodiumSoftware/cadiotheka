@@ -53,29 +53,9 @@ pub fn format_time_full(timestamp: time::OffsetDateTime) -> String {
 /// produce confusing output such as "-5 seconds ago".
 fn format_duration_ago(duration: time::Duration) -> String {
     let seconds = duration.max(time::Duration::ZERO).whole_seconds();
+    let std_duration = std::time::Duration::from_secs(seconds as u64);
 
-    let value = if seconds < 60 {
-        (seconds, "second")
-    } else if seconds < 3_600 {
-        (duration.whole_minutes(), "minute")
-    } else if seconds < 86_400 {
-        (duration.whole_hours(), "hour")
-    } else if seconds < 604_800 {
-        (duration.whole_days(), "day")
-    } else if seconds < 2_592_000 {
-        (duration.whole_weeks(), "week")
-    } else if seconds < 31_536_000 {
-        (duration.whole_days() / 30, "month")
-    } else {
-        (duration.whole_days() / 365, "year")
-    };
-
-    let (count, unit) = value;
-    if count == 1 {
-        format!("1 {unit} ago")
-    } else {
-        format!("{count} {unit}s ago")
-    }
+    timeago::Formatter::new().too_low("0").convert(std_duration)
 }
 
 /// Returns the current UTC time using the JavaScript `Date` API.
@@ -141,11 +121,11 @@ mod tests {
         assert_eq!(format_duration_ago(time::Duration::days(2)), "2 days ago");
         assert_eq!(format_duration_ago(time::Duration::weeks(2)), "2 weeks ago");
         assert_eq!(
-            format_duration_ago(time::Duration::days(60)),
+            format_duration_ago(time::Duration::days(61)),
             "2 months ago"
         );
         assert_eq!(
-            format_duration_ago(time::Duration::days(730)),
+            format_duration_ago(time::Duration::days(732)),
             "2 years ago"
         );
     }
@@ -183,8 +163,8 @@ mod tests {
         assert_eq!(format_duration_ago(time::Duration::hours(1)), "1 hour ago");
         assert_eq!(format_duration_ago(time::Duration::days(1)), "1 day ago");
         assert_eq!(format_duration_ago(time::Duration::weeks(1)), "1 week ago");
-        assert_eq!(format_duration_ago(time::Duration::days(30)), "1 month ago");
-        assert_eq!(format_duration_ago(time::Duration::days(365)), "1 year ago");
+        assert_eq!(format_duration_ago(time::Duration::days(31)), "1 month ago");
+        assert_eq!(format_duration_ago(time::Duration::days(366)), "1 year ago");
     }
 
     #[test]
