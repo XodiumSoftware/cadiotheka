@@ -1,10 +1,11 @@
+use ammonia::{Builder, UrlRelative};
 use leptos::prelude::*;
-use pulldown_cmark::{Event, Parser, Tag as CmarkTag, TagEnd};
+use pulldown_cmark::{Options, Parser, html};
 
-/// Renders a subset of CommonMark markdown as a Leptos view.
+/// Renders CommonMark markdown as a Leptos view.
 ///
-/// Supports paragraphs, headings, bold, italic, links, lists, and code spans.
-/// Raw HTML and unknown tags are escaped and rendered as plain text.
+/// Markdown is converted to HTML by `pulldown-cmark`, sanitized with `ammonia`,
+/// and then styled with project-specific Tailwind classes.
 #[component]
 pub fn MarkdownView(#[prop(into)] source: String) -> impl IntoView {
     let source = source.clone();
@@ -16,69 +17,56 @@ pub fn MarkdownView(#[prop(into)] source: String) -> impl IntoView {
 }
 
 fn render_markdown(source: &str) -> String {
-    let parser = Parser::new(source);
-    let mut output = String::new();
+    let parser = Parser::new_ext(source, Options::empty());
+    let mut raw = String::new();
+    html::push_html(&mut raw, parser);
 
-    for event in parser {
-        match event {
-            Event::Start(tag) => match tag {
-                CmarkTag::Paragraph => output.push_str("<p class=\"mb-3\">"),
-                CmarkTag::Heading { level, .. } => {
-                    let class = match level {
-                        pulldown_cmark::HeadingLevel::H1 => {
-                            "text-xl font-bold text-primary mt-4 mb-2"
-                        }
-                        pulldown_cmark::HeadingLevel::H2 => {
-                            "text-lg font-bold text-primary mt-3 mb-2"
-                        }
-                        _ => "text-base font-semibold text-base-content mt-2 mb-1",
-                    };
-                    output.push_str(&format!("<h{} class=\"{}\">", level as u8, class));
-                }
-                CmarkTag::List(_) => {
-                    output.push_str("<ul class=\"list-disc list-inside mb-3 pl-1\">")
-                }
-                CmarkTag::Item => output.push_str("<li class=\"mb-1\">"),
-                CmarkTag::Emphasis => output.push_str("<em>"),
-                CmarkTag::Strong => output.push_str("<strong>"),
-                CmarkTag::Link { dest_url, .. } => {
-                    output.push_str(&format!(
-                        "<a href=\"{}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary hover:underline\">",
-                        html_escape(&dest_url)
-                    ));
-                }
-                _ => {}
-            },
-            Event::End(tag_end) => match tag_end {
-                TagEnd::Paragraph => output.push_str("</p>"),
-                TagEnd::Heading(level) => output.push_str(&format!("</h{}\u{003e}", level as u8)),
-                TagEnd::List(_) => output.push_str("</ul>"),
-                TagEnd::Item => output.push_str("</li>"),
-                TagEnd::Emphasis => output.push_str("</em>"),
-                TagEnd::Strong => output.push_str("</strong>"),
-                TagEnd::Link => {
-                    output.push_str("</a>");
-                }
-                _ => {}
-            },
-            Event::Text(text) => output.push_str(&html_escape(&text)),
-            Event::Code(code) => output.push_str(&html_escape(&code)),
-            Event::Html(html) | Event::InlineHtml(html) => output.push_str(&html_escape(&html)),
-            Event::SoftBreak | Event::HardBreak => output.push(' '),
-            Event::Rule => output.push_str("<hr class=\"border-base-content/10 my-3\">"),
-            _ => {}
-        }
-    }
+    let safe = Builder::default()
+        .link_rel(Some("noopener noreferrer"))
+        .url_relative(UrlRelative::PassThrough)
+        .clean(&raw)
+        .to_string();
 
-    output
+    apply_classes(&safe)
 }
 
-fn html_escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('\"', "&quot;")
-        .replace('\'', "&#x27;")
+fn apply_classes(html: &str) -> String {
+    html.replace("<p>", r#"<p class="mb-3">"#)
+        .replace(
+            "<h1>",
+            r#"<h1 class="text-xl font-bold text-primary mt-4 mb-2">"#,
+        )
+        .replace(
+            "<h2>",
+            r#"<h2 class="text-lg font-bold text-primary mt-3 mb-2">"#,
+        )
+        .replace(
+            "<h3>",
+            r#"<h3 class="text-base font-semibold text-base-content mt-2 mb-1">"#,
+        )
+        .replace(
+            "<h4>",
+            r#"<h4 class="text-base font-semibold text-base-content mt-2 mb-1">"#,
+        )
+        .replace(
+            "<h5>",
+            r#"<h5 class="text-base font-semibold text-base-content mt-2 mb-1">"#,
+        )
+        .replace(
+            "<h6>",
+            r#"<h6 class="text-base font-semibold text-base-content mt-2 mb-1">"#,
+        )
+        .replace("<ul>", r#"<ul class="list-disc list-inside mb-3 pl-1">"#)
+        .replace("<li>", r#"<li class="mb-1">"#)
+        .replace("<hr>", r#"<hr class="border-base-content/10 my-3">"#)
+        .replace(
+            "<a ",
+            r#"<a target="_blank" class="text-primary hover:underline" "#,
+        )
+        .replace(
+            "<a>",
+            r#"<a target="_blank" class="text-primary hover:underline">"#,
+        )
 }
 
 #[cfg(test)]
@@ -93,10 +81,10 @@ mod tests {
     }
 
     #[test]
-    fn render_markdown_escapes_html() {
+    fn render_markdown_strips_raw_html() {
         let html = render_markdown("<script>alert('x')</script>");
         assert!(!html.contains("<script>"));
-        assert!(html.contains("alert(&#x27;x&#x27;)"));
+        assert!(!html.contains("alert"));
     }
 
     #[test]
@@ -121,12 +109,20 @@ mod tests {
     #[test]
     fn render_markdown_code_span() {
         let html = render_markdown("use `code` here");
-        assert!(html.contains("code"));
+        assert!(html.contains("<code>code</code>"));
     }
 
     #[test]
     fn render_markdown_horizontal_rule() {
         let html = render_markdown("---");
         assert!(html.contains("<hr class=\"border-base-content/10 my-3\">"));
+    }
+
+    #[test]
+    fn render_markdown_links_open_in_new_tab() {
+        let html = render_markdown("[example](https://example.com)");
+        assert!(html.contains("<a target=\"_blank\""));
+        assert!(html.contains("rel=\"noopener noreferrer\""));
+        assert!(html.contains("href=\"https://example.com\""));
     }
 }
