@@ -8,7 +8,6 @@ use pulldown_cmark::{Options, Parser, html};
 /// and then styled with project-specific Tailwind classes.
 #[component]
 pub fn MarkdownView(#[prop(into)] source: String) -> impl IntoView {
-    let source = source.clone();
     let html = leptos::prelude::Memo::new(move |_| render_markdown(&source));
 
     view! {

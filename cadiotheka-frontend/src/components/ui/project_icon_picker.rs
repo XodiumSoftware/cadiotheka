@@ -13,7 +13,7 @@ pub fn ProjectIconPicker(
     #[prop(into)] title: Signal<String>,
     #[prop(into)] editable: Signal<bool>,
     #[prop(into)] on_click: Callback<()>,
-    #[prop(into, default = "w-16 h-16".to_string())] class: String,
+    #[prop(default = "w-16 h-16")] class: &'static str,
 ) -> impl IntoView {
     let url = Memo::new(move |_| {
         icon_url
@@ -90,7 +90,7 @@ mod tests {
                 icon_url=Signal::derive(move || None)
                 title=Signal::derive(move || "My Project".to_string())
                 editable=Signal::derive(move || false)
-                on_click=Callback::new(|_| {})
+                on_click=Callback::new(|()| {})
                 class="w-16 h-16"
             />
         };
@@ -103,7 +103,7 @@ mod tests {
                 icon_url=Signal::derive(move || Some(IconUrl("https://example.com/icon.svg".to_string())))
                 title=Signal::derive(move || "My Project".to_string())
                 editable=Signal::derive(move || true)
-                on_click=Callback::new(|_| {})
+                on_click=Callback::new(|()| {})
                 class="w-16 h-16"
             />
         };

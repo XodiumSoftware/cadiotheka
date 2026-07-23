@@ -132,17 +132,32 @@ pub fn ProjectCard(
     #[prop(into)] on_author_click: Callback<()>,
     #[prop(into)] focused: Signal<bool>,
 ) -> impl IntoView {
-    let letter = placeholder_letter(&props.title);
-    let bg = placeholder_color(&props.title);
-    let icon_url = props.icon_url.as_ref().map(|IconUrl(url)| url.clone());
+    let ProjectCardProperties {
+        id,
+        title,
+        author,
+        author_id: _,
+        author_username,
+        collaborator_ids: _,
+        description,
+        extended_desc: _,
+        tags,
+        supported_platforms,
+        downloads,
+        favorites: _,
+        timestamp,
+        icon_url,
+    } = props;
+
+    let letter = placeholder_letter(&title);
+    let bg = placeholder_color(&title);
+    let icon_url = icon_url.as_ref().map(|IconUrl(url)| url.clone());
     let current_user = CurrentUserContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
     let project_modal = ProjectModalContext::use_context();
 
-    let downloads = props.downloads;
-    let timestamp = props.timestamp;
-    let project_id = props.id.clone();
-    let project_id_for_button = props.id.clone();
+    let project_id = id.clone();
+    let project_id_for_button = id.clone();
     let live_project = Memo::new({
         let project_id = project_id.clone();
         move |_| {
@@ -171,10 +186,10 @@ pub fn ProjectCard(
         })
     });
 
-    let card_title = props.title.clone();
-    let card_author = props.author.clone();
-    let card_author_username = props.author_username.clone();
-    let card_title_for_favorite_label = props.title.clone();
+    let card_title = title.clone();
+    let card_author = author.clone();
+    let card_author_username = author_username.clone();
+    let card_title_for_favorite_label = title.clone();
     let favorite_aria_label = Signal::derive(move || {
         if is_favorited.get() {
             format!("Remove {card_title_for_favorite_label} from favorites")
@@ -193,10 +208,7 @@ pub fn ProjectCard(
             card_author_for_aria.clone()
         )
     });
-    let tags = props.tags.clone();
-    let platforms = props.supported_platforms.clone();
-
-    let description = props.description.clone();
+    let platforms = supported_platforms;
 
     view! {
         <article

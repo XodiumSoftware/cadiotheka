@@ -26,12 +26,12 @@ pub fn OverflowRow(
     #[prop(into)] items: Vec<OverflowItem>,
     #[prop(default = 3)] max_visible: usize,
     #[prop(optional)] tooltip_position: Option<&'static str>,
-    #[prop(into)] badge_class: String,
+    badge_class: &'static str,
 ) -> impl IntoView {
-    let total = items.len();
-    let visible: Vec<OverflowItem> = items.iter().take(max_visible).cloned().collect();
-    let hidden: Vec<OverflowItem> = items.iter().skip(max_visible).cloned().collect();
-    let overflow_count = total.saturating_sub(max_visible);
+    let mut items = items;
+    let hidden = items.split_off(items.len().min(max_visible));
+    let visible = items;
+    let overflow_count = hidden.len();
     let tooltip = hidden
         .iter()
         .map(|item| item.label.as_str())
