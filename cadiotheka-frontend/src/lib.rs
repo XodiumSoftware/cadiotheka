@@ -1,6 +1,5 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 #![allow(
-    clippy::items_after_statements,
     clippy::must_use_candidate,
     clippy::needless_pass_by_value,
     clippy::too_many_lines

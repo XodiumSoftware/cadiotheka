@@ -14,17 +14,22 @@ Use this skill when the user wants to verify the project state or before finishi
    cargo test
    ```
 
-2. Run clippy on the WASM target with warnings as errors:
+2. Run clippy on the WASM target with pedantic lints enabled and warnings as errors:
    ```bash
-   cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
+   cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -W clippy::pedantic -D warnings
    ```
 
-3. Check formatting:
+3. Run clippy on the backend with pedantic lints enabled and warnings as errors:
+   ```bash
+   cargo clippy --all-targets --all-features -p cadiotheka-backend -- -W clippy::pedantic -D warnings
+   ```
+
+4. Check formatting:
    ```bash
    cargo fmt --all -- --check
    ```
 
-4. Run `cargo machete` to detect unused dependencies:
+5. Run `cargo machete` to detect unused dependencies:
    ```bash
    cargo machete
    ```
@@ -33,7 +38,7 @@ Use this skill when the user wants to verify the project state or before finishi
    cargo binstall cargo-machete --no-confirm --force
    ```
 
-5. Report the outcome concisely:
+6. Report the outcome concisely:
    - List any failing commands and relevant error lines.
    - If everything passes, state that clearly.
    - Do not claim validation passed unless you actually ran the commands and saw success.

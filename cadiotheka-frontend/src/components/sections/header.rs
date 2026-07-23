@@ -101,6 +101,8 @@ fn replace_last_token(parts: &mut Vec<String>, replacement: String) {
 
 #[component]
 pub fn Header() -> impl IntoView {
+    const ACCOUNT_MENU_ITEMS: usize = 4;
+
     let _layout = LayoutContext::use_context();
     let search = SearchContext::use_context();
     let (is_scrolled, set_is_scrolled) = signal(false);
@@ -112,8 +114,6 @@ pub fn Header() -> impl IntoView {
     let input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (selected_index, set_selected_index) = signal::<Option<usize>>(None);
     let (keyboard_index, set_keyboard_index) = signal::<Option<usize>>(None);
-
-    const ACCOUNT_MENU_ITEMS: usize = 4;
     let avatar_button_ref: NodeRef<leptos::html::Button> = NodeRef::new();
     let profile_ref: NodeRef<leptos::html::Button> = NodeRef::new();
     let my_projects_ref: NodeRef<leptos::html::Button> = NodeRef::new();
