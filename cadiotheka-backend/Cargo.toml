@@ -27,6 +27,7 @@ html-escape = "0.2"
 imagesize = { version = "0.15", default-features = false, features = ["jpeg", "png", "webp"] }
 infer = { version = "0.22", default-features = false }
 serde_qs = "0.15"
+cookie = "0.18"
 
 [lints]
 workspace = true

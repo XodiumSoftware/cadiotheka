@@ -1,4 +1,5 @@
 use base64::Engine as _;
+use cookie::{Cookie, SameSite};
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
@@ -69,22 +70,36 @@ fn is_https_origin(origin: &str) -> bool {
 /// HTTPS uses `SameSite=None` so the cookie is sent to the API subdomain from
 /// the frontend origin. HTTP (local dev) uses `SameSite=Lax`.
 fn build_session_cookie(name: &str, encoded: &str, is_https: bool) -> String {
-    if is_https {
-        format!(
-            "{name}={encoded}; Max-Age={SESSION_TTL_SECONDS}; Path=/; HttpOnly; Secure; SameSite=None"
-        )
+    let same_site = if is_https {
+        SameSite::None
     } else {
-        format!("{name}={encoded}; Max-Age={SESSION_TTL_SECONDS}; Path=/; HttpOnly; SameSite=Lax")
-    }
+        SameSite::Lax
+    };
+    Cookie::build((name, encoded))
+        .max_age(time::Duration::seconds(SESSION_TTL_SECONDS as i64))
+        .path("/")
+        .http_only(true)
+        .secure(is_https)
+        .same_site(same_site)
+        .build()
+        .to_string()
 }
 
 /// Builds a cookie-clearing `Set-Cookie` header value.
 fn build_clear_cookie(name: &str, is_https: bool) -> String {
-    if is_https {
-        format!("{name}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=None")
+    let same_site = if is_https {
+        SameSite::None
     } else {
-        format!("{name}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax")
-    }
+        SameSite::Lax
+    };
+    Cookie::build((name, ""))
+        .max_age(time::Duration::seconds(0))
+        .path("/")
+        .http_only(true)
+        .secure(is_https)
+        .same_site(same_site)
+        .build()
+        .to_string()
 }
 
 /// Creates a session for the given account and returns a `Set-Cookie` header
@@ -146,12 +161,10 @@ pub async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Result<Optio
         cookie_name
     );
 
-    let encoded = cookie_header
-        .split(';')
-        .map(str::trim)
-        .filter_map(|part| part.strip_prefix(cookie_name))
-        .filter_map(|rest| rest.strip_prefix('='))
-        .next();
+    let encoded = Cookie::split_parse(&cookie_header)
+        .filter_map(Result::ok)
+        .find(|cookie| cookie.name() == cookie_name)
+        .map(|cookie| cookie.value().to_owned());
 
     let encoded = match encoded {
         Some(value) => value,
@@ -279,12 +292,10 @@ pub async fn logout(req: Request, ctx: RouteContext<()>) -> Result<Response> {
         }
     };
 
-    let encoded = cookie_header
-        .split(';')
-        .map(str::trim)
-        .filter_map(|part| part.strip_prefix(cookie_name))
-        .filter_map(|rest| rest.strip_prefix('='))
-        .next();
+    let encoded = Cookie::split_parse(&cookie_header)
+        .filter_map(Result::ok)
+        .find(|cookie| cookie.name() == cookie_name)
+        .map(|cookie| cookie.value().to_owned());
 
     if let Some(encoded) = encoded
         && let Ok(decoded) = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(encoded)
