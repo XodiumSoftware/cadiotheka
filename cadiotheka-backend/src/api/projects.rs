@@ -377,17 +377,14 @@ fn icons_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
     ctx.env.bucket(ICONS_R2_BINDING)
 }
 
+/// MIME types accepted for uploaded project icons.
+const ALLOWED_ICON_CONTENT_TYPES: &[&str] = &["image/png", "image/jpeg", "image/webp"];
+
 /// Returns the MIME type for an icon based on its magic bytes.
 fn icon_content_type(bytes: &[u8]) -> Option<&'static str> {
-    if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
-        Some("image/png")
-    } else if bytes.starts_with(&[0xff, 0xd8, 0xff]) {
-        Some("image/jpeg")
-    } else if bytes.len() >= 12 && bytes[0..4] == *b"RIFF" && bytes[8..12] == *b"WEBP" {
-        Some("image/webp")
-    } else {
-        None
-    }
+    infer::get(bytes)
+        .map(|kind| kind.mime_type())
+        .filter(|mime| ALLOWED_ICON_CONTENT_TYPES.contains(mime))
 }
 
 /// Reads image dimensions from PNG, JPEG, or WebP headers without loading the
