@@ -209,7 +209,7 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
 
     let cookie = create_session(&ctx, &account, &req).await?;
 
-    let redirect_to = html_escape(&state.redirect_to);
+    let redirect_to = html_escape::encode_text(&state.redirect_to);
     let html = format!(
         r#"<!doctype html>
 <html>
@@ -233,19 +233,6 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
         .with_status(200)
         .with_headers(headers)
         .body(ResponseBody::Body(html.into())))
-}
-
-/// Minimal HTML escaping for single-quoted attributes.
-fn html_escape(text: &str) -> String {
-    text.chars()
-        .map(|ch| match ch {
-            '&' => "&amp;".to_string(),
-            '\'' => "&#39;".to_string(),
-            '<' => "&lt;".to_string(),
-            '>' => "&gt;".to_string(),
-            _ => ch.to_string(),
-        })
-        .collect()
 }
 
 async fn exchange_code(

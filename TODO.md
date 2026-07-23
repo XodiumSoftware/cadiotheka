@@ -6,7 +6,7 @@ by established Rust crates.
 | # | Replacement | File(s) | Effort | Benefit |
 |---|-------------|---------|--------|---------|
 | 1 | Sanitized markdown renderer (`ammonia` + `pulldown-cmark`) | `cadiotheka-frontend/src/components/ui/markdown.rs` | Low | High | ✅ Done |
-| 2 | `html_escape` crate | `cadiotheka-frontend/src/components/ui/markdown.rs`, `cadiotheka-backend/src/api/auth.rs` | Low | Medium |
+| 2 | `html_escape` crate | `cadiotheka-frontend/src/components/ui/markdown.rs`, `cadiotheka-backend/src/api/auth.rs` | Low | Medium | ✅ Done |
 | 3 | `timeago` / `humantime` | `cadiotheka-frontend/src/utils/format.rs` | Low | Medium |
 | 4 | `human_format` / `num-format` | `cadiotheka-frontend/src/utils/format.rs` | Low | Low-Medium |
 | 5 | `imagesize` crate | `cadiotheka-backend/src/api/projects.rs` | Low | Medium |
