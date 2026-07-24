@@ -403,6 +403,7 @@ mod tests {
             favorites: vec!["user-1".to_owned(), "user-2".to_owned()],
             timestamp: time::macros::datetime!(2024-01-01 00:00:00 UTC),
             icon_url: Some(IconUrl("https://example.com/gear.svg".to_owned())),
+            ifc_url: None,
         };
         let props: ProjectCardProperties = project.into();
         assert_eq!(props.title, "Gear");

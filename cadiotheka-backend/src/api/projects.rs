@@ -5,12 +5,12 @@ use worker::{
 };
 
 use crate::DB_BINDING;
-use crate::ICONS_R2_BINDING;
+use crate::PROJECT_ASSETS_R2_BINDING;
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::utils::{check_rate_limit, error_response, js_option};
 
-const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url FROM projects";
+const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url, ifc_url FROM projects";
 
 /// Maximum allowed length for a project title.
 const MAX_TITLE_LENGTH: usize = 100;
@@ -22,6 +22,8 @@ const MAX_ICON_KEY_LENGTH: usize = 200;
 const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
 /// Maximum allowed size for an uploaded project icon, in bytes.
 const MAX_ICON_SIZE_BYTES: usize = 5 * 1024 * 1024; // 5 MiB
+/// Maximum allowed size for an uploaded project IFC model, in bytes.
+const MAX_IFC_SIZE_BYTES: usize = 25 * 1024 * 1024; // 25 MiB
 /// Minimum allowed width or height for an uploaded icon, in pixels.
 const MIN_ICON_DIMENSION: u32 = 64;
 /// Maximum allowed width or height for an uploaded icon, in pixels.
@@ -67,6 +69,7 @@ pub struct Project {
     pub favorites: Vec<String>,
     pub timestamp: String,
     pub icon_url: Option<String>,
+    pub ifc_url: Option<String>,
 }
 
 /// Payload used to create or update a project.
@@ -90,6 +93,7 @@ pub struct ProjectPayload {
     pub favorites: Vec<String>,
     pub timestamp: String,
     pub icon_url: Option<String>,
+    pub ifc_url: Option<String>,
 }
 
 /// Serde adapter that stores a `Vec<String>` as a single JSON string column.
@@ -162,8 +166,8 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url, ifc_url) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
         )
         .bind(&[
             payload.id.into(),
@@ -180,6 +184,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             favorites.into(),
             payload.timestamp.into(),
             js_option(payload.icon_url),
+            js_option(payload.ifc_url),
         ])?
         .run()
         .await?;
@@ -332,8 +337,8 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     db(&ctx)?
         .prepare(
             "UPDATE projects \
-             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, extended_desc = ?7, tags = ?8, supported_platforms = ?9, downloads = ?10, favorites = ?11, timestamp = ?12, icon_url = ?13 \
-             WHERE id = ?14",
+             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, extended_desc = ?7, tags = ?8, supported_platforms = ?9, downloads = ?10, favorites = ?11, timestamp = ?12, icon_url = ?13, ifc_url = ?14 \
+             WHERE id = ?15",
         )
         .bind(&[
             payload.title.into(),
@@ -349,6 +354,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             favorites.into(),
             payload.timestamp.into(),
             js_option(payload.icon_url),
+            js_option(payload.ifc_url),
             id.into(),
         ])?
         .run()
@@ -383,10 +389,22 @@ pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Respo
 }
 
 /// Returns the R2 bucket configured for project icons.
-fn icons_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
-    ctx.env.bucket(ICONS_R2_BINDING)
+/// Returns the R2 bucket used for project assets (icons, IFC models, etc.).
+fn project_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
+    ctx.env.bucket(PROJECT_ASSETS_R2_BINDING)
 }
 
+/// Returns the R2 bucket used for project icons.
+fn icons_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
+    project_bucket(ctx)
+}
+
+/// Returns the R2 bucket used for project IFC models.
+fn ifcs_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
+    project_bucket(ctx)
+}
+
+/// Whether the given account may edit or delete the project.
 /// MIME types accepted for uploaded project icons.
 const ALLOWED_ICON_CONTENT_TYPES: &[&str] = &["image/png", "image/jpeg", "image/webp"];
 
@@ -475,6 +493,90 @@ pub async fn upload_project_icon(mut req: Request, ctx: RouteContext<()>) -> Res
     }
 
     Response::from_json(&serde_json::json!({ "icon_key": key, "content_type": content_type }))
+}
+
+/// Handles a multipart upload of a project IFC model, validates it, stores it in R2,
+/// and updates the project's `ifc_url` column with the R2 object key.
+pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    if let Some(response) = check_rate_limit(&req, &ctx, "ifc_upload").await? {
+        return Ok(response);
+    }
+    let account = require_account(&req, &ctx).await?;
+    let id = ctx.param("id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    if !can_edit_project(&account, &project) {
+        return error_response("Forbidden", 403);
+    }
+
+    let form_data = req.form_data().await?;
+    let Some(FormEntry::File(file)) = form_data.get("ifc") else {
+        return error_response("missing IFC file", 400);
+    };
+
+    let bytes = file.bytes().await?;
+    if bytes.len() > MAX_IFC_SIZE_BYTES {
+        return error_response("IFC model must be 25 MiB or smaller", 413);
+    }
+
+    let file_name = file.name();
+    if !file_name.to_lowercase().ends_with(".ifc") {
+        return error_response("IFC file must have a .ifc extension", 400);
+    }
+
+    let old_key = project.ifc_url.clone();
+    let key = format!("ifcs/{id}/model.ifc");
+    let http_metadata = HttpMetadata {
+        content_type: Some("application/ifc".to_string()),
+        ..Default::default()
+    };
+
+    ifcs_bucket(&ctx)?
+        .put(&key, bytes)
+        .http_metadata(http_metadata)
+        .execute()
+        .await?;
+
+    db(&ctx)?
+        .prepare("UPDATE projects SET ifc_url = ?1 WHERE id = ?2")
+        .bind(&[key.clone().into(), id.into()])?
+        .run()
+        .await?;
+
+    if let Some(old_key) = old_key.filter(|k| k != &key) {
+        let _ = ifcs_bucket(&ctx)?.delete(&old_key).await;
+    }
+
+    Response::from_json(&serde_json::json!({ "ifc_key": key, "content_type": "application/ifc" }))
+}
+
+/// Serves an IFC model from R2 by its project id and filename.
+pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let project_id = ctx.param("project_id").cloned().unwrap_or_default();
+    let filename = ctx.param("filename").cloned().unwrap_or_default();
+    if project_id.is_empty() || filename.is_empty() {
+        return error_response("Invalid IFC key", 400);
+    }
+    let key = format!("ifcs/{project_id}/{filename}");
+
+    let object = ifcs_bucket(&ctx)?.get(&key).execute().await?;
+
+    let Some(object) = object else {
+        return error_response("Not found", 404);
+    };
+
+    let http_metadata = object.http_metadata();
+    let content_type = http_metadata
+        .content_type
+        .unwrap_or_else(|| "application/octet-stream".to_string());
+    let body = object
+        .body()
+        .ok_or_else(|| worker::Error::RustError("IFC object has no body".into()))?;
+
+    let headers = Headers::new();
+    headers.set("Content-Type", &content_type)?;
+    Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
 }
 
 /// Serves an icon from R2 by its object key.
@@ -585,6 +687,7 @@ mod tests {
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
             icon_url: None,
+            ifc_url: None,
         }
     }
 
@@ -604,6 +707,7 @@ mod tests {
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
             icon_url: None,
+            ifc_url: None,
         }
     }
 

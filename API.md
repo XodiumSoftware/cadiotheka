@@ -59,6 +59,8 @@ authenticated requests.
 | POST | `/data/projects/:id/favorites` | session | Toggle favorite status for the current user. |
 | POST | `/data/projects/:id/icon` | session owner/admin | Upload a project icon (`multipart/form-data`, field `icon`). |
 | GET | `/data/icons/:project_id/:icon_id` | - | Serve a project icon. |
+| POST | `/data/projects/:id/ifc` | session owner/admin | Upload an IFC model (`multipart/form-data`, field `ifc`). |
+| GET | `/data/ifcs/:project_id/:filename` | - | Serve a project IFC model. |
 
 ### Project payload limits
 
@@ -69,3 +71,4 @@ authenticated requests.
 | `extended_desc` | 5000 characters |
 | `icon_url` key | 200 characters |
 | Icon upload | 5 MiB, PNG/JPEG/WebP only |
+| IFC upload | 25 MiB, `.ifc` extension required |

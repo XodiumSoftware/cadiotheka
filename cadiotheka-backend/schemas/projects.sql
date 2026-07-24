@@ -12,5 +12,6 @@ CREATE TABLE IF NOT EXISTS projects (
     downloads INTEGER NOT NULL DEFAULT 0,
     favorites TEXT NOT NULL DEFAULT '[]',
     timestamp TEXT NOT NULL,
-    icon_url TEXT
+    icon_url TEXT,
+    ifc_url TEXT
 );

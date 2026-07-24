@@ -91,7 +91,7 @@ npx wrangler dev
 
 The backend API is available at <http://localhost:8787/data/accounts> by default.
 
-Project icons are uploaded through the backend and stored in the `PI` R2 binding (backed by the `cadiotheka-projects-icons` bucket). The database stores only the generated R2 object key (for example `icons/<project_id>/<uuid>`), and the frontend renders icons through the backend icon route.
+Project assets (icons and IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). The database stores only the generated R2 object key, and the frontend loads assets through backend asset routes.
 
 To use your real Cloudflare resources during local development, run Wrangler in remote mode:
 
@@ -104,7 +104,7 @@ npx wrangler dev --remote
 This uses the bindings configured in `cadiotheka-backend/wrangler.toml`:
 - `DB` for D1
 - `AUTH` for KV
-- `PI` for R2
+- `PROJECT_ASSETS` for R2
 
 Be careful: `--remote` reads and writes real data in those bound resources, including production data if your bindings point at production.
 
@@ -116,12 +116,12 @@ npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql --local
 ```
 
-For icon uploads, also create or bind an R2 bucket in `wrangler.toml`:
+For asset uploads, also create or bind an R2 bucket in `wrangler.toml`:
 
 ```toml
 [[r2_buckets]]
-binding = "PI"
-bucket_name = "cadiotheka-projects-icons"
+binding = "PROJECT_ASSETS"
+bucket_name = "cadiotheka-assets"
 ```
 
 Create accounts and projects through the application UI or API as needed.

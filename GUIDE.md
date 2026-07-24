@@ -119,7 +119,7 @@ npx wrangler dev
 
 The local API is available at <http://localhost:8787/data/accounts> by default.
 
-Project icons are uploaded through the backend and stored in the `PI` R2 binding (backed by the `cadiotheka-projects-icons` bucket). D1 stores only the generated object key, and the frontend loads the image through the backend icon route.
+Project assets (icons and IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). D1 stores only the generated object key, and the frontend loads assets through backend asset routes.
 
 For local emulation, use plain `npx wrangler dev`. To hit the bound remote Cloudflare resources instead, use `npx wrangler dev --remote`.
 
@@ -136,14 +136,14 @@ npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
 The backend uses these short Worker bindings:
 - `DB` for the D1 database
 - `AUTH` for the KV namespace used by OAuth state and sessions
-- `PI` for the R2 bucket that stores project icons
+- `PROJECT_ASSETS` for the R2 bucket that stores project assets
 
-For project icon uploads, also ensure `wrangler.toml` includes an R2 bucket binding:
+For project asset uploads, also ensure `wrangler.toml` includes an R2 bucket binding:
 
 ```toml
 [[r2_buckets]]
-binding = "PI"
-bucket_name = "cadiotheka-projects-icons"
+binding = "PROJECT_ASSETS"
+bucket_name = "cadiotheka-assets"
 ```
 
 Create accounts and projects through the application UI or API as needed.
@@ -251,19 +251,19 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
    npx wrangler d1 create cadiotheka-db
    ```
 
-2. Create an R2 bucket for project icons:
+2. Create an R2 bucket for project assets:
    ```bash
-   npx wrangler r2 bucket create cadiotheka-projects-icons
+   npx wrangler r2 bucket create cadiotheka-assets
    ```
 
 3. Update `wrangler.toml` with:
    - the D1 database ID from step 1
-   - the short bindings `DB`, `AUTH`, and `PI` as needed
+   - the short bindings `DB`, `AUTH`, and `PROJECT_ASSETS` as needed
    - the R2 binding:
    ```toml
    [[r2_buckets]]
-   binding = "PI"
-   bucket_name = "cadiotheka-projects-icons"
+   binding = "PROJECT_ASSETS"
+   bucket_name = "cadiotheka-assets"
    ```
 
 4. Apply the schema:

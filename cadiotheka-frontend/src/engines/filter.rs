@@ -230,6 +230,7 @@ mod tests {
             favorites: vec!["favorite-user".to_owned(); favorites_trunc],
             timestamp: datetime!(2024-01-15 12:00:00 UTC),
             icon_url: None,
+            ifc_url: None,
         }
     }
 

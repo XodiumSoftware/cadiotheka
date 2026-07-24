@@ -139,6 +139,9 @@ pub struct ProjectData {
     /// Optional icon URL (when absent, a colored placeholder is generated).
     #[serde(deserialize_with = "deserialize_icon_key")]
     pub icon_url: Option<IconUrl>,
+    /// Optional IFC model download URL (when absent, no model has been uploaded).
+    #[serde(default, deserialize_with = "deserialize_ifc_key")]
+    pub ifc_url: Option<String>,
 }
 
 fn deserialize_icon_key<'de, D>(deserializer: D) -> Result<Option<IconUrl>, D::Error>
@@ -147,6 +150,23 @@ where
 {
     let key = Option::<String>::deserialize(deserializer)?;
     Ok(key.map(|key| icon_src_from_key(&key)))
+}
+
+fn deserialize_ifc_key<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let key = Option::<String>::deserialize(deserializer)?;
+    Ok(key.map(|key| ifc_src_from_key(&key)))
+}
+
+/// Builds a frontend URL from an IFC R2 object key (`ifcs/{project_id}/{filename}`).
+fn ifc_src_from_key(key: &str) -> String {
+    let mut parts = key.split('/');
+    let _prefix = parts.next();
+    let project_id = parts.next().unwrap_or_default();
+    let filename = parts.next().unwrap_or_default();
+    api_url(&format!("/ifcs/{project_id}/{filename}"))
 }
 
 /// Returns the current UTC time using the JavaScript `Date` API.
@@ -182,6 +202,7 @@ pub fn new_project_payload(
         favorites: vec![],
         timestamp: now_utc(),
         icon_url: None,
+        ifc_url: None,
     }
 }
 
@@ -739,6 +760,7 @@ mod tests {
             ],
             timestamp: datetime!(2026-07-07 14:30:00 UTC),
             icon_url: None,
+            ifc_url: None,
         }
     }
 

@@ -12,8 +12,8 @@ binding = "AUTH"
 id = "ba027b7e98784b0dae06ab649b1738e4"
 
 [[r2_buckets]]
-binding = "PI"
-bucket_name = "cadiotheka-projects-icons"
+binding = "PROJECT_ASSETS"
+bucket_name = "cadiotheka-assets"
 
 [observability.logs]
 enabled = true

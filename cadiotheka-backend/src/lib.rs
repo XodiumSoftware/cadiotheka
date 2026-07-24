@@ -2,8 +2,9 @@
 
 /// Name of the D1 binding configured in `wrangler.toml`.
 pub(crate) const DB_BINDING: &str = "DB";
-/// Name of the R2 binding configured in `wrangler.toml` for project icons.
-pub(crate) const ICONS_R2_BINDING: &str = "PI";
+/// Name of the R2 binding configured in `wrangler.toml` for project assets
+/// (icons, IFC models, and future project files).
+pub(crate) const PROJECT_ASSETS_R2_BINDING: &str = "PROJECT_ASSETS";
 
 /// Origins allowed to call the API from a browser.
 const ALLOWED_ORIGINS: &[&str] = &["https://cadiotheka.com", "https://www.cadiotheka.com"];
@@ -17,7 +18,9 @@ pub(crate) mod routes {
     pub(crate) const PROJECT: &str = "/data/projects/:id";
     pub(crate) const PROJECT_FAVORITES: &str = "/data/projects/:id/favorites";
     pub(crate) const PROJECT_ICON: &str = "/data/projects/:id/icon";
+    pub(crate) const PROJECT_IFC: &str = "/data/projects/:id/ifc";
     pub(crate) const ICONS: &str = "/data/icons/:project_id/:icon_id";
+    pub(crate) const IFCS: &str = "/data/ifcs/:project_id/:filename";
     pub(crate) const LOGIN_GITHUB: &str = "/login/github";
     pub(crate) const AUTH_GITHUB_CALLBACK: &str = "/auth/github/callback";
     pub(crate) const LOGIN_GOOGLE: &str = "/login/google";
@@ -120,6 +123,8 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         )
         .post_async(routes::PROJECT_ICON, api::projects::upload_project_icon)
         .get_async(routes::ICONS, api::projects::serve_icon)
+        .post_async(routes::PROJECT_IFC, api::projects::upload_project_ifc)
+        .get_async(routes::IFCS, api::projects::serve_ifc)
         .patch_async(routes::PROJECT, api::projects::patch_project)
         .put_async(routes::PROJECT, api::projects::update_project)
         .delete_async(routes::PROJECT, api::projects::delete_project)
