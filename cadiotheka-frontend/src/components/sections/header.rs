@@ -462,11 +462,11 @@ pub fn Header() -> impl IntoView {
                             }
                         }
                     >
-                        <span class="inline-block">
-                            <Logo class="h-12 w-12" />
+                        <span class="inline-flex items-center h-12">
+                            <Logo class="h-full w-auto" />
                         </span>
                         <pre
-                            class="hidden sm:block font-mono text-[0.6rem] leading-none text-primary whitespace-pre overflow-visible"
+                            class="hidden sm:inline-flex items-center h-12 font-mono text-[0.6rem] leading-none text-primary whitespace-pre overflow-visible"
                             aria-label="Cadiotheka"
                         >
                             {ASCII_LOGO}
