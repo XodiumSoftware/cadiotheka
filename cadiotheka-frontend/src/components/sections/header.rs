@@ -14,6 +14,13 @@ use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys;
 use std::time::Duration;
 
+const ASCII_LOGO: &str = r"
+ _____       _ _     _   _       _
+|     |___ _| |_|___| |_| |_ ___| |_ ___
+|   --| .'| . | | . |  _|   | -_| '_| .'|
+|_____|__,|___|_|___|_| |_|_|___|_,_|__,|
+";
+
 /// A grouped slice of suggestions shown under a category header.
 #[derive(Clone, PartialEq)]
 struct SuggestionGroup {
@@ -458,7 +465,13 @@ pub fn Header() -> impl IntoView {
                         <span class="inline-block">
                             <Logo class="h-12 w-12" />
                         </span>
-                        <span class="text-2xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors overflow-hidden whitespace-nowrap">
+                        <pre
+                            class="hidden sm:block font-mono text-[0.6rem] leading-none text-primary whitespace-pre overflow-visible"
+                            aria-label="Cadiotheka"
+                        >
+                            {ASCII_LOGO}
+                        </pre>
+                        <span class="sm:hidden text-2xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors overflow-hidden whitespace-nowrap">
                             "Cadiotheka"
                         </span>
                     </a>
