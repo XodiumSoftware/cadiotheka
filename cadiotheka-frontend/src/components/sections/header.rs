@@ -116,7 +116,6 @@ pub fn Header() -> impl IntoView {
     let (is_scrolled, set_is_scrolled) = signal(false);
     let (search_open, set_search_open) = signal(false);
     let (account_menu_open, set_account_menu_open) = signal(false);
-    let (logo_phase, set_logo_phase) = signal(0_usize);
     let account_menu_ref: NodeRef<leptos::html::Div> = NodeRef::new();
     let input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (selected_index, set_selected_index) = signal::<Option<usize>>(None);
@@ -128,30 +127,7 @@ pub fn Header() -> impl IntoView {
     let logout_ref: NodeRef<leptos::html::Button> = NodeRef::new();
     let (active_menu_index, set_active_menu_index) = signal(0usize);
 
-    let run_logo_animation = move |()| {
-        if logo_phase.get_untracked() != 0 {
-            return;
-        }
-        set_logo_phase.set(1);
-        spawn_local(async move {
-            gloo_timers::future::sleep(Duration::from_millis(400)).await;
-            set_logo_phase.set(2);
-            gloo_timers::future::sleep(Duration::from_millis(500)).await;
-            set_logo_phase.set(3);
-            gloo_timers::future::sleep(Duration::from_millis(400)).await;
-            set_logo_phase.set(4);
-            gloo_timers::future::sleep(Duration::from_millis(500)).await;
-            set_logo_phase.set(5);
-            gloo_timers::future::sleep(Duration::from_millis(300)).await;
-            set_logo_phase.set(6);
-            gloo_timers::future::sleep(Duration::from_millis(400)).await;
-            set_logo_phase.set(0);
-        });
-    };
-
     let projects_ctx = ProjectsContext::use_context();
-
-    let logo_phase_class = Memo::new(move |_| format!("logo-phase-{}", logo_phase.get()));
 
     let suggestions = Memo::new(move |_| {
         let query = search.query.get();
@@ -478,25 +454,24 @@ pub fn Header() -> impl IntoView {
                 <div class="navbar-start gap-8">
                     <a
                         href="#"
-                        class=move || format!("flex items-center gap-4 p-0 {}", logo_phase_class.get())
+                        class="flex items-center gap-4 p-0 group"
                         on:click=move |ev: leptos::web_sys::MouseEvent| {
                             ev.prevent_default();
                             if let Some(window) = web_sys::window() {
                                 window.scroll_to_with_x_and_y(0.0, 0.0);
                             }
-                            run_logo_animation(());
                         }
                     >
                         <span class="inline-flex items-center h-12">
-                            <Logo class="h-full w-auto" right_half_class="logo-right-half" />
+                            <Logo class="h-full w-auto" />
                         </span>
                         <pre
-                            class="hidden sm:inline-flex items-center h-12 font-mono text-[0.6rem] leading-none text-primary whitespace-pre overflow-visible logo-ascii"
+                            class="hidden sm:inline-flex items-center h-12 font-mono text-[0.6rem] leading-none text-primary whitespace-pre overflow-visible"
                             aria-label="Cadiotheka"
                         >
                             {ASCII_LOGO}
                         </pre>
-                        <span class="sm:hidden text-2xl font-bold tracking-tight text-base-content transition-colors overflow-hidden whitespace-nowrap">
+                        <span class="sm:hidden text-2xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors overflow-hidden whitespace-nowrap">
                             "Cadiotheka"
                         </span>
                     </a>
