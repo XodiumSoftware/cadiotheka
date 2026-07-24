@@ -123,6 +123,26 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         let Some(container) = grid_ref.get() else {
             return;
         };
+
+        // Only move browser focus into the grid if focus is already on the page body or
+        // inside the grid itself. Otherwise a modal input (e.g. search) keeps focus.
+        let Some(window) = leptos::web_sys::window() else {
+            return;
+        };
+        let Some(document) = window.document() else {
+            return;
+        };
+        let Some(active) = document.active_element() else {
+            return;
+        };
+        let active_inside_grid = container.contains(Some(&active));
+        let active_on_body = active
+            .dyn_ref::<leptos::web_sys::HtmlElement>()
+            .is_some_and(|el| el.tag_name().eq_ignore_ascii_case("body"));
+        if !active_inside_grid && !active_on_body {
+            return;
+        }
+
         let Some(children) = container
             .children()
             .dyn_into::<leptos::web_sys::HtmlCollection>()
@@ -139,9 +159,8 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         };
 
         // Avoid re-firing focus events if the target is already focused.
-        let already_focused = leptos::web_sys::window()
-            .and_then(|w| w.document())
-            .and_then(|d| d.active_element())
+        let already_focused = document
+            .active_element()
             .is_some_and(|active| active.is_same_node(Some(&html)));
         if !already_focused {
             let _ = html.focus();
