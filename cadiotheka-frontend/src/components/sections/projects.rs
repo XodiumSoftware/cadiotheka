@@ -252,7 +252,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                         Some(view! {
                                             <button
                                                 type="button"
-                                                class="btn btn-outline btn-outline-ghost btn-hover-warning btn-lift gap-1.5"
+                                                class="btn btn-outline btn-hover-warning btn-lift gap-1.5"
                                                 on:click=move |_| search.set_query.set(String::new())
                                             >
                                                 <span>{"Clear Search"}</span>

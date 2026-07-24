@@ -454,18 +454,18 @@ pub fn Header() -> impl IntoView {
                             }
                         }
                     >
-                        <span class="logo-container inline-block">
+                        <span class="inline-block">
                             <svg width="48" height="48" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-12 w-12">
-                                <g class="logo-piece logo-piece-bl">
+                                <g>
                                     <path d="M36.6562 73L15 94.6562V113H33.3438L55 91.3438V73H36.6562Z" stroke="url(#paint0_linear_0_1)" stroke-width="8"/>
                                 </g>
-                                <g class="logo-piece logo-piece-tr">
+                                <g>
                                     <path d="M91.3438 55L113 33.3438V15L94.6562 15L73 36.6562V55H91.3438Z" stroke="url(#paint1_linear_0_1)" stroke-width="8"/>
                                 </g>
-                                <g class="logo-piece logo-piece-br">
+                                <g>
                                     <path d="M91.3438 73L113 94.6562V113H94.6562L73 91.3438V73H91.3438Z" stroke="url(#paint2_linear_0_1)" stroke-width="8"/>
                                 </g>
-                                <g class="logo-piece logo-piece-tl">
+                                <g>
                                     <path d="M36.6562 55L15 33.3437L15 15L33.3438 15L55 36.6562V55H36.6562Z" stroke="url(#paint3_linear_0_1)" stroke-width="8"/>
                                 </g>
                                 <defs>
