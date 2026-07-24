@@ -130,6 +130,7 @@ pub fn ProjectCard(
     #[prop(into)] props: ProjectCardProperties,
     #[prop(into)] on_click: Callback<()>,
     #[prop(into)] on_author_click: Callback<()>,
+    #[prop(into)] on_focus: Callback<()>,
     #[prop(into)] focused: Signal<bool>,
 ) -> impl IntoView {
     let ProjectCardProperties {
@@ -213,13 +214,14 @@ pub fn ProjectCard(
     view! {
         <article
             class=move || {
-                let base = "btn-lift hover:border-primary block h-full p-2 cursor-pointer transition-all";
+                let base = "btn-lift block h-full p-2 cursor-pointer transition-all";
                 if focused.get() {
                     format!("{base} border-primary btn-lift-selected")
                 } else {
                     base.to_string()
                 }
             }
+            on:pointerenter=move |_| on_focus.run(())
             on:click=move |_| on_click.run(())
             on:keydown=move |ev: leptos::web_sys::KeyboardEvent| {
                 if matches!(ev.key().as_str(), "Enter" | " ") {

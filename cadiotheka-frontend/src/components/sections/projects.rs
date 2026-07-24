@@ -300,7 +300,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                             <button
                                                 type="button"
                                                 class=move || {
-                                                    let base = "group btn-lift flex flex-col items-center justify-center h-full w-full bg-white hover:border-primary hover:text-primary border-2 border-base-content/80 p-2 text-left";
+                                                    let base = "group btn-lift flex flex-col items-center justify-center h-full w-full bg-white hover:text-primary border-2 border-base-content/80 p-2 text-left";
                                                     if focused_index.get() == Some(0) {
                                                         format!("{base} ring-2 ring-primary ring-offset-2 ring-offset-base-100")
                                                     } else {
@@ -308,6 +308,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                     }
                                                 }
                                                 tabindex=move || if focused_index.get() == Some(0) { "0" } else { "-1" }
+                                                on:pointerenter=move |_| set_focused_index.set(Some(0))
                                                 on:keydown=move |ev| handle_grid_keydown.run(ev)
                                                 on:click=move |_| search.set_query.set(String::new())
                                             >
@@ -339,6 +340,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                 props=props
                                                 focused=Signal::derive(move || focused_index.get() == Some(index))
                                                 on_click=move |()| project_modal.open(project_for_modal.clone().into())
+                                                on_focus=move |()| set_focused_index.set(Some(index))
                                                 on_author_click=move |()| {
                                                     let account = accounts_ctx
                                                         .accounts
