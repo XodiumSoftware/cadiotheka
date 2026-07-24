@@ -8,7 +8,7 @@ use crate::contexts::{
 };
 use crate::data::{
     AccountData, AccountRole, delete_project, fetch_projects, update_project_collaborators,
-    update_project_extended_desc, update_project_platforms, update_project_tags,
+    update_project_description, update_project_platforms, update_project_tags,
     update_project_title,
 };
 use crate::utils::{placeholder_color, placeholder_letter};
@@ -16,7 +16,7 @@ use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
 const MAX_TITLE_LENGTH: usize = 100;
-const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
+const MAX_DESCRIPTION_LENGTH: usize = 5000;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ProjectDetailsTab {
@@ -261,9 +261,9 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     let (draft_platforms, set_draft_platforms) = signal(card.supported_platforms.clone());
     let (supported_platforms, set_supported_platforms) = signal(card.supported_platforms.clone());
 
-    let (editing_extended, set_editing_extended) = signal(false);
-    let (draft_extended, set_draft_extended) = signal(card.extended_desc.clone());
-    let (extended_desc, set_extended_desc) = signal(card.extended_desc.clone());
+    let (editing_description, set_editing_description) = signal(false);
+    let (draft_description, set_draft_description) = signal(card.description.clone());
+    let (description, set_description) = signal(card.description.clone());
 
     let (editing_collaborators, set_editing_collaborators) = signal(false);
     let (collaborator_ids, set_collaborator_ids) = signal(card.collaborator_ids.clone());
@@ -331,14 +331,14 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
         set_editing_platforms.set(false);
     };
 
-    let start_edit_extended = move || {
-        set_draft_extended.set(extended_desc.get());
-        set_editing_extended.set(true);
+    let start_edit_description = move || {
+        set_draft_description.set(description.get());
+        set_editing_description.set(true);
     };
 
-    let cancel_edit_extended = move || {
-        set_draft_extended.set(extended_desc.get());
-        set_editing_extended.set(false);
+    let cancel_edit_description = move || {
+        set_draft_description.set(description.get());
+        set_editing_description.set(false);
     };
 
     let start_edit_collaborators = move || {
@@ -358,7 +358,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
             cancel_edit_title();
             cancel_edit_tags();
             cancel_edit_platforms();
-            cancel_edit_extended();
+            cancel_edit_description();
             cancel_edit_collaborators();
         }
     };
@@ -396,37 +396,37 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
         })
     };
 
-    let commit_edit_extended = {
+    let commit_edit_description = {
         let project_id = project_id.clone();
         Callback::new(move |draft_value: String| {
             let project_id = project_id.clone();
-            let set_extended_desc = set_extended_desc;
-            let set_draft_extended = set_draft_extended;
-            let set_editing_extended = set_editing_extended;
+            let set_description = set_description;
+            let set_draft_description = set_draft_description;
+            let set_editing_description = set_editing_description;
             let modal_card = modal.set_card;
             let set_projects = projects_ctx.set_projects;
 
             leptos::task::spawn_local(async move {
-                if let Some(new_extended) =
-                    update_project_extended_desc(&project_id, draft_value).await
+                if let Some(new_description) =
+                    update_project_description(&project_id, draft_value).await
                 {
-                    set_extended_desc.set(new_extended.clone());
-                    set_draft_extended.set(new_extended.clone());
+                    set_description.set(new_description.clone());
+                    set_draft_description.set(new_description.clone());
                     modal_card.update(|opt| {
                         if let Some(card) = opt.as_mut() {
-                            card.extended_desc.clone_from(&new_extended);
+                            card.description.clone_from(&new_description);
                         }
                     });
                     set_projects.update(|projects| {
                         for project in projects.iter_mut() {
                             if project.id == project_id {
-                                project.extended_desc.clone_from(&new_extended);
+                                project.description.clone_from(&new_description);
                                 break;
                             }
                         }
                     });
                 }
-                set_editing_extended.set(false);
+                set_editing_description.set(false);
             });
         })
     };
@@ -797,14 +797,14 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                         <div class="min-w-0 space-y-4">
                             {move || match active_tab.get() {
                                 ProjectDetailsTab::About => {
-                                    if editing_extended.get() {
+                                    if editing_description.get() {
                                         view! {
                                             <MarkdownEditor
-                                                value=draft_extended
-                                                on_input=Callback::new(move |value| set_draft_extended.set(value))
-                                                on_cancel=Callback::new(move |()| cancel_edit_extended())
-                                                on_save=Callback::new(move |()| commit_edit_extended.run(draft_extended.get()))
-                                                maxlength=MAX_EXTENDED_DESC_LENGTH
+                                                value=draft_description
+                                                on_input=Callback::new(move |value| set_draft_description.set(value))
+                                                on_cancel=Callback::new(move |()| cancel_edit_description())
+                                                on_save=Callback::new(move |()| commit_edit_description.run(draft_description.get()))
+                                                maxlength=MAX_DESCRIPTION_LENGTH
                                                 editor_class="min-h-[20rem] font-mono text-sm"
                                             />
                                         }
@@ -817,10 +817,10 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                         <button
                                                             type="button"
                                                             class="group relative text-left w-full min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto hover:border-primary transition-colors cursor-pointer"
-                                                            aria-label="Edit extended description"
-                                                            on:click=move |_| start_edit_extended()
+                                                            aria-label="Edit description"
+                                                            on:click=move |_| start_edit_description()
                                                         >
-                                                            <MarkdownView source=extended_desc.get() />
+                                                            <MarkdownView source=description.get() />
                                                             <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 {edit_pencil_icon("w-5 h-5 text-primary")}
                                                             </div>
@@ -830,7 +830,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                 } else {
                                                     view! {
                                                         <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
-                                                            <MarkdownView source=extended_desc.get() />
+                                                            <MarkdownView source=description.get() />
                                                         </div>
                                                     }
                                                         .into_any()

@@ -65,7 +65,5 @@ authenticated requests.
 | Field | Limit |
 |-------|-------|
 | `title` | 100 characters |
-| `description` | 500 characters |
-| `extended_desc` | 5000 characters |
-| `extended_desc` | 5000 characters |
+| `description` | 5000 characters |
 | IFC upload | 25 MiB, `.ifc` extension required |

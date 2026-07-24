@@ -15,7 +15,7 @@ pub struct ProjectCardProperties {
     pub author_id: String,
     pub author_username: String,
     pub collaborator_ids: Vec<String>,
-    pub extended_desc: String,
+    pub description: String,
     pub tags: Vec<Tag>,
     pub supported_platforms: Vec<Platform>,
     pub downloads: u64,
@@ -38,7 +38,7 @@ pub fn project_card_properties_from_project_data(project: ProjectData) -> Projec
         author_id: project.author_id,
         author_username: project.author_username,
         collaborator_ids: project.collaborator_ids,
-        extended_desc: project.extended_desc,
+        description: project.description,
         tags: project.tags,
         supported_platforms: project.supported_platforms,
         downloads: project.downloads,
@@ -125,7 +125,7 @@ pub fn ProjectCard(
         author_id: _,
         author_username,
         collaborator_ids: _,
-        extended_desc: _,
+        description: _,
         tags,
         supported_platforms,
         downloads,
@@ -264,8 +264,6 @@ pub fn ProjectCard(
 
                             <hr class="border-base-content/10 my-3" />
 
-                        <hr class="border-base-content/10 my-3" />
-
                         <div class="flex items-center gap-4 text-base-content/60 text-sm">
                             <span
                                 class="flex items-center gap-1 tooltip tooltip-top"
@@ -349,7 +347,7 @@ mod tests {
             author_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901".to_owned(),
             author_username: "author".to_owned(),
             collaborator_ids: vec![],
-            extended_desc: "A gear with an **extended** markdown description.".to_owned(),
+            description: "A gear with an **extended** markdown description.".to_owned(),
             tags: vec![Tag::Model3d],
             supported_platforms: vec![Platform::Blender],
             downloads: 1234,

@@ -13,13 +13,17 @@ use leptos::wasm_bindgen::JsCast;
 #[derive(Debug, Default, Clone)]
 struct FormErrors {
     title: Option<String>,
+    description: Option<String>,
     tags: Option<String>,
     platforms: Option<String>,
 }
 
 impl FormErrors {
     fn is_empty(&self) -> bool {
-        self.title.is_none() && self.tags.is_none() && self.platforms.is_none()
+        self.title.is_none()
+            && self.description.is_none()
+            && self.tags.is_none()
+            && self.platforms.is_none()
     }
 }
 
@@ -34,7 +38,7 @@ pub fn AddProjectModal() -> impl IntoView {
 
     let title_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (title, set_title) = signal(String::new());
-    let (extended_desc, set_extended_desc) = signal(String::new());
+    let (description, set_description) = signal(String::new());
     let (selected_tags, set_selected_tags) = signal(Vec::<Tag>::new());
     let (selected_platforms, set_selected_platforms) = signal(Vec::<Platform>::new());
     let (errors, set_errors) = signal(FormErrors::default());
@@ -43,7 +47,7 @@ pub fn AddProjectModal() -> impl IntoView {
 
     let reset_form = move || {
         set_title.set(String::new());
-        set_extended_desc.set(String::new());
+        set_description.set(String::new());
         set_selected_tags.set(Vec::new());
         set_selected_platforms.set(Vec::new());
         set_errors.set(FormErrors::default());
@@ -66,6 +70,13 @@ pub fn AddProjectModal() -> impl IntoView {
             e.title = Some("A project title is required.".to_string());
         } else if t.trim().len() > 100 {
             e.title = Some("Title must be 100 characters or fewer.".to_string());
+        }
+
+        let d = description.get();
+        if d.trim().is_empty() {
+            e.description = Some("A project description is required.".to_string());
+        } else if d.trim().len() > 5000 {
+            e.description = Some("Description must be 5000 characters or fewer.".to_string());
         }
 
         if selected_tags.get().is_empty() {
@@ -112,7 +123,7 @@ pub fn AddProjectModal() -> impl IntoView {
 
         let payload = new_project_payload(
             title.get_untracked(),
-            extended_desc.get_untracked(),
+            description.get_untracked(),
             selected_tags.get_untracked(),
             selected_platforms.get_untracked(),
         );
@@ -252,15 +263,45 @@ pub fn AddProjectModal() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-base-content mb-1">
-                                        "Extended description"
+                                    <label class=move || {
+                                        if errors.get().description.is_some() {
+                                            "block text-sm font-medium text-error mb-1"
+                                        } else if description.get().len() >= 5000 {
+                                            "block text-sm font-medium text-warning mb-1"
+                                        } else {
+                                            "block text-sm font-medium text-base-content mb-1"
+                                        }
+                                    }>
+                                        <span class="text-error mr-1">"*"</span>
+                                        {move || {
+                                            let count = description.get().len();
+                                            format!("Description ({count}/5000)")
+                                        }}
                                     </label>
                                     <MarkdownEditor
-                                        value=extended_desc
-                                        on_input=Callback::new(move |value| set_extended_desc.set(value))
+                                        value=description
+                                        on_input=Callback::new(move |value| {
+                                            set_description.set(value);
+                                            set_errors.update(|errs| errs.description = None);
+                                        })
                                         maxlength=5000
                                         editor_class="min-h-[12rem] font-mono text-sm"
                                     />
+                                    {move || {
+                                        let errs = errors.get();
+                                        let base = "validator-hint text-error text-xs mt-1";
+                                        if let Some(msg) = errs.description {
+                                            Some(view! {
+                                                <p class=base>{msg}</p>
+                                            })
+                                        } else if description.get().len() >= 5000 {
+                                            Some(view! {
+                                                <p class=base>{"Description must be 5000 characters or fewer.".to_string()}</p>
+                                            })
+                                        } else {
+                                            None
+                                        }
+                                    }}
                                 </div>
 
                                 <div>
@@ -413,6 +454,7 @@ mod tests {
     fn form_errors_not_empty_when_any_field_set() {
         let errors = FormErrors {
             title: Some("required".to_string()),
+            description: None,
             tags: None,
             platforms: None,
         };
@@ -423,6 +465,7 @@ mod tests {
     fn form_errors_empty_after_closing_all_errors() {
         let errors = FormErrors {
             title: None,
+            description: None,
             tags: None,
             platforms: None,
         };

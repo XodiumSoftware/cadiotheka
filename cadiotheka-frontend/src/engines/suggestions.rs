@@ -189,7 +189,7 @@ mod tests {
             author_id: "d4e5f6a7-b8c9-0123-def1-234567890123".to_owned(),
             author_username: "testauthor".to_owned(),
             collaborator_ids: vec![],
-            extended_desc: "A sample gear with *extended* markdown description.".to_owned(),
+            description: "A sample gear with markdown description.".to_owned(),
             tags: vec![Tag::Parametric, Tag::Model3d],
             supported_platforms: vec![Platform::Blender, Platform::FreeCAD],
             downloads: 100,

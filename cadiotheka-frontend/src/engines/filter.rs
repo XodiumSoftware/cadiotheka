@@ -217,7 +217,7 @@ mod tests {
             ),
             author_username: author_username.to_owned(),
             collaborator_ids: vec![],
-            extended_desc: format!("Extended markdown summary for {title}."),
+            description: format!("Markdown summary for {title}."),
             tags: tags.to_vec(),
             supported_platforms: platforms.to_vec(),
             downloads,

@@ -9,12 +9,12 @@ use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::utils::{check_rate_limit, error_response, js_option};
 
-const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, ifc_url FROM projects";
+const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, supported_platforms, downloads, favorites, timestamp, ifc_url FROM projects";
 
 /// Maximum allowed length for a project title.
 const MAX_TITLE_LENGTH: usize = 100;
-/// Maximum allowed length for a project's extended markdown description.
-const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
+/// Maximum allowed length for a project description.
+const MAX_DESCRIPTION_LENGTH: usize = 5000;
 /// Maximum allowed size for an uploaded project IFC model, in bytes.
 const MAX_IFC_SIZE_BYTES: usize = 25 * 1024 * 1024; // 25 MiB
 
@@ -41,7 +41,7 @@ pub struct Project {
     pub author_username: String,
     #[serde(with = "json_string")]
     pub collaborator_ids: Vec<String>,
-    pub extended_desc: String,
+    pub description: String,
     #[serde(with = "json_string")]
     pub tags: Vec<String>,
     #[serde(with = "json_string")]
@@ -63,7 +63,7 @@ pub struct ProjectPayload {
     pub author_username: String,
     #[serde(with = "json_string")]
     pub collaborator_ids: Vec<String>,
-    pub extended_desc: String,
+    pub description: String,
     #[serde(with = "json_string")]
     pub tags: Vec<String>,
     #[serde(with = "json_string")]
@@ -145,24 +145,25 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, ifc_url) \
+            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, tags, supported_platforms, downloads, favorites, timestamp, ifc_url) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
         )
-        .bind(&[
-            payload.id.into(),
-            payload.title.into(),
-            payload.author.into(),
-            payload.author_id.into(),
-            payload.author_username.into(),
-            collaborator_ids.into(),
-            payload.extended_desc.into(),
-            tags.into(),
-            platforms.into(),
-            downloads_value.into(),
-            favorites.into(),
-            payload.timestamp.into(),
-            js_option(payload.ifc_url),
-        ])?
+        .bind(
+            &[
+                payload.id.into(),
+                payload.title.into(),
+                payload.author.into(),
+                payload.author_id.into(),
+                payload.author_username.into(),
+                collaborator_ids.into(),
+                payload.description.into(),
+                tags.into(),
+                platforms.into(),
+                downloads_value.into(),
+                favorites.into(),
+                payload.timestamp.into(),
+                js_option(payload.ifc_url),
+            ])?
         .run()
         .await?;
 
@@ -181,7 +182,7 @@ pub struct ProjectPatch {
     tags: Option<Vec<String>>,
     supported_platforms: Option<Vec<String>>,
     collaborator_ids: Option<Vec<String>>,
-    extended_desc: Option<String>,
+    description: Option<String>,
 }
 
 /// Partially updates an existing project, identified by the `:id` path parameter.
@@ -237,13 +238,13 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
             .await?;
     }
 
-    if let Some(extended_desc) = patch.extended_desc {
-        if extended_desc.len() > MAX_EXTENDED_DESC_LENGTH {
-            return error_response("Extended description must be 5000 characters or fewer", 400);
+    if let Some(description) = patch.description {
+        if description.len() > MAX_DESCRIPTION_LENGTH {
+            return error_response("Description must be 5000 characters or fewer", 400);
         }
         db(&ctx)?
-            .prepare("UPDATE projects SET extended_desc = ?1 WHERE id = ?2")
-            .bind(&[extended_desc.into(), id.into()])?
+            .prepare("UPDATE projects SET description = ?1 WHERE id = ?2")
+            .bind(&[description.into(), id.into()])?
             .run()
             .await?;
     }
@@ -285,24 +286,25 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     db(&ctx)?
         .prepare(
             "UPDATE projects \
-             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, extended_desc = ?6, tags = ?7, supported_platforms = ?8, downloads = ?9, favorites = ?10, timestamp = ?11, ifc_url = ?12 \
+             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, tags = ?7, supported_platforms = ?8, downloads = ?9, favorites = ?10, timestamp = ?11, ifc_url = ?12 \
              WHERE id = ?13",
         )
-        .bind(&[
-            payload.title.into(),
-            payload.author.into(),
-            payload.author_id.into(),
-            payload.author_username.into(),
-            collaborator_ids.into(),
-            payload.extended_desc.into(),
-            tags.into(),
-            platforms.into(),
-            downloads_value.into(),
-            favorites.into(),
-            payload.timestamp.into(),
-            js_option(payload.ifc_url),
-            id.into(),
-        ])?
+        .bind(
+            &[
+                payload.title.into(),
+                payload.author.into(),
+                payload.author_id.into(),
+                payload.author_username.into(),
+                collaborator_ids.into(),
+                payload.description.into(),
+                tags.into(),
+                platforms.into(),
+                downloads_value.into(),
+                favorites.into(),
+                payload.timestamp.into(),
+                js_option(payload.ifc_url),
+                id.into(),
+            ])?
         .run()
         .await?;
     Response::empty()
@@ -490,7 +492,7 @@ mod tests {
             author_id: author_id.into(),
             author_username: "author".into(),
             collaborator_ids: vec![],
-            extended_desc: String::new(),
+            description: String::new(),
             tags: vec![],
             supported_platforms: vec![],
             downloads: 0,
@@ -508,7 +510,7 @@ mod tests {
             author_id: "acc-1".into(),
             author_username: "author".into(),
             collaborator_ids: vec![],
-            extended_desc: String::new(),
+            description: String::new(),
             tags: vec![],
             supported_platforms: vec![],
             downloads: 0,
