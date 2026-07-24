@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use worker::{
     Bucket, D1Database, FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext,
-    console_log,
 };
 
 use crate::DB_BINDING;
@@ -10,24 +9,16 @@ use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::utils::{check_rate_limit, error_response, js_option};
 
-const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url, ifc_url FROM projects";
+const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, ifc_url FROM projects";
 
 /// Maximum allowed length for a project title.
 const MAX_TITLE_LENGTH: usize = 100;
 /// Maximum allowed length for a project short description.
 const MAX_DESCRIPTION_LENGTH: usize = 500;
-/// Maximum allowed length for a project icon key stored in D1.
-const MAX_ICON_KEY_LENGTH: usize = 200;
 /// Maximum allowed length for a project's extended markdown description.
 const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
-/// Maximum allowed size for an uploaded project icon, in bytes.
-const MAX_ICON_SIZE_BYTES: usize = 5 * 1024 * 1024; // 5 MiB
 /// Maximum allowed size for an uploaded project IFC model, in bytes.
 const MAX_IFC_SIZE_BYTES: usize = 25 * 1024 * 1024; // 25 MiB
-/// Minimum allowed width or height for an uploaded icon, in pixels.
-const MIN_ICON_DIMENSION: u32 = 64;
-/// Maximum allowed width or height for an uploaded icon, in pixels.
-const MAX_ICON_DIMENSION: u32 = 2048;
 
 /// Validates the project payload and returns a map of field names to error
 /// messages. An empty map means the payload is valid.
@@ -68,7 +59,6 @@ pub struct Project {
     #[serde(with = "json_string")]
     pub favorites: Vec<String>,
     pub timestamp: String,
-    pub icon_url: Option<String>,
     pub ifc_url: Option<String>,
 }
 
@@ -92,7 +82,6 @@ pub struct ProjectPayload {
     #[serde(with = "json_string")]
     pub favorites: Vec<String>,
     pub timestamp: String,
-    pub icon_url: Option<String>,
     pub ifc_url: Option<String>,
 }
 
@@ -166,8 +155,8 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, icon_url, ifc_url) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, extended_desc, tags, supported_platforms, downloads, favorites, timestamp, ifc_url) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
         )
         .bind(&[
             payload.id.into(),
@@ -183,7 +172,6 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             downloads_value.into(),
             favorites.into(),
             payload.timestamp.into(),
-            js_option(payload.icon_url),
             js_option(payload.ifc_url),
         ])?
         .run()
@@ -201,7 +189,6 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 #[allow(clippy::option_option)]
 pub struct ProjectPatch {
     title: Option<String>,
-    icon_key: Option<Option<String>>,
     description: Option<String>,
     tags: Option<Vec<String>>,
     supported_platforms: Option<Vec<String>>,
@@ -229,22 +216,6 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         db(&ctx)?
             .prepare("UPDATE projects SET title = ?1 WHERE id = ?2")
             .bind(&[title.into(), id.clone().into()])?
-            .run()
-            .await?;
-    }
-
-    if let Some(icon_key) = patch.icon_key {
-        if let Some(ref key) = icon_key {
-            if key.len() > MAX_ICON_KEY_LENGTH {
-                return error_response("Icon key must be 200 characters or fewer", 400);
-            }
-            if !key.starts_with("icons/") {
-                return error_response("Invalid icon key", 400);
-            }
-        }
-        db(&ctx)?
-            .prepare("UPDATE projects SET icon_url = ?1 WHERE id = ?2")
-            .bind(&[js_option(icon_key), id.clone().into()])?
             .run()
             .await?;
     }
@@ -337,8 +308,8 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     db(&ctx)?
         .prepare(
             "UPDATE projects \
-             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, extended_desc = ?7, tags = ?8, supported_platforms = ?9, downloads = ?10, favorites = ?11, timestamp = ?12, icon_url = ?13, ifc_url = ?14 \
-             WHERE id = ?15",
+             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, extended_desc = ?7, tags = ?8, supported_platforms = ?9, downloads = ?10, favorites = ?11, timestamp = ?12, ifc_url = ?13 \
+             WHERE id = ?14",
         )
         .bind(&[
             payload.title.into(),
@@ -353,7 +324,6 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
             downloads_value.into(),
             favorites.into(),
             payload.timestamp.into(),
-            js_option(payload.icon_url),
             js_option(payload.ifc_url),
             id.into(),
         ])?
@@ -379,123 +349,16 @@ pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Respo
         .run()
         .await?;
 
-    if let Some(icon_key) = project.icon_url
-        && let Err(err) = icons_bucket(&ctx)?.delete(&icon_key).await
-    {
-        console_log!("Failed to delete icon {} for project: {:?}", icon_key, err);
-    }
-
     Response::empty()
-}
-
-/// Returns the R2 bucket configured for project icons.
-/// Returns the R2 bucket used for project assets (icons, IFC models, etc.).
-fn project_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
-    ctx.env.bucket(PROJECT_ASSETS_R2_BINDING)
-}
-
-/// Returns the R2 bucket used for project icons.
-fn icons_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
-    project_bucket(ctx)
 }
 
 /// Returns the R2 bucket used for project IFC models.
 fn ifcs_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
-    project_bucket(ctx)
-}
-
-/// Whether the given account may edit or delete the project.
-/// MIME types accepted for uploaded project icons.
-const ALLOWED_ICON_CONTENT_TYPES: &[&str] = &["image/png", "image/jpeg", "image/webp"];
-
-/// Returns the MIME type for an icon based on its magic bytes.
-fn icon_content_type(bytes: &[u8]) -> Option<&'static str> {
-    infer::get(bytes)
-        .map(|kind| kind.mime_type())
-        .filter(|mime| ALLOWED_ICON_CONTENT_TYPES.contains(mime))
-}
-
-/// Reads image dimensions from PNG, JPEG, or WebP headers without loading the
-/// entire file.
-fn icon_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
-    imagesize::blob_size(bytes).ok().and_then(|size| {
-        Some((
-            u32::try_from(size.width).ok()?,
-            u32::try_from(size.height).ok()?,
-        ))
-    })
-}
-
-/// Handles a multipart upload of a project icon, validates it, stores it in R2,
-/// and updates the project's `icon_url` column with the R2 object key.
-pub async fn upload_project_icon(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    if let Some(response) = check_rate_limit(&req, &ctx, "icon_upload").await? {
-        return Ok(response);
-    }
-    let account = require_account(&req, &ctx).await?;
-    let id = ctx.param("id").cloned().unwrap_or_default();
-    let project = fetch_project(&ctx, &id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
-    if !can_edit_project(&account, &project) {
-        return error_response("Forbidden", 403);
-    }
-
-    let form_data = req.form_data().await?;
-    let Some(FormEntry::File(file)) = form_data.get("icon") else {
-        return error_response("missing icon file", 400);
-    };
-
-    let bytes = file.bytes().await?;
-    if bytes.len() > MAX_ICON_SIZE_BYTES {
-        return error_response("Icon must be 5 MiB or smaller", 413);
-    }
-
-    let content_type = icon_content_type(&bytes)
-        .ok_or_else(|| worker::Error::RustError("Icon must be PNG, JPEG, or WebP".into()))?;
-
-    if let Some((width, height)) = icon_dimensions(&bytes) {
-        if width < MIN_ICON_DIMENSION
-            || height < MIN_ICON_DIMENSION
-            || width > MAX_ICON_DIMENSION
-            || height > MAX_ICON_DIMENSION
-        {
-            return error_response(
-                "Icon dimensions must be between 64x64 and 2048x2048 pixels",
-                400,
-            );
-        }
-    } else {
-        return error_response("Could not read icon dimensions", 400);
-    }
-
-    let old_key = project.icon_url.clone();
-    let key = format!("icons/{id}/icon");
-    let http_metadata = HttpMetadata {
-        content_type: Some(content_type.to_string()),
-        ..Default::default()
-    };
-
-    icons_bucket(&ctx)?
-        .put(&key, bytes)
-        .http_metadata(http_metadata)
-        .execute()
-        .await?;
-
-    db(&ctx)?
-        .prepare("UPDATE projects SET icon_url = ?1 WHERE id = ?2")
-        .bind(&[key.clone().into(), id.into()])?
-        .run()
-        .await?;
-
-    if let Some(old_key) = old_key.filter(|k| k != &key) {
-        let _ = icons_bucket(&ctx)?.delete(&old_key).await;
-    }
-
-    Response::from_json(&serde_json::json!({ "icon_key": key, "content_type": content_type }))
+    ctx.env.bucket(PROJECT_ASSETS_R2_BINDING)
 }
 
 /// Handles a multipart upload of a project IFC model, validates it, stores it in R2,
+/// and updates the project's `ifc_url` column with the R2 object key.
 /// and updates the project's `ifc_url` column with the R2 object key.
 pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(response) = check_rate_limit(&req, &ctx, "ifc_upload").await? {
@@ -573,34 +436,6 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
     let body = object
         .body()
         .ok_or_else(|| worker::Error::RustError("IFC object has no body".into()))?;
-
-    let headers = Headers::new();
-    headers.set("Content-Type", &content_type)?;
-    Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
-}
-
-/// Serves an icon from R2 by its object key.
-pub async fn serve_icon(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let project_id = ctx.param("project_id").cloned().unwrap_or_default();
-    let icon_id = ctx.param("icon_id").cloned().unwrap_or_default();
-    if project_id.is_empty() || icon_id.is_empty() {
-        return error_response("Invalid icon key", 400);
-    }
-    let key = format!("icons/{project_id}/{icon_id}");
-
-    let object = icons_bucket(&ctx)?.get(&key).execute().await?;
-
-    let Some(object) = object else {
-        return error_response("Not found", 404);
-    };
-
-    let http_metadata = object.http_metadata();
-    let content_type = http_metadata
-        .content_type
-        .unwrap_or_else(|| "application/octet-stream".to_string());
-    let body = object
-        .body()
-        .ok_or_else(|| worker::Error::RustError("icon object has no body".into()))?;
 
     let headers = Headers::new();
     headers.set("Content-Type", &content_type)?;
@@ -686,7 +521,6 @@ mod tests {
             downloads: 0,
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
-            icon_url: None,
             ifc_url: None,
         }
     }
@@ -706,7 +540,6 @@ mod tests {
             downloads: 0,
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
-            icon_url: None,
             ifc_url: None,
         }
     }

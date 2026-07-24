@@ -57,8 +57,6 @@ authenticated requests.
 | PATCH | `/data/projects/:id` | session owner/admin | Partially update a project. |
 | DELETE | `/data/projects/:id` | session owner/admin | Delete a project. |
 | POST | `/data/projects/:id/favorites` | session | Toggle favorite status for the current user. |
-| POST | `/data/projects/:id/icon` | session owner/admin | Upload a project icon (`multipart/form-data`, field `icon`). |
-| GET | `/data/icons/:project_id/:icon_id` | - | Serve a project icon. |
 | POST | `/data/projects/:id/ifc` | session owner/admin | Upload an IFC model (`multipart/form-data`, field `ifc`). |
 | GET | `/data/ifcs/:project_id/:filename` | - | Serve a project IFC model. |
 
@@ -69,6 +67,5 @@ authenticated requests.
 | `title` | 100 characters |
 | `description` | 500 characters |
 | `extended_desc` | 5000 characters |
-| `icon_url` key | 200 characters |
-| Icon upload | 5 MiB, PNG/JPEG/WebP only |
+| `extended_desc` | 5000 characters |
 | IFC upload | 25 MiB, `.ifc` extension required |

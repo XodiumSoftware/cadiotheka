@@ -91,7 +91,7 @@ npx wrangler dev
 
 The backend API is available at <http://localhost:8787/data/accounts> by default.
 
-Project assets (icons and IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). The database stores only the generated R2 object key, and the frontend loads assets through backend asset routes.
+Project assets (IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). The database stores only the generated R2 object key, and the frontend loads assets through backend asset routes.
 
 To use your real Cloudflare resources during local development, run Wrangler in remote mode:
 

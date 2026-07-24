@@ -119,7 +119,7 @@ npx wrangler dev
 
 The local API is available at <http://localhost:8787/data/accounts> by default.
 
-Project assets (icons and IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). D1 stores only the generated object key, and the frontend loads assets through backend asset routes.
+Project assets (IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). D1 stores only the generated object key, and the frontend loads assets through backend asset routes.
 
 For local emulation, use plain `npx wrangler dev`. To hit the bound remote Cloudflare resources instead, use `npx wrangler dev --remote`.
 
