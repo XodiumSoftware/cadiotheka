@@ -11,16 +11,11 @@
 /* Semantic surface colors used by components that sit outside the main theme canvas. */
 :root {
     --surface-light: #d0d0d0;
-    --surface-dark: #1a1a1a;
     --kbd-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.3);
 }
 
 @utility bg-surface-light {
     background-color: var(--surface-light);
-}
-
-@utility bg-surface-dark {
-    background-color: var(--surface-dark);
 }
 
 @utility shadow-kbd {
@@ -40,22 +35,6 @@ html {
 /* Remove default focus outline where our custom :focus-visible takes over */
 :focus:not(:focus-visible) {
     outline: none;
-}
-
-.lift {
-    transition:
-        transform 0.1s ease,
-        box-shadow 0.1s ease;
-}
-
-.lift:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.8);
-}
-
-.lift:active {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0 0 rgba(0, 0, 0, 0.8);
 }
 
 .btn-outline-ghost {
@@ -103,196 +82,8 @@ html {
     box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.8);
 }
 
-.blueprint-grid {
-    background-image:
-        linear-gradient(to right, var(--color-primary) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--color-primary) 1px, transparent 1px);
-    background-size: 60px 60px;
-    background-position: center;
-    opacity: 0.08;
-}
-
-.blueprint-mask {
-    mask-image: radial-gradient(
-        ellipse 50% 50% at 50% 50%,
-        #000 60%,
-        transparent 100%
-    );
-}
-
-.bg-gradient-radial {
-    background: radial-gradient(
-        circle at center,
-        var(--tw-gradient-from) 0%,
-        var(--tw-gradient-to) 70%
-    );
-}
-
-.blueprint-scanline {
-    background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        var(--color-primary) 50%,
-        transparent 100%
-    );
-    opacity: 0.1;
-    animation: scanline 8s linear infinite;
-    height: 4px;
-}
-
-@keyframes scanline {
-    0% {
-        transform: translateY(-100%);
-    }
-    100% {
-        transform: translateY(100vh);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .blueprint-scanline {
-        animation: none;
-    }
-}
-
-/* Wireframe shapes animations */
-.wireframe-float-slow {
-    animation: wireframeFloat 12s ease-in-out infinite;
-}
-
-.wireframe-float-medium {
-    animation: wireframeFloat 8s ease-in-out infinite;
-}
-
-.wireframe-float-fast {
-    animation: wireframeFloat 6s ease-in-out infinite;
-}
-
-.wireframe-pulse {
-    animation: wireframePulse 4s ease-in-out infinite;
-}
-
-.wireframe-rotate-slow {
-    animation: wireframeRotate 20s linear infinite;
-}
-
-@keyframes wireframeFloat {
-    0%,
-    100% {
-        transform: translateY(0) translateX(0);
-    }
-    25% {
-        transform: translateY(-15px) translateX(5px);
-    }
-    50% {
-        transform: translateY(-5px) translateX(-5px);
-    }
-    75% {
-        transform: translateY(-20px) translateX(3px);
-    }
-}
-
-@keyframes wireframePulse {
-    0%,
-    100% {
-        opacity: 0.3;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.6;
-        transform: scale(1.1);
-    }
-}
-
-@keyframes wireframeRotate {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .wireframe-float-slow,
-    .wireframe-float-medium,
-    .wireframe-float-fast,
-    .wireframe-pulse,
-    .wireframe-rotate-slow {
-        animation: none;
-    }
-}
-
-/* CAD Line Drawing animations */
-.cad-line-hidden {
-    stroke-dasharray: 1200;
-    stroke-dashoffset: 1200;
-}
-
-.cad-line-draw {
-    stroke-dasharray: 1200;
-    stroke-dashoffset: 0;
-    animation: cadLineDraw 2s ease-out forwards;
-}
-
-.cad-line-draw-hero {
-    stroke-dasharray: 1200;
-    stroke-dashoffset: 1200;
-    animation: cadLineDraw 3s ease-out 0.5s forwards;
-}
-
-.cad-line-simple {
-    stroke-dasharray: 100;
-    stroke-dashoffset: 100;
-    animation: cadLineDraw 1.5s ease-in-out forwards;
-}
-
-.cad-dimension-text {
-    transition: fill-opacity 0.5s ease 2s;
-}
-
-@keyframes cadLineDraw {
-    to {
-        stroke-dashoffset: 0;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .cad-line-draw,
-    .cad-line-draw-hero,
-    .cad-line-simple {
-        animation: none;
-        stroke-dashoffset: 0;
-    }
-}
-
-/*noinspection ALL*/
-.nav-icon {
-    mask: var(--mask-url) no-repeat center / contain;
-    -webkit-mask: var(--mask-url) no-repeat center / contain;
-}
-
-.clip-organic-blob {
-    clip-path: polygon(
-        74.1% 44.1%,
-        100% 61.6%,
-        97.5% 26.9%,
-        85.5% 0.1%,
-        80.7% 2%,
-        72.5% 32.5%,
-        60.2% 62.4%,
-        52.4% 68.1%,
-        47.5% 58.3%,
-        45.2% 34.5%,
-        27.5% 76.7%,
-        0.1% 64.9%,
-        17.9% 100%,
-        27.6% 76.8%,
-        76.1% 97.7%,
-        74.1% 44.1%
-    );
-}
-
+/* Logo hover: expand + shake */
+.logo-container {
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
     *,
@@ -308,18 +99,6 @@ html {
     .lift {
         transition: none !important;
         transform: none !important;
-    }
-
-    .team-deck-container,
-    .team-card,
-    .team-cards-list,
-    .team-deck,
-    .team-deck-card {
-        animation: none !important;
-    }
-
-    .team-deck-card {
-        transition: none !important;
     }
 }
 
@@ -420,131 +199,11 @@ html {
         transform: translate(-10px, -10px);
     }
 
-    .logo-container.logo-active .logo-piece {
-        animation: logo-shake 0.25s ease-in-out 6;
-    }
-}
-
-/* New Team Deck System with step rotation */
-.team-deck-wrapper {
-    perspective: 1200px;
-    transform-style: preserve-3d;
-    min-height: 500px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.team-deck {
-    position: relative;
-    width: 240px;
-    height: 336px;
-    transform-style: preserve-3d;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.team-deck-card {
-    position: absolute;
-    width: 240px;
-    height: 336px;
-    border-radius: 0;
-    border: 2px solid oklch(var(--color-base-content) / 0.8);
-    box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.8);
-    background-color: var(--surface-light);
-    transform-style: preserve-3d;
-    transition:
-        transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-        opacity 0.3s ease;
-    overflow: hidden;
-    cursor: pointer;
-}
-
-/* Member cards have dark background */
-.team-deck-card:not(.team-deck-title) {
-    background-color: var(--surface-dark);
-}
-
-/* Position 0: Front and center */
-.team-deck-card[data-deck-pos="0"] {
-    transform: translateX(0) translateZ(0px);
-    opacity: 1;
-    z-index: 100;
-}
-
-/* Position 1: Peeking from right edge (hover target) */
-.team-deck-card[data-deck-pos="1"] {
-    transform: translateX(80px) translateZ(-30px) rotateY(-3deg);
-    opacity: 1;
-    z-index: 90;
-    pointer-events: auto;
-}
-
-/* Positions 2+: Hidden behind */
-.team-deck-card[data-deck-pos="2"],
-.team-deck-card[data-deck-pos="3"],
-.team-deck-card[data-deck-pos="4"],
-.team-deck-card[data-deck-pos="5"],
-.team-deck-card[data-deck-pos="6"],
-.team-deck-card[data-deck-pos="7"] {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(0) translateZ(-300px);
-}
-
-/* Title card overflow visible for corner-frame */
-.team-deck-title {
-    overflow: visible !important;
-}
-
-/* Member cards have dark background */
-.team-deck-card:not(.team-deck-title) {
-    background-color: #1a1a1a;
-}
-
-.team-deck-bg {
-    position: absolute;
-    inset: 0;
-    background: none;
-}
-
-/* Hover zone at right edge - triggers deck rotation */
-.deck-hover-zone {
-    position: absolute;
-    right: calc(
-        50% - 120px - 80px
-    ); /* Center - half card width - offset to edge */
-    top: 50%;
-    transform: translateY(-50%);
-    width: 80px;
-    height: 336px;
-    z-index: 95;
-    cursor: pointer;
-}
-
-.team-deck-wrapper:has(.deck-hover-zone:hover)
-    .team-deck-card[data-deck-pos="1"],
-.team-deck-wrapper:has(.team-deck-card.team-deck-title[data-deck-pos="0"]:hover)
-    .team-deck-card[data-deck-pos="1"] {
-    animation: card-edge-bounce 0.6s ease-in-out infinite;
-}
-
-.team-deck-wrapper:has(.deck-hover-zone:active)
-    .team-deck-card[data-deck-pos="1"],
-.team-deck-wrapper:has(
-        .team-deck-card.team-deck-title[data-deck-pos="0"]:active
-    )
-    .team-deck-card[data-deck-pos="1"] {
-    animation: none;
-}
-
-@keyframes card-edge-bounce {
-    0%,
-    100% {
-        transform: translateX(80px) translateZ(-30px) rotateY(-3deg);
-    }
-    50% {
-        transform: translateX(95px) translateZ(-30px) rotateY(-3deg);
+@media (prefers-reduced-motion: reduce) {
+    .logo-piece path,
+    .logo-piece {
+        transition: none !important;
+        animation: none !important;
+        transform: none !important;
     }
 }
