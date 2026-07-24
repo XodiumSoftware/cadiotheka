@@ -2,8 +2,6 @@ use crate::components::cards::project::{HeartIcon, ProjectCardProperties};
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
-use crate::components::ui::project_icon_picker::ProjectIconPicker;
-
 use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
     SearchContext,
@@ -11,7 +9,7 @@ use crate::contexts::{
 use crate::data::{
     AccountData, AccountRole, delete_project, fetch_projects, update_project_collaborators,
     update_project_extended_desc, update_project_platforms, update_project_tags,
-    update_project_title, upload_project_icon,
+    update_project_title,
 };
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
@@ -271,9 +269,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     let (collaborator_ids, set_collaborator_ids) = signal(card.collaborator_ids.clone());
     let (draft_collaborator_ids, set_draft_collaborator_ids) =
         signal(card.collaborator_ids.clone());
-
-    let icon_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
-    let (icon_url, set_icon_url) = signal(card.icon_url.clone());
 
     let (edit_mode, set_edit_mode) = signal(false);
 
@@ -540,35 +535,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
         })
     };
 
-    let commit_edit_icon = {
-        let project_id = project_id.clone();
-        Callback::new(move |file: web_sys::File| {
-            let project_id = project_id.clone();
-            let set_icon_url = set_icon_url;
-            let modal_card = modal.set_card;
-            let set_projects = projects_ctx.set_projects;
-
-            leptos::task::spawn_local(async move {
-                if let Some(new_icon) = upload_project_icon(&project_id, file).await {
-                    set_icon_url.set(Some(new_icon.clone()));
-                    modal_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.icon_url = Some(new_icon.clone());
-                        }
-                    });
-                    set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.icon_url = Some(new_icon.clone());
-                                break;
-                            }
-                        }
-                    });
-                }
-            });
-        })
-    };
-
     let toggle_favorite_click = {
         let project_id = card.id.clone();
         let set_projects = projects_ctx.set_projects;
@@ -673,44 +639,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     view! {
         <div class="flex flex-col h-full min-h-0 overflow-hidden gap-4">
             <div class="flex items-start gap-4 relative p-2 pr-3">
-                <div class="relative flex-shrink-0">
-                    <input
-                        node_ref=icon_input_ref
-                        type="file"
-                        class="hidden"
-                        accept="image/png,image/jpeg,image/webp"
-                        on:change=move |ev| {
-                            let input = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok());
-                            let Some(input) = input else {
-                                return;
-                            };
-                            let Some(files) = input.files() else {
-                                return;
-                            };
-                            let Some(file) = files.get(0).and_then(|blob| blob.dyn_into::<web_sys::File>().ok()) else {
-                                return;
-                            };
-                            commit_edit_icon.run(file);
-                            input.set_value("");
-                        }
-                    />
-                    {move || {
-                        view! {
-                            <ProjectIconPicker
-                                icon_url={move || icon_url.get()}
-                                title=move || title.get()
-                                editable={Signal::derive(move || is_editable.get() && edit_mode.get())}
-                                on_click=move |()| {
-                                    if let Some(input) = icon_input_ref.get() {
-                                        input.click();
-                                    }
-                                }
-                                class="w-16 h-16"
-                            />
-                        }
-                            .into_any()
-                    }}
-                </div>
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
                     {move || {
                         if editing_title.get() {
