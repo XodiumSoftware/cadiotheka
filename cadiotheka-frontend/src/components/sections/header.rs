@@ -455,38 +455,13 @@ pub fn Header() -> impl IntoView {
                         }
                     >
                         <span class="inline-block">
-                            <svg width="48" height="48" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-12 w-12">
-                                <g>
-                                    <path d="M36.6562 73L15 94.6562V113H33.3438L55 91.3438V73H36.6562Z" stroke="url(#paint0_linear_0_1)" stroke-width="8"/>
-                                </g>
-                                <g>
-                                    <path d="M91.3438 55L113 33.3438V15L94.6562 15L73 36.6562V55H91.3438Z" stroke="url(#paint1_linear_0_1)" stroke-width="8"/>
-                                </g>
-                                <g>
-                                    <path d="M91.3438 73L113 94.6562V113H94.6562L73 91.3438V73H91.3438Z" stroke="url(#paint2_linear_0_1)" stroke-width="8"/>
-                                </g>
-                                <g>
-                                    <path d="M36.6562 55L15 33.3437L15 15L33.3438 15L55 36.6562V55H36.6562Z" stroke="url(#paint3_linear_0_1)" stroke-width="8"/>
-                                </g>
-                                <defs>
-                                    <linearGradient id="paint0_linear_0_1" x1="35" y1="69" x2="35" y2="117" gradientUnits="userSpaceOnUse">
-                                        <stop stop-color="#CB2D3E"/>
-                                        <stop offset="1" stop-color="#EF473A"/>
-                                    </linearGradient>
-                                    <linearGradient id="paint1_linear_0_1" x1="93" y1="11" x2="93" y2="59" gradientUnits="userSpaceOnUse">
-                                        <stop stop-color="#EF473A"/>
-                                        <stop offset="1" stop-color="#CB2D3E"/>
-                                    </linearGradient>
-                                    <linearGradient id="paint2_linear_0_1" x1="93" y1="69" x2="93" y2="117" gradientUnits="userSpaceOnUse">
-                                        <stop stop-color="#CB2D3E"/>
-                                        <stop offset="1" stop-color="#EF473A"/>
-                                    </linearGradient>
-                                    <linearGradient id="paint3_linear_0_1" x1="35" y1="11" x2="35" y2="59" gradientUnits="userSpaceOnUse">
-                                        <stop stop-color="#EF473A"/>
-                                        <stop offset="1" stop-color="#CB2D3E"/>
-                                    </linearGradient>
-                                </defs>
-                            </svg>
+                            <img
+                                src="favicon.svg"
+                                alt="Cadiotheka logo"
+                                class="h-12 w-12"
+                                width="48"
+                                height="48"
+                            />
                         </span>
                         <span class="text-2xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors overflow-hidden whitespace-nowrap">
                             "Cadiotheka"
