@@ -456,7 +456,7 @@ pub fn Header() -> impl IntoView {
                     >
                         <span class="inline-block">
                             <img
-                                src="favicon.svg"
+                                src="/favicon.svg"
                                 alt="Cadiotheka logo"
                                 class="h-12 w-12"
                                 width="48"
