@@ -106,8 +106,6 @@ pub fn Header() -> impl IntoView {
     let _layout = LayoutContext::use_context();
     let search = SearchContext::use_context();
     let (is_scrolled, set_is_scrolled) = signal(false);
-    let (is_logo_active, set_is_logo_active) = signal(false);
-    let (letters_visible, set_letters_visible) = signal(true);
     let (search_open, set_search_open) = signal(false);
     let (account_menu_open, set_account_menu_open) = signal(false);
     let account_menu_ref: NodeRef<leptos::html::Div> = NodeRef::new();
@@ -388,17 +386,6 @@ pub fn Header() -> impl IntoView {
         }
     });
 
-    let trigger_logo_animation = move || {
-        set_letters_visible.set(false);
-        set_is_logo_active.set(true);
-        spawn_local(async move {
-            gloo_timers::future::sleep(Duration::from_millis(1500)).await;
-            set_is_logo_active.set(false);
-            gloo_timers::future::sleep(Duration::from_millis(300)).await;
-            set_letters_visible.set(true);
-        });
-    };
-
     let handle_keydown = move |ev: leptos::web_sys::KeyboardEvent| {
         let flat = flattened_suggestions();
         if flat.is_empty() {
@@ -440,32 +427,6 @@ pub fn Header() -> impl IntoView {
             _ => {}
         }
     };
-    let logo_wordmark = "Cadiotheka";
-
-    let letter_elements = move || {
-        logo_wordmark
-        .chars()
-        .enumerate()
-        .map(|(idx, ch)| {
-            let delay = format!("{}ms", idx * 25);
-            let ch = ch.to_string();
-            view! {
-                <span
-                    class=move || {
-                        if letters_visible.get() {
-                            "inline-block transition-all duration-300 ease-out opacity-100 translate-x-0".to_string()
-                        } else {
-                            "inline-block transition-all duration-300 ease-in opacity-0 -translate-x-8 scale-0".to_string()
-                        }
-                    }
-                    style=format!("transition-delay: {}", delay)
-                >
-                    {ch}
-                </span>
-            }
-        })
-        .collect::<Vec<_>>()
-    };
 
     view! {
         <header
@@ -491,18 +452,9 @@ pub fn Header() -> impl IntoView {
                             if let Some(window) = web_sys::window() {
                                 window.scroll_to_with_x_and_y(0.0, 0.0);
                             }
-                            trigger_logo_animation();
                         }
                     >
-                        <span
-                            class=move || {
-                                if is_logo_active.get() {
-                                    "logo-container logo-active inline-block".to_string()
-                                } else {
-                                    "logo-container inline-block".to_string()
-                                }
-                            }
-                        >
+                        <span class="logo-container inline-block">
                             <svg width="48" height="48" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-12 w-12">
                                 <g class="logo-piece logo-piece-bl">
                                     <path d="M36.6562 73L15 94.6562V113H33.3438L55 91.3438V73H36.6562Z" stroke="url(#paint0_linear_0_1)" stroke-width="8"/>
@@ -537,7 +489,7 @@ pub fn Header() -> impl IntoView {
                             </svg>
                         </span>
                         <span class="text-2xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors overflow-hidden whitespace-nowrap">
-                            {letter_elements().into_iter().collect_view()}
+                            "Cadiotheka"
                         </span>
                     </a>
                 </div>
