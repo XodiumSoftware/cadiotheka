@@ -70,7 +70,98 @@ html {
     box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.8);
 }
 
+/* Logo click animation keyframes and phase classes.
+   The sequence is driven by a `logo-phase-N` class on the header link.
+
+   Phases:
+   0 - idle
+   1 - right half slides right of the ASCII text
+   2 - right half returns while ASCII text collapses (erase)
+   3 - whole logo shakes
+   4 - ASCII text expands again while right half stays right (unerase)
+   5 - right half fades out while extended
+   6 - right half fades back in while returning to original place
+*/
+
+.logo-right-half {
+    transition:
+        transform 400ms ease-in-out,
+        opacity 300ms ease-in-out;
+}
+
+.logo-ascii {
+    max-width: 24rem;
+    opacity: 1;
+    transition:
+        max-width 400ms ease-in-out,
+        opacity 300ms ease-in-out;
+}
+
+.logo-phase-0 .logo-right-half {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.logo-phase-1 .logo-right-half,
+.logo-phase-4 .logo-right-half,
+.logo-phase-5 .logo-right-half {
+    transform: translateX(18rem);
+}
+
+.logo-phase-2 .logo-right-half {
+    transform: translateX(0);
+}
+
+.logo-phase-2 .logo-ascii,
+.logo-phase-3 .logo-ascii {
+    max-width: 0;
+    opacity: 0;
+}
+
+.logo-phase-5 .logo-right-half {
+    opacity: 0;
+}
+
+.logo-phase-6 .logo-right-half {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+@keyframes logo-shake {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    20% {
+        transform: translateX(-4px);
+    }
+    40% {
+        transform: translateX(4px);
+    }
+    60% {
+        transform: translateX(-4px);
+    }
+    80% {
+        transform: translateX(4px);
+    }
+}
+
+.logo-phase-3 {
+    animation: logo-shake 400ms ease-in-out;
+}
+
 /* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .logo-right-half,
+    .logo-ascii {
+        transition: none !important;
+    }
+
+    .logo-phase-3 {
+        animation: none !important;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
