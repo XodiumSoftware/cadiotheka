@@ -131,10 +131,20 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
             return;
         };
         let item = children.item(u32::try_from(index).unwrap_or(0));
-        if let Some(el) = item {
-            let _ = el
-                .dyn_into::<leptos::web_sys::HtmlElement>()
-                .map(|html| html.focus());
+        let Some(el) = item else {
+            return;
+        };
+        let Ok(html) = el.dyn_into::<leptos::web_sys::HtmlElement>() else {
+            return;
+        };
+
+        // Avoid re-firing focus events if the target is already focused.
+        let already_focused = leptos::web_sys::window()
+            .and_then(|w| w.document())
+            .and_then(|d| d.active_element())
+            .is_some_and(|active| active.is_same_node(Some(&html)));
+        if !already_focused {
+            let _ = html.focus();
         }
     });
 
@@ -254,13 +264,33 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                 on:focusin=move |ev| {
                                     let Some(target) = ev.target() else { return };
                                     let Ok(el) = target.dyn_into::<leptos::web_sys::Element>() else { return };
-                                    let Some(parent) = grid_ref.get() else { return };
-                                    let Some(children) = parent.children().dyn_into::<leptos::web_sys::HtmlCollection>().ok() else { return };
-                                    for i in 0..children.length() {
-                                        if children.item(i).as_ref() == Some(&el) {
-                                            set_focused_index.set(Some(i as usize));
+                                    let Some(grid) = grid_ref.get() else { return };
+                                    let Some(children) = grid.children().dyn_into::<leptos::web_sys::HtmlCollection>().ok() else { return };
+
+                                    // Walk up from the actual focus target until we find the
+                                    // direct child of the grid. This keeps selection in sync when
+                                    // focus lands on nested controls like the author or favorite
+                                    // buttons, preventing two cards from appearing selected.
+                                    let mut maybe_item: Option<leptos::web_sys::Element> = Some(el);
+                                    let mut found_index: Option<usize> = None;
+                                    while let Some(item) = maybe_item {
+                                        let is_direct_child = item
+                                            .parent_node()
+                                            .is_some_and(|parent| parent.is_same_node(Some(&grid)));
+                                        if is_direct_child {
+                                            for i in 0..children.length() {
+                                                if children.item(i).as_ref() == Some(&item) {
+                                                    found_index = Some(i as usize);
+                                                    break;
+                                                }
+                                            }
                                             break;
                                         }
+                                        maybe_item = item.parent_element();
+                                    }
+
+                                    if let Some(index) = found_index {
+                                        set_focused_index.set(Some(index));
                                     }
                                 }
                             >
