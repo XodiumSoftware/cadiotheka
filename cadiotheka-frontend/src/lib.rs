@@ -19,6 +19,7 @@ pub mod components {
         pub mod effects {
             pub mod section_fade;
         }
+        pub mod logo;
         pub mod markdown;
         pub mod markdown_editor;
         pub mod modals {
@@ -41,6 +42,7 @@ pub mod components {
 
     pub use ui::corner_frame::CornerFrame;
     pub use ui::effects::section_fade::FadeOverlay;
+    pub use ui::logo::Logo;
     pub use ui::markdown::MarkdownView;
     pub use ui::markdown_editor::MarkdownEditor;
     pub use ui::modals::add_project::AddProjectModal;

@@ -1,3 +1,4 @@
+use crate::components::ui::logo::Logo;
 use crate::components::ui::modals::search::SearchModal;
 use crate::contexts::{
     AddProjectModalContext, CurrentUserContext, LayoutContext, LoginModalContext,
@@ -455,13 +456,7 @@ pub fn Header() -> impl IntoView {
                         }
                     >
                         <span class="inline-block">
-                            <img
-                                src="/favicon.svg"
-                                alt="Cadiotheka logo"
-                                class="h-12 w-12"
-                                width="48"
-                                height="48"
-                            />
+                            <Logo class="h-12 w-12" />
                         </span>
                         <span class="text-2xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors overflow-hidden whitespace-nowrap">
                             "Cadiotheka"
