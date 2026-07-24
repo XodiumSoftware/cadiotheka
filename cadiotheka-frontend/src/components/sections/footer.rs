@@ -21,9 +21,9 @@ pub fn Footer() -> impl IntoView {
                         <p class="font-bold whitespace-nowrap max-md:text-[clamp(0.5rem,3.1cqw,1rem)] inline">
                             {format!("© {current_year} ")}
                             <a href="/" class="link link-hover link-primary">
-                                "XODIUM™"
+                                "CADIOTHEKA™"
                             </a>
-                            ". Open-Source (CAD) Software Company."
+                            ". The open hub for CAD creators."
                         </p>
                         {commit_url.map(|url| view! {
                             <a
