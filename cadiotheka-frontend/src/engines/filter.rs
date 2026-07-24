@@ -169,11 +169,7 @@ impl SearchEngine {
             .map(super::super::metadata::platforms::Platform::label)
             .collect::<Vec<_>>()
             .join(" ");
-        format!(
-            "{} {} {} {} {}",
-            card.title, card.author, card.description, tags, platforms
-        )
-        .to_lowercase()
+        format!("{} {} {} {}", card.title, card.author, tags, platforms).to_lowercase()
     }
 }
 
@@ -192,7 +188,6 @@ mod tests {
         title: &str,
         author: &str,
         author_username: &str,
-        description: &str,
         tags: &[Tag],
         platforms: &[Platform],
         downloads: u64,
@@ -222,7 +217,6 @@ mod tests {
             ),
             author_username: author_username.to_owned(),
             collaborator_ids: vec![],
-            description: description.to_owned(),
             extended_desc: format!("Extended markdown summary for {title}."),
             tags: tags.to_vec(),
             supported_platforms: platforms.to_vec(),
@@ -240,7 +234,6 @@ mod tests {
                 "Parametric Screw",
                 "ZenFlow",
                 "zenflow",
-                "A fully parametric screw model.",
                 &[Tag::Parametric, Tag::Model3d],
                 &[Platform::Blender, Platform::FreeCAD, Platform::Fusion360],
                 1_200,
@@ -250,7 +243,6 @@ mod tests {
                 "Workshop Bench",
                 "MakerJoe",
                 "makerjoe",
-                "Sturdy bench for the garage.",
                 &[Tag::Furniture, Tag::Fabrication, Tag::Diy],
                 &[Platform::SketchUp],
                 3_400,
@@ -260,7 +252,6 @@ mod tests {
                 "PCB Holder",
                 "ZenFlow",
                 "zenflow",
-                "Holder for KiCad projects.",
                 &[Tag::Electronics, Tag::Tooling],
                 &[Platform::KiCad],
                 900,
@@ -270,15 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn empty_query_returns_all_cards() {
-        let engine = engine();
-        let parsed = parse_query("");
-        let results = engine.search(&parsed);
-        assert_eq!(results.len(), 3);
-    }
-
-    #[test]
-    fn fuzzy_search_matches_title_and_description() {
+    fn fuzzy_search_matches_title() {
         let engine = engine();
         let parsed = parse_query("screw");
         let results = engine.search(&parsed);

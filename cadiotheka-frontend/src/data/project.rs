@@ -117,8 +117,6 @@ pub struct ProjectData {
     /// Account ids of credited collaborators for this project.
     #[serde(default, with = "favorites_json_string")]
     pub collaborator_ids: Vec<String>,
-    /// Short description of the content.
-    pub description: String,
     /// Extended markdown description shown in the project detail modal.
     #[serde(default)]
     pub extended_desc: String,
@@ -182,7 +180,6 @@ fn now_utc() -> time::OffsetDateTime {
 /// ones empty or zeroed.
 pub fn new_project_payload(
     title: String,
-    description: String,
     extended_desc: String,
     tags: Vec<Tag>,
     supported_platforms: Vec<Platform>,
@@ -194,7 +191,6 @@ pub fn new_project_payload(
         author_id: String::new(),
         author_username: String::new(),
         collaborator_ids: vec![],
-        description,
         extended_desc,
         tags,
         supported_platforms,
@@ -329,26 +325,6 @@ pub async fn update_project_title(id: &str, title: String) -> Option<String> {
     Some(title)
 }
 
-/// Updates the short description of an existing project via `PATCH /data/projects/:id`.
-///
-/// On success it returns the new description; on failure it logs to the console
-/// and returns `None`.
-pub async fn update_project_description(id: &str, description: String) -> Option<String> {
-    let url = api_url(&format!("/projects/{id}"));
-    let body = match serde_json::to_string(&serde_json::json!({ "description": description })) {
-        Ok(json) => json,
-        Err(err) => {
-            leptos::web_sys::console::error_1(
-                &format!("Failed to serialize description update payload: {err:?}").into(),
-            );
-            return None;
-        }
-    };
-
-    patch_project(&url, body, "description").await?;
-    Some(description)
-}
-
 /// Updates the tags of an existing project via `PATCH /data/projects/:id`.
 ///
 /// On success it returns the new tag list; on failure it logs to the console and
@@ -444,7 +420,6 @@ pub async fn update_project_collaborators(
 pub struct ProjectPatch {
     pub title: Option<String>,
     pub icon_key: Option<Option<String>>,
-    pub description: Option<String>,
     pub tags: Option<Vec<Tag>>,
     pub supported_platforms: Option<Vec<Platform>>,
     pub collaborator_ids: Option<Vec<String>>,
@@ -749,7 +724,6 @@ mod tests {
             author_id: "8af81bd9-b70a-4d64-89e9-83bbc4e0297d".to_owned(),
             author_username: "trailblazer".to_owned(),
             collaborator_ids: vec![],
-            description: "A rugged mountain bike model ready for off-road adventures.".to_owned(),
             extended_desc: "Extended description.".to_owned(),
             tags: vec![Tag::Model3d, Tag::Vehicle],
             supported_platforms: vec![Platform::Blender, Platform::FreeCAD],
@@ -766,7 +740,7 @@ mod tests {
 
     #[test]
     fn project_deserializes_backend_json_string_columns() {
-        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","collaborator_ids":"[]","description":"A rugged mountain bike model ready for off-road adventures.","extended_desc":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","supported_platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","collaborator_ids":"[]","extended_desc":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","supported_platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).expect("backend JSON parses");
         assert_eq!(projects.len(), 1);
         assert_eq!(projects[0].title, "Mountain Bike");
@@ -809,7 +783,7 @@ mod tests {
 
     #[test]
     fn project_deserializes_empty_json_string_columns() {
-        let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","description":"D","extended_desc":"E","tags":"[]","supported_platforms":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","extended_desc":"E","tags":"[]","supported_platforms":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).unwrap();
         assert_eq!(projects.len(), 1);
         assert!(projects[0].tags.is_empty());

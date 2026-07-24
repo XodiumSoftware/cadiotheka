@@ -13,17 +13,13 @@ use leptos::wasm_bindgen::JsCast;
 #[derive(Debug, Default, Clone)]
 struct FormErrors {
     title: Option<String>,
-    description: Option<String>,
     tags: Option<String>,
     platforms: Option<String>,
 }
 
 impl FormErrors {
     fn is_empty(&self) -> bool {
-        self.title.is_none()
-            && self.description.is_none()
-            && self.tags.is_none()
-            && self.platforms.is_none()
+        self.title.is_none() && self.tags.is_none() && self.platforms.is_none()
     }
 }
 
@@ -37,9 +33,7 @@ pub fn AddProjectModal() -> impl IntoView {
     let on_close = move |()| modal.close();
 
     let title_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
-    let desc_input_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
     let (title, set_title) = signal(String::new());
-    let (description, set_description) = signal(String::new());
     let (extended_desc, set_extended_desc) = signal(String::new());
     let (selected_tags, set_selected_tags) = signal(Vec::<Tag>::new());
     let (selected_platforms, set_selected_platforms) = signal(Vec::<Platform>::new());
@@ -49,16 +43,12 @@ pub fn AddProjectModal() -> impl IntoView {
 
     let reset_form = move || {
         set_title.set(String::new());
-        set_description.set(String::new());
         set_extended_desc.set(String::new());
         set_selected_tags.set(Vec::new());
         set_selected_platforms.set(Vec::new());
         set_errors.set(FormErrors::default());
         set_submit_error.set(None);
         if let Some(input) = title_input_ref.get() {
-            input.set_value("");
-        }
-        if let Some(input) = desc_input_ref.get() {
             input.set_value("");
         }
     };
@@ -76,13 +66,6 @@ pub fn AddProjectModal() -> impl IntoView {
             e.title = Some("A project title is required.".to_string());
         } else if t.trim().len() > 100 {
             e.title = Some("Title must be 100 characters or fewer.".to_string());
-        }
-
-        let d = description.get();
-        if d.trim().is_empty() {
-            e.description = Some("A short description is required.".to_string());
-        } else if d.trim().len() > 500 {
-            e.description = Some("Description must be 500 characters or fewer.".to_string());
         }
 
         if selected_tags.get().is_empty() {
@@ -129,7 +112,6 @@ pub fn AddProjectModal() -> impl IntoView {
 
         let payload = new_project_payload(
             title.get_untracked(),
-            description.get_untracked(),
             extended_desc.get_untracked(),
             selected_tags.get_untracked(),
             selected_platforms.get_untracked(),
@@ -153,13 +135,8 @@ pub fn AddProjectModal() -> impl IntoView {
                     if let Some(msg) = field_errors.get("title").cloned() {
                         form_errors.title = Some(msg);
                     }
-                    if let Some(msg) = field_errors.get("description").cloned() {
-                        form_errors.description = Some(msg);
-                    }
                     set_errors.set(form_errors);
-                    if !field_errors.contains_key("title")
-                        && !field_errors.contains_key("description")
-                    {
+                    if !field_errors.contains_key("title") {
                         set_submit_error.set(Some(
                             "The project could not be created. Please check your input and try again.".to_string(),
                         ));
@@ -272,55 +249,6 @@ pub fn AddProjectModal() -> impl IntoView {
                                             }}
 
                                     </div>
-                                </div>
-
-                                <div>
-                                    <label
-                                        class=move || {
-                                            if errors.get().description.is_some() {
-                                                "block text-sm font-medium text-error mb-1"
-                                            } else if description.get().len() >= 500 {
-                                                "block text-sm font-medium text-warning mb-1"
-                                            } else {
-                                                "block text-sm font-medium text-base-content mb-1"
-                                            }
-                                        }
-                                        for="add-project-description"
-                                    >
-                                        <span class="text-error mr-1">"*"</span>
-                                        {move || {
-                                            let count = description.get().len();
-                                            format!("Short description ({count}/500)")
-                                        }}
-                                    </label>
-                                    <textarea
-                                        node_ref=desc_input_ref
-                                        id="add-project-description"
-                                        class="textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none min-h-[4rem] validator"
-                                        required
-                                        maxlength="500"
-                                        placeholder="Short project description"
-                                        on:input=move |ev| {
-                                            set_description.set(event_target_value(&ev));
-                                            set_errors.update(|errs| errs.description = None);
-                                        }
-                                        disabled=move || is_submitting.get()
-                                    ></textarea>
-                                    {move || {
-                                        let errs = errors.get();
-                                        let base = "validator-hint text-error text-xs mt-1";
-                                        if let Some(msg) = errs.description {
-                                            Some(view! {
-                                                <p class=base>{msg}</p>
-                                            })
-                                        } else if description.get().len() >= 500 {
-                                            Some(view! {
-                                                <p class=base>{"Description must be 500 characters or fewer.".to_string()}</p>
-                                            })
-                                        } else {
-                                            None
-                                        }
-                                    }}
                                 </div>
 
                                 <div>
@@ -485,7 +413,6 @@ mod tests {
     fn form_errors_not_empty_when_any_field_set() {
         let errors = FormErrors {
             title: Some("required".to_string()),
-            description: None,
             tags: None,
             platforms: None,
         };
@@ -496,7 +423,6 @@ mod tests {
     fn form_errors_empty_after_closing_all_errors() {
         let errors = FormErrors {
             title: None,
-            description: None,
             tags: None,
             platforms: None,
         };

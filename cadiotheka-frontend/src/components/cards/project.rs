@@ -15,7 +15,6 @@ pub struct ProjectCardProperties {
     pub author_id: String,
     pub author_username: String,
     pub collaborator_ids: Vec<String>,
-    pub description: String,
     pub extended_desc: String,
     pub tags: Vec<Tag>,
     pub supported_platforms: Vec<Platform>,
@@ -32,16 +31,6 @@ impl From<ProjectData> for ProjectCardProperties {
 }
 
 pub fn project_card_properties_from_project_data(project: ProjectData) -> ProjectCardProperties {
-    let description = if project.description.trim().is_empty() {
-        "(No description)".to_string()
-    } else {
-        project.description
-    };
-    let extended_desc = if project.extended_desc.trim().is_empty() {
-        description.clone()
-    } else {
-        project.extended_desc
-    };
     ProjectCardProperties {
         id: project.id,
         title: project.title,
@@ -49,8 +38,7 @@ pub fn project_card_properties_from_project_data(project: ProjectData) -> Projec
         author_id: project.author_id,
         author_username: project.author_username,
         collaborator_ids: project.collaborator_ids,
-        description,
-        extended_desc,
+        extended_desc: project.extended_desc,
         tags: project.tags,
         supported_platforms: project.supported_platforms,
         downloads: project.downloads,
@@ -137,7 +125,6 @@ pub fn ProjectCard(
         author_id: _,
         author_username,
         collaborator_ids: _,
-        description,
         extended_desc: _,
         tags,
         supported_platforms,
@@ -277,8 +264,6 @@ pub fn ProjectCard(
 
                             <hr class="border-base-content/10 my-3" />
 
-                            <p class="text-base-content/70 flex-grow text-sm">{description}</p>
-
                         <hr class="border-base-content/10 my-3" />
 
                         <div class="flex items-center gap-4 text-base-content/60 text-sm">
@@ -364,7 +349,6 @@ mod tests {
             author_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901".to_owned(),
             author_username: "author".to_owned(),
             collaborator_ids: vec![],
-            description: "A gear.".to_owned(),
             extended_desc: "A gear with an **extended** markdown description.".to_owned(),
             tags: vec![Tag::Model3d],
             supported_platforms: vec![Platform::Blender],

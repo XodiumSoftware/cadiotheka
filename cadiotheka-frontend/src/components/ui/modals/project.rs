@@ -10,15 +10,14 @@ use crate::contexts::{
 };
 use crate::data::{
     AccountData, AccountRole, delete_project, fetch_projects, update_project_collaborators,
-    update_project_description, update_project_extended_desc, update_project_platforms,
-    update_project_tags, update_project_title, upload_project_icon,
+    update_project_extended_desc, update_project_platforms, update_project_tags,
+    update_project_title, upload_project_icon,
 };
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
 const MAX_TITLE_LENGTH: usize = 100;
-const MAX_DESCRIPTION_LENGTH: usize = 500;
 const MAX_EXTENDED_DESC_LENGTH: usize = 5000;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -256,10 +255,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     let (draft_title, set_draft_title) = signal(card.title.clone());
     let (title, set_title) = signal(card.title.clone());
 
-    let (editing_description, set_editing_description) = signal(false);
-    let (draft_description, set_draft_description) = signal(card.description.clone());
-    let (description, set_description) = signal(card.description.clone());
-
     let (editing_tags, set_editing_tags) = signal(false);
     let (draft_tags, set_draft_tags) = signal(card.tags.clone());
     let (tags, set_tags) = signal(card.tags.clone());
@@ -321,16 +316,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
         set_editing_title.set(false);
     };
 
-    let start_edit_description = move || {
-        set_draft_description.set(description.get());
-        set_editing_description.set(true);
-    };
-
-    let cancel_edit_description = move || {
-        set_draft_description.set(description.get());
-        set_editing_description.set(false);
-    };
-
     let start_edit_tags = move || {
         set_draft_tags.set(tags.get());
         set_editing_tags.set(true);
@@ -376,7 +361,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
         set_edit_mode.set(next);
         if !next {
             cancel_edit_title();
-            cancel_edit_description();
             cancel_edit_tags();
             cancel_edit_platforms();
             cancel_edit_extended();
@@ -413,41 +397,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                     });
                 }
                 set_editing_title.set(false);
-            });
-        })
-    };
-
-    let commit_edit_description = {
-        let project_id = project_id.clone();
-        Callback::new(move |draft_value: String| {
-            let project_id = project_id.clone();
-            let set_description = set_description;
-            let set_draft_description = set_draft_description;
-            let set_editing_description = set_editing_description;
-            let modal_card = modal.set_card;
-            let set_projects = projects_ctx.set_projects;
-
-            leptos::task::spawn_local(async move {
-                if let Some(new_description) =
-                    update_project_description(&project_id, draft_value).await
-                {
-                    set_description.set(new_description.clone());
-                    set_draft_description.set(new_description.clone());
-                    modal_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.description.clone_from(&new_description);
-                        }
-                    });
-                    set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.description.clone_from(&new_description);
-                                break;
-                            }
-                        }
-                    });
-                }
-                set_editing_description.set(false);
             });
         })
     };
@@ -829,73 +778,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                             class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary"
                                             aria-label="Edit title"
                                             on:click=move |_| start_edit_title()
-                                        >
-                                            {edit_pencil_icon("w-4 h-4")}
-                                        </button>
-                                    }.into_any())}
-                                </div>
-                            }
-                                .into_any()
-                        }
-                    }}
-                    {move || {
-                        if editing_description.get() {
-                            view! {
-                                <div class="space-y-2">
-                                    <textarea
-                                        class=move || {
-                                            let at_max = draft_description.get().len() >= MAX_DESCRIPTION_LENGTH;
-                                            format!(
-                                                "textarea w-full min-h-[5rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {}",
-                                                if at_max { "hover:border-error" } else { "" }
-                                            )
-                                        }
-                                        maxlength=MAX_DESCRIPTION_LENGTH.to_string()
-                                        prop:value=draft_description.get()
-                                        on:input=move |ev| set_draft_description.set(event_target_value(&ev))
-                                        on:keyup=move |ev| {
-                                            if ev.key().as_str() == "Escape" {
-                                                cancel_edit_description();
-                                            }
-                                        }
-                                        autofocus
-                                    ></textarea>
-                                    <div class="flex items-center justify-between">
-                                        <span class=move || {
-                                            if draft_description.get().len() >= MAX_DESCRIPTION_LENGTH {
-                                                "text-xs text-error"
-                                            } else {
-                                                "text-xs text-base-content/50"
-                                            }
-                                        }>
-                                            {move || format!("{}/{}", draft_description.get().len(), MAX_DESCRIPTION_LENGTH)}
-                                        </span>
-                                        <div class="flex gap-2">
-                                            <button
-                                                type="button"
-                                                class="btn btn-ghost btn-xs"
-                                                on:click=move |_| cancel_edit_description()
-                                            >"Cancel"</button>
-                                            <button
-                                                type="button"
-                                                class="btn btn-primary btn-xs"
-                                                on:click=move |_| commit_edit_description.run(draft_description.get())
-                                            >"Save"</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                                .into_any()
-                        } else {
-                            view! {
-                                <div class="flex items-center gap-2">
-                                    <p class="text-base-content/70 text-sm whitespace-pre-wrap">{description.get()}</p>
-                                    {move || (is_editable.get() && edit_mode.get()).then(|| view! {
-                                        <button
-                                            type="button"
-                                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary flex-shrink-0"
-                                            aria-label="Edit description"
-                                            on:click=move |_| start_edit_description()
                                         >
                                             {edit_pencil_icon("w-4 h-4")}
                                         </button>
