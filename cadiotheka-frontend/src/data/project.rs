@@ -137,7 +137,7 @@ pub struct ProjectData {
     #[serde(with = "time::serde::rfc3339")]
     pub timestamp: time::OffsetDateTime,
     /// Optional icon URL (when absent, a colored placeholder is generated).
-    #[serde(deserialize_with = "deserialize_icon_key")]
+    #[serde(default, deserialize_with = "deserialize_icon_key")]
     pub icon_url: Option<IconUrl>,
     /// Optional IFC model download URL (when absent, no model has been uploaded).
     #[serde(default, deserialize_with = "deserialize_ifc_key")]
