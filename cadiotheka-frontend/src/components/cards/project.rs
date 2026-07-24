@@ -4,10 +4,7 @@ use crate::contexts::{CurrentUserContext, ProjectModalContext, ProjectsContext};
 use crate::data::{IconUrl, ProjectData};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
-use crate::utils::{
-    format_number, format_number_full, format_time_ago, format_time_full, placeholder_color,
-    placeholder_letter,
-};
+use crate::utils::{format_number, format_number_full, format_time_ago, format_time_full};
 use leptos::prelude::*;
 
 #[derive(Clone)]
@@ -147,12 +144,9 @@ pub fn ProjectCard(
         downloads,
         favorites: _,
         timestamp,
-        icon_url,
+        icon_url: _,
     } = props;
 
-    let letter = placeholder_letter(&title);
-    let bg = placeholder_color(&title);
-    let icon_url = icon_url.as_ref().map(|IconUrl(url)| url.clone());
     let current_user = CurrentUserContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
     let project_modal = ProjectModalContext::use_context();
@@ -198,8 +192,6 @@ pub fn ProjectCard(
             format!("Add {card_title_for_favorite_label} to favorites")
         }
     });
-    let card_title_for_icon_alt = card_title.clone();
-    let icon_alt = Signal::derive(move || format!("{} icon", card_title_for_icon_alt.clone()));
     let card_title_for_aria = card_title.clone();
     let card_author_for_aria = card_author.clone();
     let aria_label = Signal::derive(move || {
@@ -236,53 +228,31 @@ pub fn ProjectCard(
             <CornerFrame style="square" class="h-full">
                 <div class="card bg-ghost h-full rounded-none">
                     <div class="card-body p-4">
-                        <div class="flex items-start gap-3">
-                            {move || {
-                                match icon_url.clone() {
-                                    Some(url) => view! {
-                                        <img
-                                            src={url}
-                                            alt=icon_alt
-                                            class="flex-shrink-0 w-10 h-10 object-cover"
-                                            loading="lazy"
-                                        />
-                                    }
-                                        .into_any(),
-                                    None => view! {
-                                        <div class=format!("flex-shrink-0 w-10 h-10 flex items-center justify-center text-white font-bold {}", bg)
-                                            aria-hidden="true"
-                                        >
-                                            {letter.clone()}
-                                        </div>
-                                    }
-                                        .into_any(),
-                                }
-                            }}
-                            <div class="min-w-0 flex-1 flex flex-col gap-2">
-                                <div class="flex items-start gap-2">
-                                    <h2 class="card-title text-primary text-base leading-tight min-w-0 flex-1">
-                                        <span class="truncate tooltip tooltip-top" data-tip={card_title.clone()}>{card_title.clone()}</span>
-                                        <span class="text-base-content/60 font-normal">{" by "}</span>
-                                        <button
-                                            type="button"
-                                            class="text-base-content font-semibold truncate hover:text-primary hover:underline tooltip tooltip-top"
-                                            data-tip={format!("@{card_author_username}")}
-                                            on:click=move |ev| {
-                                                ev.stop_propagation();
-                                                on_author_click.run(());
-                                            }
-                                        >
-                                            {card_author.clone()}
-                                        </button>
-                                    </h2>
-                                </div>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-start gap-2">
+                                <h2 class="card-title text-primary text-base leading-tight min-w-0 flex-1">
+                                    <span class="truncate tooltip tooltip-top" data-tip={card_title.clone()}>{card_title.clone()}</span>
+                                    <span class="text-base-content/60 font-normal">{" by "}</span>
+                                    <button
+                                        type="button"
+                                        class="text-base-content font-semibold truncate hover:text-primary hover:underline tooltip tooltip-top"
+                                        data-tip={format!("@{card_author_username}")}
+                                        on:click=move |ev| {
+                                            ev.stop_propagation();
+                                            on_author_click.run(());
+                                        }
+                                    >
+                                        {card_author.clone()}
+                                    </button>
+                                </h2>
+                            </div>
 
-                                <div class="flex flex-nowrap items-center gap-1">
-                                    <OverflowRow
-                                        items={tags
-                                            .iter()
-                                            .map(|tag| OverflowItem::new(tag.label(), tag.color()))
-                                            .collect::<Vec<_>>()}
+                            <div class="flex flex-nowrap items-center gap-1">
+                                <OverflowRow
+                                    items={tags
+                                        .iter()
+                                        .map(|tag| OverflowItem::new(tag.label(), tag.color()))
+                                        .collect::<Vec<_>>()}
                                         max_visible=2
                                         tooltip_position="tooltip-bottom"
                                         badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 whitespace-nowrap"
@@ -304,11 +274,10 @@ pub fn ProjectCard(
                                     />
                                 </div>
                             </div>
-                        </div>
 
-                        <hr class="border-base-content/10 my-3" />
+                            <hr class="border-base-content/10 my-3" />
 
-                        <p class="text-base-content/70 flex-grow text-sm">{description}</p>
+                            <p class="text-base-content/70 flex-grow text-sm">{description}</p>
 
                         <hr class="border-base-content/10 my-3" />
 
