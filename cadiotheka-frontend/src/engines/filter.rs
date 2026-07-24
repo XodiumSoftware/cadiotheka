@@ -198,13 +198,16 @@ mod tests {
         downloads: u64,
         favorites: u64,
     ) -> ProjectData {
+        let downloads_trunc = usize::try_from(downloads).unwrap_or(0);
+        let favorites_trunc = usize::try_from(favorites).unwrap_or(0);
+
         ProjectData {
             id: format!(
                 "{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}",
                 title.len() + 0x1000,
                 author.len() + 0x2000,
-                downloads as usize % 0x1000,
-                favorites as usize % 0x10000,
+                downloads_trunc % 0x1000,
+                favorites_trunc % 0x10000,
                 (downloads + favorites) % 0x1_0000_0000_0000
             ),
             title: title.to_owned(),
@@ -220,11 +223,11 @@ mod tests {
             author_username: author_username.to_owned(),
             collaborator_ids: vec![],
             description: description.to_owned(),
-            extended_desc: format!("Extended markdown summary for {}.", title),
+            extended_desc: format!("Extended markdown summary for {title}."),
             tags: tags.to_vec(),
             supported_platforms: platforms.to_vec(),
             downloads,
-            favorites: vec!["favorite-user".to_owned(); favorites as usize],
+            favorites: vec!["favorite-user".to_owned(); favorites_trunc],
             timestamp: datetime!(2024-01-15 12:00:00 UTC),
             icon_url: None,
         }
@@ -431,6 +434,6 @@ mod tests {
         let parsed = parse_query("");
         let results = engine.search(&parsed);
         assert_eq!(results.len(), 3);
-        assert!(std::ptr::eq(results[0], &engine.cards[0]));
+        assert!(std::ptr::eq(results[0], &raw const engine.cards[0]));
     }
 }
