@@ -1,12 +1,9 @@
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
-use crate::components::ui::project_icon_picker::ProjectIconPicker;
 use crate::contexts::{
     AddProjectModalContext, CurrentUserContext, LoginModalContext, ProjectsContext,
 };
-use crate::data::{
-    IconUrl, ProjectCreationResult, create_project, new_project_payload, upload_project_icon,
-};
+use crate::data::{ProjectCreationResult, create_project, new_project_payload};
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use leptos::prelude::*;
@@ -41,14 +38,11 @@ pub fn AddProjectModal() -> impl IntoView {
 
     let title_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let desc_input_ref: NodeRef<leptos::html::Textarea> = NodeRef::new();
-    let icon_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (title, set_title) = signal(String::new());
     let (description, set_description) = signal(String::new());
     let (extended_desc, set_extended_desc) = signal(String::new());
     let (selected_tags, set_selected_tags) = signal(Vec::<Tag>::new());
     let (selected_platforms, set_selected_platforms) = signal(Vec::<Platform>::new());
-    let (selected_icon_file, set_selected_icon_file) = signal(Option::<web_sys::File>::None);
-    let (selected_icon_preview, set_selected_icon_preview) = signal(Option::<String>::None);
     let (errors, set_errors) = signal(FormErrors::default());
     let (is_submitting, set_is_submitting) = signal(false);
     let (submit_error, set_submit_error) = signal(Option::<String>::None);
@@ -59,8 +53,6 @@ pub fn AddProjectModal() -> impl IntoView {
         set_extended_desc.set(String::new());
         set_selected_tags.set(Vec::new());
         set_selected_platforms.set(Vec::new());
-        set_selected_icon_file.set(None);
-        set_selected_icon_preview.set(None);
         set_errors.set(FormErrors::default());
         set_submit_error.set(None);
         if let Some(input) = title_input_ref.get() {
@@ -142,7 +134,6 @@ pub fn AddProjectModal() -> impl IntoView {
             selected_tags.get_untracked(),
             selected_platforms.get_untracked(),
         );
-        let selected_icon_file_value = selected_icon_file.get_untracked();
 
         set_is_submitting.set(true);
 
@@ -150,19 +141,7 @@ pub fn AddProjectModal() -> impl IntoView {
             let result = create_project(&payload).await;
 
             match result {
-                ProjectCreationResult::Created(created) => {
-                    if let Some(file) = selected_icon_file_value
-                        && upload_project_icon(&created.id, file).await.is_none()
-                    {
-                        set_is_submitting.set(false);
-                        set_submit_error.set(Some(
-                            "Project was created, but the icon upload failed. Please try editing the project icon afterward.".to_string(),
-                        ));
-                        let refreshed = crate::data::fetch_projects().await;
-                        projects_ctx.set_projects.set(refreshed);
-                        return;
-                    }
-
+                ProjectCreationResult::Created(_) => {
                     let refreshed = crate::data::fetch_projects().await;
                     projects_ctx.set_projects.set(refreshed);
                     modal.close();
@@ -243,45 +222,6 @@ pub fn AddProjectModal() -> impl IntoView {
                         <form class="space-y-4 flex flex-col min-h-0 overflow-hidden" on:submit=on_submit>
                             <div class="overflow-y-auto flex-1 min-h-0 space-y-4 p-2 pr-3">
                                 <div class="flex items-start gap-4">
-                                    <input
-                                        node_ref=icon_input_ref
-                                        type="file"
-                                        class="hidden"
-                                        accept="image/png,image/jpeg,image/webp"
-                                        on:change=move |ev| {
-                                            let input = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok());
-                                            let Some(input) = input else {
-                                                return;
-                                            };
-                                            let Some(files) = input.files() else {
-                                                set_selected_icon_file.set(None);
-                                                set_selected_icon_preview.set(None);
-                                                return;
-                                            };
-                                            let Some(file) = files.get(0).and_then(|blob| blob.dyn_into::<web_sys::File>().ok()) else {
-                                                set_selected_icon_file.set(None);
-                                                set_selected_icon_preview.set(None);
-                                                return;
-                                            };
-
-                                            let preview = leptos::web_sys::Url::create_object_url_with_blob(&file).ok();
-                                            set_selected_icon_file.set(Some(file));
-                                            set_selected_icon_preview.set(preview);
-                                            input.set_value("");
-                                        }
-                                        disabled=move || is_submitting.get()
-                                    />
-                                    <ProjectIconPicker
-                                        icon_url={move || selected_icon_preview.get().map(IconUrl)}
-                                        title=move || title.get()
-                                        editable={Signal::derive(move || !is_submitting.get())}
-                                        on_click=move |()| {
-                                            if let Some(input) = icon_input_ref.get() {
-                                                input.click();
-                                            }
-                                        }
-                                        class="w-20 h-20"
-                                    />
                                     <div class="flex-1 min-w-0">
                                         <label
                                             class=move || {
