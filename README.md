@@ -3,7 +3,7 @@
 <h1 align="center">
   <br />
     <a href="https://xodium.org/">
-        <img src="logo.svg" alt="Cadiotheka Logo" width="200">
+        <img src="cadiotheka-frontend/public/favicon.svg" alt="Cadiotheka Logo" width="200">
     </a>
   <br /><br />
   Cadiotheka
