@@ -608,6 +608,81 @@ pub fn icon_src_from_key(key: &str) -> IconUrl {
     IconUrl(api_url(&format!("/icons/{project_id}/{icon_id}")))
 }
 
+/// Uploads an IFC model for the given project and returns its public URL.
+///
+/// The backend stores the file in R2 and returns the object key, which is
+/// converted into a frontend download URL.
+pub async fn upload_project_ifc(id: &str, file: web_sys::File) -> Option<String> {
+    #[derive(Deserialize)]
+    struct UploadResponse {
+        ifc_key: String,
+    }
+
+    let url = api_url(&format!("/projects/{id}/ifc"));
+    let form = match web_sys::FormData::new() {
+        Ok(form) => form,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to create IFC upload form data: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    if let Err(err) = form.append_with_blob_and_filename("ifc", &file, &file.name()) {
+        leptos::web_sys::console::error_1(
+            &format!("Failed to append IFC file to form data: {err:?}").into(),
+        );
+        return None;
+    }
+
+    let request = match gloo_net::http::Request::post(&url)
+        .credentials(web_sys::RequestCredentials::Include)
+        .body(form)
+    {
+        Ok(req) => req,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to build IFC upload request: {err:?}").into(),
+            );
+            return None;
+        }
+    };
+
+    match request.send().await {
+        Ok(response) => {
+            let status = response.status();
+            if !response.ok() {
+                let text = response.text().await.unwrap_or_default();
+                leptos::web_sys::console::error_1(
+                    &format!("Failed to upload IFC model: HTTP {status}\n{text}").into(),
+                );
+                return None;
+            }
+
+            let text = response.text().await.unwrap_or_default();
+            match serde_json::from_str::<UploadResponse>(&text) {
+                Ok(upload) => Some(ifc_src_from_key(&upload.ifc_key)),
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!(
+                            "Failed to parse IFC upload response (status={status}): {err:?}\n{text}"
+                        )
+                        .into(),
+                    );
+                    None
+                }
+            }
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to upload IFC model: {err:?}").into(),
+            );
+            None
+        }
+    }
+}
+
 /// Sends a `PATCH` request to the given project endpoint.
 ///
 /// Logs failures under the provided field name and returns `Some(())` only when

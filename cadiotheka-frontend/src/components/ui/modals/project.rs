@@ -2,6 +2,7 @@ use crate::components::cards::project::{HeartIcon, ProjectCardProperties};
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
+use crate::components::ui::toast::Toast;
 use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
     SearchContext,
@@ -9,7 +10,7 @@ use crate::contexts::{
 use crate::data::{
     AccountData, AccountRole, delete_project, fetch_projects, update_project_collaborators,
     update_project_description, update_project_platforms, update_project_tags,
-    update_project_title,
+    update_project_title, upload_project_ifc,
 };
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
@@ -270,6 +271,84 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     let (draft_collaborator_ids, set_draft_collaborator_ids) =
         signal(card.collaborator_ids.clone());
 
+    let (ifc_url, set_ifc_url) = signal(card.ifc_url.clone());
+    let (is_uploading_ifc, set_is_uploading_ifc) = signal(false);
+
+    let project_id = card.id.clone();
+
+    let (toast_visible, set_toast_visible) = signal(false);
+    let (toast_message, set_toast_message) = signal(String::new());
+    let show_toast = move |message: String| {
+        set_toast_message.set(message);
+        set_toast_visible.set(true);
+        leptos::task::spawn_local(async move {
+            gloo_timers::future::TimeoutFuture::new(2500).await;
+            set_toast_visible.set(false);
+        });
+    };
+    let dismiss_toast = Callback::new(move |()| set_toast_visible.set(false));
+
+    let ifc_file_input = NodeRef::<leptos::html::Input>::new();
+
+    let trigger_ifc_upload = move || {
+        if let Some(input) = ifc_file_input.get() {
+            input.click();
+        }
+    };
+
+    let upload_ifc = {
+        let project_id = project_id.clone();
+        Callback::new(move |file: web_sys::File| {
+            let project_id = project_id.clone();
+            leptos::task::spawn_local(async move {
+                set_is_uploading_ifc.set(true);
+                match upload_project_ifc(&project_id, file).await {
+                    Some(url) => {
+                        set_ifc_url.set(Some(url.clone()));
+                        projects_ctx.set_projects.update(|projects| {
+                            for project in projects.iter_mut() {
+                                if project.id == project_id {
+                                    project.ifc_url = Some(url.clone());
+                                    break;
+                                }
+                            }
+                        });
+                        modal.set_card.update(|opt| {
+                            if let Some(card) = opt.as_mut() {
+                                card.ifc_url = Some(url);
+                            }
+                        });
+                        show_toast("IFC model uploaded".to_string());
+                    }
+                    None => {
+                        show_toast("Failed to upload IFC model".to_string());
+                    }
+                }
+                set_is_uploading_ifc.set(false);
+            });
+        })
+    };
+
+    let on_ifc_input_change = move |ev: leptos::web_sys::Event| {
+        if let Some(input) = ev
+            .target()
+            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+        {
+            if let Some(file) = input.files().and_then(|files| files.get(0)) {
+                let is_ifc = std::path::Path::new(&file.name())
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("ifc"));
+                if !is_ifc {
+                    show_toast("IFC file must have a .ifc extension".to_string());
+                    input.set_value("");
+                    return;
+                }
+                upload_ifc.run(file);
+            }
+            input.set_value("");
+        }
+    };
+
     let (edit_mode, set_edit_mode) = signal(false);
 
     let (show_delete_confirm, set_show_delete_confirm) = signal(false);
@@ -277,8 +356,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     let (is_deleting, set_is_deleting) = signal(false);
     let can_delete =
         Signal::derive(move || delete_confirm_input.get().trim() == title.get().trim());
-
-    let project_id = card.id.clone();
 
     let delete_project_click = {
         let project_id = project_id.clone();
@@ -638,6 +715,18 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
 
     view! {
         <div class="flex flex-col h-full min-h-0 overflow-hidden gap-4">
+            <Toast
+                message=Signal::derive(move || toast_message.get())
+                visible=Signal::derive(move || toast_visible.get())
+                on_dismiss=dismiss_toast
+            />
+            <input
+                type="file"
+                accept=".ifc"
+                class="hidden"
+                node_ref=ifc_file_input
+                on:change=on_ifc_input_change
+            />
             <div class="flex items-start gap-4 relative p-2 pr-3">
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
                     {move || {
@@ -841,8 +930,46 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     }
                                 }
                                 ProjectDetailsTab::Viewer3d => view! {
-                                    <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 flex items-center justify-center text-base-content/50 text-sm">
-                                        "3D viewer coming later."
+                                    <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 flex flex-col items-center justify-center text-sm gap-4">
+                                        {move || {
+                                            if let Some(url) = ifc_url.get() {
+                                                view! {
+                                                    <div class="text-center space-y-2">
+                                                        <p class="text-base-content/70">"An IFC model is available for this project."</p>
+                                                        <a
+                                                            href=url
+                                                            download=true
+                                                            class="btn btn-primary btn-sm rounded-none"
+                                                        >
+                                                            <span>"Download IFC model"</span>
+                                                        </a>
+                                                    </div>
+                                                    <p class="text-base-content/50 text-xs">"Interactive 3D viewer coming later."</p>
+                                                }
+                                                    .into_any()
+                                            } else {
+                                                view! {
+                                                    <p class="text-base-content/50">"No IFC model uploaded yet."</p>
+                                                    {move || {
+                                                        if is_editable.get() && edit_mode.get() {
+                                                            view! {
+                                                                <button
+                                                                    type="button"
+                                                                    class="btn btn-primary btn-sm rounded-none"
+                                                                    on:click=move |_| trigger_ifc_upload()
+                                                                >
+                                                                    <span>"Upload IFC model"</span>
+                                                                </button>
+                                                            }
+                                                                .into_any()
+                                                        } else {
+                                                            ().into_any()
+                                                        }
+                                                    }}
+                                                }
+                                                    .into_any()
+                                            }
+                                        }}
                                     </div>
                                 }
                                     .into_any(),
@@ -1217,6 +1344,126 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                             </div>
                                         }.into_any()
                                     }
+                                }
+                            }}
+
+                            {move || {
+                                view! {
+                                    <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                                        <h3 class="text-sm font-semibold text-base-content">"IFC model"</h3>
+                                        {move || {
+                                            if let Some(url) = ifc_url.get() {
+                                                view! {
+                                                    <div class="space-y-2">
+                                                        <div class="flex items-center gap-2 text-sm text-base-content/70">
+                                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                                                <polyline points="14 2 14 8 20 8" />
+                                                                <line x1="12" y1="18" x2="12" y2="12" />
+                                                                <line x1="9" y1="15" x2="15" y2="15" />
+                                                            </svg>
+                                                            <span>"Model available"</span>
+                                                        </div>
+                                                        <a
+                                                            href=url
+                                                            download=true
+                                                            class="btn btn-primary btn-sm w-full rounded-none"
+                                                        >
+                                                            <span>"Download IFC"</span>
+                                                        </a>
+                                                        {move || {
+                                                            if is_editable.get() && edit_mode.get() {
+                                                                view! {
+                                                                    <button
+                                                                        type="button"
+                                                                        class=move || {
+                                                                            if is_uploading_ifc.get() {
+                                                                                "btn btn-ghost btn-sm w-full rounded-none"
+                                                                            } else {
+                                                                                "btn btn-outline btn-sm w-full rounded-none"
+                                                                            }
+                                                                        }
+                                                                        disabled=move || is_uploading_ifc.get()
+                                                                        on:click=move |_| trigger_ifc_upload()
+                                                                    >
+                                                                        {move || if is_uploading_ifc.get() {
+                                                                            view! {
+                                                                                <span class="flex items-center gap-2">
+                                                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                                    <span>"Uploading..."</span>
+                                                                                </span>
+                                                                            }
+                                                                                .into_any()
+                                                                        } else {
+                                                                            view! {
+                                                                                <span class="flex items-center gap-2">
+                                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                                                        <polyline points="17 8 12 3 7 8" />
+                                                                                        <line x1="12" y1="3" x2="12" y2="15" />
+                                                                                    </svg>
+                                                                                    <span>"Replace model"</span>
+                                                                                </span>
+                                                                            }
+                                                                                .into_any()
+                                                                        }}
+                                                                    </button>
+                                                                }
+                                                                    .into_any()
+                                                            } else {
+                                                                ().into_any()
+                                                            }
+                                                        }}
+                                                    </div>
+                                                }
+                                                    .into_any()
+                                            } else {
+                                                view! {
+                                                    <div class="space-y-2">
+                                                        <p class="text-sm text-base-content/50">"No IFC model uploaded."</p>
+                                                        {move || {
+                                                            if is_editable.get() && edit_mode.get() {
+                                                                view! {
+                                                                    <button
+                                                                        type="button"
+                                                                        class="btn btn-primary btn-sm w-full rounded-none"
+                                                                        disabled=move || is_uploading_ifc.get()
+                                                                        on:click=move |_| trigger_ifc_upload()
+                                                                    >
+                                                                        {move || if is_uploading_ifc.get() {
+                                                                            view! {
+                                                                                <span class="flex items-center gap-2">
+                                                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                                    <span>"Uploading..."</span>
+                                                                                </span>
+                                                                            }
+                                                                                .into_any()
+                                                                        } else {
+                                                                            view! {
+                                                                                <span class="flex items-center gap-2">
+                                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                                                        <polyline points="17 8 12 3 7 8" />
+                                                                                        <line x1="12" y1="3" x2="12" y2="15" />
+                                                                                    </svg>
+                                                                                    <span>"Upload IFC model"</span>
+                                                                                </span>
+                                                                            }
+                                                                                .into_any()
+                                                                        }}
+                                                                    </button>
+                                                                }
+                                                                    .into_any()
+                                                            } else {
+                                                                ().into_any()
+                                                            }
+                                                        }}
+                                                    </div>
+                                                }
+                                                    .into_any()
+                                            }
+                                        }}
+                                    </div>
                                 }
                             }}
 

@@ -22,6 +22,7 @@ pub struct ProjectCardProperties {
     pub favorites: Vec<String>,
     pub timestamp: time::OffsetDateTime,
     pub icon_url: Option<IconUrl>,
+    pub ifc_url: Option<String>,
 }
 
 impl From<ProjectData> for ProjectCardProperties {
@@ -45,6 +46,7 @@ pub fn project_card_properties_from_project_data(project: ProjectData) -> Projec
         favorites: project.favorites,
         timestamp: project.timestamp,
         icon_url: project.icon_url,
+        ifc_url: project.ifc_url,
     }
 }
 
@@ -132,6 +134,7 @@ pub fn ProjectCard(
         favorites: _,
         timestamp,
         icon_url: _,
+        ifc_url: _,
     } = props;
 
     let current_user = CurrentUserContext::use_context();
