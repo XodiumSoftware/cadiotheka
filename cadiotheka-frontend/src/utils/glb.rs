@@ -1,7 +1,5 @@
 //! Minimal GLB/glTF parser for rendering IFC models produced by `ifc-lite-wasm`.
 
-#![allow(clippy::pedantic)]
-
 use std::collections::HashMap;
 
 /// Parsed GLB document with a single embedded binary buffer.
@@ -142,6 +140,11 @@ impl std::fmt::Display for GltfError {
 impl std::error::Error for GltfError {}
 
 /// Parses a GLB byte buffer into a [`GltfDocument`].
+///
+/// # Errors
+///
+/// Returns a [`GltfError`] if the header is invalid, a required chunk is
+/// missing, the JSON is malformed, or any accessor layout is invalid.
 pub fn parse_glb(bytes: &[u8]) -> Result<GltfDocument, GltfError> {
     if bytes.len() < 12 {
         return Err(GltfError::Truncated);
@@ -459,6 +462,10 @@ fn parse_node(value: &serde_json::Value) -> Result<GltfNode, GltfError> {
 }
 
 /// Number of scalar components for a glTF accessor type.
+///
+/// # Errors
+///
+/// Returns [`GltfError::InvalidAccessor`] if `type_name` is not recognized.
 pub fn accessor_type_components(type_name: &str) -> Result<usize, GltfError> {
     match type_name {
         "SCALAR" => Ok(1),
@@ -473,6 +480,11 @@ pub fn accessor_type_components(type_name: &str) -> Result<usize, GltfError> {
 }
 
 /// Size in bytes of a glTF component type.
+///
+/// # Errors
+///
+/// Returns [`GltfError::InvalidAccessor`] if `component_type` is not a known
+/// glTF component constant.
 pub fn component_type_size(component_type: u32) -> Result<usize, GltfError> {
     match component_type {
         5120 | 5121 => Ok(1),
@@ -483,6 +495,11 @@ pub fn component_type_size(component_type: u32) -> Result<usize, GltfError> {
 }
 
 /// Reads accessor data as `Vec<[f32; 3]>` for `VEC3` float accessors.
+///
+/// # Errors
+///
+/// Returns [`GltfError::InvalidAccessor`] for mismatched type/component, or
+/// [`GltfError::Truncated`] if the underlying buffer is too short.
 pub fn read_vec3_accessor(
     doc: &GltfDocument,
     accessor_index: usize,
@@ -501,6 +518,12 @@ pub fn read_vec3_accessor(
 }
 
 /// Reads an index accessor as `Vec<u32>`.
+///
+/// # Errors
+///
+/// Returns [`GltfError::InvalidAccessor`] for an out-of-bounds accessor or
+/// unsupported component type, or [`GltfError::Truncated`] if the buffer ends
+/// too early.
 pub fn read_index_accessor(
     doc: &GltfDocument,
     accessor_index: usize,
