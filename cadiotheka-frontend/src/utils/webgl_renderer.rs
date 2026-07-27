@@ -161,10 +161,13 @@ impl Camera {
     }
 
     /// Zooms by changing the distance.
+    ///
+    /// Positive `delta` moves the camera farther away (zoom out), negative moves
+    /// it closer (zoom in).
     pub fn zoom(&mut self, delta: f32) {
         let factor = 1.0 + delta * 0.001;
-        self.distance *= factor.clamp(0.8, 1.25);
-        self.distance = self.distance.max(0.01);
+        let new_distance = self.distance * factor.clamp(0.8, 1.25);
+        self.distance = new_distance.clamp(self.distance * 0.01, self.distance * 10.0);
     }
 
     /// Pans the target in the camera plane.
@@ -239,6 +242,9 @@ pub struct Renderer {
     primitives: Vec<RenderPrimitive>,
     camera: Rc<RefCell<Camera>>,
     canvas: HtmlCanvasElement,
+    scene_bounds: ([f32; 3], [f32; 3]),
+    total_vertices: usize,
+    total_triangles: usize,
 }
 
 impl Renderer {
@@ -291,6 +297,9 @@ impl Renderer {
             primitives: Vec::new(),
             camera,
             canvas,
+            scene_bounds: (min, max),
+            total_vertices: 0,
+            total_triangles: 0,
         };
 
         renderer.upload_document(doc);
@@ -394,6 +403,10 @@ impl Renderer {
             double_sided: material.double_sided,
             unlit: material.unlit,
         });
+        self.total_vertices += vertex_count as usize;
+        self.total_triangles += index_count
+            .map(|count| count as usize / 3)
+            .unwrap_or_else(|| transformed_positions.len() / 3);
     }
 }
 
@@ -518,6 +531,26 @@ impl Renderer {
     /// Returns a shared handle to the camera.
     pub fn camera(&self) -> Rc<RefCell<Camera>> {
         Rc::clone(&self.camera)
+    }
+
+    /// Returns the axis-aligned world-space bounds computed when the document was loaded.
+    pub fn scene_bounds(&self) -> (&[f32; 3], &[f32; 3]) {
+        (&self.scene_bounds.0, &self.scene_bounds.1)
+    }
+
+    /// Returns the number of uploaded primitives.
+    pub fn primitive_count(&self) -> usize {
+        self.primitives.len()
+    }
+
+    /// Returns the total number of uploaded vertices across all primitives.
+    pub fn total_vertices(&self) -> usize {
+        self.total_vertices
+    }
+
+    /// Returns the total number of triangles across all primitives.
+    pub fn total_triangles(&self) -> usize {
+        self.total_triangles
     }
 
     /// Resizes the canvas backing store to match its display size.

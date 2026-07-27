@@ -19,7 +19,7 @@ ammonia = "4.1"
 timeago = { version = "0.6", default-features = false }
 human_format = "1.2"
 thousands = "0.2"
-web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "HtmlInputElement", "HtmlCanvasElement", "HtmlButtonElement", "Node", "NodeList", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry", "File", "FileList", "Blob", "Url", "FormData", "Window", "Navigator", "Clipboard", "WebGlBuffer", "WebGlProgram", "WebGlShader", "WebGlRenderingContext", "WebGlUniformLocation", "WebGlVertexArrayObject", "MouseEvent", "WheelEvent", "UiEvent", "OesElementIndexUint"] }
+web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "HtmlInputElement", "HtmlCanvasElement", "HtmlButtonElement", "Node", "NodeList", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry", "File", "FileList", "Blob", "Url", "FormData", "Window", "Performance", "Navigator", "Clipboard", "WebGlBuffer", "WebGlProgram", "WebGlShader", "WebGlRenderingContext", "WebGlUniformLocation", "WebGlVertexArrayObject", "MouseEvent", "WheelEvent", "UiEvent", "OesElementIndexUint"] }
 console_error_panic_hook = "0.1.7"
 urlencoding = "2.1"
 send_wrapper = "0.6"
