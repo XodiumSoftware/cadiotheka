@@ -122,6 +122,8 @@ pub enum GltfError {
     MissingChunk(&'static str),
     /// An accessor index or layout is invalid.
     InvalidAccessor(&'static str),
+    /// A numeric value could not fit in the target type.
+    IntegerOverflow,
 }
 
 impl std::fmt::Display for GltfError {
@@ -133,11 +135,32 @@ impl std::fmt::Display for GltfError {
             Self::InvalidJson(msg) => write!(f, "invalid glTF JSON: {msg}"),
             Self::MissingChunk(name) => write!(f, "missing {name} chunk"),
             Self::InvalidAccessor(msg) => write!(f, "invalid accessor: {msg}"),
+            Self::IntegerOverflow => write!(f, "numeric value out of range for target type"),
         }
     }
 }
 
 impl std::error::Error for GltfError {}
+
+/// Converts a `u64` to `usize`, returning an error on overflow.
+fn u64_to_usize(value: u64) -> Result<usize, GltfError> {
+    usize::try_from(value).map_err(|_| GltfError::IntegerOverflow)
+}
+
+/// Converts a `u64` to `u32`, returning an error on overflow.
+fn u64_to_u32(value: u64) -> Result<u32, GltfError> {
+    u32::try_from(value).map_err(|_| GltfError::IntegerOverflow)
+}
+
+/// Converts an `f64` to `f32`, returning an error on overflow.
+#[allow(clippy::cast_possible_truncation)]
+fn f64_to_f32(value: f64) -> Result<f32, GltfError> {
+    let result = value as f32;
+    if result.is_infinite() && value.is_finite() {
+        return Err(GltfError::IntegerOverflow);
+    }
+    Ok(result)
+}
 
 /// Parses a GLB byte buffer into a [`GltfDocument`].
 ///
@@ -204,60 +227,56 @@ pub fn parse_glb(bytes: &[u8]) -> Result<GltfDocument, GltfError> {
     let json: serde_json::Value =
         serde_json::from_slice(json_bytes).map_err(|e| GltfError::InvalidJson(e.to_string()))?;
 
-    parse_gltf(json, bin_bytes.to_vec())
+    parse_gltf(&json, bin_bytes.to_vec())
 }
 
-fn parse_gltf(json: serde_json::Value, buffer: Vec<u8>) -> Result<GltfDocument, GltfError> {
+fn parse_gltf(json: &serde_json::Value, buffer: Vec<u8>) -> Result<GltfDocument, GltfError> {
     let accessors = json
         .get("accessors")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
+        .and_then(serde_json::Value::as_array)
+        .map_or(Ok(Vec::new()), |arr| {
             arr.iter()
                 .map(parse_accessor)
                 .collect::<Result<Vec<_>, _>>()
-        })
-        .unwrap_or(Ok(Vec::new()))?;
+        })?;
 
     let buffer_views = json
         .get("bufferViews")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
+        .and_then(serde_json::Value::as_array)
+        .map_or(Ok(Vec::new()), |arr| {
             arr.iter()
                 .map(parse_buffer_view)
                 .collect::<Result<Vec<_>, _>>()
-        })
-        .unwrap_or(Ok(Vec::new()))?;
+        })?;
 
     let materials = json
         .get("materials")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .map(parse_material)
-                .collect::<Result<Vec<_>, _>>()
-        })
-        .unwrap_or(Ok(Vec::new()))?;
+        .and_then(serde_json::Value::as_array)
+        .map_or(Ok(Vec::new()), |arr| {
+            Ok(arr.iter().map(parse_material).collect::<Vec<_>>())
+        })?;
 
     let meshes = json
         .get("meshes")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
+        .and_then(serde_json::Value::as_array)
+        .map_or(Ok(Vec::new()), |arr| {
             arr.iter()
                 .map(|m| parse_mesh(m, &materials))
                 .collect::<Result<Vec<_>, _>>()
-        })
-        .unwrap_or(Ok(Vec::new()))?;
+        })?;
 
     let nodes = json
         .get("nodes")
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().map(parse_node).collect::<Result<Vec<_>, _>>())
-        .unwrap_or(Ok(Vec::new()))?;
+        .and_then(serde_json::Value::as_array)
+        .map_or(Ok(Vec::new()), |arr| {
+            arr.iter().map(parse_node).collect::<Result<Vec<_>, _>>()
+        })?;
 
     let scene = json
         .get("scene")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as usize);
+        .and_then(serde_json::Value::as_u64)
+        .map(u64_to_usize)
+        .transpose()?;
 
     Ok(GltfDocument {
         nodes,
@@ -275,35 +294,48 @@ fn parse_accessor(value: &serde_json::Value) -> Result<GltfAccessor, GltfError> 
         .as_object()
         .ok_or(GltfError::InvalidAccessor("not an object"))?;
     Ok(GltfAccessor {
-        buffer_view: obj
-            .get("bufferView")
-            .and_then(|v| v.as_u64())
-            .ok_or(GltfError::InvalidAccessor("missing bufferView"))? as usize,
-        byte_offset: obj.get("byteOffset").and_then(|v| v.as_u64()).unwrap_or(0) as usize,
-        component_type: obj
-            .get("componentType")
-            .and_then(|v| v.as_u64())
-            .ok_or(GltfError::InvalidAccessor("missing componentType"))?
-            as u32,
-        count: obj
-            .get("count")
-            .and_then(|v| v.as_u64())
-            .ok_or(GltfError::InvalidAccessor("missing count"))? as usize,
+        buffer_view: u64_to_usize(
+            obj.get("bufferView")
+                .and_then(serde_json::Value::as_u64)
+                .ok_or(GltfError::InvalidAccessor("missing bufferView"))?,
+        )?,
+        byte_offset: obj
+            .get("byteOffset")
+            .and_then(serde_json::Value::as_u64)
+            .map(u64_to_usize)
+            .transpose()?
+            .unwrap_or(0),
+        component_type: u64_to_u32(
+            obj.get("componentType")
+                .and_then(serde_json::Value::as_u64)
+                .ok_or(GltfError::InvalidAccessor("missing componentType"))?,
+        )?,
+        count: u64_to_usize(
+            obj.get("count")
+                .and_then(serde_json::Value::as_u64)
+                .ok_or(GltfError::InvalidAccessor("missing count"))?,
+        )?,
         type_name: obj
             .get("type")
-            .and_then(|v| v.as_str())
+            .and_then(serde_json::Value::as_str)
             .ok_or(GltfError::InvalidAccessor("missing type"))?
             .to_string(),
-        min: obj.get("min").and_then(|v| v.as_array()).map(|arr| {
-            arr.iter()
-                .filter_map(|x| x.as_f64().map(|f| f as f32))
-                .collect()
-        }),
-        max: obj.get("max").and_then(|v| v.as_array()).map(|arr| {
-            arr.iter()
-                .filter_map(|x| x.as_f64().map(|f| f as f32))
-                .collect()
-        }),
+        min: obj
+            .get("min")
+            .and_then(serde_json::Value::as_array)
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|x| x.as_f64().and_then(|f| f64_to_f32(f).ok()))
+                    .collect()
+            }),
+        max: obj
+            .get("max")
+            .and_then(serde_json::Value::as_array)
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|x| x.as_f64().and_then(|f| f64_to_f32(f).ok()))
+                    .collect()
+            }),
     })
 }
 
@@ -312,31 +344,55 @@ fn parse_buffer_view(value: &serde_json::Value) -> Result<GltfBufferView, GltfEr
         .as_object()
         .ok_or(GltfError::InvalidAccessor("bufferView not an object"))?;
     Ok(GltfBufferView {
-        buffer: obj.get("buffer").and_then(|v| v.as_u64()).unwrap_or(0) as usize,
-        byte_offset: obj.get("byteOffset").and_then(|v| v.as_u64()).unwrap_or(0) as usize,
-        byte_length: obj
-            .get("byteLength")
-            .and_then(|v| v.as_u64())
-            .ok_or(GltfError::InvalidAccessor("missing byteLength"))? as usize,
+        buffer: obj
+            .get("buffer")
+            .and_then(serde_json::Value::as_u64)
+            .map(u64_to_usize)
+            .transpose()?
+            .unwrap_or(0),
+        byte_offset: obj
+            .get("byteOffset")
+            .and_then(serde_json::Value::as_u64)
+            .map(u64_to_usize)
+            .transpose()?
+            .unwrap_or(0),
+        byte_length: u64_to_usize(
+            obj.get("byteLength")
+                .and_then(serde_json::Value::as_u64)
+                .ok_or(GltfError::InvalidAccessor("missing byteLength"))?,
+        )?,
         byte_stride: obj
             .get("byteStride")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as usize),
-        target: obj.get("target").and_then(|v| v.as_u64()).map(|v| v as u32),
+            .and_then(serde_json::Value::as_u64)
+            .map(u64_to_usize)
+            .transpose()?,
+        target: obj
+            .get("target")
+            .and_then(serde_json::Value::as_u64)
+            .map(u64_to_u32)
+            .transpose()?,
     })
 }
 
-fn parse_material(value: &serde_json::Value) -> Result<GltfMaterial, GltfError> {
-    let mut material = GltfMaterial::default();
-    if let Some(pbr) = value.get("pbrMetallicRoughness")
-        && let Some(factor) = pbr.get("baseColorFactor")
-        && let Some(arr) = factor.as_array()
-    {
-        for (i, v) in arr.iter().take(4).enumerate() {
-            material.base_color_factor[i] = v.as_f64().map(|f| f as f32).unwrap_or(1.0);
-        }
+fn parse_material(value: &serde_json::Value) -> GltfMaterial {
+    GltfMaterial {
+        base_color_factor: value.get("pbrMetallicRoughness").map_or(
+            GltfMaterial::default().base_color_factor,
+            |pbr| {
+                pbr.get("baseColorFactor")
+                    .and_then(serde_json::Value::as_array)
+                    .map_or(GltfMaterial::default().base_color_factor, |arr| {
+                        let mut color = GltfMaterial::default().base_color_factor;
+                        for (i, v) in arr.iter().take(4).enumerate() {
+                            if let Some(Ok(f)) = v.as_f64().map(f64_to_f32) {
+                                color[i] = f;
+                            }
+                        }
+                        color
+                    })
+            },
+        ),
     }
-    Ok(material)
 }
 
 fn parse_mesh(
@@ -365,13 +421,14 @@ fn parse_primitive(
         .ok_or(GltfError::InvalidAccessor("primitive not an object"))?;
     let attributes = obj
         .get("attributes")
-        .and_then(|v| v.as_object())
+        .and_then(serde_json::Value::as_object)
         .ok_or(GltfError::InvalidAccessor("missing attributes"))?
         .iter()
         .map(|(k, v)| {
-            v.as_u64()
-                .map(|idx| (k.clone(), idx as usize))
-                .ok_or(GltfError::InvalidAccessor("invalid attribute index"))
+            let idx = v
+                .as_u64()
+                .ok_or(GltfError::InvalidAccessor("invalid attribute index"))?;
+            Ok((k.clone(), u64_to_usize(idx)?))
         })
         .collect::<Result<HashMap<_, _>, _>>()?;
 
@@ -379,16 +436,19 @@ fn parse_primitive(
         attributes,
         indices: obj
             .get("indices")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as usize),
+            .and_then(serde_json::Value::as_u64)
+            .map(u64_to_usize)
+            .transpose()?,
         material: obj
             .get("material")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as usize),
+            .and_then(serde_json::Value::as_u64)
+            .map(u64_to_usize)
+            .transpose()?,
         mode: obj
             .get("mode")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as u32)
+            .and_then(serde_json::Value::as_u64)
+            .map(u64_to_u32)
+            .transpose()?
             .unwrap_or(4),
     })
 }
@@ -401,58 +461,71 @@ fn parse_node(value: &serde_json::Value) -> Result<GltfNode, GltfError> {
     let parse_f32_array = |arr: &[serde_json::Value], defaults: &[f64]| {
         let mut out = Vec::with_capacity(defaults.len());
         for (i, default) in defaults.iter().enumerate() {
-            out.push(arr.get(i).and_then(|x| x.as_f64()).unwrap_or(*default) as f32);
+            let value = arr
+                .get(i)
+                .and_then(serde_json::Value::as_f64)
+                .map_or(*default, |f| f);
+            out.push(f64_to_f32(value).unwrap_or(f32::NAN));
         }
         out
     };
 
     let translation = obj
         .get("translation")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
+        .and_then(serde_json::Value::as_array)
+        .map_or([0.0; 3], |arr| {
             let v = parse_f32_array(arr, &[0.0, 0.0, 0.0]);
             [v[0], v[1], v[2]]
-        })
-        .unwrap_or([0.0; 3]);
+        });
 
     let rotation = obj
         .get("rotation")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
+        .and_then(serde_json::Value::as_array)
+        .map_or([0.0, 0.0, 0.0, 1.0], |arr| {
             let v = parse_f32_array(arr, &[0.0, 0.0, 0.0, 1.0]);
             [v[0], v[1], v[2], v[3]]
-        })
-        .unwrap_or([0.0, 0.0, 0.0, 1.0]);
+        });
 
     let scale = obj
         .get("scale")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
+        .and_then(serde_json::Value::as_array)
+        .map_or([1.0; 3], |arr| {
             let v = parse_f32_array(arr, &[1.0, 1.0, 1.0]);
             [v[0], v[1], v[2]]
-        })
-        .unwrap_or([1.0; 3]);
+        });
 
-    let matrix = obj.get("matrix").and_then(|v| v.as_array()).map(|arr| {
-        let mut m = [0.0_f32; 16];
-        for (i, v) in arr.iter().take(16).enumerate() {
-            m[i] = v.as_f64().map(|f| f as f32).unwrap_or(0.0);
-        }
-        m
-    });
+    let matrix = obj
+        .get("matrix")
+        .and_then(serde_json::Value::as_array)
+        .map(|arr| {
+            let mut m = [0.0_f32; 16];
+            for (i, v) in arr.iter().take(16).enumerate() {
+                m[i] = v.as_f64().map_or(0.0, |f| f64_to_f32(f).unwrap_or(0.0));
+            }
+            m
+        });
 
     let children = obj
         .get("children")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
+        .and_then(serde_json::Value::as_array)
+        .map_or(Ok(Vec::new()), |arr| {
             arr.iter()
-                .filter_map(|v| v.as_u64().map(|n| n as usize))
-                .collect()
-        })
-        .unwrap_or_default();
+                .map(|v| {
+                    v.as_u64()
+                        .ok_or(GltfError::InvalidAccessor("invalid child index"))
+                })
+                .map(|idx| idx.and_then(u64_to_usize))
+                .collect::<Result<Vec<_>, _>>()
+        })?;
+
+    let mesh = obj
+        .get("mesh")
+        .and_then(serde_json::Value::as_u64)
+        .map(u64_to_usize)
+        .transpose()?;
 
     Ok(GltfNode {
-        mesh: obj.get("mesh").and_then(|v| v.as_u64()).map(|v| v as usize),
+        mesh,
         children,
         translation,
         rotation,
@@ -471,8 +544,7 @@ pub fn accessor_type_components(type_name: &str) -> Result<usize, GltfError> {
         "SCALAR" => Ok(1),
         "VEC2" => Ok(2),
         "VEC3" => Ok(3),
-        "VEC4" => Ok(4),
-        "MAT2" => Ok(4),
+        "VEC4" | "MAT2" => Ok(4),
         "MAT3" => Ok(9),
         "MAT4" => Ok(16),
         _ => Err(GltfError::InvalidAccessor("unknown accessor type")),
@@ -547,7 +619,7 @@ pub fn read_index_accessor(
     match accessor.component_type {
         5123 => Ok(bytes
             .chunks_exact(2)
-            .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]) as u32)
+            .map(|chunk| u32::from(u16::from_le_bytes([chunk[0], chunk[1]])))
             .take(count)
             .collect()),
         5125 => Ok(bytes
