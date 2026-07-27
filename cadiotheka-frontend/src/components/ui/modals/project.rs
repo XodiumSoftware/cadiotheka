@@ -21,7 +21,6 @@ const MAX_DESCRIPTION_LENGTH: usize = 100;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ProjectDetailsTab {
-    About,
     Viewer3d,
     Versions,
 }
@@ -248,7 +247,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
         }
     });
 
-    let (active_tab, set_active_tab) = signal(ProjectDetailsTab::About);
+    let (active_tab, set_active_tab) = signal(ProjectDetailsTab::Viewer3d);
 
     let (editing_title, set_editing_title) = signal(false);
     let (draft_title, set_draft_title) = signal(card.title.clone());
@@ -905,11 +904,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                     <div class="tabs tabs-border">
                         <button
                             type="button"
-                            class=move || if active_tab.get() == ProjectDetailsTab::About { "tab tab-active" } else { "tab" }
-                            on:click=move |_| set_active_tab.set(ProjectDetailsTab::About)
-                        >"About"</button>
-                        <button
-                            type="button"
                             class=move || if active_tab.get() == ProjectDetailsTab::Viewer3d { "tab tab-active" } else { "tab" }
                             on:click=move |_| set_active_tab.set(ProjectDetailsTab::Viewer3d)
                         >"3D viewer"</button>
@@ -924,50 +918,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                     <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start">
                         <div class="min-w-0 space-y-4">
                             {move || match active_tab.get() {
-                                ProjectDetailsTab::About => {
-                                    if editing_description.get() {
-                                        view! {
-                                            <MarkdownEditor
-                                                value=draft_description
-                                                on_input=Callback::new(move |value| set_draft_description.set(value))
-                                                on_cancel=Callback::new(move |()| cancel_edit_description())
-                                                on_save=Callback::new(move |()| commit_edit_description.run(draft_description.get()))
-                                                maxlength=MAX_DESCRIPTION_LENGTH
-                                                editor_class="min-h-[20rem] font-mono text-sm"
-                                            />
-                                        }
-                                            .into_any()
-                                    } else {
-                                        view! {
-                                            {move || {
-                                                if is_editable.get() && edit_mode.get() {
-                                                    view! {
-                                                        <button
-                                                            type="button"
-                                                            class="group relative text-left w-full min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto hover:border-primary transition-colors cursor-pointer"
-                                                            aria-label="Edit description"
-                                                            on:click=move |_| start_edit_description()
-                                                        >
-                                                            <MarkdownView source=description.get() />
-                                                            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                {edit_pencil_icon("w-5 h-5 text-primary")}
-                                                            </div>
-                                                        </button>
-                                                    }
-                                                        .into_any()
-                                                } else {
-                                                    view! {
-                                                        <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 overflow-auto">
-                                                            <MarkdownView source=description.get() />
-                                                        </div>
-                                                    }
-                                                        .into_any()
-                                                }
-                                            }}
-                                        }
-                                            .into_any()
-                                    }
-                                }
                                 ProjectDetailsTab::Viewer3d => view! {
                                     <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 flex items-center justify-center text-base-content/50 text-sm">
                                         "3D viewer coming later."
@@ -1065,6 +1015,60 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                         <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
 
                         <div class="space-y-4">
+                            {move || {
+                                if editing_description.get() {
+                                    view! {
+                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                                            <h3 class="text-sm font-semibold text-base-content">"About"</h3>
+                                            <MarkdownEditor
+                                                value=draft_description
+                                                on_input=Callback::new(move |value| set_draft_description.set(value))
+                                                on_cancel=Callback::new(move |()| cancel_edit_description())
+                                                on_save=Callback::new(move |()| commit_edit_description.run(draft_description.get()))
+                                                maxlength=MAX_DESCRIPTION_LENGTH
+                                                editor_class="min-h-[12rem] font-mono text-sm"
+                                            />
+                                        </div>
+                                    }
+                                        .into_any()
+                                } else {
+                                    view! {
+                                        {move || {
+                                            if is_editable.get() && edit_mode.get() {
+                                                view! {
+                                                    <button
+                                                        type="button"
+                                                        class="group relative text-left w-full rounded-none border border-base-content/10 bg-base-200/20 p-4 hover:border-primary transition-colors cursor-pointer"
+                                                        aria-label="Edit description"
+                                                        on:click=move |_| start_edit_description()
+                                                    >
+                                                        <span class="text-sm font-semibold text-base-content mb-2 block">"About"</span>
+                                                        <div class="text-sm text-base-content/80 overflow-auto max-h-[12rem]">
+                                                            <MarkdownView source=description.get() />
+                                                        </div>
+                                                        <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {edit_pencil_icon("w-5 h-5 text-primary")}
+                                                        </div>
+                                                    </button>
+                                                }
+                                                    .into_any()
+                                            } else {
+                                                view! {
+                                                    <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-2">
+                                                        <h3 class="text-sm font-semibold text-base-content">"About"</h3>
+                                                        <div class="text-sm text-base-content/80 overflow-auto max-h-[12rem]">
+                                                            <MarkdownView source=description.get() />
+                                                        </div>
+                                                    </div>
+                                                }
+                                                    .into_any()
+                                            }
+                                        }}
+                                    }
+                                        .into_any()
+                                }
+                            }}
+
                             {move || {
                                 if editing_platforms.get() {
                                     view! {
