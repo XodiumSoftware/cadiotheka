@@ -2,8 +2,6 @@
 
 #![allow(
     clippy::pedantic,
-    clippy::expect_used,
-    clippy::unwrap_used,
     clippy::collapsible_if,
     clippy::get_first,
     clippy::redundant_locals
