@@ -1,6 +1,6 @@
 //! Minimal GLB/glTF parser for rendering IFC models produced by `ifc-lite-wasm`.
 
-#![allow(clippy::pedantic, clippy::get_first)]
+#![allow(clippy::pedantic)]
 
 use std::collections::HashMap;
 
@@ -394,15 +394,21 @@ fn parse_node(value: &serde_json::Value) -> Result<GltfNode, GltfError> {
     let obj = value
         .as_object()
         .ok_or(GltfError::InvalidAccessor("node not an object"))?;
+
+    let parse_f32_array = |arr: &[serde_json::Value], defaults: &[f64]| {
+        let mut out = Vec::with_capacity(defaults.len());
+        for (i, default) in defaults.iter().enumerate() {
+            out.push(arr.get(i).and_then(|x| x.as_f64()).unwrap_or(*default) as f32);
+        }
+        out
+    };
+
     let translation = obj
         .get("translation")
         .and_then(|v| v.as_array())
         .map(|arr| {
-            [
-                arr.get(0).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32,
-                arr.get(1).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32,
-                arr.get(2).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32,
-            ]
+            let v = parse_f32_array(arr, &[0.0, 0.0, 0.0]);
+            [v[0], v[1], v[2]]
         })
         .unwrap_or([0.0; 3]);
 
@@ -410,12 +416,8 @@ fn parse_node(value: &serde_json::Value) -> Result<GltfNode, GltfError> {
         .get("rotation")
         .and_then(|v| v.as_array())
         .map(|arr| {
-            [
-                arr.get(0).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32,
-                arr.get(1).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32,
-                arr.get(2).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32,
-                arr.get(3).and_then(|x| x.as_f64()).unwrap_or(1.0) as f32,
-            ]
+            let v = parse_f32_array(arr, &[0.0, 0.0, 0.0, 1.0]);
+            [v[0], v[1], v[2], v[3]]
         })
         .unwrap_or([0.0, 0.0, 0.0, 1.0]);
 
@@ -423,11 +425,8 @@ fn parse_node(value: &serde_json::Value) -> Result<GltfNode, GltfError> {
         .get("scale")
         .and_then(|v| v.as_array())
         .map(|arr| {
-            [
-                arr.get(0).and_then(|x| x.as_f64()).unwrap_or(1.0) as f32,
-                arr.get(1).and_then(|x| x.as_f64()).unwrap_or(1.0) as f32,
-                arr.get(2).and_then(|x| x.as_f64()).unwrap_or(1.0) as f32,
-            ]
+            let v = parse_f32_array(arr, &[1.0, 1.0, 1.0]);
+            [v[0], v[1], v[2]]
         })
         .unwrap_or([1.0; 3]);
 
