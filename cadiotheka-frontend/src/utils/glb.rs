@@ -97,12 +97,38 @@ pub struct GltfBufferView {
 pub struct GltfMaterial {
     /// Base color RGBA factor.
     pub base_color_factor: [f32; 4],
+    /// Metallic factor in the range `[0.0, 1.0]`.
+    pub metallic_factor: f32,
+    /// Roughness factor in the range `[0.0, 1.0]`.
+    pub roughness_factor: f32,
+    /// Whether the material is double-sided (IFC faces are often unreliable).
+    pub double_sided: bool,
+    /// Whether the material should be rendered unlit (flat base color).
+    pub unlit: bool,
 }
 
 impl Default for GltfMaterial {
     fn default() -> Self {
         Self {
             base_color_factor: [0.7, 0.7, 0.7, 1.0],
+            metallic_factor: 0.5,
+            roughness_factor: 0.5,
+            double_sided: true,
+            unlit: false,
+        }
+    }
+}
+
+impl GltfMaterial {
+    /// Returns a reasonable default for IFC-derived geometry when no material
+    /// is defined: light grey, slightly rough, non-metallic, double-sided.
+    pub fn ifc_default() -> Self {
+        Self {
+            base_color_factor: [0.85, 0.85, 0.85, 1.0],
+            metallic_factor: 0.0,
+            roughness_factor: 0.8,
+            double_sided: true,
+            unlit: false,
         }
     }
 }
@@ -375,23 +401,51 @@ fn parse_buffer_view(value: &serde_json::Value) -> Result<GltfBufferView, GltfEr
 }
 
 fn parse_material(value: &serde_json::Value) -> GltfMaterial {
-    GltfMaterial {
-        base_color_factor: value.get("pbrMetallicRoughness").map_or(
-            GltfMaterial::default().base_color_factor,
-            |pbr| {
-                pbr.get("baseColorFactor")
-                    .and_then(serde_json::Value::as_array)
-                    .map_or(GltfMaterial::default().base_color_factor, |arr| {
-                        let mut color = GltfMaterial::default().base_color_factor;
-                        for (i, v) in arr.iter().take(4).enumerate() {
-                            if let Some(Ok(f)) = v.as_f64().map(f64_to_f32) {
-                                color[i] = f;
-                            }
+    let pbr = value.get("pbrMetallicRoughness");
+    let base_color_factor = pbr.and_then(|p| p.get("baseColorFactor")).map_or(
+        GltfMaterial::default().base_color_factor,
+        |arr| {
+            arr.as_array()
+                .map_or(GltfMaterial::default().base_color_factor, |components| {
+                    let mut color = GltfMaterial::default().base_color_factor;
+                    for (i, v) in components.iter().take(4).enumerate() {
+                        if let Some(Ok(f)) = v.as_f64().map(f64_to_f32) {
+                            color[i] = f;
                         }
-                        color
-                    })
-            },
-        ),
+                    }
+                    color
+                })
+        },
+    );
+
+    let metallic_factor = pbr
+        .and_then(|p| p.get("metallicFactor"))
+        .and_then(serde_json::Value::as_f64)
+        .map_or(GltfMaterial::default().metallic_factor, |v| {
+            f64_to_f32(v).unwrap_or(GltfMaterial::default().metallic_factor)
+        });
+    let roughness_factor = pbr
+        .and_then(|p| p.get("roughnessFactor"))
+        .and_then(serde_json::Value::as_f64)
+        .map_or(GltfMaterial::default().roughness_factor, |v| {
+            f64_to_f32(v).unwrap_or(GltfMaterial::default().roughness_factor)
+        });
+
+    let double_sided = value
+        .get("doubleSided")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(true);
+    let unlit = value
+        .get("extensions")
+        .and_then(|ext| ext.get("KHR_materials_unlit"))
+        .is_some();
+
+    GltfMaterial {
+        base_color_factor,
+        metallic_factor,
+        roughness_factor,
+        double_sided,
+        unlit,
     }
 }
 

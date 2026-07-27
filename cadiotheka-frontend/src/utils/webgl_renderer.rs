@@ -9,8 +9,8 @@
 )]
 
 use crate::utils::glb::{
-    GltfDocument, compute_bounding_box, look_at_matrix, mat4_identity, mat4_mul, mat4_mul_vec3,
-    mat4_to_array, mat4_to_normal_matrix_3x3, node_transform, perspective_matrix,
+    GltfDocument, GltfMaterial, compute_bounding_box, look_at_matrix, mat4_identity, mat4_mul,
+    mat4_mul_vec3, mat4_to_array, mat4_to_normal_matrix_3x3, node_transform, perspective_matrix,
     read_index_accessor, read_vec3_accessor,
 };
 use leptos::web_sys::{
@@ -50,16 +50,34 @@ precision mediump float;
 varying vec3 v_normal;
 varying vec3 v_view_position;
 
-uniform vec4 u_color;
+uniform vec4 u_base_color_factor;
 uniform vec3 u_light_direction;
 uniform vec3 u_ambient_color;
+uniform float u_metallic_factor;
+uniform float u_roughness_factor;
+uniform float u_unlit;
 
 void main() {
     vec3 normal = normalize(v_normal);
+    vec3 base_color = u_base_color_factor.rgb;
+
+    if (u_unlit > 0.5) {
+        gl_FragColor = vec4(base_color, u_base_color_factor.a);
+        return;
+    }
+
     vec3 light_dir = normalize(u_light_direction);
     float diffuse = max(dot(normal, -light_dir), 0.0);
-    vec3 color = u_ambient_color * u_color.rgb + u_color.rgb * diffuse * 0.7;
-    gl_FragColor = vec4(color, u_color.a);
+    vec3 lit_color = u_ambient_color * base_color + base_color * diffuse * 0.7;
+
+    vec3 specular = vec3(0.04) + (vec3(1.0) - vec3(0.04)) * u_metallic_factor;
+    float specular_power = mix(8.0, 128.0, 1.0 - u_roughness_factor);
+    vec3 view_dir = normalize(-v_view_position);
+    vec3 half_dir = normalize(view_dir + light_dir);
+    float spec = pow(max(dot(normal, half_dir), 0.0), specular_power) * (1.0 - u_roughness_factor);
+    lit_color += spec * specular * diffuse;
+
+    gl_FragColor = vec4(lit_color, u_base_color_factor.a);
 }
 ";
 
@@ -194,7 +212,11 @@ struct RenderPrimitive {
     index_buffer: Option<WebGlBuffer>,
     index_count: Option<i32>,
     vertex_count: i32,
-    color: [f32; 4],
+    base_color_factor: [f32; 4],
+    metallic_factor: f32,
+    roughness_factor: f32,
+    double_sided: bool,
+    unlit: bool,
 }
 
 /// WebGL renderer for a parsed GLB document.
@@ -208,9 +230,12 @@ pub struct Renderer {
     u_view_matrix: Option<WebGlUniformLocation>,
     u_projection_matrix: Option<WebGlUniformLocation>,
     u_normal_matrix: Option<WebGlUniformLocation>,
-    u_color: Option<WebGlUniformLocation>,
+    u_base_color_factor: Option<WebGlUniformLocation>,
     u_light_direction: Option<WebGlUniformLocation>,
     u_ambient_color: Option<WebGlUniformLocation>,
+    u_metallic_factor: Option<WebGlUniformLocation>,
+    u_roughness_factor: Option<WebGlUniformLocation>,
+    u_unlit: Option<WebGlUniformLocation>,
     primitives: Vec<RenderPrimitive>,
     camera: Rc<RefCell<Camera>>,
     canvas: HtmlCanvasElement,
@@ -229,9 +254,12 @@ impl Renderer {
         let u_view_matrix = gl.get_uniform_location(&program, "u_view_matrix");
         let u_projection_matrix = gl.get_uniform_location(&program, "u_projection_matrix");
         let u_normal_matrix = gl.get_uniform_location(&program, "u_normal_matrix");
-        let u_color = gl.get_uniform_location(&program, "u_color");
+        let u_base_color_factor = gl.get_uniform_location(&program, "u_base_color_factor");
         let u_light_direction = gl.get_uniform_location(&program, "u_light_direction");
         let u_ambient_color = gl.get_uniform_location(&program, "u_ambient_color");
+        let u_metallic_factor = gl.get_uniform_location(&program, "u_metallic_factor");
+        let u_roughness_factor = gl.get_uniform_location(&program, "u_roughness_factor");
+        let u_unlit = gl.get_uniform_location(&program, "u_unlit");
 
         gl.enable(Gl::DEPTH_TEST);
         gl.depth_func(Gl::LEQUAL);
@@ -254,9 +282,12 @@ impl Renderer {
             u_view_matrix,
             u_projection_matrix,
             u_normal_matrix,
-            u_color,
+            u_base_color_factor,
             u_light_direction,
             u_ambient_color,
+            u_metallic_factor,
+            u_roughness_factor,
+            u_unlit,
             primitives: Vec::new(),
             camera,
             canvas,
@@ -345,10 +376,11 @@ impl Renderer {
                 (None, None, transformed_positions.len() as i32)
             };
 
-        let color = primitive
+        let material = primitive
             .material
             .and_then(|idx| doc.materials.get(idx))
-            .map_or([0.7, 0.7, 0.7, 1.0], |m| m.base_color_factor);
+            .copied()
+            .unwrap_or_else(GltfMaterial::ifc_default);
 
         self.primitives.push(RenderPrimitive {
             position_buffer,
@@ -356,7 +388,11 @@ impl Renderer {
             index_buffer,
             index_count,
             vertex_count,
-            color,
+            base_color_factor: material.base_color_factor,
+            metallic_factor: material.metallic_factor,
+            roughness_factor: material.roughness_factor,
+            double_sided: material.double_sided,
+            unlit: material.unlit,
         });
     }
 }
@@ -437,14 +473,30 @@ impl Renderer {
             .vertex_attrib_pointer_with_i32(self.a_normal, 3, Gl::FLOAT, false, 0, 0);
         self.gl.enable_vertex_attrib_array(self.a_normal);
 
-        if let Some(loc) = &self.u_color {
+        if let Some(loc) = &self.u_base_color_factor {
             self.gl.uniform4f(
                 Some(loc),
-                primitive.color[0],
-                primitive.color[1],
-                primitive.color[2],
-                primitive.color[3],
+                primitive.base_color_factor[0],
+                primitive.base_color_factor[1],
+                primitive.base_color_factor[2],
+                primitive.base_color_factor[3],
             );
+        }
+        if let Some(loc) = &self.u_metallic_factor {
+            self.gl.uniform1f(Some(loc), primitive.metallic_factor);
+        }
+        if let Some(loc) = &self.u_roughness_factor {
+            self.gl.uniform1f(Some(loc), primitive.roughness_factor);
+        }
+        if let Some(loc) = &self.u_unlit {
+            self.gl
+                .uniform1f(Some(loc), if primitive.unlit { 1.0 } else { 0.0 });
+        }
+
+        if primitive.double_sided {
+            self.gl.disable(Gl::CULL_FACE);
+        } else {
+            self.gl.enable(Gl::CULL_FACE);
         }
 
         match (&primitive.index_buffer, primitive.index_count) {
