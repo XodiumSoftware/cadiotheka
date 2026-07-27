@@ -1,4 +1,4 @@
-use crate::components::cards::project::{HeartIcon, ProjectCardProperties};
+use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProperties};
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
@@ -806,6 +806,45 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                     }}
                 </div>
                 <div class="hidden sm:flex items-center gap-2 text-xs flex-shrink-0">
+                    {move || {
+                        let has_ifc = ifc_url.get().is_some();
+                        view! {
+                            <button
+                                type="button"
+                                class=move || {
+                                    if has_ifc {
+                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                    } else {
+                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
+                                    }
+                                }
+                                aria-label=move || if has_ifc { "Download IFC model".to_string() } else { "No IFC model available".to_string() }
+                                data-tip=move || if has_ifc { "Download IFC".to_string() } else { "No IFC model available".to_string() }
+                                disabled=move || !has_ifc
+                            >
+                                {if has_ifc {
+                                    view! {
+                                        <a
+                                            href=ifc_url.get().unwrap_or_default()
+                                            download=true
+                                            class="flex items-center gap-1"
+                                            aria-label="Download IFC model"
+                                        >
+                                            <DownloadIcon />
+                                        </a>
+                                    }
+                                        .into_any()
+                                } else {
+                                    view! {
+                                        <span class="flex items-center gap-1">
+                                            <DownloadIcon />
+                                        </span>
+                                    }
+                                        .into_any()
+                                }}
+                            </button>
+                        }
+                    }}
                     <button
                         type="button"
                         class=move || {
