@@ -384,7 +384,7 @@ pub fn AddProjectModal() -> impl IntoView {
                             <div class="flex justify-end gap-2 flex-shrink-0 pt-2 border-t border-base-content/10">
                                 <button
                                     type="button"
-                                    class="btn btn-ghost btn-lift"
+                                    class="btn btn-ghost btn-sm rounded-none"
                                     on:click=move |_| modal.close()
                                     disabled=move || is_submitting.get()
                                 >
@@ -392,7 +392,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                 </button>
                                 <button
                                     type="submit"
-                                    class="btn btn-primary btn-lift"
+                                    class="btn btn-primary btn-sm rounded-none"
                                     disabled=move || is_submitting.get()
                                 >
                                     {move || {
