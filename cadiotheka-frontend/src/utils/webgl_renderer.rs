@@ -1,7 +1,5 @@
 //! Minimal WebGL renderer for GLB models produced from IFC files.
 
-#![allow(clippy::pedantic, clippy::get_first)]
-
 use crate::utils::glb::{
     GltfDocument, compute_bounding_box, look_at_matrix, mat4_identity, mat4_mul, mat4_mul_vec3,
     mat4_to_array, mat4_to_normal_matrix_3x3, node_transform, perspective_matrix,
