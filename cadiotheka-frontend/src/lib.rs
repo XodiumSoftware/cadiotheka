@@ -19,6 +19,7 @@ pub mod components {
         pub mod effects {
             pub mod section_fade;
         }
+        pub mod ifc_viewer;
         pub mod logo;
         pub mod markdown;
         pub mod markdown_editor;
@@ -38,10 +39,9 @@ pub mod components {
     pub use sections::header::Header;
     pub use sections::projects::ProjectsSection;
 
-    pub use cards::project::{ProjectCard, ProjectCardProperties, from_project_data};
-
     pub use ui::corner_frame::CornerFrame;
     pub use ui::effects::section_fade::FadeOverlay;
+    pub use ui::ifc_viewer::{IfcViewer, IfcViewerState};
     pub use ui::logo::Logo;
     pub use ui::markdown::MarkdownView;
     pub use ui::markdown_editor::MarkdownEditor;
@@ -107,12 +107,16 @@ pub mod utils {
     pub mod color;
     pub mod dom;
     pub mod format;
+    pub mod glb;
     pub mod url;
+    pub mod webgl_renderer;
 
     pub use color::*;
     pub use dom::*;
     pub use format::*;
+    pub use glb::*;
     pub use url::*;
+    pub use webgl_renderer::*;
 }
 
 pub use app::*;

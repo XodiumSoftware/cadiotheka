@@ -18,6 +18,7 @@ pub(crate) mod routes {
     pub(crate) const PROJECT: &str = "/data/projects/:id";
     pub(crate) const PROJECT_FAVORITES: &str = "/data/projects/:id/favorites";
     pub(crate) const PROJECT_IFC: &str = "/data/projects/:id/ifc";
+    pub(crate) const PROJECT_GLBS: &str = "/data/projects/:id/glb";
     pub(crate) const IFCS: &str = "/data/ifcs/:project_id/:filename";
     pub(crate) const LOGIN_GITHUB: &str = "/login/github";
     pub(crate) const AUTH_GITHUB_CALLBACK: &str = "/auth/github/callback";
@@ -121,6 +122,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         )
         .post_async(routes::PROJECT_IFC, api::projects::upload_project_ifc)
         .delete_async(routes::PROJECT_IFC, api::projects::delete_project_ifc)
+        .get_async(routes::PROJECT_GLBS, api::projects::serve_project_glb)
         .get_async(routes::IFCS, api::projects::serve_ifc)
         .patch_async(routes::PROJECT, api::projects::patch_project)
         .put_async(routes::PROJECT, api::projects::update_project)

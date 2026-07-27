@@ -1,4 +1,5 @@
 use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProperties};
+use crate::components::ui::ifc_viewer::IfcViewer;
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
@@ -951,9 +952,12 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                         <div class="min-w-0 space-y-4">
                             {move || match active_tab.get() {
                                 ProjectDetailsTab::Viewer3d => view! {
-                                    <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 flex items-center justify-center text-base-content/50 text-sm">
-                                        "3D viewer coming later."
-                                    </div>
+                                    <IfcViewer url=Signal::derive({
+                                        let project_id = project_id.clone();
+                                        move || {
+                                            ifc_url.get().map(|_| format!("/data/projects/{project_id}/glb"))
+                                        }
+                                    }) />
                                 }
                                     .into_any(),
                                 ProjectDetailsTab::Versions => view! {

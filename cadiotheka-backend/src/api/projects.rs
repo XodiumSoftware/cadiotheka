@@ -8,6 +8,7 @@ use crate::PROJECT_ASSETS_R2_BINDING;
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::utils::{check_rate_limit, error_response, js_option};
+use ifc_lite_export::{GltfOptions, export_glb};
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, supported_platforms, downloads, favorites, timestamp, ifc_url FROM projects";
 
@@ -445,6 +446,42 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
     let headers = Headers::new();
     headers.set("Content-Type", &content_type)?;
     Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
+}
+
+/// Serves a project's IFC model converted to a binary GLB for the 3D viewer.
+pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let id = ctx.param("id").cloned().unwrap_or_default();
+    if id.is_empty() {
+        return error_response("Invalid project id", 400);
+    }
+
+    let project = fetch_project(&ctx, &id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+
+    let Some(key) = project.ifc_url else {
+        return error_response("No IFC model uploaded for this project", 404);
+    };
+
+    let object = ifcs_bucket(&ctx)?.get(&key).execute().await?;
+    let Some(object) = object else {
+        return error_response("IFC model not found", 404);
+    };
+
+    let body = object
+        .body()
+        .ok_or_else(|| worker::Error::RustError("IFC object has no body".into()))?;
+    let ifc_bytes = body.bytes().await?;
+
+    let glb_bytes = export_glb(&ifc_bytes, &GltfOptions::default());
+    if glb_bytes.len() <= 12 {
+        return error_response("IFC model has no renderable geometry", 422);
+    }
+
+    let headers = Headers::new();
+    headers.set("Content-Type", "model/gltf-binary")?;
+    headers.set("Cache-Control", "public, max-age=3600")?;
+    Response::from_bytes(glb_bytes).map(|resp| resp.with_headers(headers))
 }
 
 /// Whether the given account may edit or delete the project.

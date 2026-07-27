@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 leptos = { version = "0.8.17", features = ["csr"] }
+wasm-bindgen = "0.2.126"
 gloo-timers = { version = "0.4.0", features = ["futures"] }
 gloo-net = "0.6"
 time = { version = "0.3", features = ["serde", "wasm-bindgen", "macros", "formatting", "parsing"] }
@@ -18,9 +19,10 @@ ammonia = "4.1"
 timeago = { version = "0.6", default-features = false }
 human_format = "1.2"
 thousands = "0.2"
-web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "HtmlInputElement", "Node", "NodeList", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry", "File", "FileList", "Blob", "Url", "FormData", "Window", "Navigator", "Clipboard"] }
+web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "HtmlInputElement", "HtmlCanvasElement", "HtmlButtonElement", "Node", "NodeList", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry", "File", "FileList", "Blob", "Url", "FormData", "Window", "Navigator", "Clipboard", "WebGlBuffer", "WebGlProgram", "WebGlShader", "WebGlRenderingContext", "WebGlUniformLocation", "WebGlVertexArrayObject", "MouseEvent", "WheelEvent", "UiEvent"] }
 console_error_panic_hook = "0.1.7"
 urlencoding = "2.1"
+send_wrapper = "0.6"
 uuid = { version = "1.11", features = ["v4", "serde", "js"] }
 
 [lints]
