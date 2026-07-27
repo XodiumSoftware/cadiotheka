@@ -1,11 +1,6 @@
 //! Minimal GLB/glTF parser for rendering IFC models produced by `ifc-lite-wasm`.
 
-#![allow(
-    clippy::pedantic,
-    clippy::collapsible_if,
-    clippy::get_first,
-    clippy::redundant_locals
-)]
+#![allow(clippy::pedantic, clippy::collapsible_if, clippy::get_first)]
 
 use std::collections::HashMap;
 
@@ -755,7 +750,6 @@ pub fn perspective_matrix(fov_y: f32, aspect: f32, near: f32, far: f32) -> [f32;
 pub fn look_at_matrix(eye: [f32; 3], center: [f32; 3], up: [f32; 3]) -> [[f32; 4]; 4] {
     let mut f = [center[0] - eye[0], center[1] - eye[1], center[2] - eye[2]];
     normalize_vec3(&mut f);
-    let up = up;
     let mut s = cross_vec3(&f, &up);
     normalize_vec3(&mut s);
     let mut u = cross_vec3(&s, &f);
