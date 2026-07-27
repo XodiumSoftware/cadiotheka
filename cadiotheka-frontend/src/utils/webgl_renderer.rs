@@ -199,6 +199,7 @@ struct RenderPrimitive {
 /// WebGL renderer for a parsed GLB document.
 pub struct Renderer {
     gl: Gl,
+    _oes_element_index_uint: Option<js_sys::Object>,
     program: WebGlProgram,
     a_position: u32,
     a_normal: u32,
@@ -237,11 +238,14 @@ impl Renderer {
         gl.cull_face(Gl::BACK);
         gl.clear_color(0.05, 0.05, 0.05, 1.0);
 
+        let oes_element_index_uint = gl.get_extension("OES_element_index_uint").ok().flatten();
+
         let (min, max) = compute_bounding_box(doc);
         let camera = Rc::new(RefCell::new(Camera::framing_bounding_box(min, max)));
 
         let mut renderer = Self {
             gl,
+            _oes_element_index_uint: oes_element_index_uint,
             program,
             a_position,
             a_normal,
