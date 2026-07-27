@@ -1,6 +1,6 @@
 //! Minimal GLB/glTF parser for rendering IFC models produced by `ifc-lite-wasm`.
 
-#![allow(clippy::pedantic, clippy::collapsible_if, clippy::get_first)]
+#![allow(clippy::pedantic, clippy::get_first)]
 
 use std::collections::HashMap;
 
@@ -324,15 +324,13 @@ fn parse_buffer_view(value: &serde_json::Value) -> Result<GltfBufferView, GltfEr
 }
 
 fn parse_material(value: &serde_json::Value) -> Result<GltfMaterial, GltfError> {
-    let obj = value.as_object().unwrap_or(&serde_json::Map::new()).clone();
     let mut material = GltfMaterial::default();
-    if let Some(pbr) = obj.get("pbrMetallicRoughness") {
-        if let Some(factor) = pbr.get("baseColorFactor") {
-            if let Some(arr) = factor.as_array() {
-                for (i, v) in arr.iter().take(4).enumerate() {
-                    material.base_color_factor[i] = v.as_f64().map(|f| f as f32).unwrap_or(1.0);
-                }
-            }
+    if let Some(pbr) = value.get("pbrMetallicRoughness")
+        && let Some(factor) = pbr.get("baseColorFactor")
+        && let Some(arr) = factor.as_array()
+    {
+        for (i, v) in arr.iter().take(4).enumerate() {
+            material.base_color_factor[i] = v.as_f64().map(|f| f as f32).unwrap_or(1.0);
         }
     }
     Ok(material)
@@ -595,17 +593,19 @@ fn visit_node_bounds(
     let transform = mat4_mul(parent_transform, &node_transform(node));
 
     if let Some(mesh_index) = node.mesh {
-        if let Some(mesh) = doc.meshes.get(mesh_index) {
-            for primitive in &mesh.primitives {
-                if let Some(&position_index) = primitive.attributes.get("POSITION") {
-                    if let Ok(positions) = read_vec3_accessor(doc, position_index) {
-                        for p in positions {
-                            let world = mat4_mul_vec3(&transform, p);
-                            for i in 0..3 {
-                                min[i] = min[i].min(world[i]);
-                                max[i] = max[i].max(world[i]);
-                            }
-                        }
+        let Some(mesh) = doc.meshes.get(mesh_index) else {
+            return;
+        };
+        for primitive in &mesh.primitives {
+            let Some(&position_index) = primitive.attributes.get("POSITION") else {
+                continue;
+            };
+            if let Ok(positions) = read_vec3_accessor(doc, position_index) {
+                for p in positions {
+                    let world = mat4_mul_vec3(&transform, p);
+                    for i in 0..3 {
+                        min[i] = min[i].min(world[i]);
+                        max[i] = max[i].max(world[i]);
                     }
                 }
             }
