@@ -2,7 +2,6 @@
 
 #![allow(
     clippy::pedantic,
-    clippy::expect_used,
     clippy::unwrap_used,
     clippy::collapsible_if,
     clippy::get_first,
@@ -323,16 +322,19 @@ impl Renderer {
             create_vec3_buffer(&self.gl, &self.flatten_vec3(&transformed_positions));
         let normal_buffer = create_vec3_buffer(&self.gl, &self.flatten_vec3(&normals));
 
+        let Some(position_buffer) = position_buffer else {
+            return;
+        };
+        let Some(normal_buffer) = normal_buffer else {
+            return;
+        };
+
         let (index_buffer, index_count, vertex_count) =
             if let Some(indices_index) = primitive.indices {
                 match read_index_accessor(doc, indices_index) {
                     Ok(indices) => {
                         let count = indices.len() as i32;
-                        (
-                            Some(create_index_buffer(&self.gl, &indices)),
-                            Some(count),
-                            count,
-                        )
+                        (create_index_buffer(&self.gl, &indices), Some(count), count)
                     }
                     Err(_) => (None, None, transformed_positions.len() as i32),
                 }
@@ -512,28 +514,26 @@ fn compile_shader(gl: &Gl, shader_type: u32, source: &str) -> Option<WebGlShader
     Some(shader)
 }
 
-fn create_vec3_buffer(gl: &Gl, data: &[f32]) -> WebGlBuffer {
-    let buffer = gl.create_buffer().expect("failed to create WebGL buffer");
+fn create_vec3_buffer(gl: &Gl, data: &[f32]) -> Option<WebGlBuffer> {
+    let buffer = gl.create_buffer()?;
     gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&buffer));
     gl.buffer_data_with_array_buffer_view(
         Gl::ARRAY_BUFFER,
         &js_sys::Float32Array::from(data),
         Gl::STATIC_DRAW,
     );
-    buffer
+    Some(buffer)
 }
 
-fn create_index_buffer(gl: &Gl, data: &[u32]) -> WebGlBuffer {
-    let buffer = gl
-        .create_buffer()
-        .expect("failed to create WebGL index buffer");
+fn create_index_buffer(gl: &Gl, data: &[u32]) -> Option<WebGlBuffer> {
+    let buffer = gl.create_buffer()?;
     gl.bind_buffer(Gl::ELEMENT_ARRAY_BUFFER, Some(&buffer));
     gl.buffer_data_with_array_buffer_view(
         Gl::ELEMENT_ARRAY_BUFFER,
         &js_sys::Uint32Array::from(data),
         Gl::STATIC_DRAW,
     );
-    buffer
+    Some(buffer)
 }
 
 /// Mouse interaction handle that keeps event closures alive.
