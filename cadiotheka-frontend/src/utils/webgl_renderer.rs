@@ -1,6 +1,6 @@
 //! Minimal WebGL renderer for GLB models produced from IFC files.
 
-#![allow(clippy::pedantic, clippy::collapsible_if, clippy::get_first)]
+#![allow(clippy::pedantic, clippy::get_first)]
 
 use crate::utils::glb::{
     GltfDocument, compute_bounding_box, look_at_matrix, mat4_identity, mat4_mul, mat4_mul_vec3,
@@ -274,11 +274,11 @@ impl Renderer {
         };
         let transform = mat4_mul(parent_transform, &node_transform(node));
 
-        if let Some(mesh_index) = node.mesh {
-            if let Some(mesh) = doc.meshes.get(mesh_index) {
-                for primitive in &mesh.primitives {
-                    self.upload_primitive(doc, primitive, &transform);
-                }
+        if let Some(mesh_index) = node.mesh
+            && let Some(mesh) = doc.meshes.get(mesh_index)
+        {
+            for primitive in &mesh.primitives {
+                self.upload_primitive(doc, primitive, &transform);
             }
         }
 
