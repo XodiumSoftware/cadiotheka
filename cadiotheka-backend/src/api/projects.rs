@@ -382,13 +382,16 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 
     db(&ctx)?
         .prepare("UPDATE projects SET ifc_url = ?1 WHERE id = ?2")
-        .bind(&[key.clone().into(), id.into()])?
+        .bind(&[key.clone().into(), id.clone().into()])?
         .run()
         .await?;
 
     if let Some(old_key) = old_key.filter(|k| k != &key) {
         let _ = ifcs_bucket(&ctx)?.delete(&old_key).await;
     }
+
+    let glb_cache_key = glb_key_for_project(&id);
+    let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
 
     Response::from_json(&serde_json::json!({ "ifc_key": key, "content_type": "application/ifc" }))
 }
@@ -409,6 +412,8 @@ pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<R
 
     if let Some(key) = project.ifc_url {
         let _ = ifcs_bucket(&ctx)?.delete(&key).await;
+        let glb_cache_key = glb_key_for_project(&id);
+        let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
     }
 
     db(&ctx)?
@@ -448,6 +453,11 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
     Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
 }
 
+/// Returns the R2 key used to cache a project's converted GLB.
+fn glb_key_for_project(id: &str) -> String {
+    format!("ifcs/{id}/model.glb")
+}
+
 /// Serves a project's IFC model converted to a binary GLB for the 3D viewer.
 pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let id = ctx.param("id").cloned().unwrap_or_default();
@@ -463,6 +473,21 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
         return error_response("No IFC model uploaded for this project", 404);
     };
 
+    let glb_cache_key = glb_key_for_project(&id);
+    if let Some(cached) = ifcs_bucket(&ctx)?.get(&glb_cache_key).execute().await? {
+        let body = cached
+            .body()
+            .ok_or_else(|| worker::Error::RustError("GLB cache object has no body".into()))?;
+        let http_metadata = cached.http_metadata();
+        let content_type = http_metadata
+            .content_type
+            .unwrap_or_else(|| "model/gltf-binary".to_string());
+        let headers = Headers::new();
+        headers.set("Content-Type", &content_type)?;
+        headers.set("Cache-Control", "public, max-age=3600")?;
+        return Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers));
+    }
+
     let object = ifcs_bucket(&ctx)?.get(&key).execute().await?;
     let Some(object) = object else {
         return error_response("IFC model not found", 404);
@@ -477,6 +502,16 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
     if glb_bytes.len() <= 12 {
         return error_response("IFC model has no renderable geometry", 422);
     }
+
+    let cache_metadata = HttpMetadata {
+        content_type: Some("model/gltf-binary".to_string()),
+        ..Default::default()
+    };
+    let _ = ifcs_bucket(&ctx)?
+        .put(&glb_cache_key, glb_bytes.clone())
+        .http_metadata(cache_metadata)
+        .execute()
+        .await;
 
     let headers = Headers::new();
     headers.set("Content-Type", "model/gltf-binary")?;
