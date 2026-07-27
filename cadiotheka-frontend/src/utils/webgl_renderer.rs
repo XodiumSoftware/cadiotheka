@@ -96,7 +96,7 @@ impl Camera {
             (max[2] - min[2]).abs(),
         ];
         let max_size = size[0].max(size[1]).max(size[2]).max(1.0);
-        let distance = max_size * 1.5;
+        let distance = max_size * 2.5;
 
         Self {
             target: center,
@@ -104,8 +104,8 @@ impl Camera {
             yaw: std::f32::consts::PI * 0.25,
             pitch: std::f32::consts::PI * 0.15,
             fov_y: std::f32::consts::PI * 0.25,
-            near: distance * 0.001,
-            far: distance * 100.0,
+            near: max_size * 0.001,
+            far: max_size * 1_000.0,
         }
     }
 
@@ -134,8 +134,9 @@ impl Camera {
 
     /// Rotates around the target from a drag delta.
     pub fn orbit(&mut self, delta_x: f32, delta_y: f32) {
-        self.yaw += delta_x * 0.01;
-        self.pitch += delta_y * 0.01;
+        let sensitivity = 0.005;
+        self.yaw += delta_x * sensitivity;
+        self.pitch += delta_y * sensitivity;
         self.pitch = self
             .pitch
             .clamp(-std::f32::consts::PI * 0.49, std::f32::consts::PI * 0.49);
