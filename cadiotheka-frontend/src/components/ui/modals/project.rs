@@ -17,7 +17,7 @@ use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
 const MAX_TITLE_LENGTH: usize = 100;
-const MAX_DESCRIPTION_LENGTH: usize = 5000;
+const MAX_DESCRIPTION_LENGTH: usize = 100;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ProjectDetailsTab {

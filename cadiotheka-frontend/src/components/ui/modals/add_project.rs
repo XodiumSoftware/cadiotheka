@@ -75,8 +75,8 @@ pub fn AddProjectModal() -> impl IntoView {
         let d = description.get();
         if d.trim().is_empty() {
             e.description = Some("A project description is required.".to_string());
-        } else if d.trim().len() > 5000 {
-            e.description = Some("Description must be 5000 characters or fewer.".to_string());
+        } else if d.trim().len() > 100 {
+            e.description = Some("Description must be 100 characters or fewer.".to_string());
         }
 
         if selected_tags.get().is_empty() {
@@ -266,7 +266,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                     <label class=move || {
                                         if errors.get().description.is_some() {
                                             "block text-sm font-medium text-error mb-1"
-                                        } else if description.get().len() >= 5000 {
+                                        } else if description.get().len() >= 100 {
                                             "block text-sm font-medium text-warning mb-1"
                                         } else {
                                             "block text-sm font-medium text-base-content mb-1"
@@ -275,7 +275,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                         <span class="text-error mr-1">"*"</span>
                                         {move || {
                                             let count = description.get().len();
-                                            format!("Description ({count}/5000)")
+                                            format!("Description ({count}/100)")
                                         }}
                                     </label>
                                     <MarkdownEditor
@@ -284,7 +284,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                             set_description.set(value);
                                             set_errors.update(|errs| errs.description = None);
                                         })
-                                        maxlength=5000
+                                        maxlength=100
                                         editor_class="min-h-[12rem] font-mono text-sm"
                                     />
                                     {move || {
@@ -294,9 +294,9 @@ pub fn AddProjectModal() -> impl IntoView {
                                             Some(view! {
                                                 <p class=base>{msg}</p>
                                             })
-                                        } else if description.get().len() >= 5000 {
+                                        } else if description.get().len() >= 100 {
                                             Some(view! {
-                                                <p class=base>{"Description must be 5000 characters or fewer.".to_string()}</p>
+                                                <p class=base>{"Description must be 100 characters or fewer.".to_string()}</p>
                                             })
                                         } else {
                                             None
