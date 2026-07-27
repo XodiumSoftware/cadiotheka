@@ -86,9 +86,10 @@ pub mod data {
     pub use account::{AccountData, AccountRole, fetch_accounts};
     pub use project::{
         IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, create_project, delete_project,
-        fetch_projects, new_project_payload, toggle_project_favorite, update_project,
-        update_project_collaborators, update_project_description, update_project_platforms,
-        update_project_tags, update_project_title, upload_project_icon, upload_project_ifc,
+        delete_project_ifc, fetch_projects, new_project_payload, toggle_project_favorite,
+        update_project, update_project_collaborators, update_project_description,
+        update_project_platforms, update_project_tags, update_project_title, upload_project_icon,
+        upload_project_ifc,
     };
 }
 

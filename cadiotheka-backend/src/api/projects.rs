@@ -392,6 +392,33 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
     Response::from_json(&serde_json::json!({ "ifc_key": key, "content_type": "application/ifc" }))
 }
 
+/// Deletes a project's IFC model from R2 and clears the `ifc_url` column.
+pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    if let Some(response) = check_rate_limit(&req, &ctx, "ifc_delete").await? {
+        return Ok(response);
+    }
+    let account = require_account(&req, &ctx).await?;
+    let id = ctx.param("id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    if !can_edit_project(&account, &project) {
+        return error_response("Forbidden", 403);
+    }
+
+    if let Some(key) = project.ifc_url {
+        let _ = ifcs_bucket(&ctx)?.delete(&key).await;
+    }
+
+    db(&ctx)?
+        .prepare("UPDATE projects SET ifc_url = NULL WHERE id = ?1")
+        .bind(&[id.into()])?
+        .run()
+        .await?;
+
+    Response::from_json(&serde_json::json!({ "deleted": true }))
+}
+
 /// Serves an IFC model from R2 by its project id and filename.
 pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let project_id = ctx.param("project_id").cloned().unwrap_or_default();

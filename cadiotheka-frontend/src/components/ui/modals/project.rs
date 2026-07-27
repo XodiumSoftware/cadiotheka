@@ -8,9 +8,9 @@ use crate::contexts::{
     SearchContext,
 };
 use crate::data::{
-    AccountData, AccountRole, delete_project, fetch_projects, update_project_collaborators,
-    update_project_description, update_project_platforms, update_project_tags,
-    update_project_title, upload_project_ifc,
+    AccountData, AccountRole, delete_project, delete_project_ifc, fetch_projects,
+    update_project_collaborators, update_project_description, update_project_platforms,
+    update_project_tags, update_project_title, upload_project_ifc,
 };
 use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
@@ -346,6 +346,38 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
             }
             input.set_value("");
         }
+    };
+
+    let (is_deleting_ifc, set_is_deleting_ifc) = signal(false);
+
+    let delete_ifc = {
+        let project_id = project_id.clone();
+        Callback::new(move |()| {
+            let project_id = project_id.clone();
+            leptos::task::spawn_local(async move {
+                set_is_deleting_ifc.set(true);
+                if delete_project_ifc(&project_id).await {
+                    set_ifc_url.set(None);
+                    projects_ctx.set_projects.update(|projects| {
+                        for project in projects.iter_mut() {
+                            if project.id == project_id {
+                                project.ifc_url = None;
+                                break;
+                            }
+                        }
+                    });
+                    modal.set_card.update(|opt| {
+                        if let Some(card) = opt.as_mut() {
+                            card.ifc_url = None;
+                        }
+                    });
+                    show_toast("IFC model deleted".to_string());
+                } else {
+                    show_toast("Failed to delete IFC model".to_string());
+                }
+                set_is_deleting_ifc.set(false);
+            });
+        })
     };
 
     let (edit_mode, set_edit_mode) = signal(false);
@@ -976,6 +1008,44 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                                 <p class="text-sm font-medium text-base-content truncate">"model.ifc"</p>
                                                                 <p class="text-xs text-base-content/50">"Latest version"</p>
                                                             </div>
+                                                            {move || {
+                                                                if is_editable.get() && edit_mode.get() {
+                                                                    view! {
+                                                                        <button
+                                                                            type="button"
+                                                                            class=move || {
+                                                                                if is_deleting_ifc.get() {
+                                                                                    "btn btn-ghost btn-xs rounded-none text-base-content/50"
+                                                                                } else {
+                                                                                    "btn btn-ghost btn-xs rounded-none text-error hover:text-error"
+                                                                                }
+                                                                            }
+                                                                            data-tip="Delete version"
+                                                                            disabled=move || is_deleting_ifc.get()
+                                                                            on:click=move |_| delete_ifc.run(())
+                                                                        >
+                                                                            {move || if is_deleting_ifc.get() {
+                                                                                view! {
+                                                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                                }
+                                                                                    .into_any()
+                                                                            } else {
+                                                                                view! {
+                                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                                                        <path d="M3 6h18" />
+                                                                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                                                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                                                                    </svg>
+                                                                                }
+                                                                                    .into_any()
+                                                                            }}
+                                                                        </button>
+                                                                    }
+                                                                        .into_any()
+                                                                } else {
+                                                                    ().into_any()
+                                                                }
+                                                            }}
                                                         </div>
                                                         <a
                                                             href=url

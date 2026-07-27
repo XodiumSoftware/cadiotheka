@@ -120,6 +120,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             api::projects::toggle_project_favorite,
         )
         .post_async(routes::PROJECT_IFC, api::projects::upload_project_ifc)
+        .delete_async(routes::PROJECT_IFC, api::projects::delete_project_ifc)
         .get_async(routes::IFCS, api::projects::serve_ifc)
         .patch_async(routes::PROJECT, api::projects::patch_project)
         .put_async(routes::PROJECT, api::projects::update_project)

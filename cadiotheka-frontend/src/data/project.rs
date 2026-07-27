@@ -608,6 +608,45 @@ pub fn icon_src_from_key(key: &str) -> IconUrl {
     IconUrl(api_url(&format!("/icons/{project_id}/{icon_id}")))
 }
 
+/// Deletes a project's IFC model from the backend.
+///
+/// Returns `true` when the request succeeds.
+pub async fn delete_project_ifc(id: &str) -> bool {
+    let url = api_url(&format!("/projects/{id}/ifc"));
+    let request = match gloo_net::http::Request::delete(&url)
+        .credentials(web_sys::RequestCredentials::Include)
+        .header("Content-Type", "application/json")
+        .body("{}")
+    {
+        Ok(req) => req,
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to build IFC delete request: {err:?}").into(),
+            );
+            return false;
+        }
+    };
+
+    match request.send().await {
+        Ok(response) => {
+            if !response.ok() {
+                let status = response.status();
+                leptos::web_sys::console::error_1(
+                    &format!("Failed to delete IFC model: HTTP {status}").into(),
+                );
+                return false;
+            }
+            true
+        }
+        Err(err) => {
+            leptos::web_sys::console::error_1(
+                &format!("Failed to delete IFC model: {err:?}").into(),
+            );
+            false
+        }
+    }
+}
+
 /// Uploads an IFC model for the given project and returns its public URL.
 ///
 /// The backend stores the file in R2 and returns the object key, which is
