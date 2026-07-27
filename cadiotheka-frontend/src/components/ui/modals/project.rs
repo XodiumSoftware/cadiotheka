@@ -1367,6 +1367,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                         view! {
                                                             <button
                                                                 type="button"
+                                                                class="cursor-pointer"
                                                                 on:click=move |_| {
                                                                     profile_modal.open(account_for_click.clone());
                                                                 }
@@ -1380,6 +1381,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                         view! {
                                                             <button
                                                                 type="button"
+                                                                class="cursor-pointer"
                                                                 on:click=move |_| {
                                                                     profile_modal.open(account_for_click.clone());
                                                                 }
