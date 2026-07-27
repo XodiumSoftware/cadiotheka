@@ -13,7 +13,7 @@ use crate::data::{
     update_project_collaborators, update_project_description, update_project_platforms,
     update_project_tags, update_project_title, upload_project_ifc,
 };
-use crate::utils::{placeholder_color, placeholder_letter};
+use crate::utils::{api_url, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -955,7 +955,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     <IfcViewer url=Signal::derive({
                                         let project_id = project_id.clone();
                                         move || {
-                                            ifc_url.get().map(|_| format!("/data/projects/{project_id}/glb"))
+                                            ifc_url.get().map(|_| api_url(&format!("/projects/{project_id}/glb")))
                                         }
                                     }) />
                                 }
