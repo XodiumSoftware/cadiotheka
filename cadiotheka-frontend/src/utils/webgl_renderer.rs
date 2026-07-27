@@ -1,5 +1,13 @@
 //! Minimal WebGL renderer for GLB models produced from IFC files.
 
+#![allow(
+    clippy::cast_lossless,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::pedantic
+)]
+
 use crate::utils::glb::{
     GltfDocument, compute_bounding_box, look_at_matrix, mat4_identity, mat4_mul, mat4_mul_vec3,
     mat4_to_array, mat4_to_normal_matrix_3x3, node_transform, perspective_matrix,
@@ -294,9 +302,8 @@ impl Renderer {
         let Some(&position_index) = primitive.attributes.get("POSITION") else {
             return;
         };
-        let positions = match read_vec3_accessor(doc, position_index) {
-            Ok(p) => p,
-            Err(_) => return,
+        let Ok(positions) = read_vec3_accessor(doc, position_index) else {
+            return;
         };
 
         let normals = primitive
@@ -310,9 +317,8 @@ impl Renderer {
             .map(|p| mat4_mul_vec3(transform, p))
             .collect();
 
-        let position_buffer =
-            create_vec3_buffer(&self.gl, &self.flatten_vec3(&transformed_positions));
-        let normal_buffer = create_vec3_buffer(&self.gl, &self.flatten_vec3(&normals));
+        let position_buffer = create_vec3_buffer(&self.gl, &flatten_vec3(&transformed_positions));
+        let normal_buffer = create_vec3_buffer(&self.gl, &flatten_vec3(&normals));
 
         let Some(position_buffer) = position_buffer else {
             return;
@@ -337,8 +343,7 @@ impl Renderer {
         let color = primitive
             .material
             .and_then(|idx| doc.materials.get(idx))
-            .map(|m| m.base_color_factor)
-            .unwrap_or([0.7, 0.7, 0.7, 1.0]);
+            .map_or([0.7, 0.7, 0.7, 1.0], |m| m.base_color_factor);
 
         self.primitives.push(RenderPrimitive {
             position_buffer,
@@ -349,15 +354,17 @@ impl Renderer {
             color,
         });
     }
+}
 
-    fn flatten_vec3(&self, data: &[[f32; 3]]) -> Vec<f32> {
-        let mut result = Vec::with_capacity(data.len() * 3);
-        for v in data {
-            result.extend_from_slice(v);
-        }
-        result
+fn flatten_vec3(data: &[[f32; 3]]) -> Vec<f32> {
+    let mut result = Vec::with_capacity(data.len() * 3);
+    for v in data {
+        result.extend_from_slice(v);
     }
+    result
+}
 
+impl Renderer {
     /// Renders the scene once.
     pub fn render(&self) {
         let width = self.canvas.client_width() as u32;
