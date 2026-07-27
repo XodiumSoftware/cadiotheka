@@ -937,35 +937,28 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     .into_any(),
                                 ProjectDetailsTab::Versions => view! {
                                     <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-4">
-                                        <div class="flex items-center justify-between">
-                                            <h3 class="text-sm font-semibold text-base-content">"IFC model versions"</h3>
+                                        <div class="flex items-center justify-end">
                                             {move || {
                                                 if is_editable.get() && edit_mode.get() {
                                                     view! {
                                                         <button
                                                             type="button"
-                                                            class="btn btn-primary btn-sm rounded-none"
+                                                            class="btn btn-ghost btn-sm rounded-none w-8 h-8 p-0 min-h-0 flex items-center justify-center text-primary tooltip tooltip-left"
+                                                            data-tip="Add version"
                                                             disabled=move || is_uploading_ifc.get()
                                                             on:click=move |_| trigger_ifc_upload()
                                                         >
                                                             {move || if is_uploading_ifc.get() {
                                                                 view! {
-                                                                    <span class="flex items-center gap-2">
-                                                                        <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                                                        <span>"Uploading..."</span>
-                                                                    </span>
+                                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
                                                                 }
                                                                     .into_any()
                                                             } else {
                                                                 view! {
-                                                                    <span class="flex items-center gap-2">
-                                                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                                            <polyline points="17 8 12 3 7 8" />
-                                                                            <line x1="12" y1="3" x2="12" y2="15" />
-                                                                        </svg>
-                                                                        <span>"Upload new version"</span>
-                                                                    </span>
+                                                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                                                    </svg>
                                                                 }
                                                                     .into_any()
                                                             }}
@@ -1014,7 +1007,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                                 ().into_any()
                                                             } else {
                                                                 view! {
-                                                                    <p class="text-base-content/40 text-xs">"Enter edit mode to upload a version."</p>
+                                                                    <p class="text-base-content/40 text-xs">"Enter edit mode to add a version."</p>
                                                                 }
                                                                     .into_any()
                                                             }
