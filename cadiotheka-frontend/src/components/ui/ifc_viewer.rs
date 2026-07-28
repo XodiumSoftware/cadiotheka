@@ -213,6 +213,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                     };
 
                     if let Some(new_renderer) = Renderer::new(&canvas, &gltf) {
+                        *renderer.borrow_mut() = Some(new_renderer);
                         let render_callback = {
                             let request_render = Rc::clone(&request_render);
                             let update_debug = update_debug.clone();
@@ -221,8 +222,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                                 update_debug();
                             }
                         };
-                        let new_controls = OrbitControls::attach(&new_renderer, render_callback);
-                        *renderer.borrow_mut() = Some(new_renderer);
+                        let new_controls = OrbitControls::attach(&renderer, render_callback);
                         *controls.borrow_mut() = Some(new_controls);
                         set_state.set(IfcViewerState::Rendering);
                         request_render.borrow_mut()();

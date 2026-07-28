@@ -65,10 +65,20 @@ pub struct OrbitControls {
 impl OrbitControls {
     /// Attaches orbit mouse listeners to the canvas.
     ///
-    /// `request_render` is called whenever an input event is queued.
-    pub fn attach<F: FnMut() + 'static>(renderer: &Renderer, request_render: F) -> Self {
-        let canvas = renderer.canvas.clone();
-        let pending_events = renderer.pending_events();
+    /// # Panics
+    ///
+    /// Panics if `renderer` does not currently contain a `Renderer`. The caller
+    /// must store the renderer before calling this method.
+    pub fn attach<F: FnMut() + 'static>(
+        renderer: &Rc<RefCell<Option<Renderer>>>,
+        request_render: F,
+    ) -> Self {
+        let renderer_guard = renderer.borrow();
+        let Some(renderer_ref) = renderer_guard.as_ref() else {
+            panic!("OrbitControls::attach called without a stored renderer");
+        };
+        let canvas = renderer_ref.canvas.clone();
+        let pending_events = renderer_ref.pending_events();
         let request_render = Rc::new(RefCell::new(request_render));
         let last_button: Rc<RefCell<Option<MouseButton>>> = Rc::new(RefCell::new(None));
         let last_press_time: Rc<RefCell<f64>> = Rc::new(RefCell::new(0.0));
@@ -78,6 +88,7 @@ impl OrbitControls {
             let request_render = Rc::clone(&request_render);
             let last_button = Rc::clone(&last_button);
             let last_press_time = Rc::clone(&last_press_time);
+            let renderer_clone = Rc::clone(renderer);
             Closure::<dyn FnMut(MouseEvent)>::new(move |ev: MouseEvent| {
                 let position = physical_point_from_mouse(&ev);
                 let button = mouse_button_from_web(ev.button());
@@ -96,12 +107,10 @@ impl OrbitControls {
                     handled: false,
                 });
                 if is_double_click {
-                    pending_events.borrow_mut().push(Event::MouseWheel {
-                        delta: (0.0, -10.0),
-                        position,
-                        modifiers,
-                        handled: false,
-                    });
+                    let mut renderer_ref = renderer_clone.borrow_mut();
+                    if let Some(renderer) = renderer_ref.as_mut() {
+                        renderer.reset_view();
+                    }
                 }
                 request_render.borrow_mut()();
             })
@@ -325,6 +334,19 @@ impl Renderer {
             })
         }
     }
+
+    /// Resets the camera and orbit target to frame the loaded model.
+    #[cfg(target_arch = "wasm32")]
+    pub fn reset_view(&mut self) {
+        let (camera, control) =
+            build_framing_camera(self.scene_bounds.0, self.scene_bounds.1, &self.canvas);
+        self.camera = camera;
+        self.control = control;
+    }
+
+    /// Resets the camera and orbit target to frame the loaded model.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn reset_view(&mut self) {}
 
     /// Renders the scene once.
     pub fn render(&mut self) {
