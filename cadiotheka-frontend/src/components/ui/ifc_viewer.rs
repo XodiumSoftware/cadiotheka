@@ -1,4 +1,4 @@
-//! 3D IFC model viewer using a custom WebGL renderer.
+//! 3D IFC model viewer using the `three-d` renderer.
 //!
 //! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`),
 //! parses it with the `gltf` crate via [`crate::utils::glb`], and renders it
@@ -68,7 +68,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                     *pending_frame.borrow_mut() = false;
                     *animation_handle.borrow_mut() = None;
                     if *dirty.borrow() {
-                        if let Some(renderer) = renderer.borrow().as_ref() {
+                        if let Some(renderer) = renderer.borrow_mut().as_mut() {
                             renderer.render();
                         }
                         *dirty.borrow_mut() = false;
@@ -99,26 +99,28 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
             let Some(renderer) = renderer_ref.as_ref() else {
                 return;
             };
-            let camera_ref = renderer.camera();
-            let camera = camera_ref.borrow();
+            let camera = renderer.camera();
             let (min, max) = renderer.scene_bounds();
-            let eye = camera.eye();
-            let target = camera.target;
+            let eye = camera.position();
+            let target = camera.target();
+            let dx = eye.x - target.x;
+            let dy = eye.y - target.y;
+            let dz = eye.z - target.z;
+            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
             let mut text = String::new();
-            let _ = writeln!(text, "eye: [{:.2}, {:.2}, {:.2}]", eye[0], eye[1], eye[2]);
+            let _ = writeln!(text, "eye: [{:.2}, {:.2}, {:.2}]", eye.x, eye.y, eye.z);
             let _ = writeln!(
                 text,
                 "target: [{:.2}, {:.2}, {:.2}]",
-                target[0], target[1], target[2]
+                target.x, target.y, target.z
             );
-            let _ = writeln!(text, "distance: {:.2}", camera.distance);
+            let _ = writeln!(text, "distance: {distance:.2}");
             let _ = writeln!(
                 text,
-                "yaw: {:.2}°, pitch: {:.2}°",
-                camera.yaw.to_degrees(),
-                camera.pitch.to_degrees()
+                "near: {:.3}, far: {:.1}",
+                camera.z_near(),
+                camera.z_far()
             );
-            let _ = writeln!(text, "near: {:.3}, far: {:.1}", camera.near, camera.far);
             let _ = writeln!(
                 text,
                 "bounds min: [{:.2}, {:.2}, {:.2}]",

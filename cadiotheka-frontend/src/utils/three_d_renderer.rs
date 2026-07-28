@@ -1,8 +1,8 @@
 //! IFC model renderer built on top of the `three-d` crate.
 //!
 //! This module replaces the previous hand-rolled WebGL renderer. It keeps the
-//! same orbit camera and mouse interaction behaviour, but delegates buffer
-//! management, shaders and draw calls to `three-d`.
+//! same scene framing and double-sided material behaviour, but delegates buffer
+//! management, shaders, draw calls and orbit interaction to `three-d`.
 
 #![allow(
     clippy::cast_possible_truncation,
@@ -15,13 +15,14 @@ use crate::utils::glb::{
     compute_bounding_box, is_triangle_mode, material_params, read_indices, read_normals,
     read_positions, triangle_count,
 };
-use crate::utils::math::{cross_vec3, normalize_vec3};
 #[cfg(target_arch = "wasm32")]
 use crate::utils::math::{mat4_identity, mat4_mul};
 #[cfg(target_arch = "wasm32")]
 use glow;
 use gltf::Gltf;
-use leptos::web_sys::{HtmlCanvasElement, MouseEvent, WebGl2RenderingContext, WheelEvent};
+use leptos::web_sys::HtmlCanvasElement;
+use leptos::web_sys::WebGl2RenderingContext;
+use leptos::web_sys::{MouseEvent, WheelEvent};
 use std::cell::RefCell;
 use std::rc::Rc;
 #[cfg(target_arch = "wasm32")]
@@ -35,199 +36,108 @@ use three_d::core::{ClearState, Context as ThreeDContext, RenderTarget};
 use three_d::renderer::Mesh;
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::PhysicalMaterial;
+use three_d::renderer::control::MouseButton;
+use three_d::renderer::control::{Event, OrbitControl};
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::geometry::{CpuMesh, Indices, Positions};
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::material::ColorMaterial;
 use three_d::renderer::{Camera as ThreeDCamera, DirectionalLight, Object};
+use three_d_asset::Viewport;
 #[cfg(target_arch = "wasm32")]
 use three_d_asset::material::LightingModel;
 #[cfg(target_arch = "wasm32")]
 use three_d_asset::{PbrMaterial, Srgba};
-use three_d_asset::{Viewport, radians, vec3};
+#[cfg(target_arch = "wasm32")]
+use three_d_asset::{radians, vec3};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::Closure;
 
-/// Orbit camera state.
-#[derive(Clone, Copy, Debug)]
-pub struct Camera {
-    /// Point the camera orbits around.
-    pub target: [f32; 3],
-    /// Distance from target.
-    pub distance: f32,
-    /// Horizontal rotation in radians.
-    pub yaw: f32,
-    /// Vertical rotation in radians, clamped to avoid flipping.
-    pub pitch: f32,
-    /// Field of view in radians.
-    pub fov_y: f32,
-    /// Near plane.
-    pub near: f32,
-    /// Far plane.
-    pub far: f32,
-}
-
-impl Camera {
-    /// Creates a camera framing the given bounding box.
-    pub fn framing_bounding_box(min: [f32; 3], max: [f32; 3]) -> Self {
-        let center = [
-            (min[0] + max[0]) * 0.5,
-            (min[1] + max[1]) * 0.5,
-            (min[2] + max[2]) * 0.5,
-        ];
-        let size = [
-            (max[0] - min[0]).abs(),
-            (max[1] - min[1]).abs(),
-            (max[2] - min[2]).abs(),
-        ];
-        let max_size = size[0].max(size[1]).max(size[2]).max(1.0);
-        let distance = max_size * 2.5;
-
-        Self {
-            target: center,
-            distance,
-            yaw: std::f32::consts::PI * 0.25,
-            pitch: std::f32::consts::PI * 0.15,
-            fov_y: std::f32::consts::PI * 0.25,
-            near: max_size * 0.001,
-            far: max_size * 1_000.0,
-        }
-    }
-
-    /// Eye position in world space.
-    pub fn eye(&self) -> [f32; 3] {
-        let cos_pitch = self.pitch.cos();
-        let dx = self.distance * cos_pitch * self.yaw.sin();
-        let dy = self.distance * self.pitch.sin();
-        let dz = self.distance * cos_pitch * self.yaw.cos();
-        [
-            self.target[0] + dx,
-            self.target[1] + dy,
-            self.target[2] + dz,
-        ]
-    }
-
-    /// Rotates around the target from a drag delta.
-    pub fn orbit(&mut self, delta_x: f32, delta_y: f32) {
-        let sensitivity = 0.005;
-        self.yaw += delta_x * sensitivity;
-        self.pitch += delta_y * sensitivity;
-        self.pitch = self
-            .pitch
-            .clamp(-std::f32::consts::PI * 0.49, std::f32::consts::PI * 0.49);
-    }
-
-    /// Zooms by changing the distance.
-    ///
-    /// Positive `delta` moves the camera farther away (zoom out), negative moves
-    /// it closer (zoom in).
-    pub fn zoom(&mut self, delta: f32) {
-        let factor = 1.0 + delta * 0.001;
-        let new_distance = self.distance * factor.clamp(0.8, 1.25);
-        self.distance = new_distance.clamp(self.distance * 0.01, self.distance * 10.0);
-    }
-
-    /// Pans the target in the camera plane.
-    pub fn pan(&mut self, delta_x: f32, delta_y: f32, viewport_height: f32) {
-        let eye = self.eye();
-        let forward = [
-            self.target[0] - eye[0],
-            self.target[1] - eye[1],
-            self.target[2] - eye[2],
-        ];
-        let forward = normalize_vec3(forward);
-        let right = normalize_vec3(cross_vec3(&forward, &[0.0, 1.0, 0.0]));
-        let up = normalize_vec3(cross_vec3(&right, &forward));
-
-        let scale = self.distance * (self.fov_y * 0.5).tan() * 2.0 / viewport_height.max(1.0);
-        for i in 0..3 {
-            self.target[i] += right[i] * delta_x * scale - up[i] * delta_y * scale;
-        }
-    }
-}
-
 /// Mouse interaction handle that keeps event closures alive.
 pub struct OrbitControls {
     _canvas: HtmlCanvasElement,
-    _camera: Rc<RefCell<Camera>>,
     _closures: Vec<JsValue>,
 }
 
 impl OrbitControls {
     /// Attaches orbit mouse listeners to the canvas.
     ///
-    /// `request_render` is called whenever the camera changes.
+    /// `request_render` is called whenever an input event is queued.
     pub fn attach<F: FnMut() + 'static>(renderer: &Renderer, request_render: F) -> Self {
-        let camera = Rc::clone(&renderer.camera);
         let canvas = renderer.canvas.clone();
-        let dragging = Rc::new(RefCell::new(false));
-        let panning = Rc::new(RefCell::new(false));
-        let last_x = Rc::new(RefCell::new(0.0_f32));
-        let last_y = Rc::new(RefCell::new(0.0_f32));
-
+        let pending_events = renderer.pending_events();
         let request_render = Rc::new(RefCell::new(request_render));
 
         let on_mouse_down = {
-            let dragging = Rc::clone(&dragging);
-            let panning = Rc::clone(&panning);
-            let last_x = Rc::clone(&last_x);
-            let last_y = Rc::clone(&last_y);
+            let pending_events = Rc::clone(&pending_events);
+            let request_render = Rc::clone(&request_render);
             Closure::<dyn FnMut(MouseEvent)>::new(move |ev: MouseEvent| {
-                *dragging.borrow_mut() = true;
-                *panning.borrow_mut() = ev.button() == 1 || (ev.button() == 0 && ev.shift_key());
-                *last_x.borrow_mut() = ev.client_x() as f32;
-                *last_y.borrow_mut() = ev.client_y() as f32;
+                let position = physical_point_from_mouse(&ev);
+                let button = mouse_button_from_web(ev.button());
+                let modifiers = modifiers_from_mouse(&ev);
+                pending_events.borrow_mut().push(Event::MousePress {
+                    button,
+                    position,
+                    modifiers,
+                    handled: false,
+                });
+                request_render.borrow_mut()();
             })
             .into_js_value()
         };
 
         let on_mouse_move = {
-            let camera = Rc::clone(&camera);
-            let dragging = Rc::clone(&dragging);
-            let panning = Rc::clone(&panning);
-            let last_x = Rc::clone(&last_x);
-            let last_y = Rc::clone(&last_y);
+            let pending_events = Rc::clone(&pending_events);
             let request_render = Rc::clone(&request_render);
-            let canvas_height = canvas.client_height() as f32;
             Closure::<dyn FnMut(MouseEvent)>::new(move |ev: MouseEvent| {
-                if !*dragging.borrow() {
-                    return;
-                }
-                let x = ev.client_x() as f32;
-                let y = ev.client_y() as f32;
-                let dx = x - *last_x.borrow();
-                let dy = y - *last_y.borrow();
-                {
-                    let mut camera = camera.borrow_mut();
-                    if *panning.borrow() {
-                        camera.pan(-dx, -dy, canvas_height);
-                    } else {
-                        camera.orbit(-dx, -dy);
-                    }
-                }
-                *last_x.borrow_mut() = x;
-                *last_y.borrow_mut() = y;
-                (request_render.borrow_mut())();
+                let position = physical_point_from_mouse(&ev);
+                let modifiers = modifiers_from_mouse(&ev);
+                let delta = (ev.movement_x() as f32, ev.movement_y() as f32);
+                pending_events.borrow_mut().push(Event::MouseMotion {
+                    button: None,
+                    delta,
+                    position,
+                    modifiers,
+                    handled: false,
+                });
+                request_render.borrow_mut()();
             })
             .into_js_value()
         };
 
         let on_mouse_up = {
-            let dragging = Rc::clone(&dragging);
-            Closure::<dyn FnMut(MouseEvent)>::new(move |_ev: MouseEvent| {
-                *dragging.borrow_mut() = false;
+            let pending_events = Rc::clone(&pending_events);
+            let request_render = Rc::clone(&request_render);
+            Closure::<dyn FnMut(MouseEvent)>::new(move |ev: MouseEvent| {
+                let position = physical_point_from_mouse(&ev);
+                let button = mouse_button_from_web(ev.button());
+                let modifiers = modifiers_from_mouse(&ev);
+                pending_events.borrow_mut().push(Event::MouseRelease {
+                    button,
+                    position,
+                    modifiers,
+                    handled: false,
+                });
+                request_render.borrow_mut()();
             })
             .into_js_value()
         };
 
         let on_wheel = {
-            let camera = Rc::clone(&camera);
+            let pending_events = Rc::clone(&pending_events);
             let request_render = Rc::clone(&request_render);
             Closure::<dyn FnMut(WheelEvent)>::new(move |ev: WheelEvent| {
                 ev.prevent_default();
-                camera.borrow_mut().zoom(ev.delta_y() as f32);
-                (request_render.borrow_mut())();
+                let position = physical_point_from_wheel(&ev);
+                let modifiers = modifiers_from_wheel(&ev);
+                pending_events.borrow_mut().push(Event::MouseWheel {
+                    delta: (0.0, ev.delta_y() as f32),
+                    position,
+                    modifiers,
+                    handled: false,
+                });
+                request_render.borrow_mut()();
             })
             .into_js_value()
         };
@@ -247,22 +157,63 @@ impl OrbitControls {
 
         Self {
             _canvas: canvas,
-            _camera: camera,
             _closures: vec![on_mouse_down, on_mouse_move, on_mouse_up, on_wheel],
         }
+    }
+}
+
+fn mouse_button_from_web(button: i16) -> MouseButton {
+    match button {
+        2 => MouseButton::Right,
+        1 => MouseButton::Middle,
+        _ => MouseButton::Left,
+    }
+}
+
+fn physical_point_from_mouse(ev: &MouseEvent) -> three_d_asset::PixelPoint {
+    three_d_asset::PixelPoint {
+        x: ev.client_x() as f32,
+        y: ev.client_y() as f32,
+    }
+}
+
+fn physical_point_from_wheel(ev: &WheelEvent) -> three_d_asset::PixelPoint {
+    three_d_asset::PixelPoint {
+        x: ev.client_x() as f32,
+        y: ev.client_y() as f32,
+    }
+}
+
+fn modifiers_from_mouse(ev: &MouseEvent) -> three_d::renderer::control::Modifiers {
+    three_d::renderer::control::Modifiers {
+        shift: ev.shift_key(),
+        ctrl: ev.ctrl_key(),
+        alt: ev.alt_key(),
+        command: ev.meta_key(),
+    }
+}
+
+fn modifiers_from_wheel(ev: &WheelEvent) -> three_d::renderer::control::Modifiers {
+    three_d::renderer::control::Modifiers {
+        shift: ev.shift_key(),
+        ctrl: ev.ctrl_key(),
+        alt: ev.alt_key(),
+        command: ev.meta_key(),
     }
 }
 
 /// `three-d` renderer for a parsed GLB document.
 pub struct Renderer {
     context: ThreeDContext,
-    camera: Rc<RefCell<Camera>>,
+    camera: ThreeDCamera,
+    control: OrbitControl,
     canvas: HtmlCanvasElement,
     scene_bounds: ([f32; 3], [f32; 3]),
     models: Vec<Box<dyn Object>>,
     total_vertices: usize,
     total_triangles: usize,
     light: DirectionalLight,
+    pending_events: Rc<RefCell<Vec<Event>>>,
 }
 
 impl Renderer {
@@ -288,10 +239,7 @@ impl Renderer {
             let context = ThreeDContext::from_gl_context(Arc::new(glow_context)).ok()?;
 
             let scene_bounds = compute_bounding_box(gltf);
-            let camera = Rc::new(RefCell::new(Camera::framing_bounding_box(
-                scene_bounds.0,
-                scene_bounds.1,
-            )));
+            let (camera, control) = build_framing_camera(scene_bounds.0, scene_bounds.1, &canvas);
 
             let mut models = Vec::new();
             let mut total_vertices = 0;
@@ -318,18 +266,20 @@ impl Renderer {
             Some(Self {
                 context,
                 camera,
+                control,
                 canvas,
                 scene_bounds,
                 models,
                 total_vertices,
                 total_triangles,
                 light,
+                pending_events: Rc::new(RefCell::new(Vec::new())),
             })
         }
     }
 
     /// Renders the scene once.
-    pub fn render(&self) {
+    pub fn render(&mut self) {
         let width = self.canvas.client_width() as u32;
         let height = self.canvas.client_height() as u32;
         if width == 0 || height == 0 {
@@ -337,18 +287,15 @@ impl Renderer {
         }
         self.resize();
 
-        let camera = self.camera.borrow();
+        let mut events = self
+            .pending_events
+            .borrow_mut()
+            .drain(..)
+            .collect::<Vec<_>>();
+        self.control.handle_events(&mut self.camera, &mut events);
+
         let viewport = Viewport::new_at_origo(width, height);
-        let eye = camera.eye();
-        let three_d_camera = ThreeDCamera::new_perspective(
-            viewport,
-            vec3(eye[0], eye[1], eye[2]),
-            vec3(camera.target[0], camera.target[1], camera.target[2]),
-            vec3(0.0_f32, 1.0, 0.0),
-            radians(camera.fov_y),
-            camera.near,
-            camera.far,
-        );
+        self.camera.set_viewport(viewport);
 
         let objects: Vec<&dyn Object> = self
             .models
@@ -357,12 +304,17 @@ impl Renderer {
             .collect();
         RenderTarget::screen(&self.context, width, height)
             .clear(ClearState::color_and_depth(0.05, 0.05, 0.05, 1.0, 1.0))
-            .render(&three_d_camera, objects, &[&self.light]);
+            .render(&self.camera, objects, &[&self.light]);
     }
 
-    /// Returns a shared handle to the camera.
-    pub fn camera(&self) -> Rc<RefCell<Camera>> {
-        Rc::clone(&self.camera)
+    /// Returns a reference to the `three-d` camera.
+    pub fn camera(&self) -> &ThreeDCamera {
+        &self.camera
+    }
+
+    /// Returns a clone of the shared pending-events queue.
+    fn pending_events(&self) -> Rc<RefCell<Vec<Event>>> {
+        Rc::clone(&self.pending_events)
     }
 
     /// Returns the axis-aligned world-space bounds computed when the document was loaded.
@@ -394,6 +346,57 @@ impl Renderer {
             self.canvas.set_height(height);
         }
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn build_framing_camera(
+    min: [f32; 3],
+    max: [f32; 3],
+    canvas: &HtmlCanvasElement,
+) -> (ThreeDCamera, OrbitControl) {
+    let center = [
+        (min[0] + max[0]) * 0.5,
+        (min[1] + max[1]) * 0.5,
+        (min[2] + max[2]) * 0.5,
+    ];
+    let size = [
+        (max[0] - min[0]).abs(),
+        (max[1] - min[1]).abs(),
+        (max[2] - min[2]).abs(),
+    ];
+    let max_size = size[0].max(size[1]).max(size[2]).max(1.0);
+    let distance = max_size * 2.5;
+    let yaw = std::f32::consts::PI * 0.25;
+    let pitch = std::f32::consts::PI * 0.15;
+    let cos_pitch = pitch.cos();
+    let eye = [
+        center[0] + distance * cos_pitch * yaw.sin(),
+        center[1] + distance * pitch.sin(),
+        center[2] + distance * cos_pitch * yaw.cos(),
+    ];
+    let fov_y = std::f32::consts::PI * 0.25;
+    let near = max_size * 0.001;
+    let far = max_size * 1_000.0;
+
+    let width = canvas.client_width().max(1) as u32;
+    let height = canvas.client_height().max(1) as u32;
+    let viewport = Viewport::new_at_origo(width, height);
+
+    let camera = ThreeDCamera::new_perspective(
+        viewport,
+        vec3(eye[0], eye[1], eye[2]),
+        vec3(center[0], center[1], center[2]),
+        vec3(0.0_f32, 1.0, 0.0),
+        radians(fov_y),
+        near,
+        far,
+    );
+    let control = OrbitControl::new(
+        vec3(center[0], center[1], center[2]),
+        max_size * 0.001,
+        max_size * 1_000.0,
+    );
+    (camera, control)
 }
 
 #[cfg(target_arch = "wasm32")]
