@@ -1,4 +1,5 @@
 use crate::components::ui::markdown::MarkdownView;
+use crate::components::ui::toolbar_button::ToolbarButton;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -262,25 +263,6 @@ pub fn MarkdownEditor(
                 }}
             </div>
         </div>
-    }
-}
-
-#[component]
-pub fn ToolbarButton(
-    label: &'static str,
-    #[prop(into)] on_click: Callback<()>,
-    children: Children,
-) -> impl IntoView {
-    view! {
-        <button
-            type="button"
-            class="btn btn-ghost btn-xs min-h-0 h-7 px-2 tooltip tooltip-top"
-            data-tip=label
-            aria-label=label
-            on:click=move |_| on_click.run(())
-        >
-            {children()}
-        </button>
     }
 }
 

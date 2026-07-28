@@ -4,7 +4,7 @@
 //! parses it with the `gltf` crate via [`crate::utils::glb`], and renders it
 //! with the `three-d` renderer in [`crate::utils::three_d_renderer`].
 
-use crate::components::ui::markdown_editor::ToolbarButton;
+use crate::components::ui::toolbar_button::ToolbarButton;
 use crate::utils::glb::Gltf;
 use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewerTheme};
 use gloo_net::http::Request;

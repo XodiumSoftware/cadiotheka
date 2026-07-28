@@ -34,6 +34,7 @@ pub mod components {
         pub mod project_icon_picker;
         pub mod toast;
         pub mod toggle;
+        pub mod toolbar_button;
     }
     pub use sections::footer::Footer;
     pub use sections::header::Header;
@@ -55,6 +56,7 @@ pub mod components {
     pub use ui::toast::Toast;
     pub use ui::toggle::ToggleSlider;
     pub use ui::toggle::ToggleSliderWithSlashLabel;
+    pub use ui::toolbar_button::ToolbarButton;
 }
 
 pub mod contexts {
