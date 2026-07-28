@@ -239,7 +239,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
     });
 
     view! {
-        <div class="relative w-full h-full min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 overflow-hidden">
+        <div class="relative w-full h-full overflow-hidden">
             <canvas
                 node_ref=canvas_ref
                 class="w-full h-full block cursor-grab active:cursor-grabbing"

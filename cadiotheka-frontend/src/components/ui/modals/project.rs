@@ -933,35 +933,38 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
             <hr class="border-base-content/10" />
 
             <div class="flex flex-col min-h-0 overflow-hidden flex-1 py-2">
-                <div class="flex items-center justify-between gap-3 pb-2 flex-shrink-0">
-                    <div class="tabs tabs-border">
-                        <button
-                            type="button"
-                            class=move || if active_tab.get() == ProjectDetailsTab::Viewer3d { "tab tab-active" } else { "tab" }
-                            on:click=move |_| set_active_tab.set(ProjectDetailsTab::Viewer3d)
-                        >"3D viewer"</button>
-                        <button
-                            type="button"
-                            class=move || if active_tab.get() == ProjectDetailsTab::Versions { "tab tab-active" } else { "tab" }
-                            on:click=move |_| set_active_tab.set(ProjectDetailsTab::Versions)
-                        >"Versions"</button>
-                    </div>
-                </div>
-                <div class="overflow-y-auto flex-1 min-h-0 p-2 pr-3 space-y-4">
+                <div class="overflow-y-auto flex-1 min-h-0 p-2 pr-3">
                     <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start h-full">
-                        <div class="min-w-0 space-y-4 h-full flex flex-col">
-                            {move || match active_tab.get() {
+                        <div class="min-w-0 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                            <div class="flex items-center justify-between gap-3 pb-2 flex-shrink-0">
+                                <div class="tabs tabs-border">
+                                    <button
+                                        type="button"
+                                        class=move || if active_tab.get() == ProjectDetailsTab::Viewer3d { "tab tab-active" } else { "tab" }
+                                        on:click=move |_| set_active_tab.set(ProjectDetailsTab::Viewer3d)
+                                    >"3D viewer"</button>
+                                    <button
+                                        type="button"
+                                        class=move || if active_tab.get() == ProjectDetailsTab::Versions { "tab tab-active" } else { "tab" }
+                                        on:click=move |_| set_active_tab.set(ProjectDetailsTab::Versions)
+                                    >"Versions"</button>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-h-0">
+                                {move || match active_tab.get() {
                                 ProjectDetailsTab::Viewer3d => view! {
-                                    <IfcViewer url=Signal::derive({
-                                        let project_id = project_id.clone();
-                                        move || {
-                                            ifc_url.get().map(|_| api_url(&format!("/projects/{project_id}/glb")))
-                                        }
-                                    }) />
+                                    <div class="h-full flex flex-col">
+                                        <IfcViewer url=Signal::derive({
+                                            let project_id = project_id.clone();
+                                            move || {
+                                                ifc_url.get().map(|_| api_url(&format!("/projects/{project_id}/glb")))
+                                            }
+                                        }) />
+                                    </div>
                                 }
                                     .into_any(),
                                 ProjectDetailsTab::Versions => view! {
-                                    <div class="min-h-0 h-full rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-4 flex flex-col">
+                                    <div class="min-h-0 h-full flex flex-col space-y-4">
                                         {move || {
                                             if is_editable.get() && edit_mode.get() {
                                                 view! {
@@ -1090,6 +1093,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     .into_any(),
                             }}
                         </div>
+                    </div>
 
                         <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
 
