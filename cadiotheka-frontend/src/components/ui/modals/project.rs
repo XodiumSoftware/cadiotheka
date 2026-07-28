@@ -959,7 +959,7 @@ fn ProjectModalContent(
             <hr class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "border-base-content/10".to_string() } />
 
             <div class=move || if viewer_fullscreen.get() { "flex flex-col min-h-0 overflow-hidden flex-1".to_string() } else { "flex flex-col min-h-0 overflow-hidden flex-1 py-2".to_string() }>
-                <div class=move || if viewer_fullscreen.get() { "overflow-y-auto flex-1 min-h-0".to_string() } else { "overflow-y-auto flex-1 min-h-0 p-2 pr-3".to_string() }>
+                <div class=move || if viewer_fullscreen.get() { "flex-1 min-h-0".to_string() } else { "overflow-y-auto flex-1 min-h-0 p-2 pr-3".to_string() }>
                     <div class=move || {
                         if viewer_fullscreen.get() {
                             "grid grid-cols-1 gap-0 items-start h-full".to_string()
@@ -992,8 +992,8 @@ fn ProjectModalContent(
                                         let debug_text = RwSignal::new(String::new());
 
                                         view! {
-                                            <div class="h-full flex flex-col space-y-3">
-                                                <div class="flex items-center justify-between gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
+                                            <div class=move || if viewer_fullscreen.get() { "h-full flex flex-col".to_string() } else { "h-full flex flex-col space-y-3".to_string() }>
+                                                <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-center justify-between gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0".to_string() }>
                                                     <div class="text-xs font-mono text-base-content/70 px-2">
                                                         {move || format!("{fps:.1} FPS", fps = fps.get())}
                                                     </div>
