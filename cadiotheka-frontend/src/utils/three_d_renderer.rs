@@ -568,7 +568,23 @@ fn build_framing_camera(
         (max[2] - min[2]).abs(),
     ];
     let max_size = size[0].max(size[1]).max(size[2]).max(1.0);
-    let distance = max_size * 2.5;
+
+    // Fit the scene's largest extent into the viewport using the smaller of the
+    // horizontal and vertical fields of view, with a small padding margin so the
+    // model does not touch the edges of the canvas.
+    let fov_y = std::f32::consts::PI * 0.25;
+    let (width, height) = canvas_size(canvas);
+    let aspect = if height == 0 {
+        1.0
+    } else {
+        width as f32 / height as f32
+    };
+    let half_fov_y = fov_y * 0.5;
+    let fov_x = 2.0 * (aspect * half_fov_y.tan()).atan();
+    let limiting_fov = fov_y.min(fov_x);
+    let padding = 1.2;
+    let distance = (max_size * 0.5 / (limiting_fov * 0.5).tan()) * padding;
+
     let yaw = std::f32::consts::PI * 0.25;
     let pitch = std::f32::consts::PI * 0.15;
     let cos_pitch = pitch.cos();
@@ -577,11 +593,9 @@ fn build_framing_camera(
         center[1] + distance * pitch.sin(),
         center[2] + distance * cos_pitch * yaw.cos(),
     ];
-    let fov_y = std::f32::consts::PI * 0.25;
     let near = max_size * 0.001;
     let far = max_size * 1_000.0;
 
-    let (width, height) = canvas_size(canvas);
     let viewport = Viewport::new_at_origo(width, height);
 
     let camera = ThreeDCamera::new_perspective(
