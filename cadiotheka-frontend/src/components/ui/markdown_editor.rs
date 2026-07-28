@@ -266,7 +266,7 @@ pub fn MarkdownEditor(
 }
 
 #[component]
-fn ToolbarButton(
+pub fn ToolbarButton(
     label: &'static str,
     #[prop(into)] on_click: Callback<()>,
     children: Children,

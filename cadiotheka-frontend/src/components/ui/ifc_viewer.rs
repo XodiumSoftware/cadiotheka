@@ -4,6 +4,7 @@
 //! parses it with the `gltf` crate via [`crate::utils::glb`], and renders it
 //! with the `three-d` renderer in [`crate::utils::three_d_renderer`].
 
+use crate::components::ui::markdown_editor::ToolbarButton;
 use crate::utils::glb::Gltf;
 use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewerTheme};
 use gloo_net::http::Request;
@@ -268,38 +269,39 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                     </div>
                 }.into_any(),
                 IfcViewerState::Rendering => view! {
-                    <div class="absolute top-2 left-2 z-10 flex flex-col gap-2 pointer-events-none">
+                    <div class="absolute top-2 left-2 right-2 z-10 flex items-center justify-between gap-2 pointer-events-none">
                         <div class="bg-base-100/80 backdrop-blur text-xs font-mono p-2 rounded border border-base-content/10 text-base-content/70 pointer-events-auto flex gap-2 items-center">
                             {move || format!("{fps:.1} FPS", fps = fps.get())}
-                            <button
-                                type="button"
-                                class="btn btn-xs btn-ghost p-1 min-h-0 h-auto"
-                                aria-label="Toggle renderer theme"
-                                on:click=move |_| {
+                        </div>
+                        <div class="bg-base-100/80 backdrop-blur rounded border border-base-content/10 pointer-events-auto flex gap-1 items-center p-1">
+                            <ToolbarButton
+                                label="Toggle theme"
+                                on_click=Callback::new(move |()| {
                                     set_theme.update(|t| {
                                         *t = match *t {
                                             ViewerTheme::Dark => ViewerTheme::Light,
                                             ViewerTheme::Light => ViewerTheme::Dark,
                                         };
                                     });
-                                }
+                                })
                             >
                                 {move || match theme.get() {
                                     ViewerTheme::Dark => "☀",
                                     ViewerTheme::Light => "🌙",
                                 }}
-                            </button>
+                            </ToolbarButton>
+                            <ToolbarButton
+                                label="Toggle debug overlay"
+                                on_click=Callback::new(move |()| {
+                                    set_show_debug.update(|v| *v = !*v);
+                                })
+                            >
+                                {move || if show_debug.get() { "🐞" } else { "🔍" }}
+                            </ToolbarButton>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        class="absolute bottom-2 right-2 z-10 btn btn-xs btn-ghost text-xs opacity-70 hover:opacity-100"
-                        on:click=move |_| set_show_debug.update(|v| *v = !*v)
-                    >
-                        {move || if show_debug.get() { "Hide debug" } else { "Debug" }}
-                    </button>
                     {move || show_debug.get().then(|| view! {
-                        <div class="absolute top-2 right-2 z-10 max-w-[20rem] bg-base-100/90 backdrop-blur text-xs font-mono p-3 rounded border border-base-content/10 text-base-content/80 whitespace-pre-wrap">
+                        <div class="absolute top-12 left-2 z-10 max-w-[20rem] bg-base-100/90 backdrop-blur text-xs font-mono p-3 rounded border border-base-content/10 text-base-content/80 whitespace-pre-wrap">
                             {move || debug_text.get()}
                         </div>
                     })}
