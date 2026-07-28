@@ -44,7 +44,7 @@ pub fn IfcViewer(
     #[prop(optional)] fps_signal: Option<RwSignal<f64>>,
     #[prop(optional)] show_debug_signal: Option<RwSignal<bool>>,
     #[prop(optional)] debug_text_signal: Option<RwSignal<String>>,
-    #[prop(into, optional)] on_pick: Option<PickCallback>,
+    #[prop(into)] on_pick: PickCallback,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -256,19 +256,14 @@ pub fn IfcViewer(
     view! {
         <div class="relative w-full h-full overflow-hidden"
             on:click=move |ev| {
-                let Some(on_pick) = on_pick.as_ref() else {
-                    return;
-                };
                 let Some(canvas) = canvas_ref.get() else {
                     return;
                 };
                 let rect = canvas.get_bounding_client_rect();
-                let x = f64::from(ev.client_x()) - rect.left();
-                let y = f64::from(ev.client_y()) - rect.top();
                 #[allow(clippy::cast_possible_truncation)]
-                let x = x as f32;
+                let x = (f64::from(ev.client_x()) - rect.left()) as f32;
                 #[allow(clippy::cast_possible_truncation)]
-                let y = y as f32;
+                let y = (f64::from(ev.client_y()) - rect.top()) as f32;
                 let pixel = three_d_asset::PixelPoint { x, y };
                 let renderer_ref = renderer_for_click.borrow();
                 let geometries_ref = geometries_for_click.borrow();
