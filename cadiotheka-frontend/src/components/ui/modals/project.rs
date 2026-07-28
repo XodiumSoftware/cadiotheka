@@ -969,9 +969,9 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                         type="button"
                                                         class=move || {
                                                             if is_uploading_ifc.get() {
-                                                                "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 cursor-not-allowed tooltip tooltip-top"
+                                                                "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 cursor-not-allowed tooltip tooltip-bottom"
                                                             } else {
-                                                                "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors cursor-pointer tooltip tooltip-top"
+                                                                "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors cursor-pointer tooltip tooltip-bottom"
                                                             }
                                                         }
                                                         disabled=move || is_uploading_ifc.get()
