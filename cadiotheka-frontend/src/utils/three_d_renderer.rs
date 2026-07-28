@@ -463,6 +463,15 @@ impl Renderer {
         best
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn pick(
+        &self,
+        _pixel: three_d_asset::PixelPoint,
+        _geometries: &[MeshGeometry],
+    ) -> Option<PickResult> {
+        None
+    }
+
     /// Handles shift-drag panning before delegating rotation/zoom to `OrbitControl`.
     fn handle_pan_events(&mut self, events: &mut [Event]) {
         let viewport_height = self.canvas.client_height().max(1) as f32;

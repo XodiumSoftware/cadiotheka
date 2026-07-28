@@ -55,6 +55,40 @@ fn visit_node_metadata(
     }
 }
 
+/// Extracts world-space geometry for every renderable primitive in the default
+/// scene, in the same order meshes are typically uploaded to the GPU.
+pub fn extract_scene_geometries(gltf: &Gltf) -> Vec<crate::utils::three_d_renderer::MeshGeometry> {
+    let mut geometries = Vec::new();
+    if let Some(scene) = gltf.default_scene() {
+        let identity = crate::utils::math::mat4_identity();
+        for node in scene.nodes() {
+            visit_node_geometry(gltf, &node, &identity, &mut geometries);
+        }
+    }
+    geometries
+}
+
+fn visit_node_geometry(
+    gltf: &Gltf,
+    node: &gltf::Node<'_>,
+    parent_transform: &[[f32; 4]; 4],
+    geometries: &mut Vec<crate::utils::three_d_renderer::MeshGeometry>,
+) {
+    let transform = crate::utils::math::mat4_mul(parent_transform, &node.transform().matrix());
+    if let Some(mesh) = node.mesh() {
+        for primitive in mesh.primitives() {
+            let Some(positions) = read_positions(gltf, &primitive, &transform) else {
+                continue;
+            };
+            let indices = read_indices(gltf, &primitive);
+            geometries.push(crate::utils::three_d_renderer::MeshGeometry { positions, indices });
+        }
+    }
+    for child in node.children() {
+        visit_node_geometry(gltf, &child, &transform, geometries);
+    }
+}
+
 use crate::utils::math::{
     mat4_identity, mat4_mul, mat4_mul_vec3, mat4_to_normal_matrix_3x3, normalize_vec3,
 };

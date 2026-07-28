@@ -4,8 +4,8 @@
 //! parses it with the `gltf` crate via [`crate::utils::glb`], and renders it
 //! with the `three-d` renderer in [`crate::utils::three_d_renderer`].
 
-use crate::utils::glb::Gltf;
-use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewerTheme};
+use crate::utils::glb::{Gltf, NodeMetadata, extract_scene_geometries};
+use crate::utils::three_d_renderer::{MeshGeometry, OrbitControls, Renderer, ViewerTheme};
 use gloo_net::http::Request;
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
@@ -30,6 +30,9 @@ pub enum IfcViewerState {
     Error,
 }
 
+/// Callback invoked when the user clicks a mesh in the IFC viewer.
+pub type PickCallback = Callback<Option<NodeMetadata>>;
+
 /// Renders an IFC model from the given URL into a canvas.
 ///
 /// Optional signals let a parent read viewer state and control debug
@@ -41,6 +44,7 @@ pub fn IfcViewer(
     #[prop(optional)] fps_signal: Option<RwSignal<f64>>,
     #[prop(optional)] show_debug_signal: Option<RwSignal<bool>>,
     #[prop(optional)] debug_text_signal: Option<RwSignal<String>>,
+    #[prop(into, optional)] on_pick: Option<PickCallback>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -50,6 +54,9 @@ pub fn IfcViewer(
 
     let renderer: Rc<RefCell<Option<Renderer>>> = Rc::new(RefCell::new(None));
     let controls: Rc<RefCell<Option<OrbitControls>>> = Rc::new(RefCell::new(None));
+    let geometries: Rc<RefCell<Option<Vec<MeshGeometry>>>> = Rc::new(RefCell::new(None));
+    let renderer_for_click = Rc::clone(&renderer);
+    let geometries_for_click = Rc::clone(&geometries);
 
     let dirty = Rc::new(RefCell::new(false));
     let pending_frame = Rc::new(RefCell::new(false));
@@ -205,6 +212,7 @@ pub fn IfcViewer(
         state.set(IfcViewerState::Loading);
         let renderer = Rc::clone(&renderer);
         let controls = Rc::clone(&controls);
+        let geometries = Rc::clone(&geometries);
         let state = state;
         let request_render = Rc::clone(&request_render);
         let update_debug = update_debug.clone();
@@ -219,6 +227,7 @@ pub fn IfcViewer(
                     };
 
                     if let Some(new_renderer) = Renderer::new(&canvas, &gltf) {
+                        *geometries.borrow_mut() = Some(extract_scene_geometries(&gltf));
                         *renderer.borrow_mut() = Some(new_renderer);
                         let render_callback = {
                             let request_render = Rc::clone(&request_render);
@@ -245,7 +254,30 @@ pub fn IfcViewer(
     });
 
     view! {
-        <div class="relative w-full h-full overflow-hidden">
+        <div class="relative w-full h-full overflow-hidden"
+            on:click=move |ev| {
+                let Some(on_pick) = on_pick.as_ref() else {
+                    return;
+                };
+                let Some(canvas) = canvas_ref.get() else {
+                    return;
+                };
+                let rect = canvas.get_bounding_client_rect();
+                let x = f64::from(ev.client_x()) - rect.left();
+                let y = f64::from(ev.client_y()) - rect.top();
+                #[allow(clippy::cast_possible_truncation)]
+                let x = x as f32;
+                #[allow(clippy::cast_possible_truncation)]
+                let y = y as f32;
+                let pixel = three_d_asset::PixelPoint { x, y };
+                let renderer_ref = renderer_for_click.borrow();
+                let geometries_ref = geometries_for_click.borrow();
+                let metadata = renderer_ref.as_ref().zip(geometries_ref.as_ref()).and_then(|(r, g)| {
+                    r.pick(pixel, g).and_then(|pick| pick.metadata)
+                });
+                on_pick.run(metadata);
+            }
+        >
             <canvas
                 node_ref=canvas_ref
                 class="w-full h-full block cursor-grab active:cursor-grabbing"
