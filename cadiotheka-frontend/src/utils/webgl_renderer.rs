@@ -9,9 +9,12 @@
 )]
 
 use crate::utils::glb::{
-    compute_bounding_box, look_at_matrix, mat4_identity, mat4_mul, mat4_to_array,
-    mat4_to_normal_matrix_3x3, material_params, perspective_matrix, read_indices, read_normals,
-    read_positions, triangle_count,
+    compute_bounding_box, material_params, read_indices, read_normals, read_positions,
+    triangle_count,
+};
+use crate::utils::math::{
+    look_at_matrix, mat4_identity, mat4_mul, mat4_to_array, mat4_to_normal_matrix_3x3,
+    perspective_matrix,
 };
 use gltf::Gltf;
 use leptos::web_sys::{

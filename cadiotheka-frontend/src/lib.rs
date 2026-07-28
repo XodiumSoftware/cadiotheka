@@ -108,6 +108,7 @@ pub mod utils {
     pub mod dom;
     pub mod format;
     pub mod glb;
+    pub mod math;
     pub mod url;
     pub mod webgl_renderer;
 
@@ -115,6 +116,7 @@ pub mod utils {
     pub use dom::*;
     pub use format::*;
     pub use glb::*;
+    pub use math::*;
     pub use url::*;
     pub use webgl_renderer::*;
 }
