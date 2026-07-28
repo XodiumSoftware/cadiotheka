@@ -14,7 +14,6 @@ use crate::data::{
     update_project_collaborators, update_project_description, update_project_platforms,
     update_project_tags, update_project_title, upload_project_ifc,
 };
-use crate::utils::three_d_renderer::ViewerTheme;
 use crate::utils::{api_url, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
@@ -958,7 +957,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     {
                                         let viewer_state = RwSignal::new(crate::components::ui::ifc_viewer::IfcViewerState::NoModel);
                                         let fps = RwSignal::new(0.0_f64);
-                                        let theme = RwSignal::new(ViewerTheme::Light);
                                         let show_debug = RwSignal::new(false);
                                         let debug_text = RwSignal::new(String::new());
 
@@ -969,23 +967,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                         {move || format!("{fps:.1} FPS", fps = fps.get())}
                                                     </div>
                                                     <div class="flex gap-1">
-                                                        <ToolbarButton
-                                                            label="Toggle theme"
-                                                            tooltip_position=TooltipPosition::Bottom
-                                                            on_click=Callback::new(move |()| {
-                                                                theme.update(|t| {
-                                                                    *t = match *t {
-                                                                        ViewerTheme::Dark => ViewerTheme::Light,
-                                                                        ViewerTheme::Light => ViewerTheme::Dark,
-                                                                    };
-                                                                });
-                                                            })
-                                                        >
-                                                            {move || match theme.get() {
-                                                                ViewerTheme::Dark => "☀",
-                                                                ViewerTheme::Light => "🌙",
-                                                            }}
-                                                        </ToolbarButton>
                                                         <ToolbarButton
                                                             label="Toggle debug overlay"
                                                             tooltip_position=TooltipPosition::Bottom
@@ -1007,7 +988,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                         })
                                                         state_signal=viewer_state
                                                         fps_signal=fps
-                                                        theme_signal=theme
                                                         show_debug_signal=show_debug
                                                         debug_text_signal=debug_text
                                                     />

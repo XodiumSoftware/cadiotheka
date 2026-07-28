@@ -32,21 +32,19 @@ pub enum IfcViewerState {
 
 /// Renders an IFC model from the given URL into a canvas.
 ///
-/// Optional signals let a parent read viewer state and control theme/debug
+/// Optional signals let a parent read viewer state and control debug
 /// visibility. When omitted, internal signals are used.
 #[component]
 pub fn IfcViewer(
     #[prop(into)] url: Signal<Option<String>>,
     #[prop(optional)] state_signal: Option<RwSignal<IfcViewerState>>,
     #[prop(optional)] fps_signal: Option<RwSignal<f64>>,
-    #[prop(optional)] theme_signal: Option<RwSignal<ViewerTheme>>,
     #[prop(optional)] show_debug_signal: Option<RwSignal<bool>>,
     #[prop(optional)] debug_text_signal: Option<RwSignal<String>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
     let fps = fps_signal.unwrap_or_else(|| RwSignal::new(0.0_f64));
-    let theme = theme_signal.unwrap_or_else(|| RwSignal::new(ViewerTheme::Light));
     let show_debug = show_debug_signal.unwrap_or_else(|| RwSignal::new(false));
     let debug_text = debug_text_signal.unwrap_or_else(|| RwSignal::new(String::new()));
 
@@ -188,9 +186,8 @@ pub fn IfcViewer(
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         move |_| {
-            let theme_value = theme.get();
             if let Some(renderer) = renderer.borrow_mut().as_mut() {
-                renderer.set_theme(theme_value);
+                renderer.set_theme(ViewerTheme::Light);
                 request_render.borrow_mut()();
             }
         }
