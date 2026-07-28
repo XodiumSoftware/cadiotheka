@@ -498,7 +498,13 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
         .ok_or_else(|| worker::Error::RustError("IFC object has no body".into()))?;
     let ifc_bytes = body.bytes().await?;
 
-    let glb_bytes = export_glb(&ifc_bytes, &GltfOptions::default());
+    let glb_bytes = export_glb(
+        &ifc_bytes,
+        &GltfOptions {
+            include_metadata: true,
+            ..GltfOptions::default()
+        },
+    );
     if glb_bytes.len() <= 12 {
         return error_response("IFC model has no renderable geometry", 422);
     }
