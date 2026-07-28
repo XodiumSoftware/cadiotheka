@@ -971,7 +971,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                             if is_uploading_ifc.get() {
                                                                 "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 cursor-not-allowed"
                                                             } else {
-                                                                "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors"
+                                                                "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors cursor-pointer"
                                                             }
                                                         }
                                                         disabled=move || is_uploading_ifc.get()
@@ -1362,7 +1362,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                 }).collect_view()}
                                                 <button
                                                     type="button"
-                                                    class="w-12 h-12 border border-dashed border-base-content/30 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors tooltip tooltip-top"
+                                                    class="w-12 h-12 border border-dashed border-base-content/30 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors tooltip tooltip-top cursor-pointer"
                                                     aria-label="Add collaborator"
                                                     data-tip="Add collaborator"
                                                     on:click=move |_| set_add_open.set(true)
