@@ -53,6 +53,10 @@ use wasm_bindgen::prelude::Closure;
 pub struct OrbitControls {
     _canvas: HtmlCanvasElement,
     _closures: Vec<JsValue>,
+    /// Tracks the currently pressed mouse button so motion events carry the
+    /// correct button for `three-d::OrbitControl`.
+    #[allow(dead_code)]
+    last_button: Rc<RefCell<Option<MouseButton>>>,
 }
 
 impl OrbitControls {
@@ -63,14 +67,17 @@ impl OrbitControls {
         let canvas = renderer.canvas.clone();
         let pending_events = renderer.pending_events();
         let request_render = Rc::new(RefCell::new(request_render));
+        let last_button: Rc<RefCell<Option<MouseButton>>> = Rc::new(RefCell::new(None));
 
         let on_mouse_down = {
             let pending_events = Rc::clone(&pending_events);
             let request_render = Rc::clone(&request_render);
+            let last_button = Rc::clone(&last_button);
             Closure::<dyn FnMut(MouseEvent)>::new(move |ev: MouseEvent| {
                 let position = physical_point_from_mouse(&ev);
                 let button = mouse_button_from_web(ev.button());
                 let modifiers = modifiers_from_mouse(&ev);
+                *last_button.borrow_mut() = Some(button);
                 pending_events.borrow_mut().push(Event::MousePress {
                     button,
                     position,
@@ -85,12 +92,14 @@ impl OrbitControls {
         let on_mouse_move = {
             let pending_events = Rc::clone(&pending_events);
             let request_render = Rc::clone(&request_render);
+            let last_button = Rc::clone(&last_button);
             Closure::<dyn FnMut(MouseEvent)>::new(move |ev: MouseEvent| {
                 let position = physical_point_from_mouse(&ev);
                 let modifiers = modifiers_from_mouse(&ev);
                 let delta = (ev.movement_x() as f32, ev.movement_y() as f32);
+                let button = *last_button.borrow();
                 pending_events.borrow_mut().push(Event::MouseMotion {
-                    button: None,
+                    button,
                     delta,
                     position,
                     modifiers,
@@ -104,10 +113,12 @@ impl OrbitControls {
         let on_mouse_up = {
             let pending_events = Rc::clone(&pending_events);
             let request_render = Rc::clone(&request_render);
+            let last_button = Rc::clone(&last_button);
             Closure::<dyn FnMut(MouseEvent)>::new(move |ev: MouseEvent| {
                 let position = physical_point_from_mouse(&ev);
                 let button = mouse_button_from_web(ev.button());
                 let modifiers = modifiers_from_mouse(&ev);
+                *last_button.borrow_mut() = None;
                 pending_events.borrow_mut().push(Event::MouseRelease {
                     button,
                     position,
@@ -153,6 +164,7 @@ impl OrbitControls {
         Self {
             _canvas: canvas,
             _closures: vec![on_mouse_down, on_mouse_move, on_mouse_up, on_wheel],
+            last_button,
         }
     }
 }
