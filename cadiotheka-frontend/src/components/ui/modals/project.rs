@@ -42,7 +42,7 @@ pub fn ProjectModal() -> impl IntoView {
 
     let container_class = Signal::derive(move || {
         if viewer_fullscreen.get() {
-            "h-[90vh] w-[90vh] max-h-[90vh] max-w-[90vh] flex flex-col".to_string()
+            "h-[90vh] w-[90vw] max-h-[90vh] max-w-[90vw] flex flex-col".to_string()
         } else {
             "w-full max-w-6xl h-full max-h-[90vh] flex flex-col".to_string()
         }
