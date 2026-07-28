@@ -4,7 +4,7 @@
 //! parses it with the `gltf` crate via [`crate::utils::glb`], and renders it
 //! with the `three-d` renderer in [`crate::utils::three_d_renderer`].
 
-use crate::components::ui::toolbar_button::ToolbarButton;
+use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
 use crate::utils::glb::Gltf;
 use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewerTheme};
 use gloo_net::http::Request;
@@ -276,6 +276,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                         <div class="bg-base-100/80 backdrop-blur rounded border border-base-content/10 pointer-events-auto flex gap-1 items-center p-1">
                             <ToolbarButton
                                 label="Toggle theme"
+                                tooltip_position=TooltipPosition::Bottom
                                 on_click=Callback::new(move |()| {
                                     set_theme.update(|t| {
                                         *t = match *t {
@@ -292,6 +293,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                             </ToolbarButton>
                             <ToolbarButton
                                 label="Toggle debug overlay"
+                                tooltip_position=TooltipPosition::Bottom
                                 on_click=Callback::new(move |()| {
                                     set_show_debug.update(|v| *v = !*v);
                                 })
