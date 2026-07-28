@@ -282,7 +282,7 @@ pub fn IfcViewer(
     };
 
     view! {
-        <div class="relative w-full h-full overflow-hidden"
+        <div class="relative w-full h-full overflow-hidden border border-base-content/10"
             on:click=move |ev| {
                 let Some(canvas) = canvas_ref.get() else {
                     return;
