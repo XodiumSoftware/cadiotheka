@@ -98,6 +98,15 @@ impl OrbitControls {
                 let modifiers = modifiers_from_mouse(&ev);
                 let delta = (ev.movement_x() as f32, ev.movement_y() as f32);
                 let button = *last_button.borrow();
+                // Holding the middle mouse button behaves like shift: pan instead of orbit.
+                let modifiers = if button == Some(MouseButton::Middle) {
+                    three_d::renderer::control::Modifiers {
+                        shift: true,
+                        ..modifiers
+                    }
+                } else {
+                    modifiers
+                };
                 pending_events.borrow_mut().push(Event::MouseMotion {
                     button,
                     delta,
