@@ -4,11 +4,7 @@
 //! same scene framing and double-sided material behaviour, but delegates buffer
 //! management, shaders, draw calls and orbit interaction to `three-d`.
 
-#![allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss
-)]
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
 #[cfg(target_arch = "wasm32")]
 use crate::utils::glb::{
@@ -132,7 +128,7 @@ impl OrbitControls {
                 let position = physical_point_from_wheel(&ev);
                 let modifiers = modifiers_from_wheel(&ev);
                 pending_events.borrow_mut().push(Event::MouseWheel {
-                    delta: (0.0, ev.delta_y() as f32),
+                    delta: (0.0, f32::from(ev.delta_y() as i16)),
                     position,
                     modifiers,
                     handled: false,
@@ -280,8 +276,7 @@ impl Renderer {
 
     /// Renders the scene once.
     pub fn render(&mut self) {
-        let width = self.canvas.client_width() as u32;
-        let height = self.canvas.client_height() as u32;
+        let (width, height) = canvas_size(&self.canvas);
         if width == 0 || height == 0 {
             return;
         }
@@ -339,13 +334,18 @@ impl Renderer {
 
     /// Resizes the canvas backing store to match its display size.
     pub fn resize(&self) {
-        let width = self.canvas.client_width() as u32;
-        let height = self.canvas.client_height() as u32;
+        let (width, height) = canvas_size(&self.canvas);
         if self.canvas.width() != width || self.canvas.height() != height {
             self.canvas.set_width(width);
             self.canvas.set_height(height);
         }
     }
+}
+
+fn canvas_size(canvas: &HtmlCanvasElement) -> (u32, u32) {
+    let width = u32::try_from(canvas.client_width()).unwrap_or(0);
+    let height = u32::try_from(canvas.client_height()).unwrap_or(0);
+    (width.max(1), height.max(1))
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -378,8 +378,7 @@ fn build_framing_camera(
     let near = max_size * 0.001;
     let far = max_size * 1_000.0;
 
-    let width = canvas.client_width().max(1) as u32;
-    let height = canvas.client_height().max(1) as u32;
+    let (width, height) = canvas_size(canvas);
     let viewport = Viewport::new_at_origo(width, height);
 
     let camera = ThreeDCamera::new_perspective(
