@@ -199,7 +199,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                         return;
                     };
 
-                    if let Some(new_renderer) = Renderer::new(canvas, &gltf) {
+                    if let Some(new_renderer) = Renderer::new(&canvas, &gltf) {
                         let render_callback = {
                             let request_render = Rc::clone(&request_render);
                             let update_debug = update_debug.clone();

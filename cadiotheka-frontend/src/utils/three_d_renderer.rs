@@ -214,7 +214,7 @@ pub struct Renderer {
 
 impl Renderer {
     /// Creates a renderer for the given canvas and glTF document.
-    pub fn new(canvas: HtmlCanvasElement, gltf: &Gltf) -> Option<Self> {
+    pub fn new(canvas: &HtmlCanvasElement, gltf: &Gltf) -> Option<Self> {
         let gl_context = canvas
             .get_context("webgl2")
             .ok()??
@@ -225,7 +225,7 @@ impl Renderer {
         {
             let _ = gl_context;
             let _ = gltf;
-            return None;
+            None
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -235,7 +235,7 @@ impl Renderer {
             let context = ThreeDContext::from_gl_context(Arc::new(glow_context)).ok()?;
 
             let scene_bounds = compute_bounding_box(gltf);
-            let (camera, control) = build_framing_camera(scene_bounds.0, scene_bounds.1, &canvas);
+            let (camera, control) = build_framing_camera(scene_bounds.0, scene_bounds.1, canvas);
 
             let mut models = Vec::new();
             let mut total_vertices = 0;
@@ -263,7 +263,7 @@ impl Renderer {
                 context,
                 camera,
                 control,
-                canvas,
+                canvas: canvas.clone(),
                 scene_bounds,
                 models,
                 total_vertices,
