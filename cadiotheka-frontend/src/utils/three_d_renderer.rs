@@ -256,6 +256,7 @@ pub struct Renderer {
     canvas: HtmlCanvasElement,
     scene_bounds: ([f32; 3], [f32; 3]),
     models: Vec<Box<dyn Object>>,
+    #[cfg(target_arch = "wasm32")]
     mesh_metadata: Vec<Option<NodeMetadata>>,
     total_vertices: usize,
     total_triangles: usize,
