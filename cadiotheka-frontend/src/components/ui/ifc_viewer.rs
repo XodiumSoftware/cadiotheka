@@ -296,7 +296,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                                     set_show_debug.update(|v| *v = !*v);
                                 })
                             >
-                                {move || if show_debug.get() { "🐞" } else { "🔍" }}
+                                {move || if show_debug.get() { "🐞" } else { "🐛" }}
                             </ToolbarButton>
                         </div>
                     </div>
