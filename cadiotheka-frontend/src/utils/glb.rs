@@ -226,6 +226,42 @@ mod tests {
         }
     }
 
+    /// Builds a non-indexed triangle primitive, returning the GLB bytes.
+    fn build_non_indexed_glb(positions: &[[f32; 3]], translation: [f32; 3]) -> Vec<u8> {
+        let mut position_bytes = Vec::new();
+        for p in positions {
+            for component in p {
+                position_bytes.extend_from_slice(&component.to_le_bytes());
+            }
+        }
+
+        let mut min = [f32::INFINITY; 3];
+        let mut max = [f32::NEG_INFINITY; 3];
+        for p in positions {
+            for i in 0..3 {
+                min[i] = min[i].min(p[i]);
+                max[i] = max[i].max(p[i]);
+            }
+        }
+
+        let json = serde_json::json!({
+            "asset": { "version": "2.0" },
+            "scene": 0,
+            "scenes": [{ "nodes": [0] }],
+            "nodes": [{ "mesh": 0, "translation": translation }],
+            "meshes": [{ "primitives": [{ "attributes": { "POSITION": 0 }, "mode": 4 }] }],
+            "buffers": [{ "byteLength": position_bytes.len() }],
+            "bufferViews": [
+                { "buffer": 0, "byteOffset": 0, "byteLength": position_bytes.len(), "target": 34962 }
+            ],
+            "accessors": [
+                { "bufferView": 0, "componentType": 5126, "count": positions.len(), "type": "VEC3", "max": max, "min": min }
+            ]
+        });
+
+        build_glb_chunks(&json, &position_bytes)
+    }
+
     /// Builds a minimal binary GLB v2 asset containing a single triangle.
     fn build_test_glb(positions: &[[f32; 3]], indices: &[u16], translation: [f32; 3]) -> Vec<u8> {
         let mut position_bytes = Vec::new();
@@ -282,7 +318,137 @@ mod tests {
             ]
         });
 
-        let mut json_bytes = serde_json::to_vec(&json).unwrap();
+        build_glb_chunks(&json, &bin_chunk)
+    }
+
+    /// Builds a single-triangle indexed GLB with per-vertex normals.
+    fn build_indexed_glb_with_normals(
+        positions: &[[f32; 3]],
+        indices: &[u16],
+        normals: &[[f32; 3]],
+        translation: [f32; 3],
+    ) -> Vec<u8> {
+        let mut position_bytes = Vec::new();
+        for p in positions {
+            for component in p {
+                position_bytes.extend_from_slice(&component.to_le_bytes());
+            }
+        }
+
+        let mut normal_bytes = Vec::new();
+        for n in normals {
+            for component in n {
+                normal_bytes.extend_from_slice(&component.to_le_bytes());
+            }
+        }
+
+        let mut index_bytes = Vec::new();
+        for i in indices {
+            index_bytes.extend_from_slice(&i.to_le_bytes());
+        }
+        while !index_bytes.len().is_multiple_of(4) {
+            index_bytes.push(0);
+        }
+
+        let normal_offset = position_bytes.len();
+        let index_offset = normal_offset + normal_bytes.len();
+        let mut bin_chunk = position_bytes.clone();
+        bin_chunk.extend_from_slice(&normal_bytes);
+        bin_chunk.extend_from_slice(&index_bytes);
+
+        let mut min = [f32::INFINITY; 3];
+        let mut max = [f32::NEG_INFINITY; 3];
+        for p in positions {
+            for i in 0..3 {
+                min[i] = min[i].min(p[i]);
+                max[i] = max[i].max(p[i]);
+            }
+        }
+
+        let json = serde_json::json!({
+            "asset": { "version": "2.0" },
+            "scene": 0,
+            "scenes": [{ "nodes": [0] }],
+            "nodes": [{ "mesh": 0, "translation": translation }],
+            "meshes": [{ "primitives": [{ "attributes": { "POSITION": 0, "NORMAL": 1 }, "indices": 2, "mode": 4 }] }],
+            "buffers": [{ "byteLength": bin_chunk.len() }],
+            "bufferViews": [
+                { "buffer": 0, "byteOffset": 0, "byteLength": position_bytes.len(), "target": 34962 },
+                { "buffer": 0, "byteOffset": normal_offset, "byteLength": normal_bytes.len(), "target": 34962 },
+                { "buffer": 0, "byteOffset": index_offset, "byteLength": index_bytes.len(), "target": 34963 }
+            ],
+            "accessors": [
+                { "bufferView": 0, "componentType": 5126, "count": positions.len(), "type": "VEC3", "max": max, "min": min },
+                { "bufferView": 1, "componentType": 5126, "count": normals.len(), "type": "VEC3" },
+                { "bufferView": 2, "componentType": 5123, "count": indices.len(), "type": "SCALAR" }
+            ]
+        });
+
+        build_glb_chunks(&json, &bin_chunk)
+    }
+
+    /// Builds a two-node GLB where the root node has `root_translation` and the
+    /// child mesh node has `child_translation`.
+    fn build_hierarchy_glb(
+        child_positions: &[[f32; 3]],
+        indices: &[u16],
+        root_translation: [f32; 3],
+        child_translation: [f32; 3],
+    ) -> Vec<u8> {
+        let mut position_bytes = Vec::new();
+        for p in child_positions {
+            for component in p {
+                position_bytes.extend_from_slice(&component.to_le_bytes());
+            }
+        }
+
+        let mut index_bytes = Vec::new();
+        for i in indices {
+            index_bytes.extend_from_slice(&i.to_le_bytes());
+        }
+        while !index_bytes.len().is_multiple_of(4) {
+            index_bytes.push(0);
+        }
+
+        let index_offset = position_bytes.len();
+        let mut bin_chunk = position_bytes.clone();
+        bin_chunk.extend_from_slice(&index_bytes);
+
+        let mut min = [f32::INFINITY; 3];
+        let mut max = [f32::NEG_INFINITY; 3];
+        for p in child_positions {
+            for i in 0..3 {
+                min[i] = min[i].min(p[i]);
+                max[i] = max[i].max(p[i]);
+            }
+        }
+
+        let json = serde_json::json!({
+            "asset": { "version": "2.0" },
+            "scene": 0,
+            "scenes": [{ "nodes": [0] }],
+            "nodes": [
+                { "children": [1], "translation": root_translation },
+                { "mesh": 0, "translation": child_translation }
+            ],
+            "meshes": [{ "primitives": [{ "attributes": { "POSITION": 0 }, "indices": 1, "mode": 4 }] }],
+            "buffers": [{ "byteLength": bin_chunk.len() }],
+            "bufferViews": [
+                { "buffer": 0, "byteOffset": 0, "byteLength": position_bytes.len(), "target": 34962 },
+                { "buffer": 0, "byteOffset": index_offset, "byteLength": index_bytes.len(), "target": 34963 }
+            ],
+            "accessors": [
+                { "bufferView": 0, "componentType": 5126, "count": child_positions.len(), "type": "VEC3", "max": max, "min": min },
+                { "bufferView": 1, "componentType": 5123, "count": indices.len(), "type": "SCALAR" }
+            ]
+        });
+
+        build_glb_chunks(&json, &bin_chunk)
+    }
+
+    /// Serializes JSON and BIN data into a GLB v2 container.
+    fn build_glb_chunks(json: &serde_json::Value, bin_chunk: &[u8]) -> Vec<u8> {
+        let mut json_bytes = serde_json::to_vec(json).unwrap();
         while !json_bytes.len().is_multiple_of(4) {
             json_bytes.push(b' ');
         }
@@ -297,7 +463,7 @@ mod tests {
         glb.extend_from_slice(&json_bytes);
         glb.extend_from_slice(&(u32::try_from(bin_chunk.len()).unwrap()).to_le_bytes());
         glb.extend_from_slice(&0x004E_4942_u32.to_le_bytes()); // "BIN\0"
-        glb.extend_from_slice(&bin_chunk);
+        glb.extend_from_slice(bin_chunk);
         glb
     }
 
@@ -377,6 +543,49 @@ mod tests {
         assert!(!is_triangle_mode(gltf::mesh::Mode::Points));
         assert_eq!(triangle_count(gltf::mesh::Mode::Triangles, 6, 4), 2);
         assert_eq!(triangle_count(gltf::mesh::Mode::TriangleStrip, 5, 0), 3);
+    }
+
+    #[test]
+    fn non_indexed_primitive_returns_no_indices() {
+        let positions = [[0.0_f32, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let glb = build_non_indexed_glb(&positions, [0.0; 3]);
+
+        let gltf = Gltf::from_slice(&glb).unwrap();
+        let primitive = first_primitive(&gltf);
+
+        let read_pos = read_positions(&gltf, &primitive, &mat4_identity()).unwrap();
+        assert_eq!(read_pos, positions.to_vec());
+        assert!(read_indices(&gltf, &primitive).is_none());
+    }
+
+    #[test]
+    fn supplied_normals_are_transformed() {
+        let positions = [[0.0_f32, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let normals = [[0.0_f32, 0.0, 1.0]; 3];
+        let glb = build_indexed_glb_with_normals(&positions, &[0, 1, 2], &normals, [0.0; 3]);
+
+        let gltf = Gltf::from_slice(&glb).unwrap();
+        let primitive = first_primitive(&gltf);
+        let read = read_normals(&gltf, &primitive, &mat4_identity());
+
+        assert_eq!(read, normals.to_vec());
+    }
+
+    #[test]
+    fn hierarchy_accumulates_parent_transforms() {
+        let child_positions = [[0.0_f32, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let glb = build_hierarchy_glb(
+            &child_positions,
+            &[0, 1, 2],
+            [5.0, 0.0, 0.0],
+            [0.0, 7.0, 0.0],
+        );
+
+        let gltf = Gltf::from_slice(&glb).unwrap();
+        let (min, max) = compute_bounding_box(&gltf);
+
+        assert_f32_array_eq(&min, &[5.0, 7.0, 0.0]);
+        assert_f32_array_eq(&max, &[6.0, 8.0, 0.0]);
     }
 
     fn first_primitive(gltf: &Gltf) -> gltf::Primitive<'_> {
