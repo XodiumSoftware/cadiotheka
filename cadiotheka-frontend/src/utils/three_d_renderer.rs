@@ -39,7 +39,6 @@ use three_d::renderer::geometry::{CpuMesh, Indices, Positions};
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::material::ColorMaterial;
 use three_d::renderer::{Camera as ThreeDCamera, DirectionalLight, Object};
-use three_d_asset::Srgba as SharedSrgba;
 use three_d_asset::Viewport;
 #[cfg(target_arch = "wasm32")]
 use three_d_asset::material::LightingModel;
@@ -390,13 +389,7 @@ impl Renderer {
 
     /// Sets the viewer theme and re-renders on the next frame.
     pub fn set_theme(&mut self, theme: ViewerTheme) {
-        if self.theme != theme {
-            self.theme = theme;
-            self.light.color = match theme {
-                ViewerTheme::Dark => SharedSrgba::WHITE,
-                ViewerTheme::Light => SharedSrgba::BLACK,
-            };
-        }
+        self.theme = theme;
     }
 
     /// Returns the current viewer theme.
