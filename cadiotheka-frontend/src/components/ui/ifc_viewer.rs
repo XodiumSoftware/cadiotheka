@@ -57,6 +57,9 @@ pub fn IfcViewer(
     let geometries: Rc<RefCell<Option<Vec<MeshGeometry>>>> = Rc::new(RefCell::new(None));
     let renderer_for_click = Rc::clone(&renderer);
     let geometries_for_click = Rc::clone(&geometries);
+    let renderer_for_hover = Rc::clone(&renderer);
+    let geometries_for_hover = Rc::clone(&geometries);
+    let hovered = RwSignal::new(false);
 
     let dirty = Rc::new(RefCell::new(false));
     let pending_frame = Rc::new(RefCell::new(false));
@@ -253,6 +256,26 @@ pub fn IfcViewer(
         });
     });
 
+    let update_hover = move |ev: leptos::web_sys::PointerEvent| {
+        let Some(canvas) = canvas_ref.get() else {
+            return;
+        };
+        let rect = canvas.get_bounding_client_rect();
+        #[allow(clippy::cast_possible_truncation)]
+        let x = (f64::from(ev.client_x()) - rect.left()) as f32;
+        #[allow(clippy::cast_possible_truncation)]
+        let y = (f64::from(ev.client_y()) - rect.top()) as f32;
+        let pixel = three_d_asset::PixelPoint { x, y };
+        let renderer_ref = renderer_for_hover.borrow();
+        let geometries_ref = geometries_for_hover.borrow();
+        let is_hovering = renderer_ref
+            .as_ref()
+            .zip(geometries_ref.as_ref())
+            .and_then(|(r, g)| r.pick(pixel, g))
+            .is_some();
+        hovered.set(is_hovering);
+    };
+
     view! {
         <div class="relative w-full h-full overflow-hidden"
             on:click=move |ev| {
@@ -272,10 +295,18 @@ pub fn IfcViewer(
                 });
                 on_pick.run(metadata);
             }
+            on:pointermove=update_hover
+            on:pointerleave=move |_| hovered.set(false)
         >
             <canvas
                 node_ref=canvas_ref
-                class="w-full h-full block cursor-grab active:cursor-grabbing"
+                class=move || {
+                    if hovered.get() {
+                        "w-full h-full block cursor-pointer active:cursor-grabbing"
+                    } else {
+                        "w-full h-full block cursor-grab active:cursor-grabbing"
+                    }
+                }
                 aria-label="IFC 3D viewer"
             />
             {move || match state.get() {
