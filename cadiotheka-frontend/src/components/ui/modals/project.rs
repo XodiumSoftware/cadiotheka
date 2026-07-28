@@ -982,6 +982,13 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                         >
                                                             {move || if show_debug.get() { "🐞" } else { "🐛" }}
                                                         </ToolbarButton>
+                                                        <ToolbarButton
+                                                            label="Toggle fullscreen"
+                                                            tooltip_position=TooltipPosition::Bottom
+                                                            on_click=Callback::new(move |()| {})
+                                                        >
+                                                            "⛶"
+                                                        </ToolbarButton>
                                                     </div>
                                                 </div>
                                                 <div class="flex-1 min-h-0 relative">
