@@ -245,6 +245,7 @@ pub fn IfcViewer(
                         let new_controls = OrbitControls::attach(&renderer, render_callback);
                         *controls.borrow_mut() = Some(new_controls);
                         state.set(IfcViewerState::Rendering);
+                        renderer.borrow_mut().as_mut().map(Renderer::reset_view);
                         request_render.borrow_mut()();
                         update_debug();
                     } else {
