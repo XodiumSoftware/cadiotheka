@@ -43,7 +43,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
     let (show_debug, set_show_debug) = signal(false);
     let (debug_text, set_debug_text) = signal(String::new());
     let (fps, set_fps) = signal(0.0_f64);
-    let (theme, set_theme) = signal(ViewerTheme::Dark);
+    let (theme, set_theme) = signal(ViewerTheme::Light);
     let dirty = Rc::new(RefCell::new(false));
     let pending_frame = Rc::new(RefCell::new(false));
     let animation_handle: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
