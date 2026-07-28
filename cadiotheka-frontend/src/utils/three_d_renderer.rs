@@ -128,7 +128,7 @@ impl OrbitControls {
                 let position = physical_point_from_wheel(&ev);
                 let modifiers = modifiers_from_wheel(&ev);
                 pending_events.borrow_mut().push(Event::MouseWheel {
-                    delta: (0.0, f32::from(ev.delta_y() as i16)),
+                    delta: (0.0, -f32::from(ev.delta_y() as i16)),
                     position,
                     modifiers,
                     handled: false,
