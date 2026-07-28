@@ -993,7 +993,7 @@ fn ProjectModalContent(
 
                                         view! {
                                             <div class=move || if viewer_fullscreen.get() { "h-full flex flex-col".to_string() } else { "h-full flex flex-col space-y-3".to_string() }>
-                                                <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-center justify-between gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0".to_string() }>
+                                                <div class="flex items-center justify-between gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
                                                     <div class="text-xs font-mono text-base-content/70 px-2">
                                                         {move || format!("{fps:.1} FPS", fps = fps.get())}
                                                     </div>
