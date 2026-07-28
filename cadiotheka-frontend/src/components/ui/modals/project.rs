@@ -32,18 +32,39 @@ enum ProjectDetailsTab {
 pub fn ProjectModal() -> impl IntoView {
     let modal = ProjectModalContext::use_context();
     let on_close = move |()| modal.close();
+    let (viewer_fullscreen, set_viewer_fullscreen) = signal(false);
+
+    Effect::new(move |_| {
+        if !modal.open.get() {
+            set_viewer_fullscreen.set(false);
+        }
+    });
+
+    let container_class = Signal::derive(move || {
+        if viewer_fullscreen.get() {
+            "h-[90vh] w-[90vh] max-h-[90vh] max-w-[90vh] flex flex-col".to_string()
+        } else {
+            "w-full max-w-6xl h-full max-h-[90vh] flex flex-col".to_string()
+        }
+    });
+
+    let toggle_fullscreen = Callback::new(move |()| set_viewer_fullscreen.update(|v| *v = !*v));
 
     view! {
         <SearchModal
             open=modal.open
             on_close=on_close
-            container_class="w-full max-w-6xl h-full max-h-[90vh] flex flex-col"
+            container_class=container_class
         >
             {move || {
                 let maybe_card = modal.card.get();
                 match maybe_card {
                     Some(card) => view! {
-                        <ProjectModalContent card=card />
+                        <ProjectModalContent
+                            card=card
+                            viewer_fullscreen=viewer_fullscreen
+                            toggle_fullscreen=toggle_fullscreen
+                        />
                     }
                         .into_any(),
                     None => view! {
@@ -233,7 +254,11 @@ fn EditableChipSection<T: Clone + PartialEq + Send + Sync + 'static>(
 }
 
 #[component]
-fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoView {
+fn ProjectModalContent(
+    #[prop(into)] card: ProjectCardProperties,
+    #[prop(into)] viewer_fullscreen: Signal<bool>,
+    #[prop(into)] toggle_fullscreen: Callback<()>,
+) -> impl IntoView {
     let current_user = CurrentUserContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
     let modal = ProjectModalContext::use_context();
@@ -250,7 +275,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     });
 
     let (active_tab, set_active_tab) = signal(ProjectDetailsTab::Viewer3d);
-    let (viewer_fullscreen, set_viewer_fullscreen) = signal(false);
 
     let (editing_title, set_editing_title) = signal(false);
     let (draft_title, set_draft_title) = signal(card.title.clone());
@@ -986,9 +1010,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                         <ToolbarButton
                                                             label="Toggle fullscreen"
                                                             tooltip_position=TooltipPosition::Bottom
-                                                            on_click=Callback::new(move |()| {
-                                                                set_viewer_fullscreen.update(|v| *v = !*v);
-                                                            })
+                                                            on_click=toggle_fullscreen
                                                         >
                                                             {move || if viewer_fullscreen.get() { "🗗" } else { "⛶" }}
                                                         </ToolbarButton>

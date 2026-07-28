@@ -30,8 +30,8 @@ pub fn SearchModal(
     #[prop(into)] open: Signal<bool>,
     #[prop(into)] on_close: Callback<()>,
     #[prop(into, default = Callback::new(|_| {}))] on_inner_click: Callback<()>,
-    #[prop(into, default = "w-full max-w-lg max-h-[80vh] flex flex-col".to_string())]
-    container_class: String,
+    #[prop(into, default = Signal::derive(|| "w-full max-w-lg max-h-[80vh] flex flex-col".to_string()))]
+    container_class: Signal<String>,
     children: Children,
 ) -> impl IntoView {
     let children_view = children();
