@@ -5,7 +5,7 @@
 //! with the `three-d` renderer in [`crate::utils::three_d_renderer`].
 
 use crate::utils::glb::Gltf;
-use crate::utils::three_d_renderer::{OrbitControls, Renderer};
+use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewerTheme};
 use gloo_net::http::Request;
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
@@ -42,7 +42,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
     let (show_debug, set_show_debug) = signal(false);
     let (debug_text, set_debug_text) = signal(String::new());
     let (fps, set_fps) = signal(0.0_f64);
-
+    let (theme, set_theme) = signal(ViewerTheme::Dark);
     let dirty = Rc::new(RefCell::new(false));
     let pending_frame = Rc::new(RefCell::new(false));
     let animation_handle: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
@@ -174,6 +174,18 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
         }
     });
 
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            let theme_value = theme.get();
+            if let Some(renderer) = renderer.borrow_mut().as_mut() {
+                renderer.set_theme(theme_value);
+                request_render.borrow_mut()();
+            }
+        }
+    });
+
     Effect::new(move |_| {
         let Some(canvas) = canvas_ref.get() else {
             return;
@@ -257,8 +269,26 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                 }.into_any(),
                 IfcViewerState::Rendering => view! {
                     <div class="absolute top-2 left-2 z-10 flex flex-col gap-2 pointer-events-none">
-                        <div class="bg-base-100/80 backdrop-blur text-xs font-mono p-2 rounded border border-base-content/10 text-base-content/70">
+                        <div class="bg-base-100/80 backdrop-blur text-xs font-mono p-2 rounded border border-base-content/10 text-base-content/70 pointer-events-auto flex gap-2 items-center">
                             {move || format!("{fps:.1} FPS", fps = fps.get())}
+                            <button
+                                type="button"
+                                class="btn btn-xs btn-ghost p-1 min-h-0 h-auto"
+                                aria-label="Toggle renderer theme"
+                                on:click=move |_| {
+                                    set_theme.update(|t| {
+                                        *t = match *t {
+                                            ViewerTheme::Dark => ViewerTheme::Light,
+                                            ViewerTheme::Light => ViewerTheme::Dark,
+                                        };
+                                    });
+                                }
+                            >
+                                {move || match theme.get() {
+                                    ViewerTheme::Dark => "☀",
+                                    ViewerTheme::Light => "🌙",
+                                }}
+                            </button>
                         </div>
                     </div>
                     <button

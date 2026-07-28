@@ -39,13 +39,12 @@ use three_d::renderer::geometry::{CpuMesh, Indices, Positions};
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::material::ColorMaterial;
 use three_d::renderer::{Camera as ThreeDCamera, DirectionalLight, Object};
+use three_d_asset::Srgba as SharedSrgba;
 use three_d_asset::Viewport;
 #[cfg(target_arch = "wasm32")]
 use three_d_asset::material::LightingModel;
 #[cfg(target_arch = "wasm32")]
-use three_d_asset::{PbrMaterial, Srgba};
-#[cfg(target_arch = "wasm32")]
-use three_d_asset::{radians, vec3};
+use three_d_asset::{PbrMaterial, Srgba, radians, vec3};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::Closure;
@@ -210,6 +209,17 @@ pub struct Renderer {
     total_triangles: usize,
     light: DirectionalLight,
     pending_events: Rc<RefCell<Vec<Event>>>,
+    theme: ViewerTheme,
+}
+
+/// Rendering theme for the viewer.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ViewerTheme {
+    /// Dark background, bright light.
+    #[default]
+    Dark,
+    /// Light background, darker light.
+    Light,
 }
 
 impl Renderer {
@@ -270,6 +280,7 @@ impl Renderer {
                 total_triangles,
                 light,
                 pending_events: Rc::new(RefCell::new(Vec::new())),
+                theme: ViewerTheme::default(),
             })
         }
     }
@@ -297,9 +308,36 @@ impl Renderer {
             .iter()
             .map(std::convert::AsRef::as_ref)
             .collect();
+        let (background, light_intensity) = match self.theme {
+            ViewerTheme::Dark => ((0.05, 0.05, 0.05, 1.0, 1.0), 1.0),
+            ViewerTheme::Light => ((0.95, 0.95, 0.95, 1.0, 1.0), 1.3),
+        };
+        self.light.intensity = light_intensity;
         RenderTarget::screen(&self.context, width, height)
-            .clear(ClearState::color_and_depth(0.05, 0.05, 0.05, 1.0, 1.0))
+            .clear(ClearState::color_and_depth(
+                background.0,
+                background.1,
+                background.2,
+                background.3,
+                background.4,
+            ))
             .render(&self.camera, objects, &[&self.light]);
+    }
+
+    /// Sets the viewer theme and re-renders on the next frame.
+    pub fn set_theme(&mut self, theme: ViewerTheme) {
+        if self.theme != theme {
+            self.theme = theme;
+            self.light.color = match theme {
+                ViewerTheme::Dark => SharedSrgba::WHITE,
+                ViewerTheme::Light => SharedSrgba::BLACK,
+            };
+        }
+    }
+
+    /// Returns the current viewer theme.
+    pub fn theme(&self) -> ViewerTheme {
+        self.theme
     }
 
     /// Returns a reference to the `three-d` camera.
