@@ -250,7 +250,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     });
 
     let (active_tab, set_active_tab) = signal(ProjectDetailsTab::Viewer3d);
-    let (sidebar_hidden, set_sidebar_hidden) = signal(false);
+    let (viewer_fullscreen, set_viewer_fullscreen) = signal(false);
 
     let (editing_title, set_editing_title) = signal(false);
     let (draft_title, set_draft_title) = signal(card.title.clone());
@@ -761,7 +761,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                 node_ref=ifc_file_input
                 on:change=on_ifc_input_change
             />
-            <div class="flex items-start gap-4 relative p-2 pr-3">
+            <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-start gap-4 relative p-2 pr-3".to_string() }>
                 <div class="min-w-0 flex-1 flex flex-col gap-1">
                     {move || {
                         if editing_title.get() {
@@ -932,19 +932,19 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                 </div>
             </div>
 
-            <hr class="border-base-content/10" />
+            <hr class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "border-base-content/10".to_string() } />
 
-            <div class="flex flex-col min-h-0 overflow-hidden flex-1 py-2">
-                <div class="overflow-y-auto flex-1 min-h-0 p-2 pr-3">
+            <div class=move || if viewer_fullscreen.get() { "flex flex-col min-h-0 overflow-hidden flex-1".to_string() } else { "flex flex-col min-h-0 overflow-hidden flex-1 py-2".to_string() }>
+                <div class=move || if viewer_fullscreen.get() { "overflow-y-auto flex-1 min-h-0".to_string() } else { "overflow-y-auto flex-1 min-h-0 p-2 pr-3".to_string() }>
                     <div class=move || {
-                        if sidebar_hidden.get() {
-                            "grid grid-cols-1 gap-6 items-start h-full".to_string()
+                        if viewer_fullscreen.get() {
+                            "grid grid-cols-1 gap-0 items-start h-full".to_string()
                         } else {
                             "grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start h-full".to_string()
                         }
                     }>
-                        <div class="min-w-0 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                            <div class="flex items-center justify-between gap-3 pb-2 flex-shrink-0">
+                        <div class=move || if viewer_fullscreen.get() { "min-w-0 h-full flex flex-col".to_string() } else { "min-w-0 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4".to_string() }>
+                            <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-center justify-between gap-3 pb-2 flex-shrink-0".to_string() }>
                                 <div class="tabs tabs-border">
                                     <button
                                         type="button"
@@ -993,10 +993,10 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                             label="Toggle fullscreen"
                                                             tooltip_position=TooltipPosition::Bottom
                                                             on_click=Callback::new(move |()| {
-                                                                set_sidebar_hidden.update(|v| *v = !*v);
+                                                                set_viewer_fullscreen.update(|v| *v = !*v);
                                                             })
                                                         >
-                                                            {move || if sidebar_hidden.get() { "🗗" } else { "⛶" }}
+                                                            {move || if viewer_fullscreen.get() { "🗗" } else { "⛶" }}
                                                         </ToolbarButton>
                                                     </div>
                                                 </div>
@@ -1166,9 +1166,9 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                         </div>
                     </div>
 
-                        <div class=move || if sidebar_hidden.get() { "hidden".to_string() } else { "hidden xl:block self-stretch w-px bg-base-content/10".to_string() } aria-hidden="true"></div>
+                        <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "hidden xl:block self-stretch w-px bg-base-content/10".to_string() } aria-hidden="true"></div>
 
-                        <div class=move || if sidebar_hidden.get() { "hidden".to_string() } else { "space-y-4".to_string() }>
+                        <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "space-y-4".to_string() }>
                             {move || {
                                 if editing_description.get() {
                                     view! {
