@@ -1024,9 +1024,9 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                                             type="button"
                                                                             class=move || {
                                                                                 if is_deleting_ifc.get() {
-                                                                                    "btn btn-ghost btn-xs rounded-none text-base-content/50"
+                                                                                    "btn btn-ghost btn-xs rounded-none text-base-content/50 tooltip tooltip-top"
                                                                                 } else {
-                                                                                    "btn btn-ghost btn-xs rounded-none text-error hover:text-error"
+                                                                                    "btn btn-ghost btn-xs rounded-none text-error hover:text-error tooltip tooltip-top"
                                                                                 }
                                                                             }
                                                                             data-tip="Delete version"
