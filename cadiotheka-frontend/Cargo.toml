@@ -23,7 +23,7 @@ web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document"
 console_error_panic_hook = "0.1.7"
 urlencoding = "2.1"
 send_wrapper = "0.6"
-gltf = { version = "1.4", default-features = false, features = ["utils", "KHR_materials_unlit"] }
+gltf = { version = "1.4", default-features = false, features = ["utils", "KHR_materials_unlit", "names", "extras"] }
 three-d = { version = "0.19", default-features = false }
 three-d-asset = "0.10"
 glow = "0.17"

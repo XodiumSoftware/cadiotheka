@@ -7,6 +7,54 @@ pub use gltf::Gltf;
 pub use gltf::mesh::util::ReadIndices;
 pub use gltf::scene::Transform;
 
+/// Metadata attached to a glTF node by `ifc-lite-export`.
+#[derive(Debug, Clone)]
+pub struct NodeMetadata {
+    /// IFC express identifier from `extras.expressId`.
+    pub express_id: Option<u32>,
+    /// Human-readable name of the glTF node.
+    pub name: String,
+}
+
+impl NodeMetadata {
+    /// Extracts metadata from a glTF node.
+    pub fn from_node(node: &gltf::Node<'_>) -> Self {
+        let express_id = node.extras().as_ref().and_then(|raw| {
+            let value: serde_json::Value = serde_json::from_str(raw.get()).ok()?;
+            value
+                .get("expressId")?
+                .as_u64()
+                .and_then(|id| id.try_into().ok())
+        });
+        Self {
+            express_id,
+            name: node.name().unwrap_or("").to_string(),
+        }
+    }
+}
+
+/// Builds a map from node index to its IFC metadata.
+pub fn build_node_metadata_map(gltf: &Gltf) -> std::collections::HashMap<usize, NodeMetadata> {
+    let mut map = std::collections::HashMap::new();
+    if let Some(scene) = gltf.default_scene() {
+        for node in scene.nodes() {
+            visit_node_metadata(&node, &mut map);
+        }
+    }
+    map
+}
+
+fn visit_node_metadata(
+    node: &gltf::Node<'_>,
+    map: &mut std::collections::HashMap<usize, NodeMetadata>,
+) {
+    let index = node.index();
+    map.insert(index, NodeMetadata::from_node(node));
+    for child in node.children() {
+        visit_node_metadata(&child, map);
+    }
+}
+
 use crate::utils::math::{
     mat4_identity, mat4_mul, mat4_mul_vec3, mat4_to_normal_matrix_3x3, normalize_vec3,
 };
