@@ -130,3 +130,88 @@ pub fn cross_vec3(a: &[f32; 3], b: &[f32; 3]) -> [f32; 3] {
 pub fn dot_vec3(a: &[f32; 3], b: &[f32; 3]) -> f32 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::float_cmp)]
+
+    use super::*;
+
+    #[test]
+    fn mat4_identity_leaves_vectors_unchanged() {
+        let m = mat4_identity();
+        assert_eq!(mat4_mul_vec3(&m, [1.0, 2.0, 3.0]), [1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn mat4_mul_with_identity_is_noop() {
+        let m = mat4_identity();
+        assert_eq!(mat4_mul(&m, &m), m);
+    }
+
+    #[test]
+    fn mat4_mul_vec3_applies_translation() {
+        let mut m = mat4_identity();
+        m[3] = [1.0, 2.0, 3.0, 1.0];
+        assert_eq!(mat4_mul_vec3(&m, [0.0, 0.0, 0.0]), [1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn mat4_to_array_roundtrips_identity() {
+        let m = mat4_identity();
+        let flat = mat4_to_array(&m);
+        // Column-major layout: each contiguous group of four values is a column.
+        let expected: [f32; 16] = [
+            1.0, 0.0, 0.0, 0.0, // column 0
+            0.0, 1.0, 0.0, 0.0, // column 1
+            0.0, 0.0, 1.0, 0.0, // column 2
+            0.0, 0.0, 0.0, 1.0, // column 3
+        ];
+        assert_eq!(flat, expected);
+    }
+
+    #[test]
+    fn perspective_matrix_has_expected_shape() {
+        let p = perspective_matrix(std::f32::consts::FRAC_PI_4, 1.0, 0.1, 100.0);
+        assert_eq!(p.len(), 16);
+        let expected_f = 1.0 / ((std::f32::consts::FRAC_PI_4 / 2.0).tan());
+        assert!((p[0] - expected_f).abs() < f32::EPSILON);
+        // The perspective matrix stores -1 in the column-major index that maps
+        // the view-space Z component to clip-space W.
+        assert!((p[11] - (-1.0)).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn look_at_oriented_along_negative_z() {
+        let m = look_at_matrix([0.0, 0.0, 1.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]);
+        // Forward axis in camera space should point along -Z.
+        let forward = [-m[0][2], -m[1][2], -m[2][2]];
+        let expected = normalize_vec3([0.0, 0.0, -1.0]);
+        assert!((forward[0] - expected[0]).abs() < 1e-6);
+        assert!((forward[1] - expected[1]).abs() < 1e-6);
+        assert!((forward[2] - expected[2]).abs() < 1e-6);
+    }
+
+    #[test]
+    fn normalize_vec3_of_unit_vector_is_unchanged() {
+        assert_eq!(normalize_vec3([1.0, 0.0, 0.0]), [1.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn normalize_vec3_of_zero_vector_is_zero() {
+        assert_eq!(normalize_vec3([0.0, 0.0, 0.0]), [0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn cross_vec3_of_basis_vectors() {
+        assert_eq!(
+            cross_vec3(&[1.0, 0.0, 0.0], &[0.0, 1.0, 0.0]),
+            [0.0, 0.0, 1.0]
+        );
+    }
+
+    #[test]
+    fn dot_vec3_of_perpendicular_vectors_is_zero() {
+        assert!(dot_vec3(&[1.0, 0.0, 0.0], &[0.0, 1.0, 0.0]).abs() < f32::EPSILON);
+    }
+}

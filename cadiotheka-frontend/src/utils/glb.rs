@@ -209,3 +209,186 @@ pub fn triangle_count(mode: gltf::mesh::Mode, index_count: usize, vertex_count: 
         _ => vertex_count / 3,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::float_cmp)]
+
+    use super::*;
+    use crate::utils::math::mat4_identity;
+
+    fn assert_f32_array_eq<const N: usize>(actual: &[f32; N], expected: &[f32; N]) {
+        for (a, b) in actual.iter().zip(expected.iter()) {
+            assert!(
+                (a - b).abs() < f32::EPSILON,
+                "expected {expected:?}, got {actual:?}"
+            );
+        }
+    }
+
+    /// Builds a minimal binary GLB v2 asset containing a single triangle.
+    fn build_test_glb(positions: &[[f32; 3]], indices: &[u16], translation: [f32; 3]) -> Vec<u8> {
+        let mut position_bytes = Vec::new();
+        for p in positions {
+            for component in p {
+                position_bytes.extend_from_slice(&component.to_le_bytes());
+            }
+        }
+
+        let mut index_bytes = Vec::new();
+        for i in indices {
+            index_bytes.extend_from_slice(&i.to_le_bytes());
+        }
+        while !index_bytes.len().is_multiple_of(4) {
+            index_bytes.push(0);
+        }
+
+        let index_offset = position_bytes.len();
+        let mut bin_chunk = position_bytes.clone();
+        bin_chunk.extend_from_slice(&index_bytes);
+
+        let mut min = [f32::INFINITY; 3];
+        let mut max = [f32::NEG_INFINITY; 3];
+        for p in positions {
+            for i in 0..3 {
+                min[i] = min[i].min(p[i]);
+                max[i] = max[i].max(p[i]);
+            }
+        }
+
+        let json = serde_json::json!({
+            "asset": { "version": "2.0" },
+            "scene": 0,
+            "scenes": [{ "nodes": [0] }],
+            "nodes": [{ "mesh": 0, "translation": translation }],
+            "meshes": [{ "primitives": [{ "attributes": { "POSITION": 0 }, "indices": 1, "material": 0, "mode": 4 }] }],
+            "materials": [{
+                "pbrMetallicRoughness": {
+                    "baseColorFactor": [1.0, 0.0, 0.0, 1.0],
+                    "metallicFactor": 0.1,
+                    "roughnessFactor": 0.2
+                },
+                "doubleSided": true,
+                "extensions": { "KHR_materials_unlit": {} }
+            }],
+            "buffers": [{ "byteLength": bin_chunk.len() }],
+            "bufferViews": [
+                { "buffer": 0, "byteOffset": 0, "byteLength": position_bytes.len(), "target": 34962 },
+                { "buffer": 0, "byteOffset": index_offset, "byteLength": index_bytes.len(), "target": 34963 }
+            ],
+            "accessors": [
+                { "bufferView": 0, "componentType": 5126, "count": positions.len(), "type": "VEC3", "max": max, "min": min },
+                { "bufferView": 1, "componentType": 5123, "count": indices.len(), "type": "SCALAR" }
+            ]
+        });
+
+        let mut json_bytes = serde_json::to_vec(&json).unwrap();
+        while !json_bytes.len().is_multiple_of(4) {
+            json_bytes.push(b' ');
+        }
+
+        let total_len = 12 + 8 + json_bytes.len() + 8 + bin_chunk.len();
+        let mut glb = Vec::with_capacity(total_len);
+        glb.extend_from_slice(&0x4654_6C67_u32.to_le_bytes()); // "glTF"
+        glb.extend_from_slice(&2_u32.to_le_bytes());
+        glb.extend_from_slice(&(u32::try_from(total_len).unwrap()).to_le_bytes());
+        glb.extend_from_slice(&(u32::try_from(json_bytes.len()).unwrap()).to_le_bytes());
+        glb.extend_from_slice(&0x4E4F_534A_u32.to_le_bytes()); // "JSON"
+        glb.extend_from_slice(&json_bytes);
+        glb.extend_from_slice(&(u32::try_from(bin_chunk.len()).unwrap()).to_le_bytes());
+        glb.extend_from_slice(&0x004E_4942_u32.to_le_bytes()); // "BIN\0"
+        glb.extend_from_slice(&bin_chunk);
+        glb
+    }
+
+    #[test]
+    fn minimal_glb_roundtrips_positions_and_indices() {
+        let positions = [[0.0_f32, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let indices = [0_u16, 1, 2];
+        let glb = build_test_glb(&positions, &indices, [0.0, 0.0, 0.0]);
+
+        let gltf = Gltf::from_slice(&glb).expect("valid test GLB");
+        let primitive = first_primitive(&gltf);
+
+        let transform = mat4_identity();
+        let read_pos = read_positions(&gltf, &primitive, &transform).expect("positions readable");
+        assert_eq!(read_pos, positions.to_vec());
+
+        let read_idx = read_indices(&gltf, &primitive).expect("indices readable");
+        assert_eq!(read_idx, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn node_translation_applies_to_positions() {
+        let positions = [[0.0_f32, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let glb = build_test_glb(&positions, &[0, 1, 2], [10.0, 20.0, 30.0]);
+
+        let gltf = Gltf::from_slice(&glb).unwrap();
+        let primitive = first_primitive(&gltf);
+        let node = gltf.default_scene().unwrap().nodes().next().unwrap();
+        let transform = mat4_mul(&mat4_identity(), &node.transform().matrix());
+
+        let read_pos = read_positions(&gltf, &primitive, &transform).unwrap();
+        assert_f32_array_eq(&read_pos[0], &[10.0, 20.0, 30.0]);
+        assert_f32_array_eq(&read_pos[1], &[11.0, 20.0, 30.0]);
+        assert_f32_array_eq(&read_pos[2], &[10.0, 21.0, 30.0]);
+    }
+
+    #[test]
+    fn missing_normals_fall_back_to_up() {
+        let positions = [[0.0_f32, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let glb = build_test_glb(&positions, &[0, 1, 2], [0.0; 3]);
+
+        let gltf = Gltf::from_slice(&glb).unwrap();
+        let primitive = first_primitive(&gltf);
+        let normals = read_normals(&gltf, &primitive, &mat4_identity());
+
+        assert_eq!(normals, vec![[0.0, 1.0, 0.0]; 3]);
+    }
+
+    #[test]
+    fn material_params_read_pbr_and_unlit_extension() {
+        let glb = build_test_glb(&[[0.0_f32; 3]; 3], &[0, 1, 2], [0.0; 3]);
+        let gltf = Gltf::from_slice(&glb).unwrap();
+        let material = first_primitive(&gltf).material();
+
+        let params = material_params(&material);
+        assert_f32_array_eq(&params.base_color_factor, &[1.0, 0.0, 0.0, 1.0]);
+        assert!((params.metallic_factor - 0.1).abs() < f32::EPSILON);
+        assert!((params.roughness_factor - 0.2).abs() < f32::EPSILON);
+        assert!(params.double_sided);
+        assert!(params.unlit);
+    }
+
+    #[test]
+    fn compute_bounding_box_matches_positions() {
+        let positions = [[0.0_f32, 0.0, 0.0], [2.0, 0.0, 0.0], [0.0, 3.0, 0.0]];
+        let glb = build_test_glb(&positions, &[0, 1, 2], [0.0; 3]);
+        let gltf = Gltf::from_slice(&glb).unwrap();
+
+        let (min, max) = compute_bounding_box(&gltf);
+        assert_f32_array_eq(&min, &[0.0, 0.0, 0.0]);
+        assert_f32_array_eq(&max, &[2.0, 3.0, 0.0]);
+    }
+
+    #[test]
+    fn triangle_mode_helpers_consistent() {
+        assert!(is_triangle_mode(gltf::mesh::Mode::Triangles));
+        assert!(!is_triangle_mode(gltf::mesh::Mode::Points));
+        assert_eq!(triangle_count(gltf::mesh::Mode::Triangles, 6, 4), 2);
+        assert_eq!(triangle_count(gltf::mesh::Mode::TriangleStrip, 5, 0), 3);
+    }
+
+    fn first_primitive(gltf: &Gltf) -> gltf::Primitive<'_> {
+        gltf.default_scene()
+            .expect("default scene")
+            .nodes()
+            .next()
+            .expect("root node")
+            .mesh()
+            .expect("mesh")
+            .primitives()
+            .next()
+            .expect("primitive")
+    }
+}
