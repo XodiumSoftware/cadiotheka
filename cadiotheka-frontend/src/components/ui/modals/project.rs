@@ -961,7 +961,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                 }
                                     .into_any(),
                                 ProjectDetailsTab::Versions => view! {
-                                    <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-4">
+                                    <div class="min-h-0 h-full rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-4 flex flex-col">
                                         {move || {
                                             if is_editable.get() && edit_mode.get() {
                                                 view! {
@@ -1003,7 +1003,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                         {move || {
                                             if let Some(url) = ifc_url.get() {
                                                 view! {
-                                                    <div class="rounded-none border border-base-content/10 bg-base-200/30 p-4 space-y-3">
+                                                    <div class="rounded-none border border-base-content/10 bg-base-200/30 p-4 space-y-3 flex-shrink-0">
                                                         <div class="flex items-center gap-3">
                                                             <div class="w-10 h-10 rounded-none bg-primary/10 text-primary flex items-center justify-center">
                                                                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
