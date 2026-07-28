@@ -588,6 +588,25 @@ mod tests {
         assert_f32_array_eq(&max, &[6.0, 8.0, 0.0]);
     }
 
+    #[test]
+    fn gltf_parses_minimal_glb_and_extraction_matches_input() {
+        let positions = [[0.0_f32, 0.0, 0.0], [2.0, 0.0, 0.0], [0.0, 3.0, 0.0]];
+        let glb = build_test_glb(&positions, &[0_u16, 1, 2], [1.0, 0.0, 0.0]);
+        let gltf = gltf::Gltf::from_slice(&glb).expect("valid test GLB");
+
+        let (min, max) = compute_bounding_box(&gltf);
+        assert_f32_array_eq(&min, &[1.0, 0.0, 0.0]);
+        assert_f32_array_eq(&max, &[3.0, 3.0, 0.0]);
+
+        let primitive = first_primitive(&gltf);
+        let params = material_params(&primitive.material());
+        assert_f32_array_eq(&params.base_color_factor, &[1.0, 0.0, 0.0, 1.0]);
+        assert!((params.metallic_factor - 0.1).abs() < f32::EPSILON);
+        assert!((params.roughness_factor - 0.2).abs() < f32::EPSILON);
+        assert!(params.double_sided);
+        assert!(params.unlit);
+    }
+
     fn first_primitive(gltf: &Gltf) -> gltf::Primitive<'_> {
         gltf.default_scene()
             .expect("default scene")

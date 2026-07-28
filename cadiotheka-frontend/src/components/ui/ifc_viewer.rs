@@ -2,10 +2,10 @@
 //!
 //! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`),
 //! parses it with the `gltf` crate via [`crate::utils::glb`], and renders it
-//! with the custom WebGL renderer in [`crate::utils::webgl_renderer`].
+//! with the `three-d` renderer in [`crate::utils::three_d_renderer`].
 
 use crate::utils::glb::Gltf;
-use crate::utils::webgl_renderer::{OrbitControls, Renderer};
+use crate::utils::three_d_renderer::{OrbitControls, Renderer};
 use gloo_net::http::Request;
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;

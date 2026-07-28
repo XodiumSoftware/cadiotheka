@@ -109,16 +109,16 @@ pub mod utils {
     pub mod format;
     pub mod glb;
     pub mod math;
+    pub mod three_d_renderer;
     pub mod url;
-    pub mod webgl_renderer;
 
     pub use color::*;
     pub use dom::*;
     pub use format::*;
     pub use glb::*;
     pub use math::*;
+    pub use three_d_renderer::*;
     pub use url::*;
-    pub use webgl_renderer::*;
 }
 
 pub use app::*;
