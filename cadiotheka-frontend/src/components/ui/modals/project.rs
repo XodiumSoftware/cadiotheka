@@ -962,39 +962,44 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                     .into_any(),
                                 ProjectDetailsTab::Versions => view! {
                                     <div class="min-h-[20rem] rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-4">
-                                        <div class="flex items-center justify-end">
-                                            {move || {
-                                                if is_editable.get() && edit_mode.get() {
-                                                    view! {
-                                                        <button
-                                                            type="button"
-                                                            class="btn btn-ghost btn-sm rounded-none w-8 h-8 p-0 min-h-0 flex items-center justify-center text-primary tooltip tooltip-left"
-                                                            data-tip="Add version"
-                                                            disabled=move || is_uploading_ifc.get()
-                                                            on:click=move |_| trigger_ifc_upload()
-                                                        >
-                                                            {move || if is_uploading_ifc.get() {
-                                                                view! {
-                                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                                                }
-                                                                    .into_any()
+                                        {move || {
+                                            if is_editable.get() && edit_mode.get() {
+                                                view! {
+                                                    <button
+                                                        type="button"
+                                                        class=move || {
+                                                            if is_uploading_ifc.get() {
+                                                                "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 cursor-not-allowed"
                                                             } else {
-                                                                view! {
-                                                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                                        <line x1="12" y1="5" x2="12" y2="19" />
-                                                                        <line x1="5" y1="12" x2="19" y2="12" />
-                                                                    </svg>
-                                                                }
-                                                                    .into_any()
-                                                            }}
-                                                        </button>
-                                                    }
-                                                        .into_any()
-                                                } else {
-                                                    ().into_any()
+                                                                "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors"
+                                                            }
+                                                        }
+                                                        disabled=move || is_uploading_ifc.get()
+                                                        on:click=move |_| trigger_ifc_upload()
+                                                        aria-label="Add version"
+                                                        data-tip="Add version"
+                                                    >
+                                                        {move || if is_uploading_ifc.get() {
+                                                            view! {
+                                                                <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+                                                            }
+                                                                .into_any()
+                                                        } else {
+                                                            view! {
+                                                                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                                </svg>
+                                                            }
+                                                                .into_any()
+                                                        }}
+                                                    </button>
                                                 }
-                                            }}
-                                        </div>
+                                                    .into_any()
+                                            } else {
+                                                ().into_any()
+                                            }
+                                        }}
                                         {move || {
                                             if let Some(url) = ifc_url.get() {
                                                 view! {
