@@ -57,6 +57,9 @@ pub struct OrbitControls {
     /// correct button for `three-d::OrbitControl`.
     #[allow(dead_code)]
     last_button: Rc<RefCell<Option<MouseButton>>>,
+    /// Last time a mouse button was pressed, used to detect double clicks.
+    #[allow(dead_code)]
+    last_press_time: Rc<RefCell<f64>>,
 }
 
 impl OrbitControls {
@@ -68,22 +71,38 @@ impl OrbitControls {
         let pending_events = renderer.pending_events();
         let request_render = Rc::new(RefCell::new(request_render));
         let last_button: Rc<RefCell<Option<MouseButton>>> = Rc::new(RefCell::new(None));
+        let last_press_time: Rc<RefCell<f64>> = Rc::new(RefCell::new(0.0));
 
         let on_mouse_down = {
             let pending_events = Rc::clone(&pending_events);
             let request_render = Rc::clone(&request_render);
             let last_button = Rc::clone(&last_button);
+            let last_press_time = Rc::clone(&last_press_time);
             Closure::<dyn FnMut(MouseEvent)>::new(move |ev: MouseEvent| {
                 let position = physical_point_from_mouse(&ev);
                 let button = mouse_button_from_web(ev.button());
                 let modifiers = modifiers_from_mouse(&ev);
+                let now = leptos::web_sys::window()
+                    .and_then(|w| w.performance())
+                    .map_or(0.0, |p| p.now());
+                let is_double_click =
+                    button == MouseButton::Middle && now - *last_press_time.borrow() <= 300.0;
                 *last_button.borrow_mut() = Some(button);
+                *last_press_time.borrow_mut() = now;
                 pending_events.borrow_mut().push(Event::MousePress {
                     button,
                     position,
                     modifiers,
                     handled: false,
                 });
+                if is_double_click {
+                    pending_events.borrow_mut().push(Event::MouseWheel {
+                        delta: (0.0, -10.0),
+                        position,
+                        modifiers,
+                        handled: false,
+                    });
+                }
                 request_render.borrow_mut()();
             })
             .into_js_value()
@@ -174,6 +193,7 @@ impl OrbitControls {
             _canvas: canvas,
             _closures: vec![on_mouse_down, on_mouse_move, on_mouse_up, on_wheel],
             last_button,
+            last_press_time,
         }
     }
 }
