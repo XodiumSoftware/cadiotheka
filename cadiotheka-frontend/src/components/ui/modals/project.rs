@@ -4,6 +4,7 @@ use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::toast::Toast;
+use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
 use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
     SearchContext,
@@ -13,6 +14,7 @@ use crate::data::{
     update_project_collaborators, update_project_description, update_project_platforms,
     update_project_tags, update_project_title, upload_project_ifc,
 };
+use crate::utils::three_d_renderer::ViewerTheme;
 use crate::utils::{api_url, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
@@ -953,14 +955,66 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                             <div class="flex-1 min-h-0">
                                 {move || match active_tab.get() {
                                 ProjectDetailsTab::Viewer3d => view! {
-                                    <div class="h-full flex flex-col">
-                                        <IfcViewer url=Signal::derive({
-                                            let project_id = project_id.clone();
-                                            move || {
-                                                ifc_url.get().map(|_| api_url(&format!("/projects/{project_id}/glb")))
-                                            }
-                                        }) />
-                                    </div>
+                                    {
+                                        let viewer_state = RwSignal::new(crate::components::ui::ifc_viewer::IfcViewerState::NoModel);
+                                        let fps = RwSignal::new(0.0_f64);
+                                        let theme = RwSignal::new(ViewerTheme::Light);
+                                        let show_debug = RwSignal::new(false);
+                                        let debug_text = RwSignal::new(String::new());
+
+                                        view! {
+                                            <div class="h-full flex flex-col space-y-3">
+                                                <div class="flex items-center justify-between gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
+                                                    <div class="text-xs font-mono text-base-content/70 px-2">
+                                                        {move || format!("{fps:.1} FPS", fps = fps.get())}
+                                                    </div>
+                                                    <div class="flex gap-1">
+                                                        <ToolbarButton
+                                                            label="Toggle theme"
+                                                            tooltip_position=TooltipPosition::Bottom
+                                                            on_click=Callback::new(move |()| {
+                                                                theme.update(|t| {
+                                                                    *t = match *t {
+                                                                        ViewerTheme::Dark => ViewerTheme::Light,
+                                                                        ViewerTheme::Light => ViewerTheme::Dark,
+                                                                    };
+                                                                });
+                                                            })
+                                                        >
+                                                            {move || match theme.get() {
+                                                                ViewerTheme::Dark => "☀",
+                                                                ViewerTheme::Light => "🌙",
+                                                            }}
+                                                        </ToolbarButton>
+                                                        <ToolbarButton
+                                                            label="Toggle debug overlay"
+                                                            tooltip_position=TooltipPosition::Bottom
+                                                            on_click=Callback::new(move |()| {
+                                                                show_debug.update(|v| *v = !*v);
+                                                            })
+                                                        >
+                                                            {move || if show_debug.get() { "🐞" } else { "🐛" }}
+                                                        </ToolbarButton>
+                                                    </div>
+                                                </div>
+                                                <div class="flex-1 min-h-0 relative">
+                                                    <IfcViewer
+                                                        url=Signal::derive({
+                                                            let project_id = project_id.clone();
+                                                            move || {
+                                                                ifc_url.get().map(|_| api_url(&format!("/projects/{project_id}/glb")))
+                                                            }
+                                                        })
+                                                        state_signal=viewer_state
+                                                        fps_signal=fps
+                                                        theme_signal=theme
+                                                        show_debug_signal=show_debug
+                                                        debug_text_signal=debug_text
+                                                    />
+                                                </div>
+                                            </div>
+                                        }
+                                    }
                                 }
                                     .into_any(),
                                 ProjectDetailsTab::Versions => view! {

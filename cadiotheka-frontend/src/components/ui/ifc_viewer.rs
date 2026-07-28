@@ -4,7 +4,6 @@
 //! parses it with the `gltf` crate via [`crate::utils::glb`], and renders it
 //! with the `three-d` renderer in [`crate::utils::three_d_renderer`].
 
-use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
 use crate::utils::glb::Gltf;
 use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewerTheme};
 use gloo_net::http::Request;
@@ -32,18 +31,28 @@ pub enum IfcViewerState {
 }
 
 /// Renders an IFC model from the given URL into a canvas.
+///
+/// Optional signals let a parent read viewer state and control theme/debug
+/// visibility. When omitted, internal signals are used.
 #[component]
-pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
+pub fn IfcViewer(
+    #[prop(into)] url: Signal<Option<String>>,
+    #[prop(optional)] state_signal: Option<RwSignal<IfcViewerState>>,
+    #[prop(optional)] fps_signal: Option<RwSignal<f64>>,
+    #[prop(optional)] theme_signal: Option<RwSignal<ViewerTheme>>,
+    #[prop(optional)] show_debug_signal: Option<RwSignal<bool>>,
+    #[prop(optional)] debug_text_signal: Option<RwSignal<String>>,
+) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
-    let (state, set_state) = signal(IfcViewerState::NoModel);
+    let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
+    let fps = fps_signal.unwrap_or_else(|| RwSignal::new(0.0_f64));
+    let theme = theme_signal.unwrap_or_else(|| RwSignal::new(ViewerTheme::Light));
+    let show_debug = show_debug_signal.unwrap_or_else(|| RwSignal::new(false));
+    let debug_text = debug_text_signal.unwrap_or_else(|| RwSignal::new(String::new()));
 
     let renderer: Rc<RefCell<Option<Renderer>>> = Rc::new(RefCell::new(None));
     let controls: Rc<RefCell<Option<OrbitControls>>> = Rc::new(RefCell::new(None));
 
-    let (show_debug, set_show_debug) = signal(false);
-    let (debug_text, set_debug_text) = signal(String::new());
-    let (fps, set_fps) = signal(0.0_f64);
-    let (theme, set_theme) = signal(ViewerTheme::Light);
     let dirty = Rc::new(RefCell::new(false));
     let pending_frame = Rc::new(RefCell::new(false));
     let animation_handle: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
@@ -142,7 +151,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
             let _ = writeln!(text, "primitives: {}", renderer.primitive_count());
             let _ = writeln!(text, "vertices: {}", renderer.total_vertices());
             let _ = writeln!(text, "triangles: {}", renderer.total_triangles());
-            set_debug_text.set(text);
+            debug_text.set(text);
 
             let window = leptos::web_sys::window().and_then(|w| w.performance());
             if let Some(performance) = window {
@@ -151,7 +160,7 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                 if now - *last_fps_update.borrow() >= 500.0 {
                     let fps_value = f64::from(*frame_count.borrow()) * 1000.0
                         / (now - *last_fps_update.borrow());
-                    set_fps.set(fps_value);
+                    fps.set(fps_value);
                     *last_fps_update.borrow_mut() = now;
                     *frame_count.borrow_mut() = 0;
                 }
@@ -192,23 +201,23 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
             return;
         };
         let Some(url) = url.get() else {
-            set_state.set(IfcViewerState::NoModel);
+            state.set(IfcViewerState::NoModel);
             return;
         };
 
-        set_state.set(IfcViewerState::Loading);
+        state.set(IfcViewerState::Loading);
         let renderer = Rc::clone(&renderer);
         let controls = Rc::clone(&controls);
-        let set_state = set_state;
+        let state = state;
         let request_render = Rc::clone(&request_render);
         let update_debug = update_debug.clone();
 
         leptos::task::spawn_local(async move {
             match load_model_bytes(&url).await {
                 Some(glb_bytes) => {
-                    set_state.set(IfcViewerState::Processing);
+                    state.set(IfcViewerState::Processing);
                     let Ok(gltf) = Gltf::from_slice(&glb_bytes) else {
-                        set_state.set(IfcViewerState::Error);
+                        state.set(IfcViewerState::Error);
                         return;
                     };
 
@@ -224,15 +233,15 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                         };
                         let new_controls = OrbitControls::attach(&renderer, render_callback);
                         *controls.borrow_mut() = Some(new_controls);
-                        set_state.set(IfcViewerState::Rendering);
+                        state.set(IfcViewerState::Rendering);
                         request_render.borrow_mut()();
                         update_debug();
                     } else {
-                        set_state.set(IfcViewerState::Error);
+                        state.set(IfcViewerState::Error);
                     }
                 }
                 None => {
-                    set_state.set(IfcViewerState::Error);
+                    state.set(IfcViewerState::Error);
                 }
             }
         });
@@ -269,41 +278,8 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
                     </div>
                 }.into_any(),
                 IfcViewerState::Rendering => view! {
-                    <div class="absolute top-2 left-2 right-2 z-10 flex items-center justify-between gap-2 pointer-events-none">
-                        <div class="bg-base-100/80 backdrop-blur text-xs font-mono p-2 rounded border border-base-content/10 text-base-content/70 pointer-events-auto flex gap-2 items-center">
-                            {move || format!("{fps:.1} FPS", fps = fps.get())}
-                        </div>
-                        <div class="bg-base-100/80 backdrop-blur rounded border border-base-content/10 pointer-events-auto flex gap-1 items-center p-1">
-                            <ToolbarButton
-                                label="Toggle theme"
-                                tooltip_position=TooltipPosition::Bottom
-                                on_click=Callback::new(move |()| {
-                                    set_theme.update(|t| {
-                                        *t = match *t {
-                                            ViewerTheme::Dark => ViewerTheme::Light,
-                                            ViewerTheme::Light => ViewerTheme::Dark,
-                                        };
-                                    });
-                                })
-                            >
-                                {move || match theme.get() {
-                                    ViewerTheme::Dark => "☀",
-                                    ViewerTheme::Light => "🌙",
-                                }}
-                            </ToolbarButton>
-                            <ToolbarButton
-                                label="Toggle debug overlay"
-                                tooltip_position=TooltipPosition::Bottom
-                                on_click=Callback::new(move |()| {
-                                    set_show_debug.update(|v| *v = !*v);
-                                })
-                            >
-                                {move || if show_debug.get() { "🐞" } else { "🐛" }}
-                            </ToolbarButton>
-                        </div>
-                    </div>
                     {move || show_debug.get().then(|| view! {
-                        <div class="absolute top-12 left-2 z-10 max-w-[20rem] bg-base-100/90 backdrop-blur text-xs font-mono p-3 rounded border border-base-content/10 text-base-content/80 whitespace-pre-wrap">
+                        <div class="absolute top-2 left-2 z-10 max-w-[20rem] bg-base-100/90 backdrop-blur text-xs font-mono p-3 rounded border border-base-content/10 text-base-content/80 whitespace-pre-wrap">
                             {move || debug_text.get()}
                         </div>
                     })}
