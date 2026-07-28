@@ -250,6 +250,7 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
     });
 
     let (active_tab, set_active_tab) = signal(ProjectDetailsTab::Viewer3d);
+    let (sidebar_hidden, set_sidebar_hidden) = signal(false);
 
     let (editing_title, set_editing_title) = signal(false);
     let (draft_title, set_draft_title) = signal(card.title.clone());
@@ -935,7 +936,13 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
 
             <div class="flex flex-col min-h-0 overflow-hidden flex-1 py-2">
                 <div class="overflow-y-auto flex-1 min-h-0 p-2 pr-3">
-                    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start h-full">
+                    <div class=move || {
+                        if sidebar_hidden.get() {
+                            "grid grid-cols-1 gap-6 items-start h-full".to_string()
+                        } else {
+                            "grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start h-full".to_string()
+                        }
+                    }>
                         <div class="min-w-0 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4">
                             <div class="flex items-center justify-between gap-3 pb-2 flex-shrink-0">
                                 <div class="tabs tabs-border">
@@ -985,9 +992,11 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                         <ToolbarButton
                                                             label="Toggle fullscreen"
                                                             tooltip_position=TooltipPosition::Bottom
-                                                            on_click=Callback::new(move |()| {})
+                                                            on_click=Callback::new(move |()| {
+                                                                set_sidebar_hidden.update(|v| *v = !*v);
+                                                            })
                                                         >
-                                                            "⛶"
+                                                            {move || if sidebar_hidden.get() { "🗗" } else { "⛶" }}
                                                         </ToolbarButton>
                                                     </div>
                                                 </div>
@@ -1157,9 +1166,9 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                         </div>
                     </div>
 
-                        <div class="hidden xl:block self-stretch w-px bg-base-content/10" aria-hidden="true"></div>
+                        <div class=move || if sidebar_hidden.get() { "hidden".to_string() } else { "hidden xl:block self-stretch w-px bg-base-content/10".to_string() } aria-hidden="true"></div>
 
-                        <div class="space-y-4">
+                        <div class=move || if sidebar_hidden.get() { "hidden".to_string() } else { "space-y-4".to_string() }>
                             {move || {
                                 if editing_description.get() {
                                     view! {
