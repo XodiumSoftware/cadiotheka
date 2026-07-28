@@ -60,6 +60,8 @@ pub fn IfcViewer(
     let renderer_for_hover = Rc::clone(&renderer);
     let geometries_for_hover = Rc::clone(&geometries);
     let hovered = RwSignal::new(false);
+    let hover_metadata = RwSignal::new(None::<NodeMetadata>);
+    let hover_position = RwSignal::new((0.0_f64, 0.0_f64));
 
     let dirty = Rc::new(RefCell::new(false));
     let pending_frame = Rc::new(RefCell::new(false));
@@ -268,12 +270,14 @@ pub fn IfcViewer(
         let pixel = three_d_asset::PixelPoint { x, y };
         let renderer_ref = renderer_for_hover.borrow();
         let geometries_ref = geometries_for_hover.borrow();
-        let is_hovering = renderer_ref
+        let picked = renderer_ref
             .as_ref()
             .zip(geometries_ref.as_ref())
-            .and_then(|(r, g)| r.pick(pixel, g))
-            .is_some();
+            .and_then(|(r, g)| r.pick(pixel, g));
+        let is_hovering = picked.is_some();
         hovered.set(is_hovering);
+        hover_metadata.set(picked.and_then(|p| p.metadata));
+        hover_position.set((f64::from(x), f64::from(y)));
     };
 
     view! {
@@ -296,7 +300,10 @@ pub fn IfcViewer(
                 on_pick.run(metadata);
             }
             on:pointermove=update_hover
-            on:pointerleave=move |_| hovered.set(false)
+            on:pointerleave=move |_| {
+                hovered.set(false);
+                hover_metadata.set(None);
+            }
         >
             <canvas
                 node_ref=canvas_ref
@@ -309,6 +316,21 @@ pub fn IfcViewer(
                 }
                 aria-label="IFC 3D viewer"
             />
+            {move || hover_metadata.get().map(|metadata| {
+                let (x, y) = hover_position.get();
+                view! {
+                    <div
+                        class="absolute z-20 pointer-events-none bg-base-100/95 backdrop-blur text-base-content border border-base-content/10 p-2 rounded shadow-lg max-w-[16rem]"
+                        style=format!("left: {x:.0}px; top: {y:.0}px; transform: translate(0.75rem, 0.75rem);")
+                    >
+                        <p class="text-xs font-semibold truncate">{metadata.name}</p>
+                        {metadata.express_id.map(|id| view! {
+                            <p class="text-xs text-base-content/60">{format!("IFC ID: {id}")}</p>
+                        })}
+                    </div>
+                }
+                    .into_any()
+            })}
             {move || match state.get() {
                 IfcViewerState::NoModel => view! {
                     <div class="absolute inset-0 flex items-center justify-center text-base-content/50 text-sm pointer-events-none">

@@ -1,5 +1,5 @@
 use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProperties};
-use crate::components::ui::ifc_viewer::{IfcViewer, PickCallback};
+use crate::components::ui::ifc_viewer::IfcViewer;
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
@@ -966,12 +966,6 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                         let fps = RwSignal::new(0.0_f64);
                                         let show_debug = RwSignal::new(false);
                                         let debug_text = RwSignal::new(String::new());
-                                        let (picked_object, set_picked_object) = signal(None::<crate::utils::glb::NodeMetadata>);
-
-
-                                        let on_pick: PickCallback = Callback::new(move |metadata| {
-                                            set_picked_object.set(metadata);
-                                        });
 
                                         view! {
                                             <div class="h-full flex flex-col space-y-3">
@@ -1012,23 +1006,9 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                         fps_signal=fps
                                                         show_debug_signal=show_debug
                                                         debug_text_signal=debug_text
-                                                        on_pick=on_pick
+                                                        on_pick=Callback::new(move |_| {})
                                                     />
                                                 </div>
-                                                {move || {
-                                                    picked_object.get().map(|metadata| {
-                                                        view! {
-                                                            <div class="rounded-none border border-base-content/10 bg-base-200/30 p-3 space-y-1 flex-shrink-0">
-                                                                <p class="text-xs font-semibold text-base-content">"Selected element"</p>
-                                                                <p class="text-sm text-base-content">{metadata.name}</p>
-                                                                {metadata.express_id.map(|id| view! {
-                                                                    <p class="text-xs text-base-content/50">{format!("IFC ID: {id}")}</p>
-                                                                })}
-                                                            </div>
-                                                        }
-                                                            .into_any()
-                                                    })
-                                                }}
                                             </div>
                                         }
                                     }
