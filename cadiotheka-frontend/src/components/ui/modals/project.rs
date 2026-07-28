@@ -14,7 +14,9 @@ use crate::data::{
     update_project_collaborators, update_project_description, update_project_platforms,
     update_project_tags, update_project_title, upload_project_ifc,
 };
-use crate::utils::{api_url, placeholder_color, placeholder_letter};
+use crate::utils::{
+    api_url, placeholder_color, placeholder_letter, toggle_fullscreen, window_event_listener,
+};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -960,13 +962,50 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                         let show_debug = RwSignal::new(false);
                                         let debug_text = RwSignal::new(String::new());
                                         let (picked_object, set_picked_object) = signal(None::<crate::utils::glb::NodeMetadata>);
+                                        let viewer_wrapper_ref = NodeRef::<leptos::html::Div>::new();
+                                        let (is_fullscreen, set_is_fullscreen) = signal(false);
+
+                                        Effect::new(move |_| {
+                                            window_event_listener::<web_sys::KeyboardEvent, _>(
+                                                "keydown",
+                                                move |ev| {
+                                                    if ev.key().eq_ignore_ascii_case("escape")
+                                                        && is_fullscreen.get()
+                                                    {
+                                                        let _ = crate::utils::exit_fullscreen();
+                                                        set_is_fullscreen.set(false);
+                                                    }
+                                                },
+                                            );
+                                        });
+
+                                        Effect::new(move |_| {
+                                            window_event_listener::<web_sys::Event, _>(
+                                                "fullscreenchange",
+                                                move |_| {
+                                                    set_is_fullscreen.set(crate::utils::is_fullscreen());
+                                                },
+                                            );
+                                            window_event_listener::<web_sys::Event, _>(
+                                                "webkitfullscreenchange",
+                                                move |_| {
+                                                    set_is_fullscreen.set(crate::utils::is_fullscreen());
+                                                },
+                                            );
+                                            window_event_listener::<web_sys::Event, _>(
+                                                "mozfullscreenchange",
+                                                move |_| {
+                                                    set_is_fullscreen.set(crate::utils::is_fullscreen());
+                                                },
+                                            );
+                                        });
 
                                         let on_pick: PickCallback = Callback::new(move |metadata| {
                                             set_picked_object.set(metadata);
                                         });
 
                                         view! {
-                                            <div class="h-full flex flex-col space-y-3">
+                                            <div class="h-full flex flex-col space-y-3" node_ref=viewer_wrapper_ref>
                                                 <div class="flex items-center justify-between gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
                                                     <div class="text-xs font-mono text-base-content/70 px-2">
                                                         {move || format!("{fps:.1} FPS", fps = fps.get())}
@@ -980,6 +1019,17 @@ fn ProjectModalContent(#[prop(into)] card: ProjectCardProperties) -> impl IntoVi
                                                             })
                                                         >
                                                             {move || if show_debug.get() { "🐞" } else { "🐛" }}
+                                                        </ToolbarButton>
+                                                        <ToolbarButton
+                                                            label="Toggle fullscreen"
+                                                            tooltip_position=TooltipPosition::Bottom
+                                                            on_click=Callback::new(move |()| {
+                                                                if let Some(el) = viewer_wrapper_ref.get() {
+                                                                    let _ = toggle_fullscreen(&el);
+                                                                }
+                                                            })
+                                                        >
+                                                            {move || if is_fullscreen.get() { "⛶" } else { "🗗" }}
                                                         </ToolbarButton>
                                                     </div>
                                                 </div>
