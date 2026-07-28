@@ -25,6 +25,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 #[cfg(target_arch = "wasm32")]
 use three_d::Gm;
+use three_d::MetricSpace;
 #[cfg(target_arch = "wasm32")]
 use three_d::core::render_states::Cull;
 use three_d::core::{ClearState, Context as ThreeDContext, RenderTarget};
@@ -32,8 +33,7 @@ use three_d::core::{ClearState, Context as ThreeDContext, RenderTarget};
 use three_d::renderer::Mesh;
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::PhysicalMaterial;
-use three_d::renderer::control::MouseButton;
-use three_d::renderer::control::{Event, OrbitControl};
+use three_d::renderer::control::{Event, MouseButton, OrbitControl};
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::geometry::{CpuMesh, Indices, Positions};
 #[cfg(target_arch = "wasm32")]
@@ -310,6 +310,7 @@ impl Renderer {
             .borrow_mut()
             .drain(..)
             .collect::<Vec<_>>();
+        self.handle_pan_events(&mut events);
         self.control.handle_events(&mut self.camera, &mut events);
 
         let viewport = Viewport::new_at_origo(width, height);
@@ -351,6 +352,38 @@ impl Renderer {
     pub fn theme(&self) -> ViewerTheme {
         self.theme
     }
+
+    /// Handles shift-drag panning before delegating rotation/zoom to `OrbitControl`.
+    fn handle_pan_events(&mut self, events: &mut [Event]) {
+        let viewport_height = self.canvas.client_height().max(1) as f32;
+        let distance = self.camera.position().distance(self.camera.target());
+        let scale = distance * (Self::FOV_Y * 0.5).tan() * 2.0 / viewport_height;
+
+        for event in events.iter_mut() {
+            let Event::MouseMotion {
+                delta,
+                modifiers,
+                handled,
+                ..
+            } = event
+            else {
+                continue;
+            };
+            if *handled || !modifiers.shift {
+                continue;
+            }
+            *handled = true;
+
+            let right = self.camera.right_direction();
+            let up = self.camera.up_orthogonal();
+            let shift = right * (-delta.0 * scale) + up * (delta.1 * scale);
+            self.camera.translate(shift);
+            self.control.target += shift;
+        }
+    }
+
+    /// Vertical field of view in radians.
+    const FOV_Y: f32 = std::f32::consts::PI * 0.25;
 
     /// Returns a reference to the `three-d` camera.
     pub fn camera(&self) -> &ThreeDCamera {
