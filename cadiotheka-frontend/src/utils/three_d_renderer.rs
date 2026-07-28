@@ -25,6 +25,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 #[cfg(target_arch = "wasm32")]
 use three_d::Gm;
+use three_d::InnerSpace;
 use three_d::MetricSpace;
 #[cfg(target_arch = "wasm32")]
 use three_d::core::render_states::Cull;
@@ -365,6 +366,16 @@ impl Renderer {
 
         let viewport = Viewport::new_at_origo(width, height);
         self.camera.set_viewport(viewport);
+
+        let eye = self.camera.position();
+        let target = self.camera.target();
+        let forward = target - eye;
+        let right = self.camera.right_direction();
+        let up = self.camera.up_orthogonal();
+        let light_dir = (forward + right * 0.2 + up * 0.3).normalize();
+        if light_dir.magnitude2() > 0.0 {
+            self.light.direction = light_dir;
+        }
 
         let objects: Vec<&dyn Object> = self
             .models
