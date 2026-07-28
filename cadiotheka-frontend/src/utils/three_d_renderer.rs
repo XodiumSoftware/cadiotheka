@@ -369,7 +369,7 @@ impl Renderer {
 
         let eye = self.camera.position();
         let target = self.camera.target();
-        let forward = target - eye;
+        let forward = eye - target;
         let right = self.camera.right_direction();
         let up = self.camera.up_orthogonal();
         let light_dir = (forward + right * 0.2 + up * 0.3).normalize();
