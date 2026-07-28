@@ -25,14 +25,16 @@ pub fn ToolbarButton(
         TooltipPosition::Bottom => "tooltip-bottom",
     };
     view! {
-        <button
-            type="button"
-            class=format!("btn btn-ghost btn-xs min-h-0 h-7 px-2 tooltip {tooltip_class}")
-            data-tip=label
-            aria-label=label
-            on:click=move |_| on_click.run(())
-        >
-            {children()}
-        </button>
+        <div class="tooltip-wrapper relative inline-block z-50">
+            <button
+                type="button"
+                class=format!("btn btn-ghost btn-xs min-h-0 h-7 px-2 tooltip {tooltip_class}")
+                data-tip=label
+                aria-label=label
+                on:click=move |_| on_click.run(())
+            >
+                {children()}
+            </button>
+        </div>
     }
 }
