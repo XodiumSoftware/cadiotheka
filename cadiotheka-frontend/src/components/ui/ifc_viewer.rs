@@ -177,11 +177,19 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
 
     Effect::new({
         let renderer = Rc::clone(&renderer);
+        move |_| {
+            if let Some(renderer) = renderer.borrow_mut().as_mut() {
+                renderer.set_theme(theme.get_untracked());
+            }
+        }
+    });
+
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         move |_| {
-            let theme_value = theme.get();
-            if let Some(renderer) = renderer.borrow_mut().as_mut() {
-                renderer.set_theme(theme_value);
+            theme.get();
+            if let Some(_renderer) = renderer.borrow_mut().as_mut() {
                 request_render.borrow_mut()();
             }
         }
