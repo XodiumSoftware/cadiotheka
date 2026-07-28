@@ -9,10 +9,11 @@
 )]
 
 use crate::utils::glb::{
-    GltfDocument, GltfMaterial, compute_bounding_box, look_at_matrix, mat4_identity, mat4_mul,
-    mat4_mul_vec3, mat4_to_array, mat4_to_normal_matrix_3x3, node_transform, perspective_matrix,
-    read_index_accessor, read_vec3_accessor,
+    compute_bounding_box, look_at_matrix, mat4_identity, mat4_mul, mat4_to_array,
+    mat4_to_normal_matrix_3x3, material_params, perspective_matrix, read_indices, read_normals,
+    read_positions, triangle_count,
 };
+use gltf::Gltf;
 use leptos::web_sys::{
     HtmlCanvasElement, MouseEvent, WebGlBuffer, WebGlProgram, WebGlRenderingContext as Gl,
     WebGlShader, WebGlUniformLocation, WheelEvent,
@@ -248,8 +249,8 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    /// Creates a renderer for the given canvas and GLB document.
-    pub fn new(canvas: HtmlCanvasElement, doc: &GltfDocument) -> Option<Self> {
+    /// Creates a renderer for the given canvas and glTF document.
+    pub fn new(canvas: HtmlCanvasElement, gltf: &Gltf) -> Option<Self> {
         let gl = canvas.get_context("webgl").ok()??.dyn_into::<Gl>().ok()?;
 
         let program = create_program(&gl, VERTEX_SHADER, FRAGMENT_SHADER)?;
@@ -275,7 +276,7 @@ impl Renderer {
 
         let oes_element_index_uint = gl.get_extension("OES_element_index_uint").ok().flatten();
 
-        let (min, max) = compute_bounding_box(doc);
+        let (min, max) = compute_bounding_box(gltf);
         let camera = Rc::new(RefCell::new(Camera::framing_bounding_box(min, max)));
 
         let mut renderer = Self {
@@ -302,67 +303,56 @@ impl Renderer {
             total_triangles: 0,
         };
 
-        renderer.upload_document(doc);
+        renderer.upload_document(gltf);
         Some(renderer)
     }
 
-    /// Uploads all primitives from the GLB document into GPU buffers.
-    fn upload_document(&mut self, doc: &GltfDocument) {
+    /// Uploads all primitives from the glTF document into GPU buffers.
+    fn upload_document(&mut self, gltf: &Gltf) {
         let identity = mat4_identity();
-        for node_index in 0..doc.nodes.len() {
-            self.upload_node(doc, node_index, &identity);
+        if let Some(scene) = gltf.default_scene() {
+            for node in scene.nodes() {
+                self.upload_node(gltf, &node, &identity);
+            }
         }
     }
 
     fn upload_node(
         &mut self,
-        doc: &GltfDocument,
-        node_index: usize,
+        gltf: &Gltf,
+        node: &gltf::Node<'_>,
         parent_transform: &[[f32; 4]; 4],
     ) {
-        let Some(node) = doc.nodes.get(node_index) else {
-            return;
-        };
-        let transform = mat4_mul(parent_transform, &node_transform(node));
+        let transform = mat4_mul(parent_transform, &node.transform().matrix());
 
-        if let Some(mesh_index) = node.mesh
-            && let Some(mesh) = doc.meshes.get(mesh_index)
-        {
-            for primitive in &mesh.primitives {
-                self.upload_primitive(doc, primitive, &transform);
+        if let Some(mesh) = node.mesh() {
+            for primitive in mesh.primitives() {
+                self.upload_primitive(gltf, &primitive, &transform);
             }
         }
 
-        for &child in &node.children {
-            self.upload_node(doc, child, &transform);
+        for child in node.children() {
+            self.upload_node(gltf, &child, &transform);
         }
     }
 
     fn upload_primitive(
         &mut self,
-        doc: &GltfDocument,
-        primitive: &crate::utils::glb::GltfPrimitive,
+        gltf: &Gltf,
+        primitive: &gltf::Primitive<'_>,
         transform: &[[f32; 4]; 4],
     ) {
-        let Some(&position_index) = primitive.attributes.get("POSITION") else {
+        let mode = primitive.mode();
+        if !crate::utils::glb::is_triangle_mode(mode) {
+            return;
+        }
+
+        let Some(positions) = read_positions(gltf, primitive, transform) else {
             return;
         };
-        let Ok(positions) = read_vec3_accessor(doc, position_index) else {
-            return;
-        };
+        let normals = read_normals(gltf, primitive, transform);
 
-        let normals = primitive
-            .attributes
-            .get("NORMAL")
-            .and_then(|&idx| read_vec3_accessor(doc, idx).ok())
-            .unwrap_or_else(|| vec![[0.0, 1.0, 0.0]; positions.len()]);
-
-        let transformed_positions: Vec<[f32; 3]> = positions
-            .into_iter()
-            .map(|p| mat4_mul_vec3(transform, p))
-            .collect();
-
-        let position_buffer = create_vec3_buffer(&self.gl, &flatten_vec3(&transformed_positions));
+        let position_buffer = create_vec3_buffer(&self.gl, &flatten_vec3(&positions));
         let normal_buffer = create_vec3_buffer(&self.gl, &flatten_vec3(&normals));
 
         let Some(position_buffer) = position_buffer else {
@@ -373,23 +363,14 @@ impl Renderer {
         };
 
         let (index_buffer, index_count, vertex_count) =
-            if let Some(indices_index) = primitive.indices {
-                match read_index_accessor(doc, indices_index) {
-                    Ok(indices) => {
-                        let count = indices.len() as i32;
-                        (create_index_buffer(&self.gl, &indices), Some(count), count)
-                    }
-                    Err(_) => (None, None, transformed_positions.len() as i32),
-                }
+            if let Some(indices) = read_indices(gltf, primitive) {
+                let count = indices.len() as i32;
+                (create_index_buffer(&self.gl, &indices), Some(count), count)
             } else {
-                (None, None, transformed_positions.len() as i32)
+                (None, None, positions.len() as i32)
             };
 
-        let material = primitive
-            .material
-            .and_then(|idx| doc.materials.get(idx))
-            .copied()
-            .unwrap_or_else(GltfMaterial::ifc_default);
+        let material = material_params(&primitive.material());
 
         self.primitives.push(RenderPrimitive {
             position_buffer,
@@ -404,9 +385,11 @@ impl Renderer {
             unlit: material.unlit,
         });
         self.total_vertices += vertex_count as usize;
-        self.total_triangles += index_count
-            .map(|count| count as usize / 3)
-            .unwrap_or_else(|| transformed_positions.len() / 3);
+        self.total_triangles += triangle_count(
+            mode,
+            index_count.map(|count| count as usize).unwrap_or(0),
+            positions.len(),
+        );
     }
 }
 

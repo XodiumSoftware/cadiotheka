@@ -1,10 +1,10 @@
 //! 3D IFC model viewer using a custom WebGL renderer.
 //!
 //! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`),
-//! parses it with the minimal GLB parser in [`crate::utils::glb`], and renders it
+//! parses it with the `gltf` crate via [`crate::utils::glb`], and renders it
 //! with the custom WebGL renderer in [`crate::utils::webgl_renderer`].
 
-use crate::utils::glb::parse_glb;
+use crate::utils::glb::Gltf;
 use crate::utils::webgl_renderer::{OrbitControls, Renderer};
 use gloo_net::http::Request;
 use leptos::prelude::*;
@@ -192,12 +192,12 @@ pub fn IfcViewer(#[prop(into)] url: Signal<Option<String>>) -> impl IntoView {
             match load_model_bytes(&url).await {
                 Some(glb_bytes) => {
                     set_state.set(IfcViewerState::Processing);
-                    let Ok(doc) = parse_glb(&glb_bytes) else {
+                    let Ok(gltf) = Gltf::from_slice(&glb_bytes) else {
                         set_state.set(IfcViewerState::Error);
                         return;
                     };
 
-                    if let Some(new_renderer) = Renderer::new(canvas, &doc) {
+                    if let Some(new_renderer) = Renderer::new(canvas, &gltf) {
                         let render_callback = {
                             let request_render = Rc::clone(&request_render);
                             let update_debug = update_debug.clone();
