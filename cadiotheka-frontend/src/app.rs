@@ -9,15 +9,12 @@ use crate::utils::window_event_listener;
 use leptos::prelude::*;
 use leptos::web_sys;
 
+/// Root application component.
+///
+/// Provides reactive contexts and wires up global keyboard shortcuts before
+/// rendering the page shell.
 #[component]
 pub fn App() -> impl IntoView {
-    view! {
-        <InnerApp />
-    }
-}
-
-#[component]
-fn InnerApp() -> impl IntoView {
     LayoutContext::provide_with_default(false);
     AccountsContext::provide();
     ProjectsContext::provide();
