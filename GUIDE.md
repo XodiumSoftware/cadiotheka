@@ -91,8 +91,7 @@ cd cadiotheka-frontend
 trunk serve --port 8080
 ```
 
-Then open <http://localhost:8080/index.html#dev> in a browser. The `#dev` hash
-disables the service worker cache so you always see the latest build.
+Then open <http://localhost:8080/index.html#dev> in a browser.
 
 Trunk rebuilds automatically when you edit the project.
 
