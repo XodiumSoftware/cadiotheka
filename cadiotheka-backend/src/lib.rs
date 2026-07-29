@@ -55,21 +55,33 @@ use worker::{
 /// Adds CORS headers to a response so the frontend (served from a different
 /// origin) can read the JSON body.
 ///
-/// Some response types (notably redirects created with `Response::redirect`)
-/// have immutable headers. In that case the original response is returned
-/// unchanged.
-fn add_cors_headers(mut resp: Response, origin: &str) -> Response {
-    {
-        let headers = resp.headers_mut();
-        let _ = headers.set("Access-Control-Allow-Origin", origin);
-        let _ = headers.set(
-            "Access-Control-Allow-Methods",
-            "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-        );
-        let _ = headers.set("Access-Control-Allow-Headers", "Content-Type");
-        let _ = headers.set("Access-Control-Allow-Credentials", "true");
+/// Returns the original response unchanged if its headers are immutable
+/// (e.g. redirects created with `Response::redirect`). Propagates any other
+/// header error so CORS misconfigurations are not silently ignored.
+fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Response> {
+    let headers = resp.headers_mut();
+    if let Err(err) = headers.set("Access-Control-Allow-Origin", origin) {
+        if is_immutable_headers_error(&err) {
+            return Ok(resp);
+        }
+        return Err(err);
     }
-    resp
+    headers.set(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    )?;
+    headers.set("Access-Control-Allow-Headers", "Content-Type")?;
+    headers.set("Access-Control-Allow-Credentials", "true")?;
+    Ok(resp)
+}
+
+/// Heuristic to detect the immutable-headers error returned by `web_sys` when
+/// trying to mutate a response with a guard such as a redirect.
+fn is_immutable_headers_error(err: &worker::Error) -> bool {
+    let message = err.to_string().to_lowercase();
+    message.contains("immutable")
+        || message.contains("guard")
+        || message.contains("headers are immutable")
 }
 
 /// Responds to CORS preflight requests.
@@ -169,7 +181,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 || is_login_route
                 || (!is_redirect && path.starts_with(routes::AUTH_PREFIX))
             {
-                Ok(add_cors_headers(resp, &origin))
+                Ok(add_cors_headers(resp, &origin)?)
             } else {
                 Ok(resp)
             }
