@@ -136,9 +136,9 @@ Lint each crate:
 
 ```bash
 cd cadiotheka-frontend
-cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -W clippy::pedantic -D warnings
+cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
 cd ../cadiotheka-backend
-cargo clippy --all-targets --all-features -- -W clippy::pedantic -D warnings
+cargo clippy --all-targets --all-features
 ```
 
 ### Frontend Build

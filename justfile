@@ -4,21 +4,21 @@
 _default:
     @just --list
 
-# Lint the frontend for the WASM target with pedantic lints
+# Lint the frontend for the WASM target (lints configured in workspace Cargo.toml)
 lint-frontend:
-    cd cadiotheka-frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -W clippy::pedantic -D warnings
+    cd cadiotheka-frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
 
-# Lint the frontend for the native target with pedantic lints
+# Lint the frontend for the native target (lints configured in workspace Cargo.toml)
 lint-frontend-native:
-    cd cadiotheka-frontend && cargo clippy --all-targets --all-features -- -W clippy::pedantic -D warnings
+    cd cadiotheka-frontend && cargo clippy --all-targets --all-features
 
-# Lint the backend for the native target with pedantic lints
+# Lint the backend for the native target (lints configured in workspace Cargo.toml)
 lint-backend:
-    cd cadiotheka-backend && cargo clippy --all-targets --all-features -- -W clippy::pedantic -D warnings
+    cd cadiotheka-backend && cargo clippy --all-targets --all-features
 
-# Lint the backend for the WASM target with pedantic lints
+# Lint the backend for the WASM target (lints configured in workspace Cargo.toml)
 lint-backend-wasm:
-    cd cadiotheka-backend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -W clippy::pedantic -D warnings
+    cd cadiotheka-backend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
 
 # Run all lints (native + WASM for both crates)
 lint: lint-frontend lint-frontend-native lint-backend lint-backend-wasm

@@ -25,11 +25,11 @@
 
 ```bash
 # Lint the frontend
-# Pedantic lints are enabled; every warning is treated as an error.
-cd cadiotheka-frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -W clippy::pedantic -D warnings
+# Pedantic lints are configured in the workspace Cargo.toml and denied by default.
+cd cadiotheka-frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
 
 # Lint the backend
-cd cadiotheka-backend && cargo clippy --all-targets --all-features -- -W clippy::pedantic -D warnings
+cd cadiotheka-backend && cargo clippy --all-targets --all-features
 
 # Run the test suite
 cargo test

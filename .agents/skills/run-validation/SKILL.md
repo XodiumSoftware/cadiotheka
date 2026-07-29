@@ -14,14 +14,14 @@ Use this skill when the user wants to verify the project state or before finishi
    cargo test
    ```
 
-2. Run clippy on the WASM target with pedantic lints enabled and warnings as errors:
+2. Run clippy on the WASM target (lints are configured in the workspace `Cargo.toml`):
    ```bash
-   cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -W clippy::pedantic -D warnings
+   cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
    ```
 
-3. Run clippy on the backend with pedantic lints enabled and warnings as errors:
+3. Run clippy on the backend (lints are configured in the workspace `Cargo.toml`):
    ```bash
-   cargo clippy --all-targets --all-features -p cadiotheka-backend -- -W clippy::pedantic -D warnings
+   cargo clippy --all-targets --all-features -p cadiotheka-backend
    ```
 
 4. Check formatting:
