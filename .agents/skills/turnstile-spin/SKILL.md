@@ -1,3 +1,11 @@
+---
+name: turnstile-spin
+description: Set up Cloudflare Turnstile end-to-end in the Cadiotheka project. Scan the codebase, embed the widget on protected forms, add the server-side siteverify call, and validate.
+references:
+  - cadiotheka-frontend
+  - cadiotheka-backend
+---
+
 # Turnstile Spin skill for Cadiotheka
 
 Inlined Cloudflare Turnstile integration skill tailored for the Cadiotheka
