@@ -1,5 +1,6 @@
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
+use crate::components::ui::turnstile::{TurnstileWidget, reset_turnstile, turnstile_response};
 use crate::contexts::{
     AddProjectModalContext, CurrentUserContext, LoginModalContext, ProjectsContext,
 };
@@ -121,6 +122,8 @@ pub fn AddProjectModal() -> impl IntoView {
             return;
         }
 
+        let token = turnstile_response();
+
         let payload = new_project_payload(
             title.get_untracked(),
             description.get_untracked(),
@@ -131,7 +134,7 @@ pub fn AddProjectModal() -> impl IntoView {
         set_is_submitting.set(true);
 
         leptos::task::spawn_local(async move {
-            let result = create_project(&payload).await;
+            let result = create_project(&payload, token.clone()).await;
 
             match result {
                 ProjectCreationResult::Created(_) => {
@@ -148,6 +151,7 @@ pub fn AddProjectModal() -> impl IntoView {
                 }
                 ProjectCreationResult::ValidationErrors(field_errors) => {
                     set_is_submitting.set(false);
+                    reset_turnstile();
                     let mut form_errors = FormErrors::default();
                     if let Some(msg) = field_errors.get("title").cloned() {
                         form_errors.title = Some(msg);
@@ -161,6 +165,7 @@ pub fn AddProjectModal() -> impl IntoView {
                 }
                 ProjectCreationResult::Failed(msg) => {
                     set_is_submitting.set(false);
+                    reset_turnstile();
                     set_submit_error.set(Some(msg));
                 }
             }
@@ -385,6 +390,8 @@ pub fn AddProjectModal() -> impl IntoView {
                                 {move || submit_error.get().map(|msg| view! {
                                     <p class="text-error text-sm">{msg}</p>
                                 })}
+
+                                <TurnstileWidget visible=Signal::derive(move || modal.open.get()) />
                             </div>
 
                             <div class="flex justify-end gap-2 flex-shrink-0 pt-2 border-t border-base-content/10">

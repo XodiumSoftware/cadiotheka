@@ -34,6 +34,7 @@ pub mod components {
         pub mod toast;
         pub mod toggle;
         pub mod toolbar_button;
+        pub mod turnstile;
     }
 
     pub use sections::footer::Footer;
@@ -56,6 +57,7 @@ pub mod components {
     pub use ui::toast::Toast;
     pub use ui::toggle::{ToggleSlider, ToggleSliderWithSlashLabel};
     pub use ui::toolbar_button::ToolbarButton;
+    pub use ui::turnstile::{TurnstileWidget, reset_turnstile, turnstile_response};
 }
 
 pub mod contexts {

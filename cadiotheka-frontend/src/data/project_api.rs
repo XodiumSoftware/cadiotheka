@@ -12,15 +12,35 @@ use gloo_net::http::Request;
 use serde::Deserialize;
 use web_sys::RequestCredentials;
 
-/// Creates a new project on the backend.
+/// Creates a new project on the backend, including a Turnstile token if one
+/// is available.
 ///
 /// Returns [`ProjectCreationResult::Created`] on success,
 /// [`ProjectCreationResult::ValidationErrors`] when the backend reports field
 /// validation failures, and [`ProjectCreationResult::Failed`] for all other
 /// errors.
-pub async fn create_project(project: &ProjectData) -> ProjectCreationResult {
+pub async fn create_project(
+    project: &ProjectData,
+    turnstile_token: Option<String>,
+) -> ProjectCreationResult {
     let url = api_url("/projects");
-    let body = match serde_json::to_string(project) {
+    let mut payload = match serde_json::to_value(project) {
+        Ok(json) => json,
+        Err(err) => {
+            return ProjectCreationResult::Failed(format!("Failed to prepare project data: {err}"));
+        }
+    };
+
+    if let Some(token) = turnstile_token
+        && let Some(object) = payload.as_object_mut()
+    {
+        object.insert(
+            "_turnstile_token".to_string(),
+            serde_json::Value::String(token),
+        );
+    }
+
+    let body = match serde_json::to_string(&payload) {
         Ok(json) => json,
         Err(err) => {
             return ProjectCreationResult::Failed(format!("Failed to prepare project data: {err}"));
@@ -159,7 +179,7 @@ pub async fn update_project(id: &str, patch: ProjectPatch) -> Result<(), Request
         RequestError::Serialize(format!("Failed to serialize project update: {err}"))
     })?;
 
-    let request = Request::patch(&url)
+    let request = Request::post(&url)
         .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .body(body)
@@ -224,14 +244,20 @@ pub async fn toggle_project_favorite(id: &str) -> Result<ProjectData, RequestErr
 ///
 /// On success it returns the updated project data; on failure it returns a
 /// [`RequestError`].
-pub async fn increment_project_downloads(id: &str) -> Result<ProjectData, RequestError> {
+pub async fn increment_project_downloads(
+    id: &str,
+    turnstile_token: Option<String>,
+) -> Result<ProjectData, RequestError> {
     let url = api_url(&format!("/projects/{id}/downloads"));
-    let request = Request::post(&url)
-        .credentials(RequestCredentials::Include)
-        .body("")
-        .map_err(|err| {
-            RequestError::BuildRequest(format!("Failed to build download increment request: {err}"))
-        })?;
+    let mut request = Request::post(&url).credentials(RequestCredentials::Include);
+
+    if let Some(token) = turnstile_token {
+        request = request.header("X-Turnstile-Token", &token);
+    }
+
+    let request = request.body("").map_err(|err| {
+        RequestError::BuildRequest(format!("Failed to build download increment request: {err}"))
+    })?;
 
     match request.send().await {
         Ok(response) if response.ok() => {

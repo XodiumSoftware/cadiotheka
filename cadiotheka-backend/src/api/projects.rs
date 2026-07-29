@@ -8,6 +8,7 @@ use crate::DB_BINDING;
 use crate::PROJECT_ASSETS_R2_BINDING;
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
+use crate::api::turnstile::verify_turnstile_token;
 use crate::utils::{check_rate_limit, error_response, js_option};
 use ifc_lite_export::{GltfOptions, export_glb};
 
@@ -121,6 +122,9 @@ pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Respon
 /// authenticated user.
 pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(response) = check_rate_limit(&req, &ctx, "project_create").await? {
+        return Ok(response);
+    }
+    if let Some(response) = verify_turnstile_token(&mut req, &ctx).await? {
         return Ok(response);
     }
     let account = require_account(&req, &ctx).await?;
@@ -565,7 +569,10 @@ pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Res
 ///
 /// This endpoint is rate-limited per client IP to discourage abuse while still
 /// allowing legitimate downloads.
-pub async fn increment_project_downloads(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub async fn increment_project_downloads(
+    mut req: Request,
+    ctx: RouteContext<()>,
+) -> Result<Response> {
     console_log!(
         "increment_project_downloads: received request for id {:?}",
         ctx.param("id")
@@ -574,6 +581,10 @@ pub async fn increment_project_downloads(req: Request, ctx: RouteContext<()>) ->
     if let Some(rate_limited) = check_rate_limit(&req, &ctx, "downloads").await? {
         console_log!("increment_project_downloads: rate limit exceeded");
         return Ok(rate_limited);
+    }
+    if let Some(response) = verify_turnstile_token(&mut req, &ctx).await? {
+        console_log!("increment_project_downloads: Turnstile verification failed");
+        return Ok(response);
     }
 
     let id = ctx.param("id").cloned().unwrap_or_default();

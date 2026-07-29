@@ -46,6 +46,7 @@ mod api {
     pub mod auth;
     pub mod projects;
     pub mod session;
+    pub mod turnstile;
 }
 
 use worker::{
