@@ -1,5 +1,4 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
-#![allow(clippy::must_use_candidate, clippy::too_many_lines)]
 
 pub mod app;
 
