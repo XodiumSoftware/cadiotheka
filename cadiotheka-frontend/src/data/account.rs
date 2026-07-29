@@ -1,3 +1,6 @@
+#![allow(clippy::missing_errors_doc)]
+
+use crate::data::error::RequestError;
 use crate::utils::api_url;
 use serde::{Deserialize, Serialize};
 
@@ -71,40 +74,32 @@ impl AccountData {
 
 /// Fetch accounts from the backend API.
 ///
-/// On failure it logs to the browser console and returns an empty vector so
-/// the UI can keep running with a graceful fallback.
-pub async fn fetch_accounts() -> Vec<AccountData> {
+/// Returns a list of accounts on success or a [`RequestError`] describing what
+/// went wrong.
+pub async fn fetch_accounts() -> Result<Vec<AccountData>, RequestError> {
     let url = api_url("/accounts");
     match gloo_net::http::Request::get(&url).send().await {
         Ok(response) if response.ok() => {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            match serde_json::from_str::<Vec<AccountData>>(&text) {
-                Ok(data) => data,
-                Err(err) => {
-                    leptos::web_sys::console::error_1(
-                        &format!(
-                            "Failed to parse accounts JSON from {url}: {err:?} (status={status}, body={text:?})"
-                        )
-                        .into(),
-                    );
-                    Vec::new()
-                }
-            }
+            serde_json::from_str::<Vec<AccountData>>(&text)
+                .map_err(|err| {
+                    RequestError::Parse(format!(
+                        "Failed to parse accounts JSON from {url}: {err:?} (status={status}, body={text:?})"
+                    ))
+                })
         }
         Ok(response) => {
             let status = response.status();
-            leptos::web_sys::console::error_1(
-                &format!("Failed to fetch accounts from {url}: HTTP {status}").into(),
-            );
-            Vec::new()
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to fetch accounts from {url}: {body}"),
+            })
         }
-        Err(err) => {
-            leptos::web_sys::console::error_1(
-                &format!("Failed to fetch accounts from {url}: {err:?}").into(),
-            );
-            Vec::new()
-        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to fetch accounts from {url}: {err:?}"
+        ))),
     }
 }
 

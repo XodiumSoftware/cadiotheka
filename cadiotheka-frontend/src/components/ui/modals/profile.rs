@@ -63,18 +63,25 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
         let set_editing = set_editing;
 
         leptos::task::spawn_local(async move {
-            if let Some(new_bio) = crate::contexts::current_user::update_bio(draft_value).await {
-                set_bio.set(new_bio.clone());
-                modal_account.update(|opt| {
-                    if let Some(acc) = opt.as_mut() {
-                        acc.bio.clone_from(&new_bio);
-                    }
-                });
-                set_current_user.update(|opt| {
-                    if let Some(acc) = opt.as_mut() {
-                        acc.bio.clone_from(&new_bio);
-                    }
-                });
+            match crate::contexts::current_user::update_bio(draft_value).await {
+                Ok(new_bio) => {
+                    set_bio.set(new_bio.clone());
+                    modal_account.update(|opt| {
+                        if let Some(acc) = opt.as_mut() {
+                            acc.bio.clone_from(&new_bio);
+                        }
+                    });
+                    set_current_user.update(|opt| {
+                        if let Some(acc) = opt.as_mut() {
+                            acc.bio.clone_from(&new_bio);
+                        }
+                    });
+                }
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to update bio: {}", err.message()).into(),
+                    );
+                }
             }
             set_editing.set(false);
         });
@@ -119,8 +126,14 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
     Effect::new(move |_| {
         if modal.open.get() && is_editable {
             leptos::task::spawn_local(async move {
-                let providers = crate::contexts::current_user::fetch_linked_providers().await;
-                set_linked_providers.set(providers);
+                match crate::contexts::current_user::fetch_linked_providers().await {
+                    Ok(providers) => set_linked_providers.set(providers),
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to fetch linked providers: {}", err.message()).into(),
+                        );
+                    }
+                }
             });
         }
     });
@@ -146,10 +159,17 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
 
     let start_unlink = move |provider: &'static str| {
         leptos::task::spawn_local(async move {
-            if crate::contexts::current_user::unlink_provider(provider).await {
-                set_linked_providers.update(|providers| {
-                    providers.retain(|p| p != provider);
-                });
+            match crate::contexts::current_user::unlink_provider(provider).await {
+                Ok(()) => {
+                    set_linked_providers.update(|providers| {
+                        providers.retain(|p| p != provider);
+                    });
+                }
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to unlink provider: {}", err.message()).into(),
+                    );
+                }
             }
         });
     };

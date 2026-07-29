@@ -329,7 +329,7 @@ fn ProjectModalContent(
             leptos::task::spawn_local(async move {
                 set_is_uploading_ifc.set(true);
                 match upload_project_ifc(&project_id, file).await {
-                    Some(url) => {
+                    Ok(url) => {
                         set_ifc_url.set(Some(url.clone()));
                         projects_ctx.set_projects.update(|projects| {
                             for project in projects.iter_mut() {
@@ -346,7 +346,10 @@ fn ProjectModalContent(
                         });
                         show_toast("IFC model uploaded".to_string());
                     }
-                    None => {
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to upload IFC model: {}", err.message()).into(),
+                        );
                         show_toast("Failed to upload IFC model".to_string());
                     }
                 }
@@ -383,24 +386,30 @@ fn ProjectModalContent(
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
                 set_is_deleting_ifc.set(true);
-                if delete_project_ifc(&project_id).await {
-                    set_ifc_url.set(None);
-                    projects_ctx.set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.ifc_url = None;
-                                break;
+                match delete_project_ifc(&project_id).await {
+                    Ok(()) => {
+                        set_ifc_url.set(None);
+                        projects_ctx.set_projects.update(|projects| {
+                            for project in projects.iter_mut() {
+                                if project.id == project_id {
+                                    project.ifc_url = None;
+                                    break;
+                                }
                             }
-                        }
-                    });
-                    modal.set_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.ifc_url = None;
-                        }
-                    });
-                    show_toast("IFC model deleted".to_string());
-                } else {
-                    show_toast("Failed to delete IFC model".to_string());
+                        });
+                        modal.set_card.update(|opt| {
+                            if let Some(card) = opt.as_mut() {
+                                card.ifc_url = None;
+                            }
+                        });
+                        show_toast("IFC model deleted".to_string());
+                    }
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to delete IFC model: {}", err.message()).into(),
+                        );
+                        show_toast("Failed to delete IFC model".to_string());
+                    }
                 }
                 set_is_deleting_ifc.set(false);
             });
@@ -423,15 +432,28 @@ fn ProjectModalContent(
             let set_projects = set_projects;
             leptos::task::spawn_local(async move {
                 set_is_deleting.set(true);
-                let success = delete_project(&project_id).await;
-                set_is_deleting.set(false);
-                if success {
-                    set_delete_confirm_input.set(String::new());
-                    set_show_delete_confirm.set(false);
-                    let refreshed = fetch_projects().await;
-                    set_projects.set(refreshed);
-                    modal.close();
+                match delete_project(&project_id).await {
+                    Ok(()) => {
+                        set_delete_confirm_input.set(String::new());
+                        set_show_delete_confirm.set(false);
+                        match fetch_projects().await {
+                            Ok(refreshed) => set_projects.set(refreshed),
+                            Err(err) => {
+                                leptos::web_sys::console::error_1(
+                                    &format!("Failed to refresh projects: {}", err.message())
+                                        .into(),
+                                );
+                            }
+                        }
+                        modal.close();
+                    }
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to delete project: {}", err.message()).into(),
+                        );
+                    }
                 }
+                set_is_deleting.set(false);
             });
         })
     };
@@ -509,22 +531,29 @@ fn ProjectModalContent(
             let set_projects = projects_ctx.set_projects;
 
             leptos::task::spawn_local(async move {
-                if let Some(new_title) = update_project_title(&project_id, draft_value).await {
-                    set_title.set(new_title.clone());
-                    set_draft_title.set(new_title.clone());
-                    modal_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.title.clone_from(&new_title);
-                        }
-                    });
-                    set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.title.clone_from(&new_title);
-                                break;
+                match update_project_title(&project_id, draft_value).await {
+                    Ok(new_title) => {
+                        set_title.set(new_title.clone());
+                        set_draft_title.set(new_title.clone());
+                        modal_card.update(|opt| {
+                            if let Some(card) = opt.as_mut() {
+                                card.title.clone_from(&new_title);
                             }
-                        }
-                    });
+                        });
+                        set_projects.update(|projects| {
+                            for project in projects.iter_mut() {
+                                if project.id == project_id {
+                                    project.title.clone_from(&new_title);
+                                    break;
+                                }
+                            }
+                        });
+                    }
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to update title: {}", err.message()).into(),
+                        );
+                    }
                 }
                 set_editing_title.set(false);
             });
@@ -542,24 +571,29 @@ fn ProjectModalContent(
             let set_projects = projects_ctx.set_projects;
 
             leptos::task::spawn_local(async move {
-                if let Some(new_description) =
-                    update_project_description(&project_id, draft_value).await
-                {
-                    set_description.set(new_description.clone());
-                    set_draft_description.set(new_description.clone());
-                    modal_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.description.clone_from(&new_description);
-                        }
-                    });
-                    set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.description.clone_from(&new_description);
-                                break;
+                match update_project_description(&project_id, draft_value).await {
+                    Ok(new_description) => {
+                        set_description.set(new_description.clone());
+                        set_draft_description.set(new_description.clone());
+                        modal_card.update(|opt| {
+                            if let Some(card) = opt.as_mut() {
+                                card.description.clone_from(&new_description);
                             }
-                        }
-                    });
+                        });
+                        set_projects.update(|projects| {
+                            for project in projects.iter_mut() {
+                                if project.id == project_id {
+                                    project.description.clone_from(&new_description);
+                                    break;
+                                }
+                            }
+                        });
+                    }
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to update description: {}", err.message()).into(),
+                        );
+                    }
                 }
                 set_editing_description.set(false);
             });
@@ -577,22 +611,29 @@ fn ProjectModalContent(
             let set_projects = projects_ctx.set_projects;
 
             leptos::task::spawn_local(async move {
-                if let Some(new_tags) = update_project_tags(&project_id, draft_value).await {
-                    set_tags.set(new_tags.clone());
-                    set_draft_tags.set(new_tags.clone());
-                    modal_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.tags.clone_from(&new_tags);
-                        }
-                    });
-                    set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.tags.clone_from(&new_tags);
-                                break;
+                match update_project_tags(&project_id, draft_value).await {
+                    Ok(new_tags) => {
+                        set_tags.set(new_tags.clone());
+                        set_draft_tags.set(new_tags.clone());
+                        modal_card.update(|opt| {
+                            if let Some(card) = opt.as_mut() {
+                                card.tags.clone_from(&new_tags);
                             }
-                        }
-                    });
+                        });
+                        set_projects.update(|projects| {
+                            for project in projects.iter_mut() {
+                                if project.id == project_id {
+                                    project.tags.clone_from(&new_tags);
+                                    break;
+                                }
+                            }
+                        });
+                    }
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to update tags: {}", err.message()).into(),
+                        );
+                    }
                 }
                 set_editing_tags.set(false);
             });
@@ -611,24 +652,29 @@ fn ProjectModalContent(
                 let set_projects = projects_ctx.set_projects;
 
                 leptos::task::spawn_local(async move {
-                    if let Some(new_platforms) =
-                        update_project_platforms(&project_id, draft_value).await
-                    {
-                        set_supported_platforms.set(new_platforms.clone());
-                        set_draft_platforms.set(new_platforms.clone());
-                        modal_card.update(|opt| {
-                            if let Some(card) = opt.as_mut() {
-                                card.supported_platforms.clone_from(&new_platforms);
-                            }
-                        });
-                        set_projects.update(|projects| {
-                            for project in projects.iter_mut() {
-                                if project.id == project_id {
-                                    project.supported_platforms.clone_from(&new_platforms);
-                                    break;
+                    match update_project_platforms(&project_id, draft_value).await {
+                        Ok(new_platforms) => {
+                            set_supported_platforms.set(new_platforms.clone());
+                            set_draft_platforms.set(new_platforms.clone());
+                            modal_card.update(|opt| {
+                                if let Some(card) = opt.as_mut() {
+                                    card.supported_platforms.clone_from(&new_platforms);
                                 }
-                            }
-                        });
+                            });
+                            set_projects.update(|projects| {
+                                for project in projects.iter_mut() {
+                                    if project.id == project_id {
+                                        project.supported_platforms.clone_from(&new_platforms);
+                                        break;
+                                    }
+                                }
+                            });
+                        }
+                        Err(err) => {
+                            leptos::web_sys::console::error_1(
+                                &format!("Failed to update platforms: {}", err.message()).into(),
+                            );
+                        }
                     }
                     set_editing_platforms.set(false);
                 });
@@ -647,23 +693,29 @@ fn ProjectModalContent(
             let set_projects = projects_ctx.set_projects;
 
             leptos::task::spawn_local(async move {
-                if let Some(new_ids) = update_project_collaborators(&project_id, draft_value).await
-                {
-                    set_collaborator_ids.set(new_ids.clone());
-                    set_draft_collaborator_ids.set(new_ids.clone());
-                    modal_card.update(|opt| {
-                        if let Some(card) = opt.as_mut() {
-                            card.collaborator_ids.clone_from(&new_ids);
-                        }
-                    });
-                    set_projects.update(|projects| {
-                        for project in projects.iter_mut() {
-                            if project.id == project_id {
-                                project.collaborator_ids.clone_from(&new_ids);
-                                break;
+                match update_project_collaborators(&project_id, draft_value).await {
+                    Ok(new_ids) => {
+                        set_collaborator_ids.set(new_ids.clone());
+                        set_draft_collaborator_ids.set(new_ids.clone());
+                        modal_card.update(|opt| {
+                            if let Some(card) = opt.as_mut() {
+                                card.collaborator_ids.clone_from(&new_ids);
                             }
-                        }
-                    });
+                        });
+                        set_projects.update(|projects| {
+                            for project in projects.iter_mut() {
+                                if project.id == project_id {
+                                    project.collaborator_ids.clone_from(&new_ids);
+                                    break;
+                                }
+                            }
+                        });
+                    }
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to update collaborators: {}", err.message()).into(),
+                        );
+                    }
                 }
                 set_editing_collaborators.set(false);
             });
@@ -677,22 +729,29 @@ fn ProjectModalContent(
         Callback::new(move |()| {
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
-                if let Some(updated) = ProjectsContext::toggle_favorite(&project_id).await {
-                    let updated_for_modal = updated.clone();
-                    set_projects.update(|projects| {
-                        if let Some(project) =
-                            projects.iter_mut().find(|project| project.id == updated.id)
-                        {
-                            *project = updated.clone();
-                        }
-                    });
-                    modal_set_card.update(|card| {
-                        if let Some(card) = card.as_mut()
-                            && card.id == updated_for_modal.id
-                        {
-                            card.favorites.clone_from(&updated_for_modal.favorites);
-                        }
-                    });
+                match ProjectsContext::toggle_favorite(&project_id).await {
+                    Ok(updated) => {
+                        let updated_for_modal = updated.clone();
+                        set_projects.update(|projects| {
+                            if let Some(project) =
+                                projects.iter_mut().find(|project| project.id == updated.id)
+                            {
+                                *project = updated.clone();
+                            }
+                        });
+                        modal_set_card.update(|card| {
+                            if let Some(card) = card.as_mut()
+                                && card.id == updated_for_modal.id
+                            {
+                                card.favorites.clone_from(&updated_for_modal.favorites);
+                            }
+                        });
+                    }
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to toggle favorite: {}", err.message()).into(),
+                        );
+                    }
                 }
             });
         })

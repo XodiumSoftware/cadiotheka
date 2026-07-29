@@ -300,20 +300,27 @@ pub fn ProjectCard(
                                     let set_projects = projects_ctx.set_projects;
                                     let modal_set_card = project_modal.set_card;
                                     leptos::task::spawn_local(async move {
-                                        if let Some(updated) = ProjectsContext::toggle_favorite(&project_id).await {
-                                            let updated_for_modal = updated.clone();
-                                            set_projects.update(|projects| {
-                                                if let Some(project) = projects.iter_mut().find(|project| project.id == updated.id) {
-                                                    project.clone_from(&updated);
-                                                }
-                                            });
-                                            modal_set_card.update(|card| {
-                                                if let Some(card) = card.as_mut()
-                                                    && card.id == updated_for_modal.id
-                                                {
-                                                    card.favorites.clone_from(&updated_for_modal.favorites);
-                                                }
-                                            });
+                                        match ProjectsContext::toggle_favorite(&project_id).await {
+                                            Ok(updated) => {
+                                                let updated_for_modal = updated.clone();
+                                                set_projects.update(|projects| {
+                                                    if let Some(project) = projects.iter_mut().find(|project| project.id == updated.id) {
+                                                        project.clone_from(&updated);
+                                                    }
+                                                });
+                                                modal_set_card.update(|card| {
+                                                    if let Some(card) = card.as_mut()
+                                                        && card.id == updated_for_modal.id
+                                                    {
+                                                        card.favorites.clone_from(&updated_for_modal.favorites);
+                                                    }
+                                                });
+                                            }
+                                            Err(err) => {
+                                                leptos::web_sys::console::error_1(
+                                                    &format!("Failed to toggle favorite: {}", err.message()).into(),
+                                                );
+                                            }
                                         }
                                     });
                                 }

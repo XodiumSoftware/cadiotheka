@@ -82,11 +82,13 @@ pub mod contexts {
 
 pub mod data {
     pub mod account;
+    pub mod error;
     pub mod project;
     pub mod project_api;
     pub mod project_types;
 
     pub use account::{AccountData, AccountRole, fetch_accounts};
+    pub use error::RequestError;
     pub use project::{
         IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, create_project, delete_project,
         delete_project_ifc, fetch_projects, new_project_payload, toggle_project_favorite,

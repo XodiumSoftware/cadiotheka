@@ -23,8 +23,14 @@ impl AccountsContext {
         });
 
         leptos::task::spawn_local(async move {
-            let fetched = fetch_accounts().await;
-            set_accounts.set(fetched);
+            match fetch_accounts().await {
+                Ok(fetched) => set_accounts.set(fetched),
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to load accounts: {}", err.message()).into(),
+                    );
+                }
+            }
             set_is_loading.set(false);
         });
     }

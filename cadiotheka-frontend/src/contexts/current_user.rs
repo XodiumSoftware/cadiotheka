@@ -1,4 +1,7 @@
+#![allow(clippy::missing_errors_doc)]
+
 use crate::data::AccountData;
+use crate::data::error::RequestError;
 use crate::utils::auth_url;
 use gloo_net::http::Request;
 use leptos::prelude::*;
@@ -29,7 +32,7 @@ impl CurrentUserContext {
         });
 
         leptos::task::spawn_local(async move {
-            let fetched = fetch_current_user().await;
+            let fetched = fetch_current_user().await.unwrap_or(None);
             set_account.set(fetched);
             set_is_loading.set(false);
         });
@@ -43,8 +46,9 @@ impl CurrentUserContext {
 
 /// Fetch the currently authenticated account from the backend.
 ///
-/// Returns `None` when the user is not logged in or the request fails.
-async fn fetch_current_user() -> Option<AccountData> {
+/// Returns `Ok(None)` when the user is not logged in. Any other failure is
+/// returned as a [`RequestError`] so the caller can decide how to report it.
+pub async fn fetch_current_user() -> Result<Option<AccountData>, RequestError> {
     let url = auth_url("/me");
     match Request::get(&url)
         .credentials(RequestCredentials::Include)
@@ -54,33 +58,25 @@ async fn fetch_current_user() -> Option<AccountData> {
         Ok(response) if response.ok() => {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            match serde_json::from_str::<MeResponse>(&body) {
-                Ok(parsed) => Some(parsed.account),
-                Err(err) => {
-                    leptos::web_sys::console::error_1(
-                        &format!(
-                            "Failed to parse /auth/me response from {url}: {err:?} (status={status}, body={body:?})"
-                        )
-                        .into(),
-                    );
-                    None
-                }
-            }
+            let parsed = serde_json::from_str::<MeResponse>(&body).map_err(|err| {
+                RequestError::Parse(format!(
+                    "Failed to parse /auth/me response from {url}: {err} (status={status}, body={body:?})"
+                ))
+            })?;
+            Ok(Some(parsed.account))
         }
-        Ok(response) if response.status() == 401 => None,
+        Ok(response) if response.status() == 401 => Ok(None),
         Ok(response) => {
             let status = response.status();
-            leptos::web_sys::console::error_1(
-                &format!("Failed to fetch current user from {url}: HTTP {status}").into(),
-            );
-            None
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to fetch current user from {url}: {body}"),
+            })
         }
-        Err(err) => {
-            leptos::web_sys::console::error_1(
-                &format!("Failed to fetch current user from {url}: {err:?}").into(),
-            );
-            None
-        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to fetch current user from {url}: {err}"
+        ))),
     }
 }
 
@@ -90,9 +86,11 @@ struct MeResponse {
 }
 
 /// Fetch the OAuth provider names linked to the currently authenticated
-/// account. Returns an empty vector when the user is not logged in or the
-/// request fails.
-pub async fn fetch_linked_providers() -> Vec<String> {
+/// account.
+///
+/// Returns a list of provider names on success or a [`RequestError`] on
+/// failure.
+pub async fn fetch_linked_providers() -> Result<Vec<String>, RequestError> {
     let url = auth_url("/linked-providers");
     match Request::get(&url)
         .credentials(RequestCredentials::Include)
@@ -101,66 +99,51 @@ pub async fn fetch_linked_providers() -> Vec<String> {
     {
         Ok(response) if response.ok() => {
             let body = response.text().await.unwrap_or_default();
-            match serde_json::from_str::<LinkedProvidersResponse>(&body) {
-                Ok(parsed) => parsed.providers,
-                Err(err) => {
-                    leptos::web_sys::console::error_1(
-                        &format!(
-                            "Failed to parse linked providers response from {url}: {err:?} (body={body:?})"
-                        )
-                        .into(),
-                    );
-                    Vec::new()
-                }
-            }
+            serde_json::from_str::<LinkedProvidersResponse>(&body)
+                .map(|parsed| parsed.providers)
+                .map_err(|err| {
+                    RequestError::Parse(format!(
+                        "Failed to parse linked providers response from {url}: {err} (body={body:?})"
+                    ))
+                })
         }
-        Ok(response) if response.status() == 401 => Vec::new(),
+        Ok(response) if response.status() == 401 => Ok(Vec::new()),
         Ok(response) => {
-            leptos::web_sys::console::error_1(
-                &format!(
-                    "Failed to fetch linked providers from {url}: HTTP {}",
-                    response.status()
-                )
-                .into(),
-            );
-            Vec::new()
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to fetch linked providers from {url}: {body}"),
+            })
         }
-        Err(err) => {
-            leptos::web_sys::console::error_1(
-                &format!("Failed to fetch linked providers from {url}: {err:?}").into(),
-            );
-            Vec::new()
-        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to fetch linked providers from {url}: {err}"
+        ))),
     }
 }
 
 /// Unlinks an OAuth provider from the currently authenticated account.
 ///
-/// Returns `true` if the provider was successfully unlinked.
-pub async fn unlink_provider(provider: &str) -> bool {
+/// Returns `Ok(())` if the provider was successfully unlinked.
+pub async fn unlink_provider(provider: &str) -> Result<(), RequestError> {
     let url = auth_url(&format!("/linked-providers/{provider}"));
     match Request::delete(&url)
         .credentials(RequestCredentials::Include)
         .send()
         .await
     {
-        Ok(response) if response.ok() => true,
+        Ok(response) if response.ok() => Ok(()),
         Ok(response) => {
-            leptos::web_sys::console::error_1(
-                &format!(
-                    "Failed to unlink provider at {url}: HTTP {}",
-                    response.status()
-                )
-                .into(),
-            );
-            false
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to unlink provider at {url}: {body}"),
+            })
         }
-        Err(err) => {
-            leptos::web_sys::console::error_1(
-                &format!("Failed to unlink provider at {url}: {err:?}").into(),
-            );
-            false
-        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to unlink provider at {url}: {err}"
+        ))),
     }
 }
 
@@ -172,45 +155,39 @@ struct LinkedProvidersResponse {
 /// Maximum length for a user-written bio, matching GitHub's profile bio limit.
 const MAX_BIO_LENGTH: usize = 160;
 
-/// Updates the current user's bio on the backend and returns the new bio on
-/// success, or `None` if the request failed.
-pub async fn update_bio(new_bio: String) -> Option<String> {
+/// Updates the current user's bio on the backend.
+///
+/// Returns the new bio on success or a [`RequestError`] describing what went
+/// wrong.
+pub async fn update_bio(new_bio: String) -> Result<String, RequestError> {
     if new_bio.len() > MAX_BIO_LENGTH {
-        leptos::web_sys::console::error_1(
-            &format!("Bio must be {MAX_BIO_LENGTH} characters or fewer").into(),
-        );
-        return None;
+        return Err(RequestError::Serialize(format!(
+            "Bio must be {MAX_BIO_LENGTH} characters or fewer"
+        )));
     }
 
     let url = auth_url("/me");
-    let request = match Request::put(&url)
+    let request = Request::put(&url)
         .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .body(serde_json::json!({ "bio": new_bio }).to_string())
-    {
-        Ok(req) => req,
-        Err(err) => {
-            leptos::web_sys::console::error_1(
-                &format!("Failed to build bio update request: {err:?}").into(),
-            );
-            return None;
-        }
-    };
+        .map_err(|err| {
+            RequestError::BuildRequest(format!("Failed to build bio update request: {err}"))
+        })?;
 
     match request.send().await {
-        Ok(response) if response.ok() => Some(new_bio),
+        Ok(response) if response.ok() => Ok(new_bio),
         Ok(response) => {
-            leptos::web_sys::console::error_1(
-                &format!("Failed to update bio at {url}: HTTP {}", response.status()).into(),
-            );
-            None
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to update bio at {url}: {body}"),
+            })
         }
-        Err(err) => {
-            leptos::web_sys::console::error_1(
-                &format!("Failed to update bio at {url}: {err:?}").into(),
-            );
-            None
-        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to update bio at {url}: {err}"
+        ))),
     }
 }
 

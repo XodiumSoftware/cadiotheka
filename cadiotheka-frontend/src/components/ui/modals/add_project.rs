@@ -135,8 +135,14 @@ pub fn AddProjectModal() -> impl IntoView {
 
             match result {
                 ProjectCreationResult::Created(_) => {
-                    let refreshed = crate::data::fetch_projects().await;
-                    projects_ctx.set_projects.set(refreshed);
+                    match crate::data::fetch_projects().await {
+                        Ok(refreshed) => projects_ctx.set_projects.set(refreshed),
+                        Err(err) => {
+                            leptos::web_sys::console::error_1(
+                                &format!("Failed to refresh projects: {}", err.message()).into(),
+                            );
+                        }
+                    }
                     modal.close();
                     reset_form();
                 }

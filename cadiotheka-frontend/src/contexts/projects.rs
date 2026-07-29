@@ -1,4 +1,6 @@
-use crate::data::{ProjectData, fetch_projects, toggle_project_favorite};
+#![allow(clippy::missing_errors_doc)]
+
+use crate::data::{ProjectData, RequestError, fetch_projects, toggle_project_favorite};
 use leptos::prelude::*;
 
 /// Provides the list of projects fetched from the backend.
@@ -13,7 +15,7 @@ pub struct ProjectsContext {
 impl ProjectsContext {
     /// Toggle the current user's favorite status for a project and return the
     /// updated project on success.
-    pub async fn toggle_favorite(id: &str) -> Option<ProjectData> {
+    pub async fn toggle_favorite(id: &str) -> Result<ProjectData, RequestError> {
         toggle_project_favorite(id).await
     }
 
@@ -29,8 +31,14 @@ impl ProjectsContext {
         });
 
         leptos::task::spawn_local(async move {
-            let fetched = fetch_projects().await;
-            set_projects.set(fetched);
+            match fetch_projects().await {
+                Ok(fetched) => set_projects.set(fetched),
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to load projects: {}", err.message()).into(),
+                    );
+                }
+            }
             set_is_loading.set(false);
         });
     }
