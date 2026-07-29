@@ -89,33 +89,31 @@ fn cors_preflight(origin: &str) -> Result<Response> {
 /// Returns the request origin if it is in the allowed list, otherwise the
 /// first allowed origin as a safe fallback.
 fn allowed_origin(req: &Request) -> String {
-    req.headers()
-        .get("Origin")
-        .ok()
-        .flatten()
-        .and_then(|origin| {
-            ALLOWED_ORIGINS
-                .iter()
-                .find(|&&allowed| allowed == origin)
-                .map(|_| origin)
-        })
-        .unwrap_or_else(|| ALLOWED_ORIGINS[0].to_string())
+    select_allowed_origin(req.headers().get("Origin").ok().flatten().as_deref())
 }
 
-#[event(fetch)]
-async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
-    let router = Router::new();
-    let origin = allowed_origin(&req);
+/// Selects an allowed origin from an optional request origin header value.
+///
+/// If the origin is in [`ALLOWED_ORIGINS`] it is returned verbatim; otherwise
+/// the first allowed origin is returned as a safe default.
+fn select_allowed_origin(origin: Option<&str>) -> String {
+    origin
+        .and_then(|value| {
+            ALLOWED_ORIGINS
+                .iter()
+                .find(|&&allowed| allowed == value)
+                .map(|_| value)
+        })
+        .unwrap_or_else(|| ALLOWED_ORIGINS[0])
+        .to_string()
+}
 
-    if req.method() == Method::Options {
-        return cors_preflight(&origin);
-    }
-
-    let path = req.path();
-    let is_data_route = path.starts_with("/data/");
-    let is_login_route = path.starts_with("/login/");
-
-    let result = router
+/// Builds the request router with all API routes registered.
+///
+/// Extracted so route wiring can be exercised in tests and so the entry point
+/// stays focused on CORS and environment handling.
+pub fn build_router() -> Router<'static, ()> {
+    Router::new()
         .get_async(routes::ACCOUNTS, api::accounts::list_accounts)
         .post_async(routes::ACCOUNTS, api::accounts::create_account)
         .get_async(routes::ACCOUNT, api::accounts::read_account)
@@ -147,8 +145,22 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .get_async(routes::AUTH_ME, api::session::me)
         .put_async(routes::AUTH_ME, api::session::update_me)
         .get_async(routes::AUTH_LOGOUT, api::session::logout)
-        .run(req, env)
-        .await;
+}
+
+#[event(fetch)]
+async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
+    let router = build_router();
+    let origin = allowed_origin(&req);
+
+    if req.method() == Method::Options {
+        return cors_preflight(&origin);
+    }
+
+    let path = req.path();
+    let is_data_route = path.starts_with("/data/");
+    let is_login_route = path.starts_with("/login/");
+
+    let result = router.run(req, env).await;
 
     match result {
         Ok(resp) => {
@@ -177,5 +189,169 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 .with_headers(headers)
                 .body(ResponseBody::Body(err.to_string().into())))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use api::accounts::Account;
+    use api::projects::Project;
+    use serde::Deserialize;
+
+    /// Frontend-compatible representation of an account response.
+    ///
+    /// The backend `Account` struct omits `project_ids`, `provider`, and
+    /// `provider_id`, which the frontend supplies via `#[serde(default)]`. This
+    /// struct mirrors the frontend contract so we can verify the JSON shape
+    /// round-trips correctly.
+    #[derive(Debug, Deserialize)]
+    struct FrontendAccountData {
+        id: String,
+        username: String,
+        display_name: String,
+        email: String,
+        role: String,
+        bio: String,
+        avatar_url: Option<String>,
+        #[serde(default)]
+        project_ids: Vec<String>,
+        created_at: String,
+        verified: i32,
+        #[serde(default)]
+        provider: String,
+        #[serde(default)]
+        provider_id: String,
+    }
+
+    /// Frontend-compatible representation of a project response.
+    ///
+    /// The backend serializes the JSON-string columns exactly as the frontend
+    /// expects to deserialize them. This struct confirms the contract without
+    /// importing the frontend crate into the backend tests.
+    #[derive(Debug, Deserialize)]
+    struct FrontendProjectData {
+        id: String,
+        title: String,
+        author: String,
+        author_id: String,
+        author_username: String,
+        #[serde(default)]
+        collaborator_ids: String,
+        description: String,
+        tags: String,
+        supported_platforms: String,
+        downloads: u64,
+        #[serde(default)]
+        favorites: String,
+        timestamp: String,
+        #[serde(default)]
+        icon_url: Option<String>,
+        #[serde(default)]
+        ifc_url: Option<String>,
+    }
+
+    #[test]
+    fn router_builds_without_conflicting_routes() {
+        let _ = build_router();
+    }
+
+    #[test]
+    fn allowed_origin_selects_production_origin() {
+        assert_eq!(
+            select_allowed_origin(Some("https://cadiotheka.com")),
+            "https://cadiotheka.com"
+        );
+        assert_eq!(
+            select_allowed_origin(Some("https://www.cadiotheka.com")),
+            "https://www.cadiotheka.com"
+        );
+    }
+
+    #[test]
+    fn allowed_origin_selects_localhost() {
+        assert_eq!(
+            select_allowed_origin(Some("http://localhost:8080")),
+            "http://localhost:8080"
+        );
+    }
+
+    #[test]
+    fn allowed_origin_falls_back_for_missing_or_unknown_origin() {
+        assert_eq!(select_allowed_origin(None), "https://cadiotheka.com");
+        assert_eq!(
+            select_allowed_origin(Some("https://evil.com")),
+            "https://cadiotheka.com"
+        );
+    }
+
+    #[test]
+    fn account_json_matches_frontend_contract() {
+        let account = Account {
+            id: "acc-1".to_string(),
+            username: "creator".to_string(),
+            display_name: "Creator".to_string(),
+            email: "creator@example.com".to_string(),
+            role: "creator".to_string(),
+            bio: "Bio".to_string(),
+            avatar_url: Some("https://example.com/avatar.png".to_string()),
+            created_at: "2025-01-01T00:00:00Z".to_string(),
+            verified: 1,
+        };
+
+        let json = serde_json::to_string(&account).expect("account serializes");
+        let parsed: FrontendAccountData =
+            serde_json::from_str(&json).expect("account matches frontend contract");
+
+        assert_eq!(parsed.id, account.id);
+        assert_eq!(parsed.username, account.username);
+        assert_eq!(parsed.display_name, account.display_name);
+        assert_eq!(parsed.email, account.email);
+        assert_eq!(parsed.role, account.role);
+        assert_eq!(parsed.bio, account.bio);
+        assert_eq!(parsed.avatar_url, account.avatar_url);
+        assert!(parsed.project_ids.is_empty());
+        assert_eq!(parsed.created_at, account.created_at);
+        assert_eq!(parsed.verified, account.verified);
+        assert!(parsed.provider.is_empty());
+        assert!(parsed.provider_id.is_empty());
+    }
+
+    #[test]
+    fn project_json_matches_frontend_contract() {
+        let project = Project {
+            id: "proj-1".to_string(),
+            title: "Mountain Bike".to_string(),
+            author: "TrailBlazer".to_string(),
+            author_id: "acc-1".to_string(),
+            author_username: "trailblazer".to_string(),
+            collaborator_ids: vec!["acc-2".to_string()],
+            description: "Extended description.".to_string(),
+            tags: vec!["3d_model".to_string(), "vehicle".to_string()],
+            supported_platforms: vec!["blender".to_string(), "freecad".to_string()],
+            downloads: 1200,
+            favorites: vec!["fav-1".to_string()],
+            timestamp: "2026-07-07T14:30:00Z".to_string(),
+            ifc_url: Some("ifcs/proj-1/model.ifc".to_string()),
+        };
+
+        let json = serde_json::to_string(&project).expect("project serializes");
+        let parsed: FrontendProjectData =
+            serde_json::from_str(&json).expect("project matches frontend contract");
+
+        assert_eq!(parsed.id, project.id);
+        assert_eq!(parsed.title, project.title);
+        assert_eq!(parsed.author, project.author);
+        assert_eq!(parsed.author_id, project.author_id);
+        assert_eq!(parsed.author_username, project.author_username);
+        assert_eq!(parsed.collaborator_ids, "[\"acc-2\"]");
+        assert_eq!(parsed.description, project.description);
+        assert_eq!(parsed.tags, "[\"3d_model\",\"vehicle\"]");
+        assert_eq!(parsed.supported_platforms, "[\"blender\",\"freecad\"]");
+        assert_eq!(parsed.downloads, project.downloads);
+        assert_eq!(parsed.favorites, "[\"fav-1\"]");
+        assert_eq!(parsed.timestamp, project.timestamp);
+        assert_eq!(parsed.icon_url, None);
+        assert_eq!(parsed.ifc_url, project.ifc_url);
     }
 }
