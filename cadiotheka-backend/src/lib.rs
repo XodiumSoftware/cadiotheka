@@ -7,7 +7,15 @@ pub(crate) const DB_BINDING: &str = "DB";
 pub(crate) const PROJECT_ASSETS_R2_BINDING: &str = "PROJECT_ASSETS";
 
 /// Origins allowed to call the API from a browser.
-const ALLOWED_ORIGINS: &[&str] = &["https://cadiotheka.com", "https://www.cadiotheka.com"];
+///
+/// `http://localhost:8080` is included so developers can hit the local backend
+/// directly (not only through Trunk's proxy) during local development. It is
+/// never sent by a production deployment.
+const ALLOWED_ORIGINS: &[&str] = &[
+    "https://cadiotheka.com",
+    "https://www.cadiotheka.com",
+    "http://localhost:8080",
+];
 
 /// Backend route paths.
 pub(crate) mod routes {
