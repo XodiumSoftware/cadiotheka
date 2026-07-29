@@ -17,6 +17,8 @@ use crate::utils::math::{mat4_identity, mat4_mul};
 #[cfg(target_arch = "wasm32")]
 use glow;
 use gltf::Gltf;
+#[cfg(target_arch = "wasm32")]
+use js_sys::{Function, Reflect};
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
 use leptos::web_sys::{MouseEvent, WheelEvent};
@@ -302,6 +304,7 @@ impl Renderer {
 
         #[cfg(target_arch = "wasm32")]
         {
+            suppress_webgl_debug_renderer_info(&gl_context);
             let glow_context = glow::Context::from_webgl2_context(gl_context);
             #[allow(clippy::arc_with_non_send_sync)]
             let context = ThreeDContext::from_gl_context(Arc::new(glow_context)).ok()?;
@@ -549,6 +552,34 @@ fn canvas_size(canvas: &HtmlCanvasElement) -> (u32, u32) {
     let width = u32::try_from(canvas.client_width()).unwrap_or(0);
     let height = u32::try_from(canvas.client_height()).unwrap_or(0);
     (width.max(1), height.max(1))
+}
+
+/// Patches `getExtension` on a WebGL2 context so that Firefox does not emit a
+/// deprecation warning for `WEBGL_debug_renderer_info`.
+///
+/// `glow` 0.17 eagerly queries this extension during context creation, but it
+/// is deprecated in Firefox. Returning `null` for it is safe because neither
+/// `glow` nor `three-d` consume the extension object.
+#[cfg(target_arch = "wasm32")]
+fn suppress_webgl_debug_renderer_info(context: &WebGl2RenderingContext) {
+    let Ok(original) = Reflect::get(context, &"getExtension".into())
+        .and_then(wasm_bindgen::JsCast::dyn_into::<Function>)
+    else {
+        return;
+    };
+    let Ok(true) = Reflect::set(context, &"getExtensionOriginal".into(), &original) else {
+        return;
+    };
+    let wrapper = Function::new_with_args(
+        "name",
+        r#"
+            if (name === "WEBGL_debug_renderer_info") {
+                return null;
+            }
+            return this.getExtensionOriginal(name);
+        "#,
+    );
+    let _ = Reflect::set(context, &"getExtension".into(), &wrapper);
 }
 
 #[cfg(target_arch = "wasm32")]
