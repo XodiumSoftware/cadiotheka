@@ -37,6 +37,8 @@ use three_d::core::{ClearState, Context as ThreeDContext, RenderTarget};
 use three_d::renderer::Mesh;
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::PhysicalMaterial;
+#[cfg(target_arch = "wasm32")]
+use three_d::renderer::Wireframe;
 use three_d::renderer::control::{Event, MouseButton, OrbitControl};
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::geometry::{CpuMesh, Indices, Positions};
@@ -259,6 +261,8 @@ pub struct Renderer {
     scene_bounds: ([f32; 3], [f32; 3]),
     models: Vec<Box<dyn Object>>,
     #[cfg(target_arch = "wasm32")]
+    wireframes: Vec<Wireframe>,
+    #[cfg(target_arch = "wasm32")]
     mesh_metadata: Vec<Option<NodeMetadata>>,
     total_vertices: usize,
     total_triangles: usize,
@@ -275,6 +279,15 @@ pub enum ViewerTheme {
     Dark,
     /// Light background, darker light.
     Light,
+}
+
+/// Returns a subtle outline color that contrasts with the viewer background.
+#[cfg(target_arch = "wasm32")]
+fn wireframe_color(theme: ViewerTheme) -> Srgba {
+    match theme {
+        ViewerTheme::Dark => Srgba::new(255, 255, 255, 140),
+        ViewerTheme::Light => Srgba::new(0, 0, 0, 140),
+    }
 }
 
 /// Per-mesh world-space geometry data retained for raycasting.
@@ -313,6 +326,7 @@ impl Renderer {
             let (camera, control) = build_framing_camera(scene_bounds.0, scene_bounds.1, canvas);
 
             let mut models = Vec::new();
+            let mut wireframes = Vec::new();
             let mut mesh_metadata: Vec<Option<NodeMetadata>> = Vec::new();
             let mut total_vertices = 0;
             let mut total_triangles = 0;
@@ -328,6 +342,7 @@ impl Renderer {
                         &context,
                         &metadata_map,
                         &mut models,
+                        &mut wireframes,
                         &mut mesh_metadata,
                         &mut total_vertices,
                         &mut total_triangles,
@@ -345,6 +360,7 @@ impl Renderer {
                 canvas: canvas.clone(),
                 scene_bounds,
                 models,
+                wireframes,
                 mesh_metadata,
                 total_vertices,
                 total_triangles,
@@ -397,10 +413,21 @@ impl Renderer {
             self.light.direction = light_dir;
         }
 
+        let wireframe_objects: Vec<&dyn Object> = {
+            #[cfg(target_arch = "wasm32")]
+            {
+                self.wireframes.iter().map(|w| w as &dyn Object).collect()
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                Vec::new()
+            }
+        };
         let objects: Vec<&dyn Object> = self
             .models
             .iter()
             .map(std::convert::AsRef::as_ref)
+            .chain(wireframe_objects)
             .collect();
         let (background, light_intensity) = match self.theme {
             ViewerTheme::Dark => ((0.05, 0.05, 0.05, 1.0, 1.0), 1.0),
@@ -419,6 +446,17 @@ impl Renderer {
     }
 
     /// Sets the viewer theme and re-renders on the next frame.
+    #[cfg(target_arch = "wasm32")]
+    pub fn set_theme(&mut self, theme: ViewerTheme) {
+        self.theme = theme;
+        let color = wireframe_color(theme);
+        for wireframe in &mut self.wireframes {
+            wireframe.set_wire_color(color);
+        }
+    }
+
+    /// Sets the viewer theme and re-renders on the next frame.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn set_theme(&mut self, theme: ViewerTheme) {
         self.theme = theme;
     }
@@ -655,6 +693,7 @@ fn upload_node(
     context: &ThreeDContext,
     metadata_map: &std::collections::HashMap<usize, NodeMetadata>,
     models: &mut Vec<Box<dyn Object>>,
+    wireframes: &mut Vec<Wireframe>,
     mesh_metadata: &mut Vec<Option<NodeMetadata>>,
     total_vertices: &mut usize,
     total_triangles: &mut usize,
@@ -671,6 +710,7 @@ fn upload_node(
                 context,
                 metadata.clone(),
                 models,
+                wireframes,
                 mesh_metadata,
                 total_vertices,
                 total_triangles,
@@ -686,6 +726,7 @@ fn upload_node(
             context,
             metadata_map,
             models,
+            wireframes,
             mesh_metadata,
             total_vertices,
             total_triangles,
@@ -702,6 +743,7 @@ fn upload_primitive(
     context: &ThreeDContext,
     metadata: Option<NodeMetadata>,
     models: &mut Vec<Box<dyn Object>>,
+    wireframes: &mut Vec<Wireframe>,
     mesh_metadata: &mut Vec<Option<NodeMetadata>>,
     total_vertices: &mut usize,
     total_triangles: &mut usize,
@@ -764,6 +806,14 @@ fn upload_primitive(
         material.render_states.cull = Cull::None;
         Box::new(Gm::new(mesh, material))
     };
+
+    let wireframe = Wireframe::new_from_cpu_mesh(
+        context,
+        &cpu_mesh,
+        1.0,
+        wireframe_color(ViewerTheme::default()),
+    );
+    wireframes.push(wireframe);
 
     models.push(model);
     mesh_metadata.push(metadata);

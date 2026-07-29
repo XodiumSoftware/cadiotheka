@@ -199,7 +199,7 @@ pub fn IfcViewer(
         let request_render = Rc::clone(&request_render);
         move |_| {
             if let Some(renderer) = renderer.borrow_mut().as_mut() {
-                renderer.set_theme(ViewerTheme::Light);
+                renderer.set_theme(ViewerTheme::Dark);
                 request_render.borrow_mut()();
             }
         }
