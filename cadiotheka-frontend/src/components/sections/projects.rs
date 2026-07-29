@@ -1,5 +1,6 @@
 use crate::components::cards::project::{ProjectCard, ProjectCardProperties};
 use crate::components::ui::corner_frame::CornerFrame;
+use crate::components::ui::effects::section_fade::FadeOverlay;
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
 use crate::contexts::{
     AccountsContext, LayoutContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
@@ -7,7 +8,6 @@ use crate::contexts::{
 };
 use crate::data::ProjectData;
 use crate::engines::SearchEngine;
-use crate::ui::effects::section_fade::FadeOverlay;
 use crate::utils::window_event_listener;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;

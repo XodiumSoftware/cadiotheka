@@ -109,7 +109,7 @@ cadiotheka/
 - Address all `cargo clippy` warnings.
 - Use clear module boundaries as the project grows.
 - Prefer immutable data and explicit error handling (`Result`, `Option`).
-- **Register modules and re-exports in `src/lib.rs` explicitly.** Do not use `mod.rs` files, and do not nest `mod` declarations inside other module files. Every module in the crate must be declared directly in the crate root (`src/lib.rs` for `cadiotheka-frontend`, `src/lib.rs` for `cadiotheka-backend`).
+- **Register modules and re-exports in `src/lib.rs` explicitly.** Do not use `mod.rs` files. Modules may be grouped in `src/lib.rs` using nested `mod` blocks (e.g. `components { pub mod cards; }`) to mirror the directory structure, but do not nest `mod` declarations inside any other `.rs` file. Every crate-level module must be declared in `src/lib.rs` for `cadiotheka-frontend` and `cadiotheka-backend`.
 - Use `snake_case` for all Rust source filenames. Compound module names should be split with underscores (e.g. `project_card.rs`, `search_modal.rs`, `corner_frame.rs`, `project_list.rs`), not concatenated.
 - When adding crate dependencies, look up the latest version on [crates.io](https://crates.io) rather than guessing or reusing an old version from another crate in the workspace.
 - Backend route handlers live under `cadiotheka-backend/src/api/` and are wired in `cadiotheka-backend/src/lib.rs`.
@@ -137,7 +137,7 @@ GitHub Actions workflows in `.github/workflows/` handle building, testing, and r
 ### Adding a New Module
 
 1. Create a new file under `src/` (e.g., `src/registry.rs`).
-2. Add `mod registry;` to `src/lib.rs` if needed.
+2. Add `mod registry;` (or `pub mod registry;`) to `src/lib.rs` if needed, inside an existing top-level group or as a new top-level module.
 3. Keep public APIs minimal and well-named.
 4. Add tests for new behavior.
 

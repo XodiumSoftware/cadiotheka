@@ -1,17 +1,17 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 #![allow(clippy::must_use_candidate, clippy::too_many_lines)]
 
-mod app;
+pub mod app;
 
 pub mod components {
+    pub mod cards {
+        pub mod project;
+    }
+
     pub mod sections {
         pub mod footer;
         pub mod header;
         pub mod projects;
-    }
-
-    pub mod cards {
-        pub mod project;
     }
 
     pub mod ui {
@@ -36,6 +36,7 @@ pub mod components {
         pub mod toggle;
         pub mod toolbar_button;
     }
+
     pub use sections::footer::Footer;
     pub use sections::header::Header;
     pub use sections::projects::ProjectsSection;
@@ -54,8 +55,7 @@ pub mod components {
     pub use ui::overflow_row::OverflowRow;
     pub use ui::project_icon_picker::ProjectIconPicker;
     pub use ui::toast::Toast;
-    pub use ui::toggle::ToggleSlider;
-    pub use ui::toggle::ToggleSliderWithSlashLabel;
+    pub use ui::toggle::{ToggleSlider, ToggleSliderWithSlashLabel};
     pub use ui::toolbar_button::ToolbarButton;
 }
 
@@ -123,10 +123,4 @@ pub mod utils {
     pub use url::*;
 }
 
-pub use app::*;
-pub use components::*;
-pub use contexts::*;
-pub use data::*;
-pub use engines::*;
-pub use metadata::*;
-pub use utils::*;
+pub use app::App;

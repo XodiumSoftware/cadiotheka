@@ -1,7 +1,7 @@
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use crate::utils::api_url;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 
 /// A URL pointing to a project's icon asset.
@@ -15,7 +15,8 @@ pub struct IconUrl(pub String);
 /// that JSON string into a list of strings and then deserializes each string
 /// into a strongly-typed [`Tag`] via `serde(rename)`.
 mod tag_json_string {
-    use super::{Deserialize, Deserializer, Serializer, Tag};
+    use crate::metadata::tags::Tag;
+    use serde::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S: Serializer>(value: &[Tag], serializer: S) -> Result<S::Ok, S::Error> {
         let strings: Vec<String> = value
@@ -52,7 +53,8 @@ mod tag_json_string {
 /// parses that JSON string into a list of strings and then deserializes each
 /// string into a strongly-typed [`Platform`] via `serde(rename)`.
 mod platform_json_string {
-    use super::{Deserialize, Deserializer, Platform, Serializer};
+    use crate::metadata::platforms::Platform;
+    use serde::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S: Serializer>(value: &[Platform], serializer: S) -> Result<S::Ok, S::Error> {
         let strings: Vec<String> = value
@@ -87,7 +89,7 @@ mod platform_json_string {
 
 /// Serde adapter for favorites stored as a JSON-text column.
 mod favorites_json_string {
-    use super::{Deserialize, Deserializer, Serializer};
+    use serde::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S: Serializer>(value: &[String], serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
