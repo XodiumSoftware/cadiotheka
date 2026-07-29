@@ -104,7 +104,7 @@ worker-build
 npx wrangler dev --remote
 ```
 
-That uses the `DB`, `AUTH`, and `PI` bindings from `wrangler.toml`. Be careful: if those bindings point at production, your local app will read and write real production data.
+That uses the `DB`, `AUTH`, and `PROJECT_ASSETS` bindings from `wrangler.toml`. Be careful: if those bindings point at production, your local app will read and write real production data.
 
 ## Run Backend Locally
 
@@ -112,7 +112,7 @@ The backend is a Cloudflare Pages Functions Rust worker. First build the WASM bu
 
 ```bash
 cd cadiotheka-backend
-cargo install worker-build
+cargo install worker-build --version 0.7.5 --force
 worker-build
 npx wrangler dev
 ```

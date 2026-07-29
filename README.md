@@ -58,20 +58,18 @@ Cadiotheka is a Cargo workspace with two members: `cadiotheka-frontend` and `cad
 
 ### Frontend
 
-Start a local Trunk dev server:
-
-```bash
-git clone https://github.com/XodiumSoftware/cadiotheka.git
-cd cadiotheka
-cd cadiotheka-backend
-npx wrangler dev
-```
-
-In a second terminal, start the frontend:
+Start a local Trunk dev server (the backend must already be running):
 
 ```bash
 cd cadiotheka-frontend
 trunk serve --port 8080
+```
+
+In a second terminal, start the backend first:
+
+```bash
+cd cadiotheka-backend
+npx wrangler dev
 ```
 
 Then open <http://localhost:8080/index.html#dev> in a browser.
@@ -112,8 +110,8 @@ To create the local D1 database tables:
 
 ```bash
 cd cadiotheka-backend
-npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql --local
-npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql --local
+npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
+npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
 ```
 
 For asset uploads, also create or bind an R2 bucket in `wrangler.toml`:
@@ -138,9 +136,9 @@ Lint each crate:
 
 ```bash
 cd cadiotheka-frontend
-cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
+cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -W clippy::pedantic -D warnings
 cd ../cadiotheka-backend
-cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --all-targets --all-features -- -W clippy::pedantic -D warnings
 ```
 
 ### Frontend Build
@@ -166,7 +164,7 @@ The static site is placed in `cadiotheka-frontend/dist/`.
    The backend uses these short Worker bindings:
    - `DB` for the D1 database
    - `AUTH` for the KV namespace used by OAuth state and sessions
-   - `PI` for the R2 bucket that stores project icons
+   - `PROJECT_ASSETS` for the R2 bucket that stores project assets
 
 3. Create a KV namespace for OAuth state and sessions:
    ```bash
@@ -193,8 +191,8 @@ The static site is placed in `cadiotheka-frontend/dist/`.
 
 5. Apply the schema:
    ```bash
-   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/schemas/accounts.sql
-   npx wrangler d1 execute cadiotheka-db --file=cadiotheka-backend/schemas/projects.sql
+   npx wrangler d1 execute cadiotheka --file=cadiotheka-backend/schemas/accounts.sql
+   npx wrangler d1 execute cadiotheka --file=cadiotheka-backend/schemas/projects.sql
    ```
 
    Create the first accounts and projects through the deployed application UI or API.
