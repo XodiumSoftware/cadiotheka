@@ -9,7 +9,7 @@ use leptos::web_sys;
 /// backend requests. The component resets the widget whenever it becomes
 /// visible so stale single-use tokens are discarded.
 #[component]
-pub fn TurnstileWidget(#[prop(into)] visible: Signal<bool>) -> impl IntoView {
+pub fn TurnstileWidget(id: &'static str, #[prop(into)] visible: Signal<bool>) -> impl IntoView {
     Effect::new(move |_| {
         if visible.get() {
             reset_turnstile_internal();
@@ -18,26 +18,23 @@ pub fn TurnstileWidget(#[prop(into)] visible: Signal<bool>) -> impl IntoView {
 
     view! {
         <div
+            id=id
             class="cf-turnstile"
             data-sitekey="0x4AAAAAAEA7QaTfmDX0gWZ2"
             data-action="turnstile-spin-v2"
-            data-callback="turnstileOnSuccess"
-            data-error-callback="turnstileOnError"
         ></div>
     }
 }
 
-/// Reads the current Turnstile response token from the DOM, if any.
+/// Reads the current Turnstile response token from the widget with the given
+/// container id.
 ///
 /// Returns `None` when the widget has not rendered a token yet.
-pub fn turnstile_response() -> Option<String> {
+pub fn turnstile_response(id: &str) -> Option<String> {
+    let selector = format!("#{id} input[name='cf-turnstile-response']");
     web_sys::window()
         .and_then(|window| window.document())
-        .and_then(|document| {
-            document
-                .query_selector("input[name='cf-turnstile-response']")
-                .ok()
-        })
+        .and_then(|document| document.query_selector(&selector).ok())
         .flatten()
         .and_then(|element| element.dyn_into::<web_sys::HtmlInputElement>().ok())
         .map(|input| input.value())
@@ -53,27 +50,8 @@ pub fn reset_turnstile() {
 }
 
 fn reset_turnstile_internal() {
-    let Some(window) = web_sys::window() else {
-        return;
-    };
-
-    let value = js_sys::Reflect::get(&window, &JsValue::from_str("turnstile"))
-        .ok()
-        .filter(|value| !value.is_undefined() && !value.is_null());
-    let Some(value) = value else {
-        return;
-    };
-
-    let Ok(object) = value.dyn_into::<js_sys::Object>() else {
-        return;
-    };
-    object.unchecked_ref::<TurnstileApi>().reset_opt();
-}
-
-#[wasm_bindgen::prelude::wasm_bindgen]
-extern "C" {
-    type TurnstileApi;
-
-    #[wasm_bindgen(method, js_name = "reset")]
-    fn reset_opt(this: &TurnstileApi);
+    let function = js_sys::Function::new_no_args(
+        "if (typeof window !== 'undefined' && window.turnstile && typeof window.turnstile.reset === 'function') { try { window.turnstile.reset(); } catch (e) { /* widget not ready yet */ } }",
+    );
+    let _ = function.call0(&JsValue::undefined());
 }
