@@ -788,7 +788,6 @@ fn ProjectModalContent(
 
     let increment_downloads = {
         let project_id = card.id.clone();
-        let ifc_url = ifc_url;
         let set_projects = projects_ctx.set_projects;
         let modal_set_card = modal.set_card;
         Callback::new(move |()| {
@@ -982,7 +981,7 @@ fn ProjectModalContent(
                                     data-tip=label
                                     disabled=move || !has_ifc
                                     on:click={
-                                        let cb = increment_downloads.clone();
+                                        let cb = increment_downloads;
                                         move |_| cb.run(())
                                     }
                                 >
@@ -1226,7 +1225,7 @@ fn ProjectModalContent(
                                                             type="button"
                                                             class="btn btn-primary btn-sm w-full rounded-none"
                                                             on:click={
-                                                                let cb = increment_downloads.clone();
+                                                                let cb = increment_downloads;
                                                                 move |_| cb.run(())
                                                             }
                                                         >
