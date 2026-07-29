@@ -11,8 +11,8 @@ use crate::contexts::{
 };
 use crate::data::{
     AccountData, AccountRole, delete_project, delete_project_ifc, fetch_projects,
-    update_project_collaborators, update_project_description, update_project_platforms,
-    update_project_tags, update_project_title, upload_project_ifc,
+    increment_project_downloads, update_project_collaborators, update_project_description,
+    update_project_platforms, update_project_tags, update_project_title, upload_project_ifc,
 };
 use crate::utils::{api_url, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
@@ -786,6 +786,41 @@ fn ProjectModalContent(
         }
     });
 
+    let increment_downloads = {
+        let project_id = card.id.clone();
+        let set_projects = projects_ctx.set_projects;
+        let modal_set_card = modal.set_card;
+        Callback::new(move |()| {
+            let project_id = project_id.clone();
+            leptos::task::spawn_local(async move {
+                match increment_project_downloads(&project_id).await {
+                    Ok(updated) => {
+                        let updated_for_modal = updated.clone();
+                        set_projects.update(|projects| {
+                            if let Some(project) =
+                                projects.iter_mut().find(|project| project.id == updated.id)
+                            {
+                                *project = updated.clone();
+                            }
+                        });
+                        modal_set_card.update(|card| {
+                            if let Some(card) = card.as_mut()
+                                && card.id == updated_for_modal.id
+                            {
+                                card.downloads = updated_for_modal.downloads;
+                            }
+                        });
+                    }
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to increment downloads: {}", err.message()).into(),
+                        );
+                    }
+                }
+            });
+        })
+    };
+
     let toggle_tag = Callback::new(move |tag: crate::metadata::tags::Tag| {
         set_draft_tags.update(|tags| {
             if let Some(pos) = tags.iter().position(|t| *t == tag) {
@@ -946,6 +981,10 @@ fn ProjectModalContent(
                                             download=true
                                             class="flex items-center gap-1"
                                             aria-label="Download IFC model"
+                                            on:click={
+                                                let cb = increment_downloads;
+                                                move |_| cb.run(())
+                                            }
                                         >
                                             <DownloadIcon />
                                         </a>
@@ -1195,6 +1234,10 @@ fn ProjectModalContent(
                                                             href=url
                                                             download=true
                                                             class="btn btn-primary btn-sm w-full rounded-none"
+                                                            on:click={
+                                                                let cb = increment_downloads;
+                                                                move |_| cb.run(())
+                                                            }
                                                         >
                                                             <span>"Download IFC"</span>
                                                         </a>

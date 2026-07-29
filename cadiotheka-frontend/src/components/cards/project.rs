@@ -154,6 +154,12 @@ pub fn ProjectCard(
         }
     });
 
+    let download_count = Signal::derive(move || {
+        live_project
+            .get()
+            .map_or(downloads, |project| project.downloads)
+    });
+
     let favorite_count = Signal::derive(move || {
         live_project
             .get()
@@ -270,10 +276,10 @@ pub fn ProjectCard(
                         <div class="flex items-center gap-4 text-base-content/60 text-sm">
                             <span
                                 class="flex items-center gap-1 tooltip tooltip-top"
-                                data-tip={move || format!("{} downloads", format_number_full(downloads))}
+                                data-tip={move || format!("{} downloads", format_number_full(download_count.get()))}
                             >
                                 <DownloadIcon />
-                                {move || format_number(downloads)}
+                                {move || format_number(download_count.get())}
                             </span>
                             <span
                                 class=move || {
@@ -369,6 +375,7 @@ mod tests {
         let props: ProjectCardProperties = project.into();
         assert_eq!(props.title, "Gear");
         assert_eq!(props.author, "Author");
+        assert_eq!(props.downloads, 1234);
         assert_eq!(props.tags.len(), 1);
         assert_eq!(props.supported_platforms.len(), 1);
     }

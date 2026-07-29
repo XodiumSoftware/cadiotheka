@@ -25,6 +25,7 @@ pub(crate) mod routes {
     pub(crate) const PROJECTS: &str = "/data/projects";
     pub(crate) const PROJECT: &str = "/data/projects/:id";
     pub(crate) const PROJECT_FAVORITES: &str = "/data/projects/:id/favorites";
+    pub(crate) const PROJECT_DOWNLOADS: &str = "/data/projects/:id/downloads";
     pub(crate) const PROJECT_IFC: &str = "/data/projects/:id/ifc";
     pub(crate) const PROJECT_GLBS: &str = "/data/projects/:id/glb";
     pub(crate) const IFCS: &str = "/data/ifcs/:project_id/:filename";
@@ -137,6 +138,10 @@ pub fn build_router() -> Router<'static, ()> {
         .post_async(
             routes::PROJECT_FAVORITES,
             api::projects::toggle_project_favorite,
+        )
+        .post_async(
+            routes::PROJECT_DOWNLOADS,
+            api::projects::increment_project_downloads,
         )
         .post_async(routes::PROJECT_IFC, api::projects::upload_project_ifc)
         .delete_async(routes::PROJECT_IFC, api::projects::delete_project_ifc)

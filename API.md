@@ -57,6 +57,7 @@ authenticated requests.
 | PATCH | `/data/projects/:id` | session owner/admin | Partially update a project. |
 | DELETE | `/data/projects/:id` | session owner/admin | Delete a project. |
 | POST | `/data/projects/:id/favorites` | session | Toggle favorite status for the current user. |
+| POST | `/data/projects/:id/downloads` | - | Increment the project's download counter and return the updated project. |
 | POST | `/data/projects/:id/ifc` | session owner/admin | Upload an IFC model (`multipart/form-data`, field `ifc`). |
 | GET | `/data/ifcs/:project_id/:filename` | - | Serve a project IFC model. |
 

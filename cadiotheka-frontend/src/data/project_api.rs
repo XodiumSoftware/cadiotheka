@@ -220,6 +220,43 @@ pub async fn toggle_project_favorite(id: &str) -> Result<ProjectData, RequestErr
     }
 }
 
+/// Increments the download counter for a project and returns the updated project.
+///
+/// On success it returns the updated project data; on failure it returns a
+/// [`RequestError`].
+pub async fn increment_project_downloads(id: &str) -> Result<ProjectData, RequestError> {
+    let url = api_url(&format!("/projects/{id}/downloads"));
+    let request = Request::post(&url)
+        .credentials(RequestCredentials::Include)
+        .body("")
+        .map_err(|err| {
+            RequestError::BuildRequest(format!("Failed to build download increment request: {err}"))
+        })?;
+
+    match request.send().await {
+        Ok(response) if response.ok() => {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            serde_json::from_str::<ProjectData>(&text).map_err(|err| {
+                RequestError::Parse(format!(
+                    "Failed to parse download increment response (status={status}): {err}\n{text}"
+                ))
+            })
+        }
+        Ok(response) => {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to increment project downloads: {body}"),
+            })
+        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to increment project downloads: {err}"
+        ))),
+    }
+}
+
 /// Uploads a project icon and returns its public URL.
 pub async fn upload_project_icon(id: &str, file: web_sys::File) -> Result<IconUrl, RequestError> {
     #[derive(Deserialize)]

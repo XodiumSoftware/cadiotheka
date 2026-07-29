@@ -560,6 +560,32 @@ pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Res
     Response::from_json(&updated)
 }
 
+/// Increments the download counter for a project and returns the updated project.
+///
+/// This endpoint is rate-limited per client IP to discourage abuse while still
+/// allowing legitimate downloads.
+pub async fn increment_project_downloads(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    if let Some(rate_limited) = check_rate_limit(&req, &ctx, "downloads").await? {
+        return Ok(rate_limited);
+    }
+
+    let id = ctx.param("id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+
+    db(&ctx)?
+        .prepare("UPDATE projects SET downloads = downloads + 1 WHERE id = ?1")
+        .bind(&[project.id.clone().into()])?
+        .run()
+        .await?;
+
+    let updated = fetch_project(&ctx, &project.id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("updated project not found".into()))?;
+    Response::from_json(&updated)
+}
+
 /// Fetches a single project by id, returning `None` when no row matches.
 async fn fetch_project(ctx: &RouteContext<()>, id: &str) -> Result<Option<Project>> {
     let result = db(ctx)?
