@@ -788,9 +788,15 @@ fn ProjectModalContent(
 
     let increment_downloads = {
         let project_id = card.id.clone();
+        let ifc_url = ifc_url;
         let set_projects = projects_ctx.set_projects;
         let modal_set_card = modal.set_card;
         Callback::new(move |()| {
+            let Some(url) = ifc_url.get() else {
+                return;
+            };
+            trigger_download(&url);
+
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
                 match increment_project_downloads(&project_id).await {
@@ -958,49 +964,35 @@ fn ProjectModalContent(
                     }}
                 </div>
                 <div class="hidden sm:flex items-center gap-2 text-xs flex-shrink-0">
-                    {move || {
-                        let has_ifc = ifc_url.get().is_some();
-                        view! {
-                            <button
-                                type="button"
-                                class=move || {
-                                    if has_ifc {
-                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
-                                    } else {
-                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
+                    {
+                        move || {
+                            let has_ifc = ifc_url.get().is_some();
+                            let label = if has_ifc { "Download IFC" } else { "No IFC model available" };
+                            view! {
+                                <button
+                                    type="button"
+                                    class=move || {
+                                        if has_ifc {
+                                            "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                        } else {
+                                            "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
+                                        }
                                     }
-                                }
-                                aria-label=move || if has_ifc { "Download IFC model".to_string() } else { "No IFC model available".to_string() }
-                                data-tip=move || if has_ifc { "Download IFC".to_string() } else { "No IFC model available".to_string() }
-                                disabled=move || !has_ifc
-                            >
-                                {if has_ifc {
-                                    view! {
-                                        <a
-                                            href=ifc_url.get().unwrap_or_default()
-                                            download=true
-                                            class="flex items-center gap-1"
-                                            aria-label="Download IFC model"
-                                            on:click={
-                                                let cb = increment_downloads;
-                                                move |_| cb.run(())
-                                            }
-                                        >
-                                            <DownloadIcon />
-                                        </a>
+                                    aria-label=label
+                                    data-tip=label
+                                    disabled=move || !has_ifc
+                                    on:click={
+                                        let cb = increment_downloads.clone();
+                                        move |_| cb.run(())
                                     }
-                                        .into_any()
-                                } else {
-                                    view! {
-                                        <span class="flex items-center gap-1">
-                                            <DownloadIcon />
-                                        </span>
-                                    }
-                                        .into_any()
-                                }}
-                            </button>
+                                >
+                                    <span class="flex items-center gap-1">
+                                        <DownloadIcon />
+                                    </span>
+                                </button>
+                            }
                         }
-                    }}
+                    }
                     <button
                         type="button"
                         class=move || {
@@ -1175,7 +1167,7 @@ fn ProjectModalContent(
                                             }
                                         }}
                                         {move || {
-                                            if let Some(url) = ifc_url.get() {
+                                            if ifc_url.get().is_some() {
                                                 view! {
                                                     <div class="rounded-none border border-base-content/10 bg-base-200/30 p-4 space-y-3 flex-shrink-0">
                                                         <div class="flex items-center gap-3">
@@ -1230,17 +1222,16 @@ fn ProjectModalContent(
                                                                 }
                                                             }}
                                                         </div>
-                                                        <a
-                                                            href=url
-                                                            download=true
+                                                        <button
+                                                            type="button"
                                                             class="btn btn-primary btn-sm w-full rounded-none"
                                                             on:click={
-                                                                let cb = increment_downloads;
+                                                                let cb = increment_downloads.clone();
                                                                 move |_| cb.run(())
                                                             }
                                                         >
                                                             <span>"Download IFC"</span>
-                                                        </a>
+                                                        </button>
                                                     </div>
                                                 }
                                                     .into_any()
@@ -1803,4 +1794,29 @@ fn event_target_value(ev: &leptos::web_sys::Event) -> String {
             })
         })
         .unwrap_or_default()
+}
+
+/// Programmatically starts a file download from the given URL.
+///
+/// A temporary anchor element with the `download` attribute is created and
+/// clicked, then removed. This avoids nesting interactive elements and keeps
+/// the download behaviour explicit and testable.
+fn trigger_download(url: &str) {
+    let Some(document) = leptos::web_sys::window().and_then(|w| w.document()) else {
+        return;
+    };
+    let Ok(anchor) = document.create_element("a") else {
+        return;
+    };
+    let _ = anchor.set_attribute("href", url);
+    let _ = anchor.set_attribute("download", "");
+    let _ = anchor.set_attribute("style", "display:none");
+    let _ = anchor.set_attribute("aria-hidden", "true");
+    if let Some(body) = document.body() {
+        let _ = body.append_child(&anchor);
+        if let Some(element) = anchor.dyn_ref::<leptos::web_sys::HtmlElement>() {
+            element.click();
+        }
+        let _ = body.remove_child(&anchor);
+    }
 }

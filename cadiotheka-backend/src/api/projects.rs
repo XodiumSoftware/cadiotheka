@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use worker::{
     Bucket, D1Database, FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext,
+    console_log,
 };
 
 use crate::DB_BINDING;
@@ -565,15 +566,24 @@ pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Res
 /// This endpoint is rate-limited per client IP to discourage abuse while still
 /// allowing legitimate downloads.
 pub async fn increment_project_downloads(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    console_log!(
+        "increment_project_downloads: received request for id {:?}",
+        ctx.param("id")
+    );
+
     if let Some(rate_limited) = check_rate_limit(&req, &ctx, "downloads").await? {
+        console_log!("increment_project_downloads: rate limit exceeded");
         return Ok(rate_limited);
     }
 
     let id = ctx.param("id").cloned().unwrap_or_default();
+    console_log!("increment_project_downloads: looking up project {id}");
+
     let project = fetch_project(&ctx, &id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
 
+    console_log!("increment_project_downloads: updating download count for {id}");
     db(&ctx)?
         .prepare("UPDATE projects SET downloads = downloads + 1 WHERE id = ?1")
         .bind(&[project.id.clone().into()])?
@@ -583,6 +593,7 @@ pub async fn increment_project_downloads(req: Request, ctx: RouteContext<()>) ->
     let updated = fetch_project(&ctx, &project.id)
         .await?
         .ok_or_else(|| worker::Error::RustError("updated project not found".into()))?;
+    console_log!("increment_project_downloads: returning updated project {id}");
     Response::from_json(&updated)
 }
 
