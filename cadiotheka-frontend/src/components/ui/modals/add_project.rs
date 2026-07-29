@@ -122,7 +122,7 @@ pub fn AddProjectModal() -> impl IntoView {
             return;
         }
 
-        let token = turnstile_response();
+        let token = turnstile_response("add-project-turnstile");
 
         let payload = new_project_payload(
             title.get_untracked(),
@@ -391,7 +391,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                     <p class="text-error text-sm">{msg}</p>
                                 })}
 
-                                <TurnstileWidget visible=Signal::derive(move || modal.open.get()) />
+                                <TurnstileWidget id="add-project-turnstile" visible=Signal::derive(move || modal.open.get()) />
                             </div>
 
                             <div class="flex justify-end gap-2 flex-shrink-0 pt-2 border-t border-base-content/10">

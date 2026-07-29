@@ -15,6 +15,8 @@ const TURNSTILE_SECRET_KEY: &str = "TURNSTILE_SECRET";
 #[derive(Debug, Deserialize)]
 struct SiteVerifyResponse {
     success: bool,
+    #[serde(default, rename = "error-codes")]
+    error_codes: Vec<String>,
 }
 
 /// Verifies a Turnstile token from the request.
@@ -41,8 +43,11 @@ pub async fn verify_turnstile_token(
     }
 
     match verify_with_cloudflare(&ctx.env, &token, &client_ip(req)).await {
-        Ok(true) => Ok(None),
-        Ok(false) => Ok(Some(error_response("Turnstile verification failed", 403)?)),
+        Ok((true, _)) => Ok(None),
+        Ok((false, error_codes)) => {
+            console_log!("Turnstile verification failed: {error_codes:?}");
+            Ok(Some(error_response("Turnstile verification failed", 403)?))
+        }
         Err(err) => {
             console_log!("Turnstile siteverify error: {err}");
             Ok(Some(error_response("Turnstile verification failed", 403)?))
@@ -69,7 +74,11 @@ async fn extract_token(req: &mut Request) -> Option<String> {
 }
 
 /// Calls Cloudflare's Turnstile siteverify endpoint.
-async fn verify_with_cloudflare(env: &Env, token: &str, remoteip: &str) -> Result<bool> {
+async fn verify_with_cloudflare(
+    env: &Env,
+    token: &str,
+    remoteip: &str,
+) -> Result<(bool, Vec<String>)> {
     let secret = env
         .secret(TURNSTILE_SECRET_KEY)
         .map_err(|err| rust_err(format!("missing TURNSTILE_SECRET: {err}")))?
@@ -108,7 +117,7 @@ async fn verify_with_cloudflare(env: &Env, token: &str, remoteip: &str) -> Resul
         ))
     })?;
 
-    Ok(parsed.success)
+    Ok((parsed.success, parsed.error_codes))
 }
 
 /// Best-effort client IP from Cloudflare/forwarded headers.

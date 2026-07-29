@@ -801,7 +801,13 @@ fn ProjectModalContent(
                 return;
             };
 
-            let token = turnstile_response();
+            let token = turnstile_response("download-turnstile");
+            if token.is_none() {
+                set_show_download_turnstile.set(true);
+                pending_download_url.set_value(Some(url));
+                return;
+            }
+
             let project_id = project_id.clone();
             let url = url.clone();
             leptos::task::spawn_local(async move {
@@ -846,10 +852,13 @@ fn ProjectModalContent(
             let Some(url) = pending_download_url.get_value() else {
                 return;
             };
-            let token = turnstile_response();
+            let token = turnstile_response("download-turnstile");
+            let Some(token) = token else {
+                return;
+            };
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
-                match increment_project_downloads(&project_id, token.clone()).await {
+                match increment_project_downloads(&project_id, Some(token)).await {
                     Ok(updated) => {
                         pending_download_url.set_value(None);
                         set_show_download_turnstile.set(false);
@@ -1291,7 +1300,7 @@ fn ProjectModalContent(
                                                         {move || if show_download_turnstile.get() {
                                                             Some(view! {
                                                                 <div class="mt-3 space-y-2">
-                                                                    <TurnstileWidget visible=Signal::derive(move || show_download_turnstile.get()) />
+                                                                    <TurnstileWidget id="download-turnstile" visible=Signal::derive(move || show_download_turnstile.get()) />
                                                                     <button
                                                                         type="button"
                                                                         class="btn btn-primary btn-sm w-full rounded-none"

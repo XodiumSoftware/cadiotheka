@@ -30,10 +30,10 @@ Leptos CSR + Cloudflare Pages Functions Rust backend project.
 ## Frontend contract
 
 - Load `<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` in `index.html`.
-- Render a `<div class="cf-turnstile" data-sitekey="<SITEKEY>" data-action="turnstile-spin-v2"></div>` in each protected modal.
-- Read the token from the hidden `<input name="cf-turnstile-response">` that the widget creates.
+- Render the shared `<TurnstileWidget id="<unique-id>" visible=... />` component from `cadiotheka-frontend/src/components/ui/turnstile.rs` in each protected modal, giving each instance a unique `id`.
+- Read the token via `turnstile_response("<unique-id>")` so the correct scoped widget token is used.
 - Pass the token to the backend via the `X-Turnstile-Token` request header in the existing request helpers.
-- Reset the widget after any non-redirect error: `window.turnstile?.reset()` or use the provided `reset_turnstile()` helper.
+- Reset the widget after any non-redirect error: `reset_turnstile()` is safe to call even before the widget has rendered.
 
 ## Backend contract
 
