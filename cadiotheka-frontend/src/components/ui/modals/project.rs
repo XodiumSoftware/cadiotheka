@@ -794,12 +794,13 @@ fn ProjectModalContent(
             let Some(url) = ifc_url.get() else {
                 return;
             };
-            trigger_download(&url);
 
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
                 match increment_project_downloads(&project_id).await {
                     Ok(updated) => {
+                        trigger_download(&url);
+
                         let updated_for_modal = updated.clone();
                         set_projects.update(|projects| {
                             if let Some(project) =
