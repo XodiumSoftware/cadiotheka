@@ -14,6 +14,7 @@ pub mod components {
     }
 
     pub mod ui {
+        pub mod buy_me_a_coffee;
         pub mod corner_frame;
         pub mod effects {
             pub mod section_fade;
@@ -41,6 +42,7 @@ pub mod components {
     pub use sections::header::Header;
     pub use sections::projects::ProjectsSection;
 
+    pub use ui::buy_me_a_coffee::BuyMeACoffeeLogo;
     pub use ui::corner_frame::CornerFrame;
     pub use ui::effects::section_fade::FadeOverlay;
     pub use ui::ifc_viewer::{IfcViewer, IfcViewerState, PickCallback};

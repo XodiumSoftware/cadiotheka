@@ -1,3 +1,4 @@
+use crate::components::ui::buy_me_a_coffee::BuyMeACoffeeLogo;
 use crate::components::ui::logo::Logo;
 use crate::components::ui::modals::search::SearchModal;
 use crate::contexts::{
@@ -530,6 +531,16 @@ pub fn Header() -> impl IntoView {
                             </button>
                         })
                     }}
+
+                    <a
+                        href="https://buymeacoffee.com/illyrius"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="btn btn-outline btn-primary btn-lift h-[42px] w-[42px] p-0 flex items-center justify-center"
+                        aria-label="Buy me a coffee"
+                    >
+                        <BuyMeACoffeeLogo class="w-6 h-6" />
+                    </a>
 
                     {move || {
                         let current_user = CurrentUserContext::use_context();
