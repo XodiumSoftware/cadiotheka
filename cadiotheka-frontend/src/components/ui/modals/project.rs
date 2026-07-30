@@ -272,6 +272,21 @@ fn EditableChipSection<T: Clone + PartialEq + Send + Sync + 'static>(
     }
 }
 
+fn sanitize_filename(name: &str) -> String {
+    name.chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>()
+        .replace(' ', "_")
+        .trim_matches('_')
+        .to_lowercase()
+}
+
 #[component]
 fn ProjectModalContent(
     #[prop(into)] card: ProjectCardProperties,
@@ -1145,6 +1160,7 @@ fn ProjectModalContent(
                                         let show_axes = RwSignal::new(true);
                                         let debug_text = RwSignal::new(String::new());
                                         let reset_view = RwSignal::new(false);
+                                        let screenshot = RwSignal::new(false);
 
                                         view! {
                                             <div node_ref=viewer_ref class="h-full flex flex-col">
@@ -1179,6 +1195,15 @@ fn ProjectModalContent(
                                                             })
                                                         >
                                                             {move || if show_axes.get() { "📍" } else { "⚪" }}
+                                                        </ToolbarButton>
+                                                        <ToolbarButton
+                                                            label="Download screenshot"
+                                                            tooltip_position=TooltipPosition::Bottom
+                                                            on_click=Callback::new(move |()| {
+                                                                screenshot.set(true);
+                                                            })
+                                                        >
+                                                            "📷"
                                                         </ToolbarButton>
                                                         <ToolbarButton
                                                             label="Reset view"
@@ -1217,6 +1242,24 @@ fn ProjectModalContent(
                                                         reset_view_signal=reset_view
                                                         show_grid_signal=show_grid
                                                         show_axes_signal=show_axes
+                                                        screenshot_signal=screenshot
+                                                        screenshot_filename=Signal::derive({
+                                                            let title = card.title.clone();
+                                                            move || {
+                                                                let now = time::OffsetDateTime::now_utc();
+                                                                format!(
+                                                                    "{}-{:04}{:02}{:02}-{:02}{:02}{:02}.png",
+                                                                    sanitize_filename(&title
+                                                                    ),
+                                                                    now.year(),
+                                                                    now.month() as u8,
+                                                                    now.day(),
+                                                                    now.hour(),
+                                                                    now.minute(),
+                                                                    now.second()
+                                                                )
+                                                            }
+                                                        })
                                                     />
                                                 </div>
                                             </div>

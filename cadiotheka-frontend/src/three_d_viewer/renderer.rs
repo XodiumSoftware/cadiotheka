@@ -261,6 +261,30 @@ impl Renderer {
         self.show_axes = show;
     }
 
+    /// Renders the current view and downloads it as a PNG file.
+    pub fn download_screenshot(&mut self, filename: &str) {
+        self.render();
+        let Some(window) = leptos::web_sys::window() else {
+            return;
+        };
+        let Some(document) = window.document() else {
+            return;
+        };
+        let Ok(data_url) = self.canvas.to_data_url_with_type("image/png") else {
+            return;
+        };
+        let Ok(anchor) = document.create_element("a") else {
+            return;
+        };
+        let _ = anchor.set_attribute("href", &data_url);
+        let _ = anchor.set_attribute("download", filename);
+        let _ = document.body().and_then(|b| b.append_child(&anchor).ok());
+        if let Ok(el) = anchor.dyn_into::<leptos::web_sys::HtmlElement>() {
+            let () = el.click();
+            let _ = el.parent_node().and_then(|p| p.remove_child(&el).ok());
+        }
+    }
+
     /// Sets the viewer theme and re-renders on the next frame.
     pub fn set_theme(&mut self, theme: ViewerTheme) {
         if self.theme != theme {
