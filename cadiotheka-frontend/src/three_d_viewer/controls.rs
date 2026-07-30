@@ -53,6 +53,7 @@ impl OrbitControls {
             let last_press_time = Rc::clone(&last_press_time);
             let renderer_clone = Rc::clone(renderer);
             Closure::<dyn FnMut(MouseEvent)>::new(move |ev: MouseEvent| {
+                ev.prevent_default();
                 let position = physical_point_from_mouse(&ev);
                 let button = mouse_button_from_web(ev.button());
                 let modifiers = modifiers_from_mouse(&ev);
@@ -85,6 +86,7 @@ impl OrbitControls {
             let request_render = Rc::clone(&request_render);
             let last_button = Rc::clone(&last_button);
             Closure::<dyn FnMut(MouseEvent)>::new(move |ev: MouseEvent| {
+                ev.prevent_default();
                 let position = physical_point_from_mouse(&ev);
                 let modifiers = modifiers_from_mouse(&ev);
                 let delta = (ev.movement_x() as f32, ev.movement_y() as f32);
@@ -148,6 +150,13 @@ impl OrbitControls {
             .into_js_value()
         };
 
+        let on_context_menu = Closure::<dyn FnMut(leptos::web_sys::MouseEvent)>::new(
+            move |ev: leptos::web_sys::MouseEvent| {
+                ev.prevent_default();
+            },
+        )
+        .into_js_value();
+
         canvas
             .add_event_listener_with_callback("mousedown", on_mouse_down.unchecked_ref())
             .ok();
@@ -160,10 +169,19 @@ impl OrbitControls {
         canvas
             .add_event_listener_with_callback("wheel", on_wheel.unchecked_ref())
             .ok();
+        canvas
+            .add_event_listener_with_callback("contextmenu", on_context_menu.unchecked_ref())
+            .ok();
 
         Self {
             _canvas: canvas,
-            _closures: vec![on_mouse_down, on_mouse_move, on_mouse_up, on_wheel],
+            _closures: vec![
+                on_mouse_down,
+                on_mouse_move,
+                on_mouse_up,
+                on_wheel,
+                on_context_menu,
+            ],
             last_button,
             last_press_time,
         }
