@@ -7,9 +7,12 @@
 - [Build the Frontend](#build-the-frontend)
 - [Run Frontend Locally](#run-frontend-locally)
 - [Run Backend Locally](#run-backend-locally)
+- [3D IFC Viewer](#3d-ifc-viewer)
+- [Create the Database Tables](#create-the-database-tables)
+- [Build the Backend](#build-the-backend)
+- [Build for Release](#build-for-release)
 - [Run Tests](#run-tests)
 - [Run Linting](#run-linting)
-- [Build for Release](#build-for-release)
 - [Deploy the Backend](#deploy-the-backend)
 - [Troubleshooting](#troubleshooting)
 
@@ -119,6 +122,20 @@ npx wrangler dev
 The local API is available at <http://localhost:8787/data/accounts> by default.
 
 Project assets (IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). D1 stores only the generated object key, and the frontend loads assets through backend asset routes.
+
+### 3D IFC viewer
+
+The project details modal includes a built-in IFC/GLB viewer built on `three-d`. Once an IFC model has been uploaded and converted, the viewer offers:
+
+- Orbit, pan, and zoom controls via mouse.
+- A reset-view button that clears any persisted camera state and reframes the model.
+- A browser-fullscreen toggle for the viewer panel.
+- A ground grid centered on the model footprint for spatial orientation.
+- An X/Y/Z axes gizmo scaled to the model size.
+- Toggles to show or hide the grid, axes, and debug overlay.
+- A screenshot button that downloads the current view as a PNG.
+
+Camera state is persisted per project in `localStorage` so the view is restored on the next visit. Resetting the view clears that saved state.
 
 For local emulation, use plain `npx wrangler dev`. To hit the bound remote Cloudflare resources instead, use `npx wrangler dev --remote`.
 
