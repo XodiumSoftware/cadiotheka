@@ -131,6 +131,11 @@ pub fn dot_vec3(a: &[f32; 3], b: &[f32; 3]) -> f32 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
+/// Converts a `three-d` `Vec3` into a plain `[f32; 3]`.
+pub fn vec3_to_array(v: three_d_asset::Vec3) -> [f32; 3] {
+    [v.x, v.y, v.z]
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::float_cmp)]

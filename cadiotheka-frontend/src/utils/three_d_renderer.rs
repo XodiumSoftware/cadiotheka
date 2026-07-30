@@ -7,16 +7,8 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
 #[cfg(target_arch = "wasm32")]
-use crate::utils::glb::{
-    compute_bounding_box, is_triangle_mode, material_params, read_indices, read_normals,
-    read_positions, triangle_count,
-};
-#[cfg(target_arch = "wasm32")]
-use crate::utils::math::{mat4_identity, mat4_mul};
-#[cfg(target_arch = "wasm32")]
+use crate::utils::math::vec3_to_array;
 use glow;
-use gltf::Gltf;
-#[cfg(target_arch = "wasm32")]
 use js_sys::{Function, Reflect};
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
@@ -25,8 +17,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 #[cfg(target_arch = "wasm32")]
 use std::sync::Arc;
-#[cfg(target_arch = "wasm32")]
-use three_d::Gm;
 use three_d::InnerSpace;
 use three_d::MetricSpace;
 #[cfg(target_arch = "wasm32")]
@@ -38,15 +28,10 @@ use three_d::renderer::Mesh;
 use three_d::renderer::PhysicalMaterial;
 use three_d::renderer::control::{Event, MouseButton, OrbitControl};
 #[cfg(target_arch = "wasm32")]
-use three_d::renderer::geometry::{CpuMesh, Indices, Positions};
-#[cfg(target_arch = "wasm32")]
 use three_d::renderer::material::ColorMaterial;
 use three_d::renderer::{Camera as ThreeDCamera, DirectionalLight, Object};
-use three_d_asset::Viewport;
-#[cfg(target_arch = "wasm32")]
 use three_d_asset::material::LightingModel;
-#[cfg(target_arch = "wasm32")]
-use three_d_asset::{Mat4, PbrMaterial, Srgba, radians, vec3};
+use three_d_asset::{Mat4, Model, PbrMaterial, Scene, Srgba, Viewport, radians, vec3};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::Closure;
@@ -263,7 +248,7 @@ pub struct Renderer {
     pending_events: Rc<RefCell<Vec<Event>>>,
     theme: ViewerTheme,
     #[cfg(target_arch = "wasm32")]
-    skybox: Gm<Mesh, ColorMaterial>,
+    skybox: three_d::Gm<Mesh, ColorMaterial>,
 }
 
 /// Rendering theme for the viewer.
@@ -303,7 +288,9 @@ fn lerp_srgba(a: Srgba, b: Srgba, t: f32) -> Srgba {
 
 /// Creates a large gradient sphere that follows the camera and acts as a skybox.
 #[cfg(target_arch = "wasm32")]
-fn build_skybox(context: &ThreeDContext, theme: ViewerTheme) -> Gm<Mesh, ColorMaterial> {
+fn build_skybox(context: &ThreeDContext, theme: ViewerTheme) -> three_d::Gm<Mesh, ColorMaterial> {
+    use three_d::renderer::geometry::{CpuMesh, Positions};
+
     let mut cpu_mesh = CpuMesh::sphere(32);
     let (bottom, top) = skybox_gradient(theme);
     let colors = match &cpu_mesh.positions {
@@ -349,12 +336,14 @@ fn build_skybox(context: &ThreeDContext, theme: ViewerTheme) -> Gm<Mesh, ColorMa
     material.render_states.write_mask.depth = false;
     material.render_states.depth_test = DepthTest::Always;
     material.render_states.cull = Cull::Back;
-    Gm::new(mesh, material)
+    three_d::Gm::new(mesh, material)
 }
 
 impl Renderer {
-    /// Creates a renderer for the given canvas and glTF document.
-    pub fn new(canvas: &HtmlCanvasElement, gltf: &Gltf) -> Option<Self> {
+    /// Creates a renderer for the given canvas and GLB bytes.
+    ///
+    /// Returns `None` if WebGL2 is unavailable or the model cannot be loaded.
+    pub fn new(canvas: &HtmlCanvasElement, glb_bytes: &[u8]) -> Option<Self> {
         let gl_context = canvas
             .get_context("webgl2")
             .ok()??
@@ -364,7 +353,7 @@ impl Renderer {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let _ = gl_context;
-            let _ = gltf;
+            let _ = glb_bytes;
             None
         }
 
@@ -375,26 +364,27 @@ impl Renderer {
             #[allow(clippy::arc_with_non_send_sync)]
             let context = ThreeDContext::from_gl_context(Arc::new(glow_context)).ok()?;
 
-            let scene_bounds = compute_bounding_box(gltf);
+            let mut raw_assets = three_d_asset::io::RawAssets::new();
+            raw_assets.insert("model.glb", glb_bytes.to_vec());
+            let scene: Scene = raw_assets.deserialize("model.glb").ok()?;
+            let model = Model::from(scene);
+
+            let scene_bounds = scene_bounds_from_model(&model);
             let (camera, control) = build_framing_camera(scene_bounds.0, scene_bounds.1, canvas);
 
             let mut models = Vec::new();
             let mut total_vertices = 0;
             let mut total_triangles = 0;
 
-            if let Some(scene) = gltf.default_scene() {
-                let identity = mat4_identity();
-                for node in scene.nodes() {
-                    upload_node(
-                        gltf,
-                        &node,
-                        &identity,
-                        &context,
-                        &mut models,
-                        &mut total_vertices,
-                        &mut total_triangles,
-                    );
-                }
+            for primitive in &model.geometries {
+                upload_primitive(
+                    &context,
+                    primitive,
+                    &model.materials,
+                    &mut models,
+                    &mut total_vertices,
+                    &mut total_triangles,
+                );
             }
 
             let light =
@@ -678,115 +668,112 @@ fn build_framing_camera(
     (camera, control)
 }
 
+/// Computes the world-space bounding box for a loaded `three-d-asset` model.
 #[cfg(target_arch = "wasm32")]
-fn upload_node(
-    gltf: &Gltf,
-    node: &gltf::Node<'_>,
-    parent_transform: &[[f32; 4]; 4],
-    context: &ThreeDContext,
-    models: &mut Vec<Box<dyn Object>>,
-    total_vertices: &mut usize,
-    total_triangles: &mut usize,
-) {
-    let transform = mat4_mul(parent_transform, &node.transform().matrix());
+fn scene_bounds_from_model(model: &Model) -> ([f32; 3], [f32; 3]) {
+    use three_d_asset::Geometry;
 
-    if let Some(mesh) = node.mesh() {
-        for primitive in mesh.primitives() {
-            upload_primitive(
-                gltf,
-                &primitive,
-                &transform,
-                context,
-                models,
-                total_vertices,
-                total_triangles,
-            );
+    let mut aabb = three_d_asset::AxisAlignedBoundingBox::EMPTY;
+    for primitive in &model.geometries {
+        let local_aabb = match &primitive.geometry {
+            Geometry::Triangles(mesh) => mesh.compute_aabb(),
+            Geometry::Points(_) => three_d_asset::AxisAlignedBoundingBox::EMPTY,
         }
+        .transformed(primitive.transformation);
+        aabb.expand_with_aabb(local_aabb);
     }
 
-    for child in node.children() {
-        upload_node(
-            gltf,
-            &child,
-            &transform,
-            context,
-            models,
-            total_vertices,
-            total_triangles,
-        );
+    if aabb.is_empty() {
+        ([0.0; 3], [1.0; 3])
+    } else {
+        (vec3_to_array(aabb.min()), vec3_to_array(aabb.max()))
     }
 }
 
+/// Uploads a single `three-d-asset` primitive into a `three-d` render object.
 #[cfg(target_arch = "wasm32")]
 fn upload_primitive(
-    gltf: &Gltf,
-    primitive: &gltf::Primitive<'_>,
-    transform: &[[f32; 4]; 4],
     context: &ThreeDContext,
+    primitive: &three_d_asset::Primitive,
+    materials: &[PbrMaterial],
     models: &mut Vec<Box<dyn Object>>,
     total_vertices: &mut usize,
     total_triangles: &mut usize,
 ) {
-    let mode = primitive.mode();
-    if !is_triangle_mode(mode) {
-        return;
-    }
+    use three_d::renderer::geometry::CpuMesh;
+    use three_d_asset::Geometry;
 
-    let Some(positions) = read_positions(gltf, primitive, transform) else {
+    let Geometry::Triangles(tri_mesh) = &primitive.geometry else {
         return;
     };
-    let normals = read_normals(gltf, primitive, transform);
-    let position_count = positions.len();
-    let indices = read_indices(gltf, primitive);
 
+    let position_count = tri_mesh.positions.len();
     let cpu_mesh = CpuMesh {
-        positions: Positions::F32(positions.iter().map(|p| vec3(p[0], p[1], p[2])).collect()),
-        indices: indices
-            .as_ref()
-            .map_or(Indices::None, |i| Indices::U32(i.clone())),
-        normals: Some(normals.iter().map(|n| vec3(n[0], n[1], n[2])).collect()),
-        tangents: None,
-        uvs: None,
-        colors: None,
+        positions: tri_mesh.positions.clone(),
+        indices: tri_mesh.indices.clone(),
+        normals: tri_mesh.normals.clone(),
+        tangents: tri_mesh.tangents.clone(),
+        uvs: tri_mesh.uvs.clone(),
+        colors: tri_mesh.colors.clone(),
     };
 
-    let mesh = Mesh::new(context, &cpu_mesh);
+    let mut mesh = Mesh::new(context, &cpu_mesh);
+    mesh.set_transformation(primitive.transformation);
 
-    let material_info = material_params(&primitive.material());
-    let cpu_material = PbrMaterial {
-        name: String::new(),
-        albedo: Srgba::from(material_info.base_color_factor),
-        albedo_texture: None,
-        metallic: material_info.metallic_factor,
-        roughness: material_info.roughness_factor,
-        occlusion_metallic_roughness_texture: None,
-        metallic_roughness_texture: None,
-        occlusion_strength: 1.0,
-        occlusion_texture: None,
-        normal_scale: 1.0,
-        normal_texture: None,
-        emissive: Srgba::BLACK,
-        emissive_texture: None,
-        alpha_cutout: None,
-        lighting_model: LightingModel::Blinn,
-        index_of_refraction: 1.5,
-        transmission: 0.0,
-        transmission_texture: None,
-    };
+    let mut cpu_material = primitive
+        .material_index
+        .and_then(|i| materials.get(i))
+        .cloned()
+        .unwrap_or_else(default_ifc_material);
+    cpu_material.lighting_model = LightingModel::Blinn;
 
-    let model: Box<dyn Object> = if material_info.unlit {
+    let model: Box<dyn Object> = if cpu_material.is_unlit() {
         let mut material = ColorMaterial::new(context, &cpu_material);
         material.render_states.cull = Cull::None;
-        Box::new(Gm::new(mesh, material))
+        Box::new(three_d::Gm::new(mesh, material))
     } else {
         let mut material = PhysicalMaterial::new(context, &cpu_material);
         material.render_states.cull = Cull::None;
-        Box::new(Gm::new(mesh, material))
+        Box::new(three_d::Gm::new(mesh, material))
     };
 
     models.push(model);
 
-    let index_count = indices.as_ref().map_or(0, std::vec::Vec::len);
+    let index_count = tri_mesh.indices.len().unwrap_or(0);
     *total_vertices += position_count;
-    *total_triangles += triangle_count(mode, index_count, position_count);
+    *total_triangles += triangle_count(index_count, position_count);
+}
+
+/// Returns a default material tuned for IFC-derived geometry.
+fn default_ifc_material() -> PbrMaterial {
+    PbrMaterial {
+        name: String::new(),
+        albedo: Srgba::new(217, 217, 217, 255),
+        metallic: 0.0,
+        roughness: 0.8,
+        ..Default::default()
+    }
+}
+
+/// Returns whether the given material should be rendered unlit.
+trait UnlitMaterial {
+    fn is_unlit(&self) -> bool;
+}
+
+impl UnlitMaterial for PbrMaterial {
+    fn is_unlit(&self) -> bool {
+        matches!(self.lighting_model, LightingModel::Blinn)
+            && self.metallic == 0.0
+            && (self.roughness - 1.0).abs() < f32::EPSILON
+            && self.emissive == Srgba::BLACK
+    }
+}
+
+/// Counts triangles for a primitive given its index and vertex counts.
+fn triangle_count(index_count: usize, vertex_count: usize) -> usize {
+    if index_count == 0 {
+        vertex_count / 3
+    } else {
+        index_count / 3
+    }
 }

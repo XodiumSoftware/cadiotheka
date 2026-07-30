@@ -1,10 +1,8 @@
 //! 3D IFC model viewer using the `three-d` renderer.
 //!
-//! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`),
-//! parses it with the `gltf` crate via [`crate::utils::glb`], and renders it
-//! with the `three-d` renderer in [`crate::utils::three_d_renderer`].
+//! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`)
+//! and renders it with the `three-d` renderer in [`crate::utils::three_d_renderer`].
 
-use crate::utils::glb::Gltf;
 use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewerTheme};
 use gloo_net::http::Request;
 use leptos::prelude::*;
@@ -212,12 +210,8 @@ pub fn IfcViewer(
             match load_model_bytes(&url).await {
                 Some(glb_bytes) => {
                     state.set(IfcViewerState::Processing);
-                    let Ok(gltf) = Gltf::from_slice(&glb_bytes) else {
-                        state.set(IfcViewerState::Error);
-                        return;
-                    };
 
-                    if let Some(new_renderer) = Renderer::new(&canvas, &gltf) {
+                    if let Some(new_renderer) = Renderer::new(&canvas, &glb_bytes) {
                         *renderer.borrow_mut() = Some(new_renderer);
                         let render_callback = {
                             let request_render = Rc::clone(&request_render);
