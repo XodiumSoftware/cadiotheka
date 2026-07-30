@@ -6,7 +6,6 @@
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
-#[cfg(target_arch = "wasm32")]
 use crate::utils::math::vec3_to_array;
 #[cfg(target_arch = "wasm32")]
 use js_sys::{Function, Reflect};
@@ -19,21 +18,17 @@ use std::rc::Rc;
 use std::sync::Arc;
 use three_d::InnerSpace;
 use three_d::MetricSpace;
-#[cfg(target_arch = "wasm32")]
 use three_d::core::render_states::Cull;
 use three_d::core::{ClearState, Context as ThreeDContext, RenderTarget};
-#[cfg(target_arch = "wasm32")]
 use three_d::renderer::Mesh;
-#[cfg(target_arch = "wasm32")]
 use three_d::renderer::PhysicalMaterial;
 use three_d::renderer::control::{Event, MouseButton, OrbitControl};
-#[cfg(target_arch = "wasm32")]
 use three_d::renderer::material::ColorMaterial;
 use three_d::renderer::{Camera as ThreeDCamera, DirectionalLight, Object};
 #[cfg(target_arch = "wasm32")]
+use three_d_asset::Scene;
 use three_d_asset::material::LightingModel;
-#[cfg(target_arch = "wasm32")]
-use three_d_asset::{Model, PbrMaterial, Scene, Srgba};
+use three_d_asset::{Model, PbrMaterial, Srgba};
 use three_d_asset::{Viewport, radians, vec3};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
@@ -378,17 +373,12 @@ impl Renderer {
     }
 
     /// Resets the camera and orbit target to frame the loaded model.
-    #[cfg(target_arch = "wasm32")]
     pub fn reset_view(&mut self) {
         let (camera, control) =
             build_framing_camera(self.scene_bounds.0, self.scene_bounds.1, &self.canvas);
         self.camera = camera;
         self.control = control;
     }
-
-    /// Resets the camera and orbit target to frame the loaded model.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn reset_view(&mut self) {}
 
     /// Renders the scene once.
     pub fn render(&mut self) {
@@ -557,7 +547,6 @@ fn suppress_webgl_debug_renderer_info(context: &WebGl2RenderingContext) {
     let _ = Reflect::set(context, &"getExtension".into(), &wrapper);
 }
 
-#[cfg(target_arch = "wasm32")]
 fn build_framing_camera(
     min: [f32; 3],
     max: [f32; 3],
@@ -621,8 +610,7 @@ fn build_framing_camera(
     (camera, control)
 }
 
-/// Computes the world-space bounding box for a loaded `three-d-asset` model.
-#[cfg(target_arch = "wasm32")]
+#[allow(dead_code)]
 fn scene_bounds_from_model(model: &Model) -> ([f32; 3], [f32; 3]) {
     use three_d_asset::Geometry;
 
@@ -644,7 +632,7 @@ fn scene_bounds_from_model(model: &Model) -> ([f32; 3], [f32; 3]) {
 }
 
 /// Uploads a single `three-d-asset` primitive into a `three-d` render object.
-#[cfg(target_arch = "wasm32")]
+#[allow(dead_code)]
 fn upload_primitive(
     context: &ThreeDContext,
     primitive: &three_d_asset::Primitive,
@@ -698,7 +686,7 @@ fn upload_primitive(
 }
 
 /// Returns a default material tuned for IFC-derived geometry.
-#[cfg(target_arch = "wasm32")]
+#[allow(dead_code)]
 fn default_ifc_material() -> PbrMaterial {
     PbrMaterial {
         name: String::new(),
@@ -710,12 +698,12 @@ fn default_ifc_material() -> PbrMaterial {
 }
 
 /// Returns whether the given material should be rendered unlit.
-#[cfg(target_arch = "wasm32")]
+#[allow(dead_code)]
 trait UnlitMaterial {
     fn is_unlit(&self) -> bool;
 }
 
-#[cfg(target_arch = "wasm32")]
+#[allow(dead_code)]
 impl UnlitMaterial for PbrMaterial {
     fn is_unlit(&self) -> bool {
         matches!(self.lighting_model, LightingModel::Blinn)
@@ -726,7 +714,7 @@ impl UnlitMaterial for PbrMaterial {
 }
 
 /// Counts triangles for a primitive given its index and vertex counts.
-#[cfg(target_arch = "wasm32")]
+#[allow(dead_code)]
 fn triangle_count(index_count: usize, vertex_count: usize) -> usize {
     if index_count == 0 {
         vertex_count / 3
