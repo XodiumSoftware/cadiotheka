@@ -191,6 +191,24 @@ fn choose_grid_step(scene_size: f32) -> f32 {
     }
 }
 
+/// Creates an axes gizmo at the world origin with arrow dimensions scaled to
+/// the model size.
+pub fn build_axes(
+    context: &ThreeDContext,
+    bounds_min: [f32; 3],
+    bounds_max: [f32; 3],
+) -> Box<dyn Object> {
+    let size = [
+        (bounds_max[0] - bounds_min[0]).abs(),
+        (bounds_max[1] - bounds_min[1]).abs(),
+        (bounds_max[2] - bounds_min[2]).abs(),
+    ];
+    let max_size = size[0].max(size[1]).max(size[2]).max(1.0);
+    let length = max_size * 0.08;
+    let radius = length * 0.04;
+    Box::new(three_d::renderer::Axes::new(context, radius, length))
+}
+
 /// Computes an axis-aligned world-space bounding box from a parsed model.
 #[allow(dead_code)]
 pub fn scene_bounds_from_model(model: &three_d_asset::Model) -> ([f32; 3], [f32; 3]) {

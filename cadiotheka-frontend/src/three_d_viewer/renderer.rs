@@ -2,7 +2,9 @@
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
-use crate::three_d_viewer::scene::{build_framing_camera, build_ground_grid, canvas_size};
+use crate::three_d_viewer::scene::{
+    build_axes, build_framing_camera, build_ground_grid, canvas_size,
+};
 use crate::three_d_viewer::state::{ViewState, ViewerTheme};
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
@@ -31,6 +33,7 @@ pub struct Renderer {
     pub(crate) scene_bounds: ([f32; 3], [f32; 3]),
     pub(crate) models: Vec<Box<dyn Object>>,
     pub(crate) ground_grid: Option<Box<dyn Object>>,
+    pub(crate) axes: Option<Box<dyn Object>>,
     pub(crate) total_vertices: usize,
     pub(crate) total_triangles: usize,
     pub(crate) light: DirectionalLight,
@@ -100,6 +103,7 @@ impl Renderer {
                 scene_bounds.1,
                 ViewerTheme::default(),
             ));
+            let axes = Some(build_axes(&context, scene_bounds.0, scene_bounds.1));
 
             Some(Self {
                 context,
@@ -109,6 +113,7 @@ impl Renderer {
                 scene_bounds,
                 models,
                 ground_grid,
+                axes,
                 total_vertices,
                 total_triangles,
                 light,
@@ -159,6 +164,15 @@ impl Renderer {
         self.camera = camera;
         self.control = control;
         self.rebuild_ground_grid();
+        self.rebuild_axes();
+    }
+
+    fn rebuild_axes(&mut self) {
+        self.axes = Some(build_axes(
+            &self.context,
+            self.scene_bounds.0,
+            self.scene_bounds.1,
+        ));
     }
 
     fn rebuild_ground_grid(&mut self) {
@@ -204,6 +218,7 @@ impl Renderer {
             .iter()
             .map(std::convert::AsRef::as_ref)
             .chain(self.ground_grid.iter().map(AsRef::as_ref))
+            .chain(self.axes.iter().map(AsRef::as_ref))
             .collect();
         let (background, light_intensity) = match self.theme {
             ViewerTheme::Dark => ((0.05, 0.05, 0.05, 1.0, 1.0), 1.0),
