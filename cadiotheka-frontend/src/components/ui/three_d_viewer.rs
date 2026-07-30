@@ -249,8 +249,16 @@ pub fn IfcViewer(
                 let _ = storage.remove_item(&key);
             }
 
-            if let Some(renderer) = renderer.borrow_mut().as_mut() {
-                renderer.reset_view();
+            let has_renderer = {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.reset_view();
+                    true
+                } else {
+                    false
+                }
+            };
+            if has_renderer {
                 request_render.borrow_mut()();
                 update_debug();
             }
@@ -261,8 +269,16 @@ pub fn IfcViewer(
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         move |_| {
-            if let Some(renderer) = renderer.borrow_mut().as_mut() {
-                renderer.set_theme(ViewerTheme::Dark);
+            let has_renderer = {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.set_theme(ViewerTheme::Dark);
+                    true
+                } else {
+                    false
+                }
+            };
+            if has_renderer {
                 request_render.borrow_mut()();
             }
         }
