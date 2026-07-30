@@ -483,7 +483,7 @@ pub fn Header() -> impl IntoView {
                         href="https://buymeacoffee.com/illyrius"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="btn btn-primary btn-lift flex items-center justify-center"
+                        class="btn btn-primary btn-lift flex items-center justify-center w-10 min-w-0 px-0"
                         aria-label="Buy me a coffee"
                     >
                         <BuyMeACoffeeLogo class="w-6 h-6" />
