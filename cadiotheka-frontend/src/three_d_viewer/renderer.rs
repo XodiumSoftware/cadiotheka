@@ -2,7 +2,7 @@
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
-use crate::three_d_viewer::scene::{build_framing_camera, canvas_size};
+use crate::three_d_viewer::scene::{build_framing_camera, build_ground_grid, canvas_size};
 use crate::three_d_viewer::state::{ViewState, ViewerTheme};
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
@@ -30,6 +30,7 @@ pub struct Renderer {
     pub(crate) canvas: HtmlCanvasElement,
     pub(crate) scene_bounds: ([f32; 3], [f32; 3]),
     pub(crate) models: Vec<Box<dyn Object>>,
+    pub(crate) ground_grid: Option<Box<dyn Object>>,
     pub(crate) total_vertices: usize,
     pub(crate) total_triangles: usize,
     pub(crate) light: DirectionalLight,
@@ -93,6 +94,13 @@ impl Renderer {
             let light =
                 DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(0.3_f32, -0.8, -0.5));
 
+            let ground_grid = Some(build_ground_grid(
+                &context,
+                scene_bounds.0,
+                scene_bounds.1,
+                ViewerTheme::default(),
+            ));
+
             Some(Self {
                 context,
                 camera,
@@ -100,6 +108,7 @@ impl Renderer {
                 canvas: canvas.clone(),
                 scene_bounds,
                 models,
+                ground_grid,
                 total_vertices,
                 total_triangles,
                 light,
@@ -149,6 +158,16 @@ impl Renderer {
             build_framing_camera(self.scene_bounds.0, self.scene_bounds.1, &self.canvas);
         self.camera = camera;
         self.control = control;
+        self.rebuild_ground_grid();
+    }
+
+    fn rebuild_ground_grid(&mut self) {
+        self.ground_grid = Some(build_ground_grid(
+            &self.context,
+            self.scene_bounds.0,
+            self.scene_bounds.1,
+            self.theme,
+        ));
     }
 
     /// Renders the scene once.
@@ -184,6 +203,7 @@ impl Renderer {
             .models
             .iter()
             .map(std::convert::AsRef::as_ref)
+            .chain(self.ground_grid.iter().map(AsRef::as_ref))
             .collect();
         let (background, light_intensity) = match self.theme {
             ViewerTheme::Dark => ((0.05, 0.05, 0.05, 1.0, 1.0), 1.0),
@@ -204,7 +224,10 @@ impl Renderer {
 
     /// Sets the viewer theme and re-renders on the next frame.
     pub fn set_theme(&mut self, theme: ViewerTheme) {
-        self.theme = theme;
+        if self.theme != theme {
+            self.theme = theme;
+            self.rebuild_ground_grid();
+        }
     }
 
     /// Returns the current viewer theme.

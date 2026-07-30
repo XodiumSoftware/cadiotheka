@@ -6,9 +6,14 @@ use crate::utils::math::vec3_to_array;
 use leptos::web_sys::HtmlCanvasElement;
 #[cfg(target_arch = "wasm32")]
 use leptos::web_sys::WebGl2RenderingContext;
+use three_d::SquareMatrix;
+use three_d::core::Context as ThreeDContext;
 use three_d::renderer::Camera as ThreeDCamera;
+use three_d::renderer::Object;
 use three_d::renderer::control::OrbitControl;
-use three_d_asset::{Viewport, radians, vec3};
+use three_d::renderer::geometry::CpuMesh;
+use three_d::renderer::material::ColorMaterial;
+use three_d_asset::{Indices, Positions, Srgba, Viewport, radians, vec3};
 
 #[cfg(target_arch = "wasm32")]
 use js_sys::{Function, Reflect};
@@ -110,6 +115,80 @@ pub fn build_framing_camera(
         max_size * 1_000.0,
     );
     (camera, control)
+}
+
+/// Creates a ground-grid object laid on the horizontal plane at the bottom of
+/// the model bounds.
+pub fn build_ground_grid(
+    context: &ThreeDContext,
+    bounds_min: [f32; 3],
+    bounds_max: [f32; 3],
+    theme: crate::three_d_viewer::state::ViewerTheme,
+) -> Box<dyn Object> {
+    let center_x = (bounds_min[0] + bounds_max[0]) * 0.5;
+    let center_z = (bounds_min[2] + bounds_max[2]) * 0.5;
+    let size_x = (bounds_max[0] - bounds_min[0]).max(1.0);
+    let size_z = (bounds_max[2] - bounds_min[2]).max(1.0);
+    let max_size = size_x.max(size_z);
+    let y = bounds_min[1];
+
+    let half_extent = max_size * 1.5;
+    let step = choose_grid_step(max_size);
+    let line_count = ((half_extent * 2.0) / step).ceil() as i32 + 1;
+
+    let mut positions = Vec::new();
+    let mut indices = Vec::new();
+
+    let start_x = center_x - half_extent;
+    let start_z = center_z - half_extent;
+
+    for i in 0..line_count {
+        let t = i as f32 * step;
+        let x = start_x + t;
+        let z = start_z + t;
+
+        positions.push(vec3(x, y, start_z));
+        positions.push(vec3(x, y, start_z + half_extent * 2.0));
+        positions.push(vec3(start_x, y, z));
+        positions.push(vec3(start_x + half_extent * 2.0, y, z));
+    }
+
+    for i in 0..positions.len() {
+        indices.push(i as u32);
+    }
+
+    let mut cpu_mesh = CpuMesh {
+        positions: Positions::F32(positions),
+        indices: Indices::U32(indices),
+        ..Default::default()
+    };
+    cpu_mesh.compute_normals();
+
+    let mut mesh = three_d::renderer::Mesh::new(context, &cpu_mesh);
+    mesh.set_transformation(three_d::Mat4::identity());
+
+    let mut material = ColorMaterial {
+        color: match theme {
+            crate::three_d_viewer::state::ViewerTheme::Dark => Srgba::new(128, 128, 128, 255),
+            crate::three_d_viewer::state::ViewerTheme::Light => Srgba::new(160, 160, 160, 255),
+        },
+        ..Default::default()
+    };
+    material.render_states.cull = three_d::core::render_states::Cull::None;
+    material.render_states.depth_test = three_d::core::render_states::DepthTest::LessOrEqual;
+
+    Box::new(three_d::Gm::new(mesh, material))
+}
+
+fn choose_grid_step(scene_size: f32) -> f32 {
+    let base = 10.0_f32.powf(scene_size.log10().floor());
+    if scene_size / base < 2.5 {
+        base * 0.25
+    } else if scene_size / base < 5.0 {
+        base * 0.5
+    } else {
+        base
+    }
 }
 
 /// Computes an axis-aligned world-space bounding box from a parsed model.
