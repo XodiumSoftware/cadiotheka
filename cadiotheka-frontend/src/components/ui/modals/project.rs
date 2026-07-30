@@ -1093,6 +1093,7 @@ fn ProjectModalContent(
                                         let fps = RwSignal::new(0.0_f64);
                                         let show_debug = RwSignal::new(false);
                                         let debug_text = RwSignal::new(String::new());
+                                        let reset_view = RwSignal::new(false);
 
                                         view! {
                                             <div class="h-full flex flex-col">
@@ -1109,6 +1110,15 @@ fn ProjectModalContent(
                                                             })
                                                         >
                                                             {move || if show_debug.get() { "🐞" } else { "🐛" }}
+                                                        </ToolbarButton>
+                                                        <ToolbarButton
+                                                            label="Reset view"
+                                                            tooltip_position=TooltipPosition::Bottom
+                                                            on_click=Callback::new(move |()| {
+                                                                reset_view.set(true);
+                                                            })
+                                                        >
+                                                            "⟲"
                                                         </ToolbarButton>
                                                         <ToolbarButton
                                                             label="Toggle fullscreen"
@@ -1135,6 +1145,7 @@ fn ProjectModalContent(
                                                         fps_signal=fps
                                                         show_debug_signal=show_debug
                                                         debug_text_signal=debug_text
+                                                        reset_view_signal=reset_view
                                                     />
                                                 </div>
                                             </div>

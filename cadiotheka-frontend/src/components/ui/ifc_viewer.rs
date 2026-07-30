@@ -41,12 +41,14 @@ pub fn IfcViewer(
     #[prop(optional)] fps_signal: Option<RwSignal<f64>>,
     #[prop(optional)] show_debug_signal: Option<RwSignal<bool>>,
     #[prop(optional)] debug_text_signal: Option<RwSignal<String>>,
+    #[prop(optional)] reset_view_signal: Option<RwSignal<bool>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
     let fps = fps_signal.unwrap_or_else(|| RwSignal::new(0.0_f64));
     let show_debug = show_debug_signal.unwrap_or_else(|| RwSignal::new(false));
     let debug_text = debug_text_signal.unwrap_or_else(|| RwSignal::new(String::new()));
+    let reset_view = reset_view_signal.unwrap_or_else(|| RwSignal::new(false));
 
     let renderer: Rc<RefCell<Option<Renderer>>> = Rc::new(RefCell::new(None));
     let controls: Rc<RefCell<Option<OrbitControls>>> = Rc::new(RefCell::new(None));
@@ -224,6 +226,34 @@ pub fn IfcViewer(
             }
             *(*renderer).borrow_mut() = None;
             *(*controls).borrow_mut() = None;
+        }
+    });
+
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        let update_debug = update_debug.clone();
+        move |_| {
+            if !reset_view.get() {
+                return;
+            }
+            reset_view.set(false);
+
+            if let Some(key) = storage_key
+                .as_ref()
+                .map(|s| s.get())
+                .filter(|k| !k.is_empty())
+                && let Some(window) = leptos::web_sys::window()
+                && let Ok(Some(storage)) = window.local_storage()
+            {
+                let _ = storage.remove_item(&key);
+            }
+
+            if let Some(renderer) = renderer.borrow_mut().as_mut() {
+                renderer.reset_view();
+                request_render.borrow_mut()();
+                update_debug();
+            }
         }
     });
 
