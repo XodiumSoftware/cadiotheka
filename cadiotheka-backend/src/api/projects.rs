@@ -455,6 +455,10 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
 
     let headers = Headers::new();
     headers.set("Content-Type", &content_type)?;
+    headers.set(
+        "Content-Disposition",
+        &format!("attachment; filename=\"{filename}\""),
+    )?;
     Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
 }
 
