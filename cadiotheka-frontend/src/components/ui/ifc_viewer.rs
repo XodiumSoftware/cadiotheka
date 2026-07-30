@@ -3,8 +3,9 @@
 //! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`)
 //! and renders it with the `three-d` renderer in [`crate::utils::three_d_renderer`].
 
-use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewerTheme};
+use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewState, ViewerTheme};
 use gloo_net::http::Request;
+use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use std::cell::RefCell;
@@ -35,6 +36,7 @@ pub enum IfcViewerState {
 #[component]
 pub fn IfcViewer(
     #[prop(into)] url: Signal<Option<String>>,
+    #[prop(into, optional)] storage_key: Option<Signal<String>>,
     #[prop(optional)] state_signal: Option<RwSignal<IfcViewerState>>,
     #[prop(optional)] fps_signal: Option<RwSignal<f64>>,
     #[prop(optional)] show_debug_signal: Option<RwSignal<bool>>,
@@ -52,7 +54,50 @@ pub fn IfcViewer(
     let pending_frame = Rc::new(RefCell::new(false));
     let animation_handle: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
 
+    let save_generation: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
+
+    let schedule_save = {
+        let renderer = Rc::clone(&renderer);
+        let save_generation = Rc::clone(&save_generation);
+        move || {
+            let Some(key) = storage_key
+                .as_ref()
+                .map(|s| s.get())
+                .filter(|k| !k.is_empty())
+            else {
+                return;
+            };
+            let state_json = renderer
+                .borrow()
+                .as_ref()
+                .map(|r| r.save_view_state().to_json())
+                .unwrap_or_default();
+            if state_json.is_empty() {
+                return;
+            }
+
+            let expected = {
+                let mut generation = save_generation.borrow_mut();
+                *generation = generation.wrapping_add(1);
+                *generation
+            };
+
+            leptos::task::spawn_local(async move {
+                TimeoutFuture::new(500).await;
+                if *save_generation.borrow() != expected {
+                    return;
+                }
+                if let Some(window) = leptos::web_sys::window()
+                    && let Ok(Some(storage)) = window.local_storage()
+                {
+                    let _ = storage.set_item(&key, &state_json);
+                }
+            });
+        }
+    };
+
     let request_render: Rc<RefCell<dyn FnMut()>> = {
+        let schedule_save = schedule_save.clone();
         let renderer = Rc::clone(&renderer);
         let dirty = Rc::clone(&dirty);
         let pending_frame = Rc::clone(&pending_frame);
@@ -69,6 +114,7 @@ pub fn IfcViewer(
                 let dirty = Rc::clone(&dirty);
                 let pending_frame = Rc::clone(&pending_frame);
                 let animation_handle = Rc::clone(&animation_handle);
+                let schedule_save = schedule_save.clone();
                 Closure::<dyn FnMut()>::new(move || {
                     *pending_frame.borrow_mut() = false;
                     *animation_handle.borrow_mut() = None;
@@ -77,6 +123,8 @@ pub fn IfcViewer(
                             renderer.render();
                         }
                         *dirty.borrow_mut() = false;
+                        let schedule_save = schedule_save.clone();
+                        schedule_save();
                     }
                 })
             };
@@ -224,7 +272,21 @@ pub fn IfcViewer(
                         let new_controls = OrbitControls::attach(&renderer, render_callback);
                         *controls.borrow_mut() = Some(new_controls);
                         state.set(IfcViewerState::Rendering);
-                        renderer.borrow_mut().as_mut().map(Renderer::reset_view);
+
+                        let restored = storage_key
+                            .as_ref()
+                            .map(|s| s.get())
+                            .filter(|k| !k.is_empty())
+                            .and_then(|key| load_view_state(&key));
+
+                        if let Some(state) = restored {
+                            if let Some(r) = renderer.borrow_mut().as_mut() {
+                                r.restore_view_state(&state);
+                            }
+                        } else {
+                            renderer.borrow_mut().as_mut().map(Renderer::reset_view);
+                        }
+
                         request_render.borrow_mut()();
                         update_debug();
                     } else {
@@ -294,4 +356,11 @@ async fn load_model_bytes(url: &str) -> Option<Vec<u8>> {
             None
         }
     }
+}
+
+fn load_view_state(key: &str) -> Option<ViewState> {
+    let window = leptos::web_sys::window()?;
+    let storage = window.local_storage().ok().flatten()?;
+    let json = storage.get_item(key).ok().flatten()?;
+    ViewState::from_json(&json)
 }

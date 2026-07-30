@@ -1127,6 +1127,10 @@ fn ProjectModalContent(
                                                                 ifc_url.get().map(|_| api_url(&format!("/projects/{project_id}/glb")))
                                                             }
                                                         })
+                                                        storage_key=Signal::derive({
+                                                            let project_id = project_id.clone();
+                                                            move || format!("cadiotheka.ifc_viewer.{project_id}")
+                                                        })
                                                         state_signal=viewer_state
                                                         fps_signal=fps
                                                         show_debug_signal=show_debug

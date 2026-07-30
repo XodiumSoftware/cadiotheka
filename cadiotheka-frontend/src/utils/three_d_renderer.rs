@@ -7,6 +7,8 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
 #[cfg(target_arch = "wasm32")]
+use crate::utils::math::vec3_to_array;
+#[cfg(target_arch = "wasm32")]
 use js_sys::{Function, Reflect};
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
@@ -21,16 +23,18 @@ use three_d::MetricSpace;
 use three_d::core::render_states::Cull;
 use three_d::core::{ClearState, Context as ThreeDContext, RenderTarget};
 #[cfg(target_arch = "wasm32")]
+use three_d::renderer::Mesh;
+#[cfg(target_arch = "wasm32")]
 use three_d::renderer::PhysicalMaterial;
 use three_d::renderer::control::{Event, MouseButton, OrbitControl};
+#[cfg(target_arch = "wasm32")]
+use three_d::renderer::material::ColorMaterial;
 use three_d::renderer::{Camera as ThreeDCamera, DirectionalLight, Object};
-use three_d_asset::Viewport;
 #[cfg(target_arch = "wasm32")]
 use three_d_asset::material::LightingModel;
 #[cfg(target_arch = "wasm32")]
-use three_d_asset::{Model, Scene, radians, vec3};
-#[cfg(target_arch = "wasm32")]
-use three_d_asset::{PbrMaterial, Srgba};
+use three_d_asset::{Model, PbrMaterial, Scene, Srgba};
+use three_d_asset::{Viewport, radians, vec3};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::Closure;
@@ -248,13 +252,28 @@ pub struct Renderer {
     theme: ViewerTheme,
 }
 
-/// Rendering theme for the viewer.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct ViewState {
+    pub eye: [f32; 3],
+    pub target: [f32; 3],
+    pub up: [f32; 3],
+    pub theme: ViewerTheme,
+}
+
+impl ViewState {
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap_or_default()
+    }
+
+    pub fn from_json(json: &str) -> Option<Self> {
+        serde_json::from_str(json).ok()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ViewerTheme {
-    /// Dark background, bright light.
     #[default]
     Dark,
-    /// Light background, darker light.
     Light,
 }
 
@@ -323,6 +342,39 @@ impl Renderer {
                 theme: ViewerTheme::default(),
             })
         }
+    }
+
+    /// Serializes the current camera and theme state.
+    pub fn save_view_state(&self) -> ViewState {
+        let eye = self.camera.position();
+        let target = self.camera.target();
+        let up = self.camera.up_orthogonal();
+        ViewState {
+            eye: [eye.x, eye.y, eye.z],
+            target: [target.x, target.y, target.z],
+            up: [up.x, up.y, up.z],
+            theme: self.theme,
+        }
+    }
+
+    /// Restores the camera and theme from a saved state.
+    pub fn restore_view_state(&mut self, state: &ViewState) {
+        let viewport = Viewport::new_at_origo(self.canvas.width(), self.canvas.height());
+        self.camera = ThreeDCamera::new_perspective(
+            viewport,
+            vec3(state.eye[0], state.eye[1], state.eye[2]),
+            vec3(state.target[0], state.target[1], state.target[2]),
+            vec3(state.up[0], state.up[1], state.up[2]),
+            radians(Self::FOV_Y),
+            self.camera.z_near(),
+            self.camera.z_far(),
+        );
+        self.control = OrbitControl::new(
+            vec3(state.target[0], state.target[1], state.target[2]),
+            self.camera.z_near(),
+            self.camera.z_far(),
+        );
+        self.set_theme(state.theme);
     }
 
     /// Resets the camera and orbit target to frame the loaded model.
