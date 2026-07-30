@@ -479,6 +479,16 @@ pub fn Header() -> impl IntoView {
                 </div>
 
                 <div class="navbar-end flex items-center gap-3" node_ref=account_menu_ref>
+                    <a
+                        href="https://buymeacoffee.com/illyrius"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="btn btn-primary btn-lift h-[42px] w-[42px] p-0 flex items-center justify-center"
+                        aria-label="Buy me a coffee"
+                    >
+                        <BuyMeACoffeeLogo class="w-6 h-6" />
+                    </a>
+
                     <button
                         type="button"
                         class="btn btn-primary hover:btn-warning btn-lift"
@@ -720,15 +730,6 @@ pub fn Header() -> impl IntoView {
                         }
                     }}
 
-                    <a
-                        href="https://buymeacoffee.com/illyrius"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="btn btn-primary btn-lift h-[42px] w-[42px] p-0 flex items-center justify-center"
-                        aria-label="Buy me a coffee"
-                    >
-                        <BuyMeACoffeeLogo class="w-6 h-6" />
-                    </a>
                 </div>
             </nav>
 
