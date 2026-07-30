@@ -32,12 +32,25 @@ enum ProjectDetailsTab {
 #[component]
 pub fn ProjectModal() -> impl IntoView {
     let modal = ProjectModalContext::use_context();
-    let on_close = move |()| modal.close();
     let (viewer_fullscreen, set_viewer_fullscreen) = signal(false);
+    let on_close = Callback::new(move |()| {
+        if is_fullscreen_active() {
+            if let Some(document) = leptos::web_sys::window().and_then(|w| w.document()) {
+                document.exit_fullscreen();
+            }
+            return;
+        }
+        modal.close();
+    });
 
     Effect::new(move |_| {
         if !modal.open.get() {
             set_viewer_fullscreen.set(false);
+            if let Some(document) = leptos::web_sys::window().and_then(|w| w.document())
+                && document.fullscreen_element().is_some()
+            {
+                document.exit_fullscreen();
+            }
         }
     });
 
@@ -48,8 +61,6 @@ pub fn ProjectModal() -> impl IntoView {
             "w-full max-w-6xl h-full max-h-[90vh] flex flex-col".to_string()
         }
     });
-
-    let toggle_fullscreen = Callback::new(move |()| set_viewer_fullscreen.update(|v| *v = !*v));
 
     view! {
         <SearchModal
@@ -64,7 +75,7 @@ pub fn ProjectModal() -> impl IntoView {
                         <ProjectModalContent
                             card=card
                             viewer_fullscreen=viewer_fullscreen
-                            toggle_fullscreen=toggle_fullscreen
+                            set_viewer_fullscreen=set_viewer_fullscreen
                         />
                     }
                         .into_any(),
@@ -76,6 +87,13 @@ pub fn ProjectModal() -> impl IntoView {
             }}
         </SearchModal>
     }
+}
+
+fn is_fullscreen_active() -> bool {
+    leptos::web_sys::window()
+        .and_then(|w| w.document())
+        .and_then(|d| d.fullscreen_element())
+        .is_some()
 }
 
 fn avatar_button(account: &AccountData, class: Option<String>) -> impl IntoView + use<> {
@@ -258,7 +276,7 @@ fn EditableChipSection<T: Clone + PartialEq + Send + Sync + 'static>(
 fn ProjectModalContent(
     #[prop(into)] card: ProjectCardProperties,
     #[prop(into)] viewer_fullscreen: Signal<bool>,
-    #[prop(into)] toggle_fullscreen: Callback<()>,
+    #[prop(into)] set_viewer_fullscreen: WriteSignal<bool>,
 ) -> impl IntoView {
     let current_user = CurrentUserContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
@@ -303,6 +321,37 @@ fn ProjectModalContent(
     let (is_downloading, set_is_downloading) = signal(false);
 
     let project_id = card.id.clone();
+    let viewer_ref = NodeRef::<leptos::html::Div>::new();
+
+    Effect::new({
+        move |_| {
+            crate::utils::document_event_listener::<web_sys::Event, _>(
+                "fullscreenchange",
+                move |_| {
+                    let active = leptos::web_sys::window()
+                        .and_then(|w| w.document())
+                        .and_then(|d| d.fullscreen_element())
+                        .is_some();
+                    set_viewer_fullscreen.set(active);
+                },
+            );
+        }
+    });
+
+    let toggle_fullscreen = Callback::new(move |()| {
+        let active = leptos::web_sys::window()
+            .and_then(|w| w.document())
+            .and_then(|d| d.fullscreen_element())
+            .is_some();
+        if active {
+            if let Some(document) = leptos::web_sys::window().and_then(|w| w.document()) {
+                document.exit_fullscreen();
+            }
+            set_viewer_fullscreen.set(false);
+        } else if let Some(element) = viewer_ref.get() {
+            let _ = element.request_fullscreen();
+        }
+    });
 
     let (toast_visible, set_toast_visible) = signal(false);
     let (toast_message, set_toast_message) = signal(String::new());
@@ -1096,7 +1145,7 @@ fn ProjectModalContent(
                                         let reset_view = RwSignal::new(false);
 
                                         view! {
-                                            <div class="h-full flex flex-col">
+                                            <div node_ref=viewer_ref class="h-full flex flex-col">
                                                 <div class="flex items-center justify-between gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
                                                     <div class="text-xs font-mono text-base-content/70 px-2">
                                                         {move || format!("{fps:.1} FPS", fps = fps.get())}

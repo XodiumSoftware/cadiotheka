@@ -2,6 +2,44 @@ use leptos::wasm_bindgen::JsCast;
 use leptos::wasm_bindgen::JsValue;
 use leptos::wasm_bindgen::closure::Closure;
 
+/// Add a listener to the browser `document` and automatically remove it when
+/// the surrounding effect is cleaned up.
+///
+/// Returns `None` if the listener could not be registered.
+pub fn document_event_listener<E, F>(event: &'static str, mut handler: F) -> Option<()>
+where
+    E: JsCast + 'static,
+    F: FnMut(E) + 'static,
+{
+    let document = leptos::web_sys::window()?.document()?;
+    let closure = Closure::wrap(Box::new(move |ev: leptos::web_sys::Event| {
+        if let Ok(typed) = ev.dyn_into::<E>() {
+            handler(typed);
+        }
+    }) as Box<dyn FnMut(_)>);
+
+    let function: js_sys::Function = closure.as_ref().unchecked_ref::<js_sys::Function>().clone();
+    if let Err(err) = document.add_event_listener_with_callback(event, &function) {
+        leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(
+            "Failed to add document '{event}' event listener: {err:?}"
+        )));
+        return None;
+    }
+    std::mem::forget(closure);
+
+    leptos::prelude::on_cleanup(move || {
+        if let Some(document) = leptos::web_sys::window().and_then(|w| w.document())
+            && let Err(err) = document.remove_event_listener_with_callback(event, &function)
+        {
+            leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(
+                "Failed to remove document '{event}' event listener: {err:?}"
+            )));
+        }
+    });
+
+    Some(())
+}
+
 /// Add a listener to the browser `window` and automatically remove it when
 /// the surrounding effect is cleaned up.
 ///
