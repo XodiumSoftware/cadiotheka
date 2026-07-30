@@ -4,8 +4,8 @@
 //! parses it with the `gltf` crate via [`crate::utils::glb`], and renders it
 //! with the `three-d` renderer in [`crate::utils::three_d_renderer`].
 
-use crate::utils::glb::{Gltf, NodeMetadata, extract_scene_geometries};
-use crate::utils::three_d_renderer::{MeshGeometry, OrbitControls, Renderer, ViewerTheme};
+use crate::utils::glb::Gltf;
+use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewerTheme};
 use gloo_net::http::Request;
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
@@ -30,9 +30,6 @@ pub enum IfcViewerState {
     Error,
 }
 
-/// Callback invoked when the user clicks a mesh in the IFC viewer.
-pub type PickCallback = Callback<Option<NodeMetadata>>;
-
 /// Renders an IFC model from the given URL into a canvas.
 ///
 /// Optional signals let a parent read viewer state and control debug
@@ -44,7 +41,6 @@ pub fn IfcViewer(
     #[prop(optional)] fps_signal: Option<RwSignal<f64>>,
     #[prop(optional)] show_debug_signal: Option<RwSignal<bool>>,
     #[prop(optional)] debug_text_signal: Option<RwSignal<String>>,
-    #[prop(into)] on_pick: PickCallback,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -54,15 +50,6 @@ pub fn IfcViewer(
 
     let renderer: Rc<RefCell<Option<Renderer>>> = Rc::new(RefCell::new(None));
     let controls: Rc<RefCell<Option<OrbitControls>>> = Rc::new(RefCell::new(None));
-    let geometries: Rc<RefCell<Option<Vec<MeshGeometry>>>> = Rc::new(RefCell::new(None));
-    let renderer_for_click = Rc::clone(&renderer);
-    let geometries_for_click = Rc::clone(&geometries);
-    let renderer_for_hover = Rc::clone(&renderer);
-    let geometries_for_hover = Rc::clone(&geometries);
-    let hovered = RwSignal::new(false);
-    let hover_metadata = RwSignal::new(None::<NodeMetadata>);
-    let hover_position = RwSignal::new((0.0_f64, 0.0_f64));
-
     let dirty = Rc::new(RefCell::new(false));
     let pending_frame = Rc::new(RefCell::new(false));
     let animation_handle: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
@@ -217,7 +204,6 @@ pub fn IfcViewer(
         state.set(IfcViewerState::Loading);
         let renderer = Rc::clone(&renderer);
         let controls = Rc::clone(&controls);
-        let geometries = Rc::clone(&geometries);
         let state = state;
         let request_render = Rc::clone(&request_render);
         let update_debug = update_debug.clone();
@@ -232,7 +218,6 @@ pub fn IfcViewer(
                     };
 
                     if let Some(new_renderer) = Renderer::new(&canvas, &gltf) {
-                        *geometries.borrow_mut() = Some(extract_scene_geometries(&gltf));
                         *renderer.borrow_mut() = Some(new_renderer);
                         let render_callback = {
                             let request_render = Rc::clone(&request_render);
@@ -259,79 +244,13 @@ pub fn IfcViewer(
         });
     });
 
-    let update_hover = move |ev: leptos::web_sys::PointerEvent| {
-        let Some(canvas) = canvas_ref.get() else {
-            return;
-        };
-        let rect = canvas.get_bounding_client_rect();
-        #[allow(clippy::cast_possible_truncation)]
-        let x = (f64::from(ev.client_x()) - rect.left()) as f32;
-        #[allow(clippy::cast_possible_truncation)]
-        let y = (f64::from(ev.client_y()) - rect.top()) as f32;
-        let pixel = three_d_asset::PixelPoint { x, y };
-        let renderer_ref = renderer_for_hover.borrow();
-        let geometries_ref = geometries_for_hover.borrow();
-        let picked = renderer_ref
-            .as_ref()
-            .zip(geometries_ref.as_ref())
-            .and_then(|(r, g)| r.pick(pixel, g));
-        let is_hovering = picked.is_some();
-        hovered.set(is_hovering);
-        hover_metadata.set(picked.and_then(|p| p.metadata));
-        hover_position.set((f64::from(x), f64::from(y)));
-    };
-
     view! {
-        <div class="relative w-full h-full overflow-hidden border border-base-content/10"
-            on:click=move |ev| {
-                let Some(canvas) = canvas_ref.get() else {
-                    return;
-                };
-                let rect = canvas.get_bounding_client_rect();
-                #[allow(clippy::cast_possible_truncation)]
-                let x = (f64::from(ev.client_x()) - rect.left()) as f32;
-                #[allow(clippy::cast_possible_truncation)]
-                let y = (f64::from(ev.client_y()) - rect.top()) as f32;
-                let pixel = three_d_asset::PixelPoint { x, y };
-                let renderer_ref = renderer_for_click.borrow();
-                let geometries_ref = geometries_for_click.borrow();
-                let metadata = renderer_ref.as_ref().zip(geometries_ref.as_ref()).and_then(|(r, g)| {
-                    r.pick(pixel, g).and_then(|pick| pick.metadata)
-                });
-                on_pick.run(metadata);
-            }
-            on:pointermove=update_hover
-            on:pointerleave=move |_| {
-                hovered.set(false);
-                hover_metadata.set(None);
-            }
-        >
+        <div class="relative w-full h-full overflow-hidden border border-base-content/10">
             <canvas
                 node_ref=canvas_ref
-                class=move || {
-                    if hovered.get() {
-                        "w-full h-full block cursor-pointer active:cursor-grabbing"
-                    } else {
-                        "w-full h-full block cursor-grab active:cursor-grabbing"
-                    }
-                }
+                class="w-full h-full block cursor-grab active:cursor-grabbing"
                 aria-label="IFC 3D viewer"
             />
-            {move || hover_metadata.get().map(|metadata| {
-                let (x, y) = hover_position.get();
-                view! {
-                    <div
-                        class="absolute z-20 pointer-events-none bg-base-100/95 backdrop-blur text-base-content border border-base-content/10 p-2 rounded shadow-lg max-w-[16rem]"
-                        style=format!("left: {x:.0}px; top: {y:.0}px; transform: translate(0.75rem, 0.75rem);")
-                    >
-                        <p class="text-xs font-semibold truncate">{metadata.name}</p>
-                        {metadata.express_id.map(|id| view! {
-                            <p class="text-xs text-base-content/60">{format!("IFC ID: {id}")}</p>
-                        })}
-                    </div>
-                }
-                    .into_any()
-            })}
             {move || match state.get() {
                 IfcViewerState::NoModel => view! {
                     <div class="absolute inset-0 flex items-center justify-center text-base-content/50 text-sm pointer-events-none">

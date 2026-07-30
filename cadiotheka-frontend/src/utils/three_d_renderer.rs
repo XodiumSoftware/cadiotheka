@@ -6,11 +6,10 @@
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
-use crate::utils::glb::NodeMetadata;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::glb::{
-    build_node_metadata_map, compute_bounding_box, is_triangle_mode, material_params, read_indices,
-    read_normals, read_positions, triangle_count,
+    compute_bounding_box, is_triangle_mode, material_params, read_indices, read_normals,
+    read_positions, triangle_count,
 };
 #[cfg(target_arch = "wasm32")]
 use crate::utils::math::{mat4_identity, mat4_mul};
@@ -258,8 +257,6 @@ pub struct Renderer {
     canvas: HtmlCanvasElement,
     scene_bounds: ([f32; 3], [f32; 3]),
     models: Vec<Box<dyn Object>>,
-    #[cfg(target_arch = "wasm32")]
-    mesh_metadata: Vec<Option<NodeMetadata>>,
     total_vertices: usize,
     total_triangles: usize,
     light: DirectionalLight,
@@ -355,15 +352,6 @@ fn build_skybox(context: &ThreeDContext, theme: ViewerTheme) -> Gm<Mesh, ColorMa
     Gm::new(mesh, material)
 }
 
-/// Per-mesh world-space geometry data retained for raycasting.
-#[derive(Clone, Debug)]
-pub struct MeshGeometry {
-    /// World-space vertex positions.
-    pub positions: Vec<[f32; 3]>,
-    /// Optional indices describing triangles.
-    pub indices: Option<Vec<u32>>,
-}
-
 impl Renderer {
     /// Creates a renderer for the given canvas and glTF document.
     pub fn new(canvas: &HtmlCanvasElement, gltf: &Gltf) -> Option<Self> {
@@ -391,12 +379,10 @@ impl Renderer {
             let (camera, control) = build_framing_camera(scene_bounds.0, scene_bounds.1, canvas);
 
             let mut models = Vec::new();
-            let mut mesh_metadata: Vec<Option<NodeMetadata>> = Vec::new();
             let mut total_vertices = 0;
             let mut total_triangles = 0;
 
             if let Some(scene) = gltf.default_scene() {
-                let metadata_map = build_node_metadata_map(gltf);
                 let identity = mat4_identity();
                 for node in scene.nodes() {
                     upload_node(
@@ -404,9 +390,7 @@ impl Renderer {
                         &node,
                         &identity,
                         &context,
-                        &metadata_map,
                         &mut models,
-                        &mut mesh_metadata,
                         &mut total_vertices,
                         &mut total_triangles,
                     );
@@ -424,7 +408,6 @@ impl Renderer {
                 canvas: canvas.clone(),
                 scene_bounds,
                 models,
-                mesh_metadata,
                 total_vertices,
                 total_triangles,
                 light,
@@ -523,54 +506,6 @@ impl Renderer {
     /// Returns the current viewer theme.
     pub fn theme(&self) -> ViewerTheme {
         self.theme
-    }
-
-    /// Returns the metadata attached to the closest mesh under the given
-    /// screen-space pixel coordinate, or `None` if nothing was hit.
-    #[cfg(target_arch = "wasm32")]
-    pub fn pick(
-        &self,
-        pixel: three_d_asset::PixelPoint,
-        geometries: &[MeshGeometry],
-    ) -> Option<PickResult> {
-        let (width, height) = canvas_size(&self.canvas);
-        if width == 0 || height == 0 || geometries.len() != self.mesh_metadata.len() {
-            return None;
-        }
-        let ray_origin = self.camera.position_at_pixel(pixel);
-        let ray_dir = self.camera.view_direction_at_pixel(pixel).normalize();
-
-        let mut best: Option<PickResult> = None;
-        for (idx, geometry) in geometries.iter().enumerate() {
-            let Some(metadata) = self.mesh_metadata.get(idx).cloned().flatten() else {
-                continue;
-            };
-            let Some(distance) = ray_intersect_triangles(
-                ray_origin,
-                ray_dir,
-                &geometry.positions,
-                geometry.indices.as_deref(),
-            ) else {
-                continue;
-            };
-            let pick = PickResult {
-                metadata: Some(metadata),
-                distance,
-            };
-            best = Some(best.map_or(pick.clone(), |b| {
-                if b.distance < pick.distance { b } else { pick }
-            }));
-        }
-        best
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn pick(
-        &self,
-        _pixel: three_d_asset::PixelPoint,
-        _geometries: &[MeshGeometry],
-    ) -> Option<PickResult> {
-        None
     }
 
     /// Handles shift-drag panning before delegating rotation/zoom to `OrbitControl`.
@@ -744,31 +679,25 @@ fn build_framing_camera(
 }
 
 #[cfg(target_arch = "wasm32")]
-#[allow(clippy::too_many_arguments)]
 fn upload_node(
     gltf: &Gltf,
     node: &gltf::Node<'_>,
     parent_transform: &[[f32; 4]; 4],
     context: &ThreeDContext,
-    metadata_map: &std::collections::HashMap<usize, NodeMetadata>,
     models: &mut Vec<Box<dyn Object>>,
-    mesh_metadata: &mut Vec<Option<NodeMetadata>>,
     total_vertices: &mut usize,
     total_triangles: &mut usize,
 ) {
     let transform = mat4_mul(parent_transform, &node.transform().matrix());
 
     if let Some(mesh) = node.mesh() {
-        let metadata = metadata_map.get(&node.index()).cloned();
         for primitive in mesh.primitives() {
             upload_primitive(
                 gltf,
                 &primitive,
                 &transform,
                 context,
-                metadata.clone(),
                 models,
-                mesh_metadata,
                 total_vertices,
                 total_triangles,
             );
@@ -781,9 +710,7 @@ fn upload_node(
             &child,
             &transform,
             context,
-            metadata_map,
             models,
-            mesh_metadata,
             total_vertices,
             total_triangles,
         );
@@ -791,26 +718,21 @@ fn upload_node(
 }
 
 #[cfg(target_arch = "wasm32")]
-#[allow(clippy::too_many_arguments)]
 fn upload_primitive(
     gltf: &Gltf,
     primitive: &gltf::Primitive<'_>,
     transform: &[[f32; 4]; 4],
     context: &ThreeDContext,
-    metadata: Option<NodeMetadata>,
     models: &mut Vec<Box<dyn Object>>,
-    mesh_metadata: &mut Vec<Option<NodeMetadata>>,
     total_vertices: &mut usize,
     total_triangles: &mut usize,
 ) {
     let mode = primitive.mode();
     if !is_triangle_mode(mode) {
-        mesh_metadata.push(metadata);
         return;
     }
 
     let Some(positions) = read_positions(gltf, primitive, transform) else {
-        mesh_metadata.push(metadata);
         return;
     };
     let normals = read_normals(gltf, primitive, transform);
@@ -863,91 +785,8 @@ fn upload_primitive(
     };
 
     models.push(model);
-    mesh_metadata.push(metadata);
 
     let index_count = indices.as_ref().map_or(0, std::vec::Vec::len);
     *total_vertices += position_count;
     *total_triangles += triangle_count(mode, index_count, position_count);
-}
-
-/// Metadata returned when picking an object in the viewer.
-#[derive(Clone, Debug)]
-pub struct PickResult {
-    /// Metadata of the closest picked mesh, if available.
-    pub metadata: Option<NodeMetadata>,
-    /// World-space distance from the camera to the hit point.
-    pub distance: f32,
-}
-
-/// Picks the closest mesh under a screen-space point by casting a ray through
-/// the camera frustum.
-#[cfg(target_arch = "wasm32")]
-fn ray_intersect_triangles(
-    ray_origin: three_d_asset::Vec3,
-    ray_dir: three_d_asset::Vec3,
-    positions: &[[f32; 3]],
-    indices: Option<&[u32]>,
-) -> Option<f32> {
-    let triangles: Vec<[u32; 3]> = match indices {
-        Some(idx) => idx.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect(),
-        None => (0..positions.len() as u32)
-            .step_by(3)
-            .map(|i| [i, i + 1, i + 2])
-            .collect(),
-    };
-
-    let mut closest: Option<f32> = None;
-    for &[ia, ib, ic] in &triangles {
-        let a = three_d_asset::vec3(
-            positions[ia as usize][0],
-            positions[ia as usize][1],
-            positions[ia as usize][2],
-        );
-        let b = three_d_asset::vec3(
-            positions[ib as usize][0],
-            positions[ib as usize][1],
-            positions[ib as usize][2],
-        );
-        let c = three_d_asset::vec3(
-            positions[ic as usize][0],
-            positions[ic as usize][1],
-            positions[ic as usize][2],
-        );
-        if let Some(t) = triangle_intersection(ray_origin, ray_dir, a, b, c) {
-            closest = Some(closest.map_or(t, |c| c.min(t)));
-        }
-    }
-    closest
-}
-
-#[cfg(target_arch = "wasm32")]
-#[allow(clippy::many_single_char_names)]
-fn triangle_intersection(
-    ray_origin: three_d_asset::Vec3,
-    ray_dir: three_d_asset::Vec3,
-    v0: three_d_asset::Vec3,
-    v1: three_d_asset::Vec3,
-    v2: three_d_asset::Vec3,
-) -> Option<f32> {
-    let epsilon = 1e-6;
-    let edge1 = v1 - v0;
-    let edge2 = v2 - v0;
-    let h = ray_dir.cross(edge2);
-    let det = edge1.dot(h);
-    if det.abs() < epsilon {
-        return None;
-    }
-    let inv_det = 1.0 / det;
-    let s = ray_origin - v0;
-    let u = inv_det * s.dot(h);
-    if !(0.0..=1.0).contains(&u) {
-        return None;
-    }
-    let q = s.cross(edge1);
-    let v = inv_det * ray_dir.dot(q);
-    if v < 0.0 || u + v > 1.0 {
-        return None;
-    }
-    let t = inv_det * edge2.dot(q);
-    if t > epsilon { Some(t) } else { None }
 }

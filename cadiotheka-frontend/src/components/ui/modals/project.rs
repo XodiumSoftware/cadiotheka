@@ -1131,7 +1131,6 @@ fn ProjectModalContent(
                                                         fps_signal=fps
                                                         show_debug_signal=show_debug
                                                         debug_text_signal=debug_text
-                                                        on_pick=Callback::new(move |_| {})
                                                     />
                                                 </div>
                                             </div>

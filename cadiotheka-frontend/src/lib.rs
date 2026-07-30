@@ -45,7 +45,7 @@ pub mod components {
     pub use ui::buy_me_a_coffee::BuyMeACoffeeLogo;
     pub use ui::corner_frame::CornerFrame;
     pub use ui::effects::section_fade::FadeOverlay;
-    pub use ui::ifc_viewer::{IfcViewer, IfcViewerState, PickCallback};
+    pub use ui::ifc_viewer::{IfcViewer, IfcViewerState};
     pub use ui::logo::Logo;
     pub use ui::markdown::MarkdownView;
     pub use ui::markdown_editor::MarkdownEditor;
