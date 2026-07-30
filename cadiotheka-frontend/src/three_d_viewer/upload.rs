@@ -10,7 +10,7 @@ use three_d::renderer::material::ColorMaterial;
 use three_d_asset::Geometry;
 use three_d_asset::PbrMaterial;
 use three_d_asset::Srgba;
-use three_d_asset::material::LightingModel;
+use three_d_asset::material::{GeometryFunction, LightingModel, NormalDistributionFunction};
 
 /// Uploads a single `three-d-asset` primitive into a `three-d` render object.
 #[allow(dead_code)]
@@ -44,7 +44,7 @@ pub fn upload_primitive(
         .and_then(|i| materials.get(i))
         .cloned()
         .unwrap_or_else(default_ifc_material);
-    cpu_material.lighting_model = LightingModel::Blinn;
+    cpu_material.lighting_model = choose_lighting_model(&cpu_material);
 
     let model: Box<dyn Object> = if cpu_material.is_unlit() {
         let mut material = ColorMaterial::new(context, &cpu_material);
@@ -72,6 +72,30 @@ fn default_ifc_material() -> PbrMaterial {
         metallic: 0.0,
         roughness: 0.8,
         ..Default::default()
+    }
+}
+
+/// Picks a lighting model for the given material.
+///
+/// GLTF assets already specify Cook-Torrance, which gives physically correct
+/// PBR shading. For untextured IFC fallback geometry we keep Blinn as a cheaper
+/// default. Any material with textures benefits from Cook-Torrance so the maps
+/// (normal, metallic-roughness, albedo) are evaluated in a physically based
+/// shader.
+fn choose_lighting_model(cpu_material: &PbrMaterial) -> LightingModel {
+    let has_pbr_textures = cpu_material.albedo_texture.is_some()
+        || cpu_material.metallic_roughness_texture.is_some()
+        || cpu_material.occlusion_metallic_roughness_texture.is_some()
+        || cpu_material.normal_texture.is_some()
+        || cpu_material.emissive_texture.is_some();
+
+    if has_pbr_textures {
+        LightingModel::Cook(
+            NormalDistributionFunction::TrowbridgeReitzGGX,
+            GeometryFunction::SmithSchlickGGX,
+        )
+    } else {
+        LightingModel::Blinn
     }
 }
 
