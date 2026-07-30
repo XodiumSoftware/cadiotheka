@@ -42,6 +42,8 @@ pub fn IfcViewer(
     #[prop(optional)] show_debug_signal: Option<RwSignal<bool>>,
     #[prop(optional)] debug_text_signal: Option<RwSignal<String>>,
     #[prop(optional)] reset_view_signal: Option<RwSignal<bool>>,
+    #[prop(optional)] show_grid_signal: Option<RwSignal<bool>>,
+    #[prop(optional)] show_axes_signal: Option<RwSignal<bool>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -49,6 +51,8 @@ pub fn IfcViewer(
     let show_debug = show_debug_signal.unwrap_or_else(|| RwSignal::new(false));
     let debug_text = debug_text_signal.unwrap_or_else(|| RwSignal::new(String::new()));
     let reset_view = reset_view_signal.unwrap_or_else(|| RwSignal::new(false));
+    let show_grid = show_grid_signal.unwrap_or_else(|| RwSignal::new(true));
+    let show_axes = show_axes_signal.unwrap_or_else(|| RwSignal::new(true));
 
     let renderer: Rc<RefCell<Option<Renderer>>> = Rc::new(RefCell::new(None));
     let controls: Rc<RefCell<Option<OrbitControls>>> = Rc::new(RefCell::new(None));
@@ -281,6 +285,36 @@ pub fn IfcViewer(
             if has_renderer {
                 request_render.borrow_mut()();
             }
+        }
+    });
+
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            let show = show_grid.get();
+            {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.set_show_grid(show);
+                }
+            }
+            request_render.borrow_mut()();
+        }
+    });
+
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            let show = show_axes.get();
+            {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.set_show_axes(show);
+                }
+            }
+            request_render.borrow_mut()();
         }
     });
 

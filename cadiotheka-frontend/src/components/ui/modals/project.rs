@@ -1141,6 +1141,8 @@ fn ProjectModalContent(
                                         let viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
                                         let fps = RwSignal::new(0.0_f64);
                                         let show_debug = RwSignal::new(false);
+                                        let show_grid = RwSignal::new(true);
+                                        let show_axes = RwSignal::new(true);
                                         let debug_text = RwSignal::new(String::new());
                                         let reset_view = RwSignal::new(false);
 
@@ -1159,6 +1161,24 @@ fn ProjectModalContent(
                                                             })
                                                         >
                                                             {move || if show_debug.get() { "🐞" } else { "🐛" }}
+                                                        </ToolbarButton>
+                                                        <ToolbarButton
+                                                            label="Toggle ground grid"
+                                                            tooltip_position=TooltipPosition::Bottom
+                                                            on_click=Callback::new(move |()| {
+                                                                show_grid.update(|v| *v = !*v);
+                                                            })
+                                                        >
+                                                            {move || if show_grid.get() { "▦" } else { "▨" }}
+                                                        </ToolbarButton>
+                                                        <ToolbarButton
+                                                            label="Toggle axes gizmo"
+                                                            tooltip_position=TooltipPosition::Bottom
+                                                            on_click=Callback::new(move |()| {
+                                                                show_axes.update(|v| *v = !*v);
+                                                            })
+                                                        >
+                                                            {move || if show_axes.get() { "📍" } else { "⚪" }}
                                                         </ToolbarButton>
                                                         <ToolbarButton
                                                             label="Reset view"
@@ -1195,6 +1215,8 @@ fn ProjectModalContent(
                                                         show_debug_signal=show_debug
                                                         debug_text_signal=debug_text
                                                         reset_view_signal=reset_view
+                                                        show_grid_signal=show_grid
+                                                        show_axes_signal=show_axes
                                                     />
                                                 </div>
                                             </div>

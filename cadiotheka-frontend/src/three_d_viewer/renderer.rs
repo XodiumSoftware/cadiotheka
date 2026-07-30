@@ -34,6 +34,8 @@ pub struct Renderer {
     pub(crate) models: Vec<Box<dyn Object>>,
     pub(crate) ground_grid: Option<Box<dyn Object>>,
     pub(crate) axes: Option<Box<dyn Object>>,
+    pub(crate) show_grid: bool,
+    pub(crate) show_axes: bool,
     pub(crate) total_vertices: usize,
     pub(crate) total_triangles: usize,
     pub(crate) light: DirectionalLight,
@@ -114,6 +116,8 @@ impl Renderer {
                 models,
                 ground_grid,
                 axes,
+                show_grid: true,
+                show_axes: true,
                 total_vertices,
                 total_triangles,
                 light,
@@ -217,8 +221,18 @@ impl Renderer {
             .models
             .iter()
             .map(std::convert::AsRef::as_ref)
-            .chain(self.ground_grid.iter().map(AsRef::as_ref))
-            .chain(self.axes.iter().map(AsRef::as_ref))
+            .chain(
+                self.ground_grid
+                    .iter()
+                    .filter(|_| self.show_grid)
+                    .map(AsRef::as_ref),
+            )
+            .chain(
+                self.axes
+                    .iter()
+                    .filter(|_| self.show_axes)
+                    .map(AsRef::as_ref),
+            )
             .collect();
         let (background, light_intensity) = match self.theme {
             ViewerTheme::Dark => ((0.05, 0.05, 0.05, 1.0, 1.0), 1.0),
@@ -235,6 +249,16 @@ impl Renderer {
             background.4,
         ));
         target.render(&self.camera, objects, &[&self.light]);
+    }
+
+    /// Sets whether the ground grid is rendered.
+    pub fn set_show_grid(&mut self, show: bool) {
+        self.show_grid = show;
+    }
+
+    /// Sets whether the axes gizmo is rendered.
+    pub fn set_show_axes(&mut self, show: bool) {
+        self.show_axes = show;
     }
 
     /// Sets the viewer theme and re-renders on the next frame.
