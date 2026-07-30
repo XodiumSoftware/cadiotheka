@@ -8,7 +8,7 @@
 
 #[cfg(target_arch = "wasm32")]
 use crate::utils::math::vec3_to_array;
-use glow;
+#[cfg(target_arch = "wasm32")]
 use js_sys::{Function, Reflect};
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
@@ -30,8 +30,13 @@ use three_d::renderer::control::{Event, MouseButton, OrbitControl};
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::material::ColorMaterial;
 use three_d::renderer::{Camera as ThreeDCamera, DirectionalLight, Object};
+use three_d_asset::Viewport;
+#[cfg(target_arch = "wasm32")]
 use three_d_asset::material::LightingModel;
-use three_d_asset::{Mat4, Model, PbrMaterial, Scene, Srgba, Viewport, radians, vec3};
+#[cfg(target_arch = "wasm32")]
+use three_d_asset::{Mat4, Model, Scene, radians, vec3};
+#[cfg(target_arch = "wasm32")]
+use three_d_asset::{PbrMaterial, Srgba};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::Closure;
@@ -745,6 +750,7 @@ fn upload_primitive(
 }
 
 /// Returns a default material tuned for IFC-derived geometry.
+#[cfg(target_arch = "wasm32")]
 fn default_ifc_material() -> PbrMaterial {
     PbrMaterial {
         name: String::new(),
@@ -756,10 +762,12 @@ fn default_ifc_material() -> PbrMaterial {
 }
 
 /// Returns whether the given material should be rendered unlit.
+#[cfg(target_arch = "wasm32")]
 trait UnlitMaterial {
     fn is_unlit(&self) -> bool;
 }
 
+#[cfg(target_arch = "wasm32")]
 impl UnlitMaterial for PbrMaterial {
     fn is_unlit(&self) -> bool {
         matches!(self.lighting_model, LightingModel::Blinn)
@@ -770,6 +778,7 @@ impl UnlitMaterial for PbrMaterial {
 }
 
 /// Counts triangles for a primitive given its index and vertex counts.
+#[cfg(target_arch = "wasm32")]
 fn triangle_count(index_count: usize, vertex_count: usize) -> usize {
     if index_count == 0 {
         vertex_count / 3
