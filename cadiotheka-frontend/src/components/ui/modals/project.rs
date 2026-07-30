@@ -300,6 +300,7 @@ fn ProjectModalContent(
 
     let (ifc_url, set_ifc_url) = signal(card.ifc_url.clone());
     let (is_uploading_ifc, set_is_uploading_ifc) = signal(false);
+    let (is_downloading, set_is_downloading) = signal(false);
 
     let project_id = card.id.clone();
 
@@ -792,12 +793,16 @@ fn ProjectModalContent(
         let set_projects = projects_ctx.set_projects;
         let modal_set_card = modal.set_card;
         Callback::new(move |()| {
+            if is_downloading.get_untracked() {
+                return;
+            }
             let Some(url) = ifc_url.get() else {
                 return;
             };
 
             let project_id = project_id.clone();
             let url = url.clone();
+            set_is_downloading.set(true);
             leptos::task::spawn_local(async move {
                 match increment_project_downloads(&project_id).await {
                     Ok(updated) => {
@@ -825,6 +830,8 @@ fn ProjectModalContent(
                         );
                     }
                 }
+                gloo_timers::future::TimeoutFuture::new(1000).await;
+                set_is_downloading.set(false);
             });
         })
     };
@@ -969,27 +976,40 @@ fn ProjectModalContent(
                     {
                         move || {
                             let has_ifc = ifc_url.get().is_some();
-                            let label = if has_ifc { "Download IFC" } else { "No IFC model available" };
+                            let downloading = is_downloading.get();
+                            let label = if downloading {
+                                "Downloading IFC..."
+                            } else if has_ifc {
+                                "Download IFC"
+                            } else {
+                                "No IFC model available"
+                            };
                             view! {
                                 <button
                                     type="button"
                                     class=move || {
-                                        if has_ifc {
-                                            "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
-                                        } else {
+                                        if !has_ifc || downloading {
                                             "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
+                                        } else {
+                                            "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
                                         }
                                     }
                                     aria-label=label
                                     data-tip=label
-                                    disabled=move || !has_ifc
+                                    disabled=move || !has_ifc || downloading
                                     on:click={
                                         let cb = increment_downloads;
                                         move |_| cb.run(())
                                     }
                                 >
                                     <span class="flex items-center gap-1">
-                                        <DownloadIcon />
+                                        {if downloading {
+                                            view! {
+                                                <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                            }.into_any()
+                                        } else {
+                                            view! { <DownloadIcon /> }.into_any()
+                                        }}
                                     </span>
                                 </button>
                             }
@@ -1224,16 +1244,37 @@ fn ProjectModalContent(
                                                                 }
                                                             }}
                                                         </div>
-                                                        <button
-                                                            type="button"
-                                                            class="btn btn-primary btn-sm w-full rounded-none"
-                                                            on:click={
-                                                                let cb = increment_downloads;
-                                                                move |_| cb.run(())
+                                                        {move || {
+                                                            let downloading = is_downloading.get();
+                                                            view! {
+                                                                <button
+                                                                    type="button"
+                                                                    class=move || {
+                                                                        if downloading {
+                                                                            "btn btn-primary btn-sm w-full rounded-none cursor-not-allowed"
+                                                                        } else {
+                                                                            "btn btn-primary btn-sm w-full rounded-none"
+                                                                        }
+                                                                    }
+                                                                    disabled=move || downloading
+                                                                    on:click={
+                                                                        let cb = increment_downloads;
+                                                                        move |_| cb.run(())
+                                                                    }
+                                                                >
+                                                                    <span class="flex items-center justify-center gap-2">
+                                                                        {if downloading {
+                                                                            view! {
+                                                                                <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                                <span>"Downloading..."</span>
+                                                                            }.into_any()
+                                                                        } else {
+                                                                            view! { <span>"Download IFC"</span> }.into_any()
+                                                                        }}
+                                                                    </span>
+                                                                </button>
                                                             }
-                                                        >
-                                                            <span>"Download IFC"</span>
-                                                        </button>
+                                                        }}
                                                     </div>
                                                 }
                                                     .into_any()
@@ -1801,8 +1842,9 @@ fn event_target_value(ev: &leptos::web_sys::Event) -> String {
 /// Programmatically starts a file download from the given URL.
 ///
 /// A temporary anchor element with the `download` attribute is created and
-/// clicked, then removed. This avoids nesting interactive elements and keeps
-/// the download behaviour explicit and testable.
+/// clicked. The anchor is kept in the DOM for a short delay before removal,
+/// because removing it immediately can cancel the download request before the
+/// browser has initiated it.
 fn trigger_download(url: &str) {
     let Some(document) = leptos::web_sys::window().and_then(|w| w.document()) else {
         return;
@@ -1810,15 +1852,23 @@ fn trigger_download(url: &str) {
     let Ok(anchor) = document.create_element("a") else {
         return;
     };
+    let filename = url.rsplit_once('/').map_or("model.ifc", |(_, name)| name);
     let _ = anchor.set_attribute("href", url);
-    let _ = anchor.set_attribute("download", "");
+    let _ = anchor.set_attribute("download", filename);
     let _ = anchor.set_attribute("style", "display:none");
     let _ = anchor.set_attribute("aria-hidden", "true");
-    if let Some(body) = document.body() {
-        let _ = body.append_child(&anchor);
-        if let Some(element) = anchor.dyn_ref::<leptos::web_sys::HtmlElement>() {
-            element.click();
-        }
-        let _ = body.remove_child(&anchor);
+    let Some(body) = document.body() else {
+        return;
+    };
+    let _ = body.append_child(&anchor);
+    if let Some(element) = anchor.dyn_ref::<leptos::web_sys::HtmlElement>() {
+        element.click();
     }
+
+    leptos::task::spawn_local(async move {
+        gloo_timers::future::TimeoutFuture::new(1000).await;
+        if let Some(parent) = anchor.parent_node() {
+            let _ = parent.remove_child(&anchor);
+        }
+    });
 }
