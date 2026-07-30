@@ -791,7 +791,6 @@ fn ProjectModalContent(
     let increment_downloads = {
         let project_id = card.id.clone();
         let set_projects = projects_ctx.set_projects;
-        let modal_set_card = modal.set_card;
         Callback::new(move |()| {
             if is_downloading.get_untracked() {
                 return;
@@ -808,19 +807,11 @@ fn ProjectModalContent(
                     Ok(updated) => {
                         trigger_download(&url);
 
-                        let updated_for_modal = updated.clone();
                         set_projects.update(|projects| {
                             if let Some(project) =
                                 projects.iter_mut().find(|project| project.id == updated.id)
                             {
                                 *project = updated.clone();
-                            }
-                        });
-                        modal_set_card.update(|card| {
-                            if let Some(card) = card.as_mut()
-                                && card.id == updated_for_modal.id
-                            {
-                                card.downloads = updated_for_modal.downloads;
                             }
                         });
                     }
