@@ -7,8 +7,6 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
 #[cfg(target_arch = "wasm32")]
-use crate::utils::math::vec3_to_array;
-#[cfg(target_arch = "wasm32")]
 use js_sys::{Function, Reflect};
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
@@ -20,21 +18,17 @@ use std::sync::Arc;
 use three_d::InnerSpace;
 use three_d::MetricSpace;
 #[cfg(target_arch = "wasm32")]
-use three_d::core::render_states::{Cull, DepthTest};
+use three_d::core::render_states::Cull;
 use three_d::core::{ClearState, Context as ThreeDContext, RenderTarget};
-#[cfg(target_arch = "wasm32")]
-use three_d::renderer::Mesh;
 #[cfg(target_arch = "wasm32")]
 use three_d::renderer::PhysicalMaterial;
 use three_d::renderer::control::{Event, MouseButton, OrbitControl};
-#[cfg(target_arch = "wasm32")]
-use three_d::renderer::material::ColorMaterial;
 use three_d::renderer::{Camera as ThreeDCamera, DirectionalLight, Object};
 use three_d_asset::Viewport;
 #[cfg(target_arch = "wasm32")]
 use three_d_asset::material::LightingModel;
 #[cfg(target_arch = "wasm32")]
-use three_d_asset::{Mat4, Model, Scene, radians, vec3};
+use three_d_asset::{Model, Scene, radians, vec3};
 #[cfg(target_arch = "wasm32")]
 use three_d_asset::{PbrMaterial, Srgba};
 use wasm_bindgen::JsCast;
@@ -252,8 +246,6 @@ pub struct Renderer {
     light: DirectionalLight,
     pending_events: Rc<RefCell<Vec<Event>>>,
     theme: ViewerTheme,
-    #[cfg(target_arch = "wasm32")]
-    skybox: three_d::Gm<Mesh, ColorMaterial>,
 }
 
 /// Rendering theme for the viewer.
@@ -264,84 +256,6 @@ pub enum ViewerTheme {
     Dark,
     /// Light background, darker light.
     Light,
-}
-
-/// Bottom and top colors for the gradient sky sphere.
-#[cfg(target_arch = "wasm32")]
-fn skybox_gradient(theme: ViewerTheme) -> (Srgba, Srgba) {
-    match theme {
-        ViewerTheme::Dark => (
-            Srgba::new(245, 250, 255, 255),
-            Srgba::new(66, 130, 190, 255),
-        ),
-        ViewerTheme::Light => (
-            Srgba::new(255, 255, 255, 255),
-            Srgba::new(176, 224, 230, 255),
-        ),
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn lerp_srgba(a: Srgba, b: Srgba, t: f32) -> Srgba {
-    let lerp = |x: u8, y: u8| -> u8 {
-        let value = f32::from(x) + (f32::from(y) - f32::from(x)) * t;
-        let clamped = value.clamp(0.0, 255.0);
-        u8::try_from(clamped as i32).unwrap_or(0)
-    };
-    Srgba::new(lerp(a.r, b.r), lerp(a.g, b.g), lerp(a.b, b.b), 255)
-}
-
-/// Creates a large gradient sphere that follows the camera and acts as a skybox.
-#[cfg(target_arch = "wasm32")]
-fn build_skybox(context: &ThreeDContext, theme: ViewerTheme) -> three_d::Gm<Mesh, ColorMaterial> {
-    use three_d::renderer::geometry::{CpuMesh, Positions};
-
-    let mut cpu_mesh = CpuMesh::sphere(32);
-    let (bottom, top) = skybox_gradient(theme);
-    let colors = match &cpu_mesh.positions {
-        Positions::F32(positions) => positions
-            .iter()
-            .map(|p| {
-                let t = (p.y + 1.0) * 0.5;
-                lerp_srgba(bottom, top, t.clamp(0.0, 1.0))
-            })
-            .collect(),
-        Positions::F64(positions) => positions
-            .iter()
-            .map(|p| {
-                let t = ((p.y as f32) + 1.0) * 0.5;
-                lerp_srgba(bottom, top, t.clamp(0.0, 1.0))
-            })
-            .collect(),
-    };
-    cpu_mesh.colors = Some(colors);
-
-    let mesh = Mesh::new(context, &cpu_mesh);
-    let cpu_material = PbrMaterial {
-        name: String::new(),
-        albedo: Srgba::WHITE,
-        albedo_texture: None,
-        metallic: 0.0,
-        roughness: 1.0,
-        occlusion_metallic_roughness_texture: None,
-        metallic_roughness_texture: None,
-        occlusion_strength: 1.0,
-        occlusion_texture: None,
-        normal_scale: 1.0,
-        normal_texture: None,
-        emissive: Srgba::BLACK,
-        emissive_texture: None,
-        alpha_cutout: None,
-        lighting_model: LightingModel::Blinn,
-        index_of_refraction: 1.5,
-        transmission: 0.0,
-        transmission_texture: None,
-    };
-    let mut material = ColorMaterial::new(context, &cpu_material);
-    material.render_states.write_mask.depth = false;
-    material.render_states.depth_test = DepthTest::Always;
-    material.render_states.cull = Cull::Back;
-    three_d::Gm::new(mesh, material)
 }
 
 impl Renderer {
@@ -394,7 +308,6 @@ impl Renderer {
 
             let light =
                 DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(0.3_f32, -0.8, -0.5));
-            let skybox = build_skybox(&context, ViewerTheme::default());
 
             Some(Self {
                 context,
@@ -408,7 +321,6 @@ impl Renderer {
                 light,
                 pending_events: Rc::new(RefCell::new(Vec::new())),
                 theme: ViewerTheme::default(),
-                skybox,
             })
         }
     }
@@ -474,26 +386,10 @@ impl Renderer {
             background.3,
             background.4,
         ));
-        #[cfg(target_arch = "wasm32")]
-        {
-            let eye = self.camera.position();
-            let radius = self.camera.z_near() * 10.0;
-            let transform = Mat4::from_translation(eye) * Mat4::from_scale(radius);
-            self.skybox.set_transformation(transform);
-            target.render(&self.camera, [&self.skybox], &[]);
-        }
         target.render(&self.camera, objects, &[&self.light]);
     }
 
     /// Sets the viewer theme and re-renders on the next frame.
-    #[cfg(target_arch = "wasm32")]
-    pub fn set_theme(&mut self, theme: ViewerTheme) {
-        self.theme = theme;
-        self.skybox = build_skybox(&self.context, theme);
-    }
-
-    /// Sets the viewer theme and re-renders on the next frame.
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn set_theme(&mut self, theme: ViewerTheme) {
         self.theme = theme;
     }
