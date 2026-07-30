@@ -1,9 +1,9 @@
 //! 3D IFC model viewer using the `three-d` renderer.
 //!
 //! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`)
-//! and renders it with the `three-d` renderer in [`crate::utils::three_d_renderer`].
+//! and renders it with the `three-d` renderer in [`crate::three_d_viewer`].
 
-use crate::utils::three_d_renderer::{OrbitControls, Renderer, ViewState, ViewerTheme};
+use crate::three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerTheme};
 use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;

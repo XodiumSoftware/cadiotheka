@@ -2758,6 +2758,7 @@ checksum = "e73bbcfd30f69623bed55b90bcc084d316fab03a490c2087935c2aa287bd6995"
 dependencies = [
  "cgmath",
  "glow",
+ "image",
  "instant",
  "open-enum",
  "serde",

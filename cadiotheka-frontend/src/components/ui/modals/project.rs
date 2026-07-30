@@ -1,8 +1,8 @@
 use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProperties};
-use crate::components::ui::ifc_viewer::IfcViewer;
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
+use crate::components::ui::three_d_viewer::IfcViewer;
 use crate::components::ui::toast::Toast;
 use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
 
@@ -1089,7 +1089,7 @@ fn ProjectModalContent(
                                 {move || match active_tab.get() {
                                 ProjectDetailsTab::Viewer3d => view! {
                                     {
-                                        let viewer_state = RwSignal::new(crate::components::ui::ifc_viewer::IfcViewerState::NoModel);
+                                        let viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
                                         let fps = RwSignal::new(0.0_f64);
                                         let show_debug = RwSignal::new(false);
                                         let debug_text = RwSignal::new(String::new());
@@ -1139,7 +1139,7 @@ fn ProjectModalContent(
                                                         })
                                                         storage_key=Signal::derive({
                                                             let project_id = project_id.clone();
-                                                            move || format!("cadiotheka.ifc_viewer.{project_id}")
+                                                            move || format!("cadiotheka.three_d_viewer.{project_id}")
                                                         })
                                                         state_signal=viewer_state
                                                         fps_signal=fps

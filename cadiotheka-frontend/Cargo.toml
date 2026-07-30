@@ -23,7 +23,7 @@ web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document"
 console_error_panic_hook = "0.1.7"
 urlencoding = "2.1"
 send_wrapper = "0.6"
-three-d = { version = "0.19", default-features = false, features = ["serde"] }
+three-d = { version = "0.19", default-features = false, features = ["serde", "image"] }
 three-d-asset = { version = "0.10", features = ["gltf"] }
 glow = "0.17"
 uuid = { version = "1.11", features = ["v4", "serde", "js"] }

@@ -19,10 +19,10 @@ pub mod components {
         pub mod effects {
             pub mod section_fade;
         }
-        pub mod ifc_viewer;
         pub mod logo;
         pub mod markdown;
         pub mod markdown_editor;
+        pub mod three_d_viewer;
         pub mod modals {
             pub mod add_project;
             pub mod login;
@@ -45,7 +45,6 @@ pub mod components {
     pub use ui::buy_me_a_coffee::BuyMeACoffeeLogo;
     pub use ui::corner_frame::CornerFrame;
     pub use ui::effects::section_fade::FadeOverlay;
-    pub use ui::ifc_viewer::{IfcViewer, IfcViewerState};
     pub use ui::logo::Logo;
     pub use ui::markdown::MarkdownView;
     pub use ui::markdown_editor::MarkdownEditor;
@@ -56,6 +55,7 @@ pub mod components {
     pub use ui::modals::search::SearchModal;
     pub use ui::overflow_row::OverflowRow;
     pub use ui::project_icon_picker::ProjectIconPicker;
+    pub use ui::three_d_viewer::{IfcViewer, IfcViewerState};
     pub use ui::toast::Toast;
     pub use ui::toggle::{ToggleSlider, ToggleSliderWithSlashLabel};
     pub use ui::toolbar_button::ToolbarButton;
@@ -112,19 +112,31 @@ pub mod metadata {
     pub use tags::{tag_color, tag_label};
 }
 
+pub mod three_d_viewer {
+    pub mod controls;
+    pub mod renderer;
+    pub mod scene;
+    pub mod state;
+    pub mod upload;
+
+    pub use controls::OrbitControls;
+    pub use renderer::Renderer;
+    pub use state::{ViewState, ViewerTheme};
+}
+
+pub use three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerTheme};
+
 pub mod utils {
     pub mod color;
     pub mod dom;
     pub mod format;
     pub mod math;
-    pub mod three_d_renderer;
     pub mod url;
 
     pub use color::*;
     pub use dom::*;
     pub use format::*;
     pub use math::*;
-    pub use three_d_renderer::*;
     pub use url::*;
 }
 
