@@ -5,7 +5,7 @@ use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::toast::Toast;
 use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
-use crate::components::ui::turnstile::{TurnstileWidget, reset_turnstile, turnstile_response};
+
 use crate::contexts::{
     AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
     SearchContext,
@@ -787,11 +787,6 @@ fn ProjectModalContent(
         }
     });
 
-    let (show_download_turnstile, set_show_download_turnstile) = signal(false);
-
-    let pending_download_url: leptos::prelude::StoredValue<Option<String>> =
-        leptos::prelude::StoredValue::new(None);
-
     let increment_downloads = {
         let project_id = card.id.clone();
         let set_projects = projects_ctx.set_projects;
@@ -801,17 +796,10 @@ fn ProjectModalContent(
                 return;
             };
 
-            let token = turnstile_response("download-turnstile");
-            if token.is_none() {
-                set_show_download_turnstile.set(true);
-                pending_download_url.set_value(Some(url));
-                return;
-            }
-
             let project_id = project_id.clone();
             let url = url.clone();
             leptos::task::spawn_local(async move {
-                match increment_project_downloads(&project_id, token.clone()).await {
+                match increment_project_downloads(&project_id).await {
                     Ok(updated) => {
                         trigger_download(&url);
 
@@ -832,56 +820,6 @@ fn ProjectModalContent(
                         });
                     }
                     Err(err) => {
-                        set_show_download_turnstile.set(true);
-                        reset_turnstile();
-                        pending_download_url.set_value(Some(url));
-                        leptos::web_sys::console::error_1(
-                            &format!("Failed to increment downloads: {}", err.message()).into(),
-                        );
-                    }
-                }
-            });
-        })
-    };
-
-    let confirm_turnstile_download = {
-        let project_id = card.id.clone();
-        let set_projects = projects_ctx.set_projects;
-        let modal_set_card = modal.set_card;
-        Callback::new(move |()| {
-            let Some(url) = pending_download_url.get_value() else {
-                return;
-            };
-            let token = turnstile_response("download-turnstile");
-            let Some(token) = token else {
-                return;
-            };
-            let project_id = project_id.clone();
-            leptos::task::spawn_local(async move {
-                match increment_project_downloads(&project_id, Some(token)).await {
-                    Ok(updated) => {
-                        pending_download_url.set_value(None);
-                        set_show_download_turnstile.set(false);
-                        trigger_download(&url);
-
-                        let updated_for_modal = updated.clone();
-                        set_projects.update(|projects| {
-                            if let Some(project) =
-                                projects.iter_mut().find(|project| project.id == updated.id)
-                            {
-                                *project = updated.clone();
-                            }
-                        });
-                        modal_set_card.update(|card| {
-                            if let Some(card) = card.as_mut()
-                                && card.id == updated_for_modal.id
-                            {
-                                card.downloads = updated_for_modal.downloads;
-                            }
-                        });
-                    }
-                    Err(err) => {
-                        reset_turnstile();
                         leptos::web_sys::console::error_1(
                             &format!("Failed to increment downloads: {}", err.message()).into(),
                         );
@@ -1296,36 +1234,6 @@ fn ProjectModalContent(
                                                         >
                                                             <span>"Download IFC"</span>
                                                         </button>
-
-                                                        {move || if show_download_turnstile.get() {
-                                                            Some(view! {
-                                                                <div class="mt-3 space-y-2">
-                                                                    <TurnstileWidget id="download-turnstile" visible=Signal::derive(move || show_download_turnstile.get()) />
-                                                                    <button
-                                                                        type="button"
-                                                                        class="btn btn-primary btn-sm w-full rounded-none"
-                                                                        on:click={
-                                                                            let cb = confirm_turnstile_download;
-                                                                            move |_| cb.run(())
-                                                                        }
-                                                                    >
-                                                                        <span>"Verify and download"</span>
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        class="btn btn-ghost btn-xs w-full rounded-none"
-                                                                        on:click={
-                                                                            let cb = set_show_download_turnstile;
-                                                                            move |_| cb.set(false)
-                                                                        }
-                                                                    >
-                                                                        <span>"Cancel"</span>
-                                                                    </button>
-                                                                </div>
-                                                            })
-                                                        } else {
-                                                            None
-                                                        }}
                                                     </div>
                                                 }
                                                     .into_any()

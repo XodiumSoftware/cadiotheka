@@ -569,10 +569,7 @@ pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Res
 ///
 /// This endpoint is rate-limited per client IP to discourage abuse while still
 /// allowing legitimate downloads.
-pub async fn increment_project_downloads(
-    mut req: Request,
-    ctx: RouteContext<()>,
-) -> Result<Response> {
+pub async fn increment_project_downloads(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     console_log!(
         "increment_project_downloads: received request for id {:?}",
         ctx.param("id")
@@ -581,10 +578,6 @@ pub async fn increment_project_downloads(
     if let Some(rate_limited) = check_rate_limit(&req, &ctx, "downloads").await? {
         console_log!("increment_project_downloads: rate limit exceeded");
         return Ok(rate_limited);
-    }
-    if let Some(response) = verify_turnstile_token(&mut req, &ctx).await? {
-        console_log!("increment_project_downloads: Turnstile verification failed");
-        return Ok(response);
     }
 
     let id = ctx.param("id").cloned().unwrap_or_default();

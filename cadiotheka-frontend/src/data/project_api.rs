@@ -244,20 +244,14 @@ pub async fn toggle_project_favorite(id: &str) -> Result<ProjectData, RequestErr
 ///
 /// On success it returns the updated project data; on failure it returns a
 /// [`RequestError`].
-pub async fn increment_project_downloads(
-    id: &str,
-    turnstile_token: Option<String>,
-) -> Result<ProjectData, RequestError> {
+pub async fn increment_project_downloads(id: &str) -> Result<ProjectData, RequestError> {
     let url = api_url(&format!("/projects/{id}/downloads"));
-    let mut request = Request::post(&url).credentials(RequestCredentials::Include);
-
-    if let Some(token) = turnstile_token {
-        request = request.header("X-Turnstile-Token", &token);
-    }
-
-    let request = request.body("").map_err(|err| {
-        RequestError::BuildRequest(format!("Failed to build download increment request: {err}"))
-    })?;
+    let request = Request::post(&url)
+        .credentials(RequestCredentials::Include)
+        .body("")
+        .map_err(|err| {
+            RequestError::BuildRequest(format!("Failed to build download increment request: {err}"))
+        })?;
 
     match request.send().await {
         Ok(response) if response.ok() => {
