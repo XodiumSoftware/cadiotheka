@@ -15,6 +15,7 @@ use std::sync::Arc;
 use three_d::InnerSpace;
 use three_d::MetricSpace;
 use three_d::core::{ClearState, Context as ThreeDContext, RenderTarget};
+use three_d::renderer::AmbientLight;
 use three_d::renderer::Camera as ThreeDCamera;
 use three_d::renderer::DirectionalLight;
 use three_d::renderer::Object;
@@ -39,6 +40,7 @@ pub struct Renderer {
     pub(crate) total_vertices: usize,
     pub(crate) total_triangles: usize,
     pub(crate) light: DirectionalLight,
+    pub(crate) ambient: AmbientLight,
     pub(crate) pending_events: Rc<RefCell<Vec<Event>>>,
     pub(crate) theme: ViewerTheme,
 }
@@ -98,6 +100,7 @@ impl Renderer {
 
             let light =
                 DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(0.3_f32, -0.8, -0.5));
+            let ambient = AmbientLight::new(&context, 0.4, Srgba::WHITE);
 
             let ground_grid = Some(build_ground_grid(
                 &context,
@@ -121,6 +124,7 @@ impl Renderer {
                 total_vertices,
                 total_triangles,
                 light,
+                ambient,
                 pending_events: Rc::new(RefCell::new(Vec::new())),
                 theme: ViewerTheme::default(),
             })
@@ -137,6 +141,7 @@ impl Renderer {
             target: [target.x, target.y, target.z],
             up: [up.x, up.y, up.z],
             theme: self.theme,
+            shadows: self.light.shadow_map().is_some(),
         }
     }
 
@@ -159,6 +164,7 @@ impl Renderer {
             self.camera.z_far(),
         );
         self.set_theme(state.theme);
+        self.set_shadows(state.shadows);
     }
 
     /// Resets the camera and orbit target to frame the loaded model.
@@ -240,6 +246,12 @@ impl Renderer {
         };
         self.light.intensity = light_intensity;
 
+        if self.light.shadow_map().is_some() {
+            let _ = self
+                .light
+                .generate_shadow_map(2048, self.models.iter().map(AsRef::as_ref));
+        }
+
         let target = RenderTarget::screen(&self.context, width, height);
         target.clear(ClearState::color_and_depth(
             background.0,
@@ -248,7 +260,23 @@ impl Renderer {
             background.3,
             background.4,
         ));
-        target.render(&self.camera, objects, &[&self.light]);
+        target.render(&self.camera, objects, &[&self.light, &self.ambient]);
+    }
+
+    /// Sets whether the directional light casts soft shadows.
+    pub fn set_shadows(&mut self, enabled: bool) {
+        if enabled {
+            let _ = self
+                .light
+                .generate_shadow_map(2048, self.models.iter().map(AsRef::as_ref));
+        } else {
+            self.light.clear_shadow_map();
+        }
+    }
+
+    /// Returns whether soft shadows are currently enabled.
+    pub fn shadows(&self) -> bool {
+        self.light.shadow_map().is_some()
     }
 
     /// Sets whether the ground grid is rendered.

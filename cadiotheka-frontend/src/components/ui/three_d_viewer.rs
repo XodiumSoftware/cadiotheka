@@ -44,6 +44,7 @@ pub fn IfcViewer(
     #[prop(optional)] reset_view_signal: Option<RwSignal<bool>>,
     #[prop(optional)] show_grid_signal: Option<RwSignal<bool>>,
     #[prop(optional)] show_axes_signal: Option<RwSignal<bool>>,
+    #[prop(optional)] shadows_signal: Option<RwSignal<bool>>,
     #[prop(optional)] screenshot_signal: Option<RwSignal<bool>>,
     #[prop(into, optional)] screenshot_filename: Option<Signal<String>>,
 ) -> impl IntoView {
@@ -55,6 +56,7 @@ pub fn IfcViewer(
     let reset_view = reset_view_signal.unwrap_or_else(|| RwSignal::new(false));
     let show_grid = show_grid_signal.unwrap_or_else(|| RwSignal::new(true));
     let show_axes = show_axes_signal.unwrap_or_else(|| RwSignal::new(true));
+    let shadows = shadows_signal.unwrap_or_else(|| RwSignal::new(true));
     let screenshot = screenshot_signal.unwrap_or_else(|| RwSignal::new(false));
 
     let renderer: Rc<RefCell<Option<Renderer>>> = Rc::new(RefCell::new(None));
@@ -315,6 +317,21 @@ pub fn IfcViewer(
                 let mut renderer_ref = renderer.borrow_mut();
                 if let Some(renderer) = renderer_ref.as_mut() {
                     renderer.set_show_axes(show);
+                }
+            }
+            request_render.borrow_mut()();
+        }
+    });
+
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            let enabled = shadows.get();
+            {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.set_shadows(enabled);
                 }
             }
             request_render.borrow_mut()();

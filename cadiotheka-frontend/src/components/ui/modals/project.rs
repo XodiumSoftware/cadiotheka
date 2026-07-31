@@ -1165,6 +1165,7 @@ fn ProjectModalContent(
                                         let show_debug = RwSignal::new(false);
                                         let show_grid = RwSignal::new(true);
                                         let show_axes = RwSignal::new(true);
+                                        let shadows = RwSignal::new(true);
                                         let debug_text = RwSignal::new(String::new());
                                         let reset_view = RwSignal::new(false);
                                         let screenshot = RwSignal::new(false);
@@ -1202,6 +1203,15 @@ fn ProjectModalContent(
                                                             })
                                                         >
                                                             {move || if show_axes.get() { "📍" } else { "⚪" }}
+                                                        </ToolbarButton>
+                                                        <ToolbarButton
+                                                            label="Toggle shadows"
+                                                            tooltip_position=TooltipPosition::Bottom
+                                                            on_click=Callback::new(move |()| {
+                                                                shadows.update(|v| *v = !*v);
+                                                            })
+                                                        >
+                                                            {move || if shadows.get() { "🌑" } else { "☀" }}
                                                         </ToolbarButton>
                                                         <ToolbarButton
                                                             label="Download screenshot"
@@ -1249,6 +1259,7 @@ fn ProjectModalContent(
                                                         reset_view_signal=reset_view
                                                         show_grid_signal=show_grid
                                                         show_axes_signal=show_axes
+                                                        shadows_signal=shadows
                                                         screenshot_signal=screenshot
                                                         screenshot_filename=Signal::derive({
                                                             let title = card.title.clone();
