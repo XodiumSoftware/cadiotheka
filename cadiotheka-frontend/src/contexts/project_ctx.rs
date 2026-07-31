@@ -1,4 +1,5 @@
 use crate::components::cards::project::ProjectCardProperties;
+use crate::components::ui::modals::project::ProjectDetailsTab;
 use leptos::prelude::*;
 
 /// Provides and reads the project detail modal state.
@@ -6,8 +7,10 @@ use leptos::prelude::*;
 pub struct ProjectModalContext {
     pub open: Signal<bool>,
     pub card: Signal<Option<ProjectCardProperties>>,
+    pub active_tab: Signal<ProjectDetailsTab>,
     pub set_open: WriteSignal<bool>,
     pub set_card: WriteSignal<Option<ProjectCardProperties>>,
+    pub set_active_tab: WriteSignal<ProjectDetailsTab>,
 }
 
 impl ProjectModalContext {
@@ -15,11 +18,14 @@ impl ProjectModalContext {
     pub fn provide_with_default() {
         let (open, set_open) = signal(false);
         let (card, set_card) = signal::<Option<ProjectCardProperties>>(None);
+        let (active_tab, set_active_tab) = signal(ProjectDetailsTab::Viewer3d);
         provide_context(Self {
             open: open.into(),
             card: card.into(),
+            active_tab: active_tab.into(),
             set_open,
             set_card,
+            set_active_tab,
         });
     }
 

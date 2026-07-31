@@ -51,7 +51,7 @@ pub mod components {
     pub use ui::modals::add_project::AddProjectModal;
     pub use ui::modals::login::LoginModal;
     pub use ui::modals::profile::ProfileModal;
-    pub use ui::modals::project::ProjectModal;
+    pub use ui::modals::project::{ProjectDetailsTab, ProjectModal};
     pub use ui::modals::search::SearchModal;
     pub use ui::overflow_row::OverflowRow;
     pub use ui::project_icon_picker::ProjectIconPicker;

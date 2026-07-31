@@ -23,7 +23,7 @@ const MAX_TITLE_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 100;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum ProjectDetailsTab {
+pub enum ProjectDetailsTab {
     Viewer3d,
     Versions,
 }
@@ -54,19 +54,22 @@ pub fn ProjectModal() -> impl IntoView {
         }
     });
 
-    let container_class = Signal::derive(move || {
-        if viewer_fullscreen.get() {
-            "h-[90vh] w-[90vw] max-h-[90vh] max-w-[90vw] flex flex-col".to_string()
-        } else {
-            "w-full max-w-6xl h-full max-h-[90vh] flex flex-col".to_string()
-        }
-    });
-
     view! {
         <SearchModal
             open=modal.open
             on_close=on_close
-            container_class=container_class
+            container_class=Signal::derive({
+                let active_tab = modal.active_tab;
+                move || {
+                    if viewer_fullscreen.get() {
+                        "h-[90vh] w-[90vw] max-h-[90vh] max-w-[90vw] flex flex-col".to_string()
+                    } else if active_tab.get() == ProjectDetailsTab::Viewer3d {
+                        "w-[95vw] max-w-[95vw] h-full max-h-[90vh] flex flex-col".to_string()
+                    } else {
+                        "w-full max-w-6xl h-full max-h-[90vh] flex flex-col".to_string()
+                    }
+                }
+            })
         >
             {move || {
                 let maybe_card = modal.card.get();
@@ -309,6 +312,10 @@ fn ProjectModalContent(
     });
 
     let (active_tab, set_active_tab) = signal(ProjectDetailsTab::Viewer3d);
+
+    Effect::new(move |_| {
+        modal.set_active_tab.set(active_tab.get());
+    });
 
     let (editing_title, set_editing_title) = signal(false);
     let (draft_title, set_draft_title) = signal(card.title.clone());
