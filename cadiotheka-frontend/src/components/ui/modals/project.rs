@@ -375,6 +375,34 @@ fn ProjectModalContent(
         }
     });
 
+    Effect::new(move |_| {
+        crate::utils::window_event_listener::<web_sys::KeyboardEvent, _>("keydown", {
+            let toggle_fullscreen = toggle_fullscreen;
+            move |ev| {
+                if active_tab.get() == ProjectDetailsTab::Viewer3d
+                    && ev.key().eq_ignore_ascii_case("f")
+                    && !ev.ctrl_key()
+                    && !ev.alt_key()
+                    && !ev.meta_key()
+                {
+                    let target = ev
+                        .target()
+                        .and_then(|t| t.dyn_into::<web_sys::HtmlElement>().ok());
+                    if let Some(target) = target
+                        && matches!(
+                            target.tag_name().to_ascii_uppercase().as_str(),
+                            "INPUT" | "TEXTAREA" | "SELECT"
+                        )
+                    {
+                        return;
+                    }
+                    ev.prevent_default();
+                    toggle_fullscreen.run(());
+                }
+            }
+        });
+    });
+
     let (toast_visible, set_toast_visible) = signal(false);
     let (toast_message, set_toast_message) = signal(String::new());
     let show_toast = move |message: String| {
