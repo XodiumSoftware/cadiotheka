@@ -956,22 +956,6 @@ fn ProjectModalContent(
                 node_ref=ifc_file_input
                 on:change=on_ifc_input_change
             />
-            <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-center justify-between gap-3 pb-2 flex-shrink-0 p-2 pr-3".to_string() }>
-                <div class="tabs tabs-border">
-                    <button
-                        type="button"
-                        class=move || if active_tab.get() == ProjectDetailsTab::Viewer3d { "tab tab-active" } else { "tab" }
-                        on:click=move |_| set_active_tab.set(ProjectDetailsTab::Viewer3d)
-                    >"3D viewer"</button>
-                    <button
-                        type="button"
-                        class=move || if active_tab.get() == ProjectDetailsTab::Versions { "tab tab-active" } else { "tab" }
-                        on:click=move |_| set_active_tab.set(ProjectDetailsTab::Versions)
-                    >"Versions"</button>
-                </div>
-            </div>
-
-            <hr class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "border-base-content/10".to_string() } />
 
             <div class=move || if viewer_fullscreen.get() { "flex flex-col min-h-0 overflow-hidden flex-1".to_string() } else { "flex flex-col min-h-0 overflow-hidden flex-1 py-2".to_string() }>
                 <div class=move || if viewer_fullscreen.get() { "flex-1 min-h-0".to_string() } else { "overflow-y-auto flex-1 min-h-0 p-2 pr-3".to_string() }>
