@@ -956,100 +956,18 @@ fn ProjectModalContent(
                 node_ref=ifc_file_input
                 on:change=on_ifc_input_change
             />
-            <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex flex-wrap items-start justify-end gap-4 relative p-2 pr-3".to_string() }>
-                <div class="flex items-center gap-2 text-xs flex-shrink-0">
-                    {
-                        move || {
-                            let has_ifc = ifc_url.get().is_some();
-                            let downloading = is_downloading.get();
-                            let label = if downloading {
-                                "Downloading IFC..."
-                            } else if has_ifc {
-                                "Download IFC"
-                            } else {
-                                "No IFC model available"
-                            };
-                            view! {
-                                <button
-                                    type="button"
-                                    class=move || {
-                                        if !has_ifc || downloading {
-                                            "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
-                                        } else {
-                                            "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
-                                        }
-                                    }
-                                    aria-label=label
-                                    data-tip=label
-                                    disabled=move || !has_ifc || downloading
-                                    on:click={
-                                        let cb = increment_downloads;
-                                        move |_| cb.run(())
-                                    }
-                                >
-                                    <span class="flex items-center gap-1">
-                                        {if downloading {
-                                            view! {
-                                                <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                            }.into_any()
-                                        } else {
-                                            view! { <DownloadIcon /> }.into_any()
-                                        }}
-                                    </span>
-                                </button>
-                            }
-                        }
-                    }
+            <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-center justify-between gap-3 pb-2 flex-shrink-0 p-2 pr-3".to_string() }>
+                <div class="tabs tabs-border">
                     <button
                         type="button"
-                        class=move || {
-                            if is_favorited.get() {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50 tooltip tooltip-bottom"
-                            } else {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error tooltip tooltip-bottom"
-                            }
-                        }
-                        aria-label=move || {
-                            if is_favorited.get() {
-                                format!("Remove {} from favorites", title.get())
-                            } else {
-                                format!("Add {} to favorites", title.get())
-                            }
-                        }
-                        data-tip=move || {
-                            if is_favorited.get() {
-                                "Remove favorite".to_string()
-                            } else {
-                                "Add favorite".to_string()
-                            }
-                        }
-                        on:click={
-                            let cb = toggle_favorite_click;
-                            move |_| cb.run(())
-                        }
-                    >
-                        <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
-                        <span>{move || favorite_count.get().to_string()}</span>
-                    </button>
-                    {move || is_editable.get().then(|| view! {
+                        class=move || if active_tab.get() == ProjectDetailsTab::Viewer3d { "tab tab-active" } else { "tab" }
+                        on:click=move |_| set_active_tab.set(ProjectDetailsTab::Viewer3d)
+                    >"3D viewer"</button>
                     <button
                         type="button"
-                        class=move || {
-                            if edit_mode.get() {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-primary tooltip tooltip-bottom"
-                            } else {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
-                            }
-                        }
-                        aria-label=move || if edit_mode.get() { "Leave edit mode" } else { "Enter edit mode" }
-                        data-tip=move || if edit_mode.get() { "Done editing" } else { "Edit project" }
-                        on:click=move |_| toggle_edit_mode()
-                    >
-                        {edit_pencil_icon("w-4 h-4")}
-                    </button>
-                }.into_any())}
-                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
-                    <span class="text-base-content/50">to close</span>
+                        class=move || if active_tab.get() == ProjectDetailsTab::Versions { "tab tab-active" } else { "tab" }
+                        on:click=move |_| set_active_tab.set(ProjectDetailsTab::Versions)
+                    >"Versions"</button>
                 </div>
             </div>
 
@@ -1064,7 +982,7 @@ fn ProjectModalContent(
                             "grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_1px_18rem] gap-6 items-start h-full".to_string()
                         }
                     }>
-                        <div class=move || if viewer_fullscreen.get() { "min-w-0 h-full flex flex-col".to_string() } else { "min-w-0 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4".to_string() }>
+                        <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "min-w-0 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4".to_string() }>
                             <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-center justify-between gap-3 pb-2 flex-shrink-0".to_string() }>
                                 <div class="tabs tabs-border">
                                     <button
@@ -1444,6 +1362,107 @@ fn ProjectModalContent(
                                         .into_any()
                                 }
                             }}
+
+                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                    <div class="flex items-center gap-2">
+                                        {
+                                            move || {
+                                                let has_ifc = ifc_url.get().is_some();
+                                                let downloading = is_downloading.get();
+                                                let label = if downloading {
+                                                    "Downloading IFC..."
+                                                } else if has_ifc {
+                                                    "Download IFC"
+                                                } else {
+                                                    "No IFC model available"
+                                                };
+                                                view! {
+                                                    <button
+                                                        type="button"
+                                                        class=move || {
+                                                            if !has_ifc || downloading {
+                                                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
+                                                            } else {
+                                                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                                            }
+                                                        }
+                                                        aria-label=label
+                                                        data-tip=label
+                                                        disabled=move || !has_ifc || downloading
+                                                        on:click={
+                                                            let cb = increment_downloads;
+                                                            move |_| cb.run(())
+                                                        }
+                                                    >
+                                                        <span class="flex items-center gap-1">
+                                                            {if downloading {
+                                                                view! {
+                                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                }.into_any()
+                                                            } else {
+                                                                view! { <DownloadIcon /> }.into_any()
+                                                            }}
+                                                        </span>
+                                                    </button>
+                                                }
+                                            }
+                                        }
+                                        <button
+                                            type="button"
+                                            class=move || {
+                                                if is_favorited.get() {
+                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50 tooltip tooltip-bottom"
+                                                } else {
+                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error tooltip tooltip-bottom"
+                                                }
+                                            }
+                                            aria-label=move || {
+                                                if is_favorited.get() {
+                                                    format!("Remove {} from favorites", title.get())
+                                                } else {
+                                                    format!("Add {} to favorites", title.get())
+                                                }
+                                            }
+                                            data-tip=move || {
+                                                if is_favorited.get() {
+                                                    "Remove favorite".to_string()
+                                                } else {
+                                                    "Add favorite".to_string()
+                                                }
+                                            }
+                                            on:click={
+                                                let cb = toggle_favorite_click;
+                                                move |_| cb.run(())
+                                            }
+                                        >
+                                            <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
+                                            <span>{move || favorite_count.get().to_string()}</span>
+                                        </button>
+                                        {move || is_editable.get().then(|| view! {
+                                            <button
+                                                type="button"
+                                                class=move || {
+                                                    if edit_mode.get() {
+                                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-primary tooltip tooltip-bottom"
+                                                    } else {
+                                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                                    }
+                                                }
+                                                aria-label=move || if edit_mode.get() { "Leave edit mode" } else { "Enter edit mode" }
+                                                data-tip=move || if edit_mode.get() { "Done editing" } else { "Edit project" }
+                                                on:click=move |_| toggle_edit_mode()
+                                            >
+                                                {edit_pencil_icon("w-4 h-4")}
+                                            </button>
+                                        }.into_any())}
+                                    </div>
+                                    <div class="flex items-center gap-2 text-base-content/50">
+                                        <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
+                                        <span>"to close"</span>
+                                    </div>
+                                </div>
+                            </div>
 
                             {move || {
                                 if editing_description.get() {
