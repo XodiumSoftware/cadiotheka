@@ -1138,7 +1138,7 @@ fn ProjectModalContent(
                         if viewer_fullscreen.get() {
                             "grid grid-cols-1 gap-0 items-start h-full".to_string()
                         } else {
-                            "grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_1px_minmax(18rem,1fr)] gap-6 items-start h-full".to_string()
+                            "grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_1px_18rem] gap-6 items-start h-full".to_string()
                         }
                     }>
                         <div class=move || if viewer_fullscreen.get() { "min-w-0 h-full flex flex-col".to_string() } else { "min-w-0 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4".to_string() }>
