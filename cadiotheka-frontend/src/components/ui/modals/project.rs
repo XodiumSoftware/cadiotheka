@@ -7,8 +7,8 @@ use crate::components::ui::toast::Toast;
 use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
 
 use crate::contexts::{
-    AccountsContext, CurrentUserContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
-    SearchContext,
+    AccountsContext, CurrentUserContext, MetadataContext, ProfileModalContext, ProjectModalContext,
+    ProjectsContext, SearchContext,
 };
 use crate::data::{
     AccountData, AccountRole, convert_project_glb, delete_project, delete_project_ifc,
@@ -16,10 +16,11 @@ use crate::data::{
     update_project_description, update_project_platforms, update_project_tags,
     update_project_title, upload_project_ifc,
 };
+use crate::metadata::platforms::Platform;
+use crate::metadata::tags::Tag;
 use crate::utils::{api_url, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
-use strum::IntoEnumIterator;
 
 const MAX_TITLE_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 100;
@@ -200,22 +201,68 @@ fn edit_pencil_icon(class: &'static str) -> impl IntoView {
     }
 }
 
+/// Returns a platform's wire id.
+fn platform_id(platform: &Platform) -> String {
+    platform.id.clone()
+}
+
+/// Returns a platform's user-facing label.
+fn platform_label(platform: &Platform) -> String {
+    platform.label.clone()
+}
+
+/// Returns a platform's Tailwind color class.
+fn platform_color(platform: &Platform) -> String {
+    platform.color.clone()
+}
+
+/// Returns a tag's wire id.
+fn tag_id(tag: &Tag) -> String {
+    tag.id.clone()
+}
+
+/// Returns a tag's user-facing label.
+fn tag_label(tag: &Tag) -> String {
+    tag.label.clone()
+}
+
+/// Returns a tag's Tailwind color class.
+fn tag_color(tag: &Tag) -> String {
+    tag.color.clone()
+}
+
 #[component]
 fn EditableChipSection<T: Clone + PartialEq + Send + Sync + 'static>(
     #[allow(unused_variables)] title: &'static str,
     #[allow(unused_variables)] aria_label: &'static str,
-    #[allow(unused_variables)] items: Vec<T>,
+    #[allow(unused_variables)] items: Vec<String>,
     all_items: Vec<T>,
     editing: Signal<bool>,
     on_cancel: Callback<()>,
-    on_toggle: Callback<T>,
-    on_save: Callback<Vec<T>>,
-    on_item_click: Callback<T>,
-    label_fn: fn(&T) -> &'static str,
-    color_fn: fn(&T) -> &'static str,
-    selected_items: Signal<Vec<T>>,
+    on_toggle: Callback<String>,
+    on_save: Callback<Vec<String>>,
+    on_item_click: Callback<String>,
+    id_fn: fn(&T) -> String,
+    label_fn: fn(&T) -> String,
+    color_fn: fn(&T) -> String,
+    selected_items: Signal<Vec<String>>,
     badge_class: &'static str,
 ) -> impl IntoView {
+    let all_items_for_label = all_items.clone();
+    let all_items_for_color = all_items.clone();
+    let resolve_label = move |id: &str| {
+        all_items_for_label
+            .iter()
+            .find(|item| id_fn(item) == id)
+            .map_or_else(|| id.to_owned(), label_fn)
+    };
+    let resolve_color = move |id: &str| {
+        all_items_for_color
+            .iter()
+            .find(|item| id_fn(item) == id)
+            .map_or_else(String::new, color_fn)
+    };
+
     view! {
         <div class="space-y-3">
             <h3 class="text-sm font-semibold text-base-content">{title}</h3>
@@ -226,13 +273,15 @@ fn EditableChipSection<T: Clone + PartialEq + Send + Sync + 'static>(
                         <div class="space-y-2">
                             <div class="flex flex-wrap gap-2" role="group" aria-label=aria_label>
                                 {all_items.iter().map(|item| {
-                                    let item_for_class = item.clone();
-                                    let item_for_aria = item.clone();
+                                    let item_id = id_fn(item);
+                                    let item_id_for_class = item_id.clone();
+                                    let item_id_for_aria = item_id.clone();
+                                    let label = label_fn(item);
                                     view! {
                                         <button
                                             type="button"
                                             class=move || {
-                                                let selected = selected_items.get().contains(&item_for_class);
+                                                let selected = selected_items.get().contains(&item_id_for_class);
                                                 format!(
                                                     "badge badge-sm badge-outline rounded-none cursor-pointer transition-colors {}",
                                                     if selected {
@@ -242,13 +291,10 @@ fn EditableChipSection<T: Clone + PartialEq + Send + Sync + 'static>(
                                                     }
                                                 )
                                             }
-                                            on:click={
-                                                let item = item.clone();
-                                                move |_| on_toggle.run(item.clone())
-                                            }
-                                            aria-pressed=move || selected_items.get().contains(&item_for_aria).to_string()
+                                            on:click=move |_| on_toggle.run(item_id.clone())
+                                            aria-pressed=move || selected_items.get().contains(&item_id_for_aria).to_string()
                                         >
-                                            {label_fn(item)}
+                                            {label}
                                         </button>
                                     }
                                 }).collect_view()}
@@ -271,15 +317,17 @@ fn EditableChipSection<T: Clone + PartialEq + Send + Sync + 'static>(
                 } else {
                     view! {
                         <div class="flex flex-wrap gap-2" role="group" aria_label=aria_label>
-                            {items.iter().map(|item| {
-                                let item_for_click = item.clone();
+                            {items.iter().map(|id| {
+                                let id_for_click = id.clone();
+                                let color = resolve_color(id);
+                                let label = resolve_label(id);
                                 view! {
                                     <button
                                         type="button"
-                                        class=format!("{} {}", badge_class, color_fn(item))
-                                        on:click=move |_| on_item_click.run(item_for_click.clone())
+                                        class=format!("{badge_class} {color}")
+                                        on:click=move |_| on_item_click.run(id_for_click.clone())
                                     >
-                                        {label_fn(item)}
+                                        {label}
                                     </button>
                                 }
                             }).collect_view()}
@@ -303,6 +351,7 @@ fn ProjectModalContent(
     let modal = ProjectModalContext::use_context();
     let profile_modal = ProfileModalContext::use_context();
     let search = SearchContext::use_context();
+    let metadata = MetadataContext::use_context();
     let is_editable = Signal::derive({
         let author_id = card.author_id.clone();
         move || {
@@ -728,7 +777,7 @@ fn ProjectModalContent(
 
     let commit_edit_tags = {
         let project_id = project_id.clone();
-        Callback::new(move |draft_value: Vec<crate::metadata::tags::Tag>| {
+        Callback::new(move |draft_value: Vec<String>| {
             let project_id = project_id.clone();
             let set_tags = set_tags;
             let set_draft_tags = set_draft_tags;
@@ -768,44 +817,42 @@ fn ProjectModalContent(
 
     let commit_edit_platforms = {
         let project_id = project_id.clone();
-        Callback::new(
-            move |draft_value: Vec<crate::metadata::platforms::Platform>| {
-                let project_id = project_id.clone();
-                let set_supported_platforms = set_supported_platforms;
-                let set_draft_platforms = set_draft_platforms;
-                let set_editing_platforms = set_editing_platforms;
-                let modal_card = modal.set_card;
-                let set_projects = projects_ctx.set_projects;
+        Callback::new(move |draft_value: Vec<String>| {
+            let project_id = project_id.clone();
+            let set_supported_platforms = set_supported_platforms;
+            let set_draft_platforms = set_draft_platforms;
+            let set_editing_platforms = set_editing_platforms;
+            let modal_card = modal.set_card;
+            let set_projects = projects_ctx.set_projects;
 
-                leptos::task::spawn_local(async move {
-                    match update_project_platforms(&project_id, draft_value).await {
-                        Ok(new_platforms) => {
-                            set_supported_platforms.set(new_platforms.clone());
-                            set_draft_platforms.set(new_platforms.clone());
-                            modal_card.update(|opt| {
-                                if let Some(card) = opt.as_mut() {
-                                    card.supported_platforms.clone_from(&new_platforms);
+            leptos::task::spawn_local(async move {
+                match update_project_platforms(&project_id, draft_value).await {
+                    Ok(new_platforms) => {
+                        set_supported_platforms.set(new_platforms.clone());
+                        set_draft_platforms.set(new_platforms.clone());
+                        modal_card.update(|opt| {
+                            if let Some(card) = opt.as_mut() {
+                                card.supported_platforms.clone_from(&new_platforms);
+                            }
+                        });
+                        set_projects.update(|projects| {
+                            for project in projects.iter_mut() {
+                                if project.id == project_id {
+                                    project.supported_platforms.clone_from(&new_platforms);
+                                    break;
                                 }
-                            });
-                            set_projects.update(|projects| {
-                                for project in projects.iter_mut() {
-                                    if project.id == project_id {
-                                        project.supported_platforms.clone_from(&new_platforms);
-                                        break;
-                                    }
-                                }
-                            });
-                        }
-                        Err(err) => {
-                            leptos::web_sys::console::error_1(
-                                &format!("Failed to update platforms: {}", err.message()).into(),
-                            );
-                        }
+                            }
+                        });
                     }
-                    set_editing_platforms.set(false);
-                });
-            },
-        )
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to update platforms: {}", err.message()).into(),
+                        );
+                    }
+                }
+                set_editing_platforms.set(false);
+            });
+        })
     };
 
     let commit_edit_collaborators = {
@@ -951,7 +998,7 @@ fn ProjectModalContent(
         })
     };
 
-    let toggle_tag = Callback::new(move |tag: crate::metadata::tags::Tag| {
+    let toggle_tag = Callback::new(move |tag: String| {
         set_draft_tags.update(|tags| {
             if let Some(pos) = tags.iter().position(|t| *t == tag) {
                 tags.remove(pos);
@@ -961,7 +1008,7 @@ fn ProjectModalContent(
         });
     });
 
-    let toggle_platform = Callback::new(move |platform: crate::metadata::platforms::Platform| {
+    let toggle_platform = Callback::new(move |platform: String| {
         set_draft_platforms.update(|platforms| {
             if let Some(pos) = platforms.iter().position(|p| *p == platform) {
                 platforms.remove(pos);
@@ -1553,14 +1600,21 @@ fn ProjectModalContent(
                                                 title="Supported platforms"
                                                 aria_label="Supported platforms"
                                                 items=supported_platforms.get()
-                                                all_items={crate::metadata::platforms::Platform::iter().collect::<Vec<_>>()}
+                                                all_items={metadata.platforms.get()}
                                                 editing=editing_platforms.into()
                                                 on_cancel=Callback::new(move |()| cancel_edit_platforms())
                                                 on_toggle=toggle_platform
                                                 on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
-                                                on_item_click=Callback::new(move |platform: crate::metadata::platforms::Platform| apply_filter.run(platform.label().to_string()))
-                                                label_fn=crate::metadata::platforms::platform_label
-                                                color_fn=crate::metadata::platforms::platform_color
+                                                on_item_click=Callback::new(move |id: String| {
+                                                    let label = metadata
+                                                        .platform_by_id(&id)
+                                                        .map(|platform| platform.label)
+                                                        .unwrap_or_default();
+                                                    apply_filter.run(label);
+                                                })
+                                                id_fn=platform_id
+                                                label_fn=platform_label
+                                                color_fn=platform_color
                                                 selected_items=draft_platforms.into()
                                                 badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
                                             />
@@ -1577,15 +1631,18 @@ fn ProjectModalContent(
                                         >
                                             <span class="text-sm font-semibold text-base-content mb-3 block">"Supported platforms"</span>
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                                {supported_platforms.get().iter().map(|item| {
-                                                    view! {
+                                                {supported_platforms.get().iter().filter_map(|id| {
+                                                    let platform = metadata.platform_by_id(id)?;
+                                                    let color = platform.color.clone();
+                                                    let label = platform.label.clone();
+                                                    Some(view! {
                                                         <span class=format!(
                                                             "badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap {}",
-                                                            crate::metadata::platforms::platform_color(item)
+                                                            color
                                                         )>
-                                                            {crate::metadata::platforms::platform_label(item)}
+                                                            {label}
                                                         </span>
-                                                    }
+                                                    }.into_any())
                                                 }).collect_view()}
                                             </div>
                                             <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1599,20 +1656,23 @@ fn ProjectModalContent(
                                         <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
                                             <h3 class="text-sm font-semibold text-base-content mb-3">"Supported platforms"</h3>
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                                {supported_platforms.get().iter().map(|item| {
-                                                    let item_for_click = *item;
-                                                    view! {
+                                                {supported_platforms.get().iter().filter_map(|id| {
+                                                    let platform = metadata.platform_by_id(id)?;
+                                                    let color = platform.color.clone();
+                                                    let label = platform.label.clone();
+                                                    let label_click = label.clone();
+                                                    Some(view! {
                                                         <button
                                                             type="button"
                                                             class=format!(
                                                                 "badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer {}",
-                                                                crate::metadata::platforms::platform_color(item)
+                                                                color
                                                             )
-                                                            on:click=move |_| apply_filter.run(crate::metadata::platforms::platform_label(&item_for_click).to_string())
+                                                            on:click=move |_| apply_filter.run(label_click.clone())
                                                         >
-                                                            {crate::metadata::platforms::platform_label(item)}
+                                                            {label}
                                                         </button>
-                                                    }
+                                                    }.into_any())
                                                 }).collect_view()}
                                             </div>
                                         </div>
@@ -1629,14 +1689,21 @@ fn ProjectModalContent(
                                                 title="Tags"
                                                 aria_label="Tags"
                                                 items=tags.get()
-                                                all_items={crate::metadata::tags::Tag::iter().collect::<Vec<_>>()}
+                                                all_items={metadata.tags.get()}
                                                 editing=editing_tags.into()
                                                 on_cancel=Callback::new(move |()| cancel_edit_tags())
                                                 on_toggle=toggle_tag
                                                 on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
-                                                on_item_click=Callback::new(move |tag: crate::metadata::tags::Tag| apply_filter.run(tag.label().to_string()))
-                                                label_fn=crate::metadata::tags::tag_label
-                                                color_fn=crate::metadata::tags::tag_color
+                                                on_item_click=Callback::new(move |id: String| {
+                                                    let label = metadata
+                                                        .tag_by_id(&id)
+                                                        .map(|tag| tag.label)
+                                                        .unwrap_or_default();
+                                                    apply_filter.run(label);
+                                                })
+                                                id_fn=tag_id
+                                                label_fn=tag_label
+                                                color_fn=tag_color
                                                 selected_items=draft_tags.into()
                                                 badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
                                             />
@@ -1653,15 +1720,18 @@ fn ProjectModalContent(
                                         >
                                             <span class="text-sm font-semibold text-base-content mb-3 block">"Tags"</span>
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
-                                                {tags.get().iter().map(|item| {
-                                                    view! {
+                                                {tags.get().iter().filter_map(|id| {
+                                                    let tag = metadata.tag_by_id(id)?;
+                                                    let color = tag.color.clone();
+                                                    let label = tag.label.clone();
+                                                    Some(view! {
                                                         <span class=format!(
                                                             "badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap {}",
-                                                            crate::metadata::tags::tag_color(item)
+                                                            color
                                                         )>
-                                                            {crate::metadata::tags::tag_label(item)}
+                                                            {label}
                                                         </span>
-                                                    }
+                                                    }.into_any())
                                                 }).collect_view()}
                                             </div>
                                             <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1675,20 +1745,23 @@ fn ProjectModalContent(
                                         <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
                                             <h3 class="text-sm font-semibold text-base-content mb-3">"Tags"</h3>
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
-                                                {tags.get().iter().map(|item| {
-                                                    let item_for_click = *item;
-                                                    view! {
+                                                {tags.get().iter().filter_map(|id| {
+                                                    let tag = metadata.tag_by_id(id)?;
+                                                    let color = tag.color.clone();
+                                                    let label = tag.label.clone();
+                                                    let label_click = label.clone();
+                                                    Some(view! {
                                                         <button
                                                             type="button"
                                                             class=format!(
                                                                 "badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer {}",
-                                                                crate::metadata::tags::tag_color(item)
+                                                                color
                                                             )
-                                                            on:click=move |_| apply_filter.run(crate::metadata::tags::tag_label(&item_for_click).to_string())
+                                                            on:click=move |_| apply_filter.run(label_click.clone())
                                                         >
-                                                            {crate::metadata::tags::tag_label(item)}
+                                                            {label}
                                                         </button>
-                                                    }
+                                                    }.into_any())
                                                 }).collect_view()}
                                             </div>
                                         </div>

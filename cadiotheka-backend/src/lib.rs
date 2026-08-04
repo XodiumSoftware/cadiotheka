@@ -22,6 +22,8 @@ pub(crate) mod routes {
     pub(crate) const AUTH_PREFIX: &str = "/auth/";
     pub(crate) const ACCOUNTS: &str = "/data/accounts";
     pub(crate) const ACCOUNT: &str = "/data/accounts/:id";
+    pub(crate) const TAGS: &str = "/data/tags";
+    pub(crate) const PLATFORMS: &str = "/data/platforms";
     pub(crate) const PROJECTS: &str = "/data/projects";
     pub(crate) const PROJECT: &str = "/data/projects/:id";
     pub(crate) const PROJECT_FAVORITES: &str = "/data/projects/:id/favorites";
@@ -44,6 +46,7 @@ mod utils;
 mod api {
     pub mod accounts;
     pub mod auth;
+    pub mod metadata;
     pub mod projects;
     pub mod session;
     pub mod turnstile;
@@ -133,6 +136,8 @@ pub fn build_router() -> Router<'static, ()> {
         .get_async(routes::ACCOUNT, api::accounts::read_account)
         .put_async(routes::ACCOUNT, api::accounts::update_account)
         .delete_async(routes::ACCOUNT, api::accounts::delete_account)
+        .get_async(routes::TAGS, api::metadata::list_tags)
+        .get_async(routes::PLATFORMS, api::metadata::list_platforms)
         .get_async(routes::PROJECTS, api::projects::list_projects)
         .post_async(routes::PROJECTS, api::projects::create_project)
         .get_async(routes::PROJECT, api::projects::read_project)

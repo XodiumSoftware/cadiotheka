@@ -68,6 +68,7 @@ pub mod contexts {
     pub mod current_user;
     pub mod layout;
     pub mod login;
+    pub mod metadata;
     pub mod profile;
     pub mod project_ctx;
     pub mod projects;
@@ -78,6 +79,7 @@ pub mod contexts {
     pub use current_user::CurrentUserContext;
     pub use layout::LayoutContext;
     pub use login::LoginModalContext;
+    pub use metadata::MetadataContext;
     pub use profile::ProfileModalContext;
     pub use project_ctx::ProjectModalContext;
     pub use projects::ProjectsContext;
@@ -87,12 +89,14 @@ pub mod contexts {
 pub mod data {
     pub mod account;
     pub mod error;
+    pub mod metadata;
     pub mod project;
     pub mod project_api;
     pub mod project_types;
 
     pub use account::{AccountData, AccountRole, fetch_accounts};
     pub use error::RequestError;
+    pub use metadata::{fetch_platforms, fetch_tags};
     pub use project::{
         IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, convert_project_glb,
         create_project, delete_project, delete_project_ifc, fetch_projects,

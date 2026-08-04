@@ -3,22 +3,35 @@
 use crate::data::ProjectData;
 use crate::engines::query::{ParsedQuery, SortBy, SortOrder, active_needle, parse_query};
 use crate::engines::suggestions::{Suggestion, from_cards};
-use crate::metadata::tags::Tag;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
+use std::collections::HashMap;
 
 /// Search engine that owns the loaded cards and answers search queries.
+///
+/// Cards reference tags and platforms by wire id, so the engine also holds
+/// id-to-label maps (built from `/data/tags` and `/data/platforms`) to resolve
+/// user-facing labels for filtering and searchable text.
 pub struct SearchEngine {
     cards: Vec<ProjectData>,
     matcher: SkimMatcherV2,
+    tag_labels: HashMap<String, String>,
+    platform_labels: HashMap<String, String>,
 }
 
 impl SearchEngine {
-    /// Creates a new search engine from a list of projects.
-    pub fn new(cards: Vec<ProjectData>) -> Self {
+    /// Creates a new search engine from a list of projects and id-to-label maps
+    /// for tags and platforms.
+    pub fn new(
+        cards: Vec<ProjectData>,
+        tag_labels: HashMap<String, String>,
+        platform_labels: HashMap<String, String>,
+    ) -> Self {
         Self {
             cards,
             matcher: SkimMatcherV2::default(),
+            tag_labels,
+            platform_labels,
         }
     }
 
@@ -87,13 +100,13 @@ impl SearchEngine {
         favorited_by: Option<&str>,
     ) -> Option<i64> {
         let matches_filters = filters.iter().all(|filter| {
-            card.tags
-                .iter()
-                .any(|tag| Self::label_matches(tag.label(), filter))
-                || card
-                    .supported_platforms
-                    .iter()
-                    .any(|platform| Self::label_matches(platform.label(), filter))
+            card.tags.iter().any(|id| {
+                self.tag_label(id)
+                    .is_some_and(|label| Self::label_matches(label, filter))
+            }) || card.supported_platforms.iter().any(|id| {
+                self.platform_label(id)
+                    .is_some_and(|label| Self::label_matches(label, filter))
+            })
         });
         if !matches_filters {
             return None;
@@ -118,8 +131,18 @@ impl SearchEngine {
             return Some(0);
         }
 
-        let haystack = Self::searchable_text(card);
+        let haystack = Self::searchable_text(card, &self.tag_labels, &self.platform_labels);
         self.matcher.fuzzy_match(&haystack, query)
+    }
+
+    /// Resolves a tag id to its user-facing label, or `None` if unknown.
+    fn tag_label(&self, id: &str) -> Option<&str> {
+        self.tag_labels.get(id).map(String::as_str)
+    }
+
+    /// Resolves a platform id to its user-facing label, or `None` if unknown.
+    fn platform_label(&self, id: &str) -> Option<&str> {
+        self.platform_labels.get(id).map(String::as_str)
     }
 
     /// Checks whether a user-facing label matches a filter needle.
@@ -147,7 +170,13 @@ impl SearchEngine {
             .last()
             .is_some_and(|token| token.starts_with('@'));
         let needle = active_needle(query);
-        from_cards(&self.cards, include_sort, &needle)
+        from_cards(
+            &self.cards,
+            include_sort,
+            &needle,
+            &self.tag_labels,
+            &self.platform_labels,
+        )
     }
 
     /// Parses a raw query string into a structured [`ParsedQuery`].
@@ -156,17 +185,23 @@ impl SearchEngine {
     }
 
     /// Combines all searchable project fields into a single lowercase string.
-    fn searchable_text(card: &ProjectData) -> String {
+    fn searchable_text(
+        card: &ProjectData,
+        tag_labels: &HashMap<String, String>,
+        platform_labels: &HashMap<String, String>,
+    ) -> String {
         let tags = card
             .tags
             .iter()
-            .map(Tag::label)
+            .filter_map(|id| tag_labels.get(id))
+            .cloned()
             .collect::<Vec<_>>()
             .join(" ");
         let platforms = card
             .supported_platforms
             .iter()
-            .map(super::super::metadata::platforms::Platform::label)
+            .filter_map(|id| platform_labels.get(id))
+            .cloned()
             .collect::<Vec<_>>()
             .join(" ");
         format!("{} {} {} {}", card.title, card.author, tags, platforms).to_lowercase()
@@ -179,17 +214,37 @@ mod tests {
     use crate::data::ProjectData;
     use crate::engines::query::parse_query;
     use crate::engines::suggestions::SuggestionKind;
-    use crate::metadata::platforms::Platform;
-    use crate::metadata::tags::Tag;
     use time::macros::datetime;
+
+    fn tag_labels() -> HashMap<String, String> {
+        HashMap::from([
+            ("3d_model".to_owned(), "3D Model".to_owned()),
+            ("parametric".to_owned(), "Parametric".to_owned()),
+            ("furniture".to_owned(), "Furniture".to_owned()),
+            ("fabrication".to_owned(), "Fabrication".to_owned()),
+            ("diy".to_owned(), "DIY".to_owned()),
+            ("electronics".to_owned(), "Electronics".to_owned()),
+            ("tooling".to_owned(), "Tooling".to_owned()),
+        ])
+    }
+
+    fn platform_labels() -> HashMap<String, String> {
+        HashMap::from([
+            ("blender".to_owned(), "Blender".to_owned()),
+            ("freecad".to_owned(), "FreeCAD".to_owned()),
+            ("fusion_360".to_owned(), "Fusion 360".to_owned()),
+            ("sketchup".to_owned(), "SketchUp".to_owned()),
+            ("kicad".to_owned(), "KiCad".to_owned()),
+        ])
+    }
 
     #[allow(clippy::too_many_arguments)]
     fn card(
         title: &str,
         author: &str,
         author_username: &str,
-        tags: &[Tag],
-        platforms: &[Platform],
+        tags: &[&str],
+        platforms: &[&str],
         downloads: u64,
         favorites: u64,
     ) -> ProjectData {
@@ -218,8 +273,8 @@ mod tests {
             author_username: author_username.to_owned(),
             collaborator_ids: vec![],
             description: format!("Markdown summary for {title}."),
-            tags: tags.to_vec(),
-            supported_platforms: platforms.to_vec(),
+            tags: tags.iter().map(|s| (*s).to_owned()).collect(),
+            supported_platforms: platforms.iter().map(|s| (*s).to_owned()).collect(),
             downloads,
             favorites: vec!["favorite-user".to_owned(); favorites_trunc],
             timestamp: datetime!(2024-01-15 12:00:00 UTC),
@@ -229,35 +284,39 @@ mod tests {
     }
 
     fn engine() -> SearchEngine {
-        SearchEngine::new(vec![
-            card(
-                "Parametric Screw",
-                "ZenFlow",
-                "zenflow",
-                &[Tag::Parametric, Tag::Model3d],
-                &[Platform::Blender, Platform::FreeCAD, Platform::Fusion360],
-                1_200,
-                80,
-            ),
-            card(
-                "Workshop Bench",
-                "MakerJoe",
-                "makerjoe",
-                &[Tag::Furniture, Tag::Fabrication, Tag::Diy],
-                &[Platform::SketchUp],
-                3_400,
-                250,
-            ),
-            card(
-                "PCB Holder",
-                "ZenFlow",
-                "zenflow",
-                &[Tag::Electronics, Tag::Tooling],
-                &[Platform::KiCad],
-                900,
-                45,
-            ),
-        ])
+        SearchEngine::new(
+            vec![
+                card(
+                    "Parametric Screw",
+                    "ZenFlow",
+                    "zenflow",
+                    &["parametric", "3d_model"],
+                    &["blender", "freecad", "fusion_360"],
+                    1_200,
+                    80,
+                ),
+                card(
+                    "Workshop Bench",
+                    "MakerJoe",
+                    "makerjoe",
+                    &["furniture", "fabrication", "diy"],
+                    &["sketchup"],
+                    3_400,
+                    250,
+                ),
+                card(
+                    "PCB Holder",
+                    "ZenFlow",
+                    "zenflow",
+                    &["electronics", "tooling"],
+                    &["kicad"],
+                    900,
+                    45,
+                ),
+            ],
+            tag_labels(),
+            platform_labels(),
+        )
     }
 
     #[test]

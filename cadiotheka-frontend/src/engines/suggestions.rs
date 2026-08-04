@@ -4,7 +4,7 @@ use crate::data::ProjectData;
 use crate::engines::query::{SortBy, SortOrder};
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Kind of suggestion shown in the search bar popup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,7 +67,15 @@ impl Suggestion {
 /// Suggestions are ranked by fuzzy relevance to `needle` and filtered out when
 /// they do not match a non-empty needle. Sort directives are only included when
 /// `include_sort` is `true`, which is typically when the user has typed `@`.
-pub fn from_cards(cards: &[ProjectData], include_sort: bool, needle: &str) -> Vec<Suggestion> {
+/// Tag and platform wire ids are resolved to labels via the provided maps.
+#[allow(clippy::implicit_hasher)]
+pub fn from_cards(
+    cards: &[ProjectData],
+    include_sort: bool,
+    needle: &str,
+    tag_labels: &HashMap<String, String>,
+    platform_labels: &HashMap<String, String>,
+) -> Vec<Suggestion> {
     let matcher = SkimMatcherV2::default();
     let needle_lower = needle.to_lowercase();
     let needle_empty = needle_lower.is_empty();
@@ -80,11 +88,15 @@ pub fn from_cards(cards: &[ProjectData], include_sort: bool, needle: &str) -> Ve
     for card in cards {
         titles.insert(card.title.clone());
         authors.insert(card.author_username.clone());
-        for tag in &card.tags {
-            tags.insert(tag.label().to_owned());
+        for id in &card.tags {
+            if let Some(label) = tag_labels.get(id) {
+                tags.insert(label.clone());
+            }
         }
-        for platform in &card.supported_platforms {
-            platforms.insert(platform.label().to_owned());
+        for id in &card.supported_platforms {
+            if let Some(label) = platform_labels.get(id) {
+                platforms.insert(label.clone());
+            }
         }
     }
 
@@ -177,9 +189,20 @@ fn default_sort_suggestions() -> Vec<Suggestion> {
 mod tests {
     use super::*;
     use crate::data::ProjectData;
-    use crate::metadata::platforms::Platform;
-    use crate::metadata::tags::Tag;
     use time::macros::datetime;
+
+    fn label_maps() -> (HashMap<String, String>, HashMap<String, String>) {
+        (
+            HashMap::from([
+                ("parametric".to_owned(), "Parametric".to_owned()),
+                ("3d_model".to_owned(), "3D Model".to_owned()),
+            ]),
+            HashMap::from([
+                ("blender".to_owned(), "Blender".to_owned()),
+                ("freecad".to_owned(), "FreeCAD".to_owned()),
+            ]),
+        )
+    }
 
     fn sample_card() -> ProjectData {
         ProjectData {
@@ -190,8 +213,8 @@ mod tests {
             author_username: "testauthor".to_owned(),
             collaborator_ids: vec![],
             description: "A sample gear with markdown description.".to_owned(),
-            tags: vec![Tag::Parametric, Tag::Model3d],
-            supported_platforms: vec![Platform::Blender, Platform::FreeCAD],
+            tags: vec!["parametric".to_owned(), "3d_model".to_owned()],
+            supported_platforms: vec!["blender".to_owned(), "freecad".to_owned()],
             downloads: 100,
             favorites: vec!["favorite-user".to_owned(); 10],
             timestamp: datetime!(2024-06-01 10:00:00 UTC),
@@ -240,7 +263,14 @@ mod tests {
     #[test]
     fn from_cards_extracts_unique_values() {
         let card = sample_card();
-        let suggestions = from_cards(&[card.clone(), card], false, "");
+        let (tag_labels, platform_labels) = label_maps();
+        let suggestions = from_cards(
+            &[card.clone(), card],
+            false,
+            "",
+            &tag_labels,
+            &platform_labels,
+        );
 
         let plain: Vec<_> = suggestions
             .iter()
@@ -268,7 +298,8 @@ mod tests {
 
     #[test]
     fn from_cards_includes_sort_when_requested() {
-        let suggestions = from_cards(&[sample_card()], true, "");
+        let (tag_labels, platform_labels) = label_maps();
+        let suggestions = from_cards(&[sample_card()], true, "", &tag_labels, &platform_labels);
         let sort_count = suggestions
             .iter()
             .filter(|s| s.kind == SuggestionKind::Sort)
@@ -278,7 +309,8 @@ mod tests {
 
     #[test]
     fn from_cards_excludes_sort_when_not_requested() {
-        let suggestions = from_cards(&[sample_card()], false, "");
+        let (tag_labels, platform_labels) = label_maps();
+        let suggestions = from_cards(&[sample_card()], false, "", &tag_labels, &platform_labels);
         assert!(!suggestions.iter().any(|s| s.kind == SuggestionKind::Sort));
     }
 
@@ -289,7 +321,8 @@ mod tests {
         let mut card_b = sample_card();
         card_b.title = "Beta".to_owned();
 
-        let suggestions = from_cards(&[card_a, card_b], false, "");
+        let (tag_labels, platform_labels) = label_maps();
+        let suggestions = from_cards(&[card_a, card_b], false, "", &tag_labels, &platform_labels);
         let plain: Vec<_> = suggestions
             .iter()
             .filter(|s| s.kind == SuggestionKind::Plain)
@@ -306,7 +339,14 @@ mod tests {
         let mut screw = sample_card();
         screw.title = "Machine Screw".to_owned();
 
-        let suggestions = from_cards(&[gear, screw], false, "screw");
+        let (tag_labels, platform_labels) = label_maps();
+        let suggestions = from_cards(
+            &[gear, screw],
+            false,
+            "screw",
+            &tag_labels,
+            &platform_labels,
+        );
         let plain: Vec<_> = suggestions
             .iter()
             .filter(|s| s.kind == SuggestionKind::Plain)
@@ -319,7 +359,8 @@ mod tests {
     #[test]
     fn from_cards_matches_prefixed_needle() {
         let card = sample_card();
-        let suggestions = from_cards(&[card], false, "model");
+        let (tag_labels, platform_labels) = label_maps();
+        let suggestions = from_cards(&[card], false, "model", &tag_labels, &platform_labels);
 
         assert!(
             suggestions

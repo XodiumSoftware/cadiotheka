@@ -2,7 +2,7 @@ use crate::components::ui::buy_me_a_coffee::BuyMeACoffeeLogo;
 use crate::components::ui::logo::Logo;
 use crate::components::ui::modals::search::SearchModal;
 use crate::contexts::{
-    AddProjectModalContext, CurrentUserContext, LayoutContext, LoginModalContext,
+    AddProjectModalContext, CurrentUserContext, LayoutContext, LoginModalContext, MetadataContext,
     ProfileModalContext, ProjectsContext, SearchContext,
 };
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
@@ -129,11 +129,14 @@ pub fn Header() -> impl IntoView {
     let (active_menu_index, set_active_menu_index) = signal(0usize);
 
     let projects_ctx = ProjectsContext::use_context();
+    let metadata = MetadataContext::use_context();
 
     let suggestions = Memo::new(move |_| {
         let query = search.query.get();
         let projects = projects_ctx.projects.get();
-        let engine = SearchEngine::new(projects);
+        let tag_labels = metadata.tag_labels();
+        let platform_labels = metadata.platform_labels();
+        let engine = SearchEngine::new(projects, tag_labels, platform_labels);
         let all = engine.suggestions(&query);
         group_and_filter_suggestions(&all)
     });

@@ -1,9 +1,7 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
-use crate::contexts::{CurrentUserContext, ProjectModalContext, ProjectsContext};
+use crate::contexts::{CurrentUserContext, MetadataContext, ProjectModalContext, ProjectsContext};
 use crate::data::{IconUrl, ProjectData};
-use crate::metadata::platforms::Platform;
-use crate::metadata::tags::Tag;
 use crate::utils::{format_number, format_number_full, format_time_ago, format_time_full};
 use leptos::prelude::*;
 
@@ -16,8 +14,8 @@ pub struct ProjectCardProperties {
     pub author_username: String,
     pub collaborator_ids: Vec<String>,
     pub description: String,
-    pub tags: Vec<Tag>,
-    pub supported_platforms: Vec<Platform>,
+    pub tags: Vec<String>,
+    pub supported_platforms: Vec<String>,
     pub downloads: u64,
     pub favorites: Vec<String>,
     pub timestamp: time::OffsetDateTime,
@@ -140,6 +138,7 @@ pub fn ProjectCard(
     let current_user = CurrentUserContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
     let project_modal = ProjectModalContext::use_context();
+    let metadata = MetadataContext::use_context();
 
     let project_id = id.clone();
     let project_id_for_button = id.clone();
@@ -199,6 +198,40 @@ pub fn ProjectCard(
     });
     let platforms = supported_platforms;
 
+    let tag_items = {
+        let tags = tags.clone();
+        Signal::derive(move || {
+            tags.iter()
+                .filter_map(|id| {
+                    metadata
+                        .tag_by_id(id)
+                        .map(|tag| OverflowItem::new(tag.label, tag.color))
+                })
+                .collect::<Vec<_>>()
+        })
+    };
+    let platform_items = {
+        let platforms = platforms.clone();
+        Signal::derive(move || {
+            platforms
+                .iter()
+                .filter_map(|id| {
+                    metadata
+                        .platform_by_id(id)
+                        .map(|platform| OverflowItem::new(platform.label, platform.color))
+                })
+                .collect::<Vec<_>>()
+        })
+    };
+    let has_tags = {
+        let tags = tags.clone();
+        Signal::derive(move || !tags.is_empty())
+    };
+    let has_platforms = {
+        let platforms = platforms.clone();
+        Signal::derive(move || !platforms.is_empty())
+    };
+
     view! {
         <article
             class=move || {
@@ -244,30 +277,34 @@ pub fn ProjectCard(
                             </div>
 
                             <div class="flex flex-nowrap items-center gap-1">
-                                <OverflowRow
-                                    items={tags
-                                        .iter()
-                                        .map(|tag| OverflowItem::new(tag.label(), tag.color()))
-                                        .collect::<Vec<_>>()}
-                                        max_visible=2
-                                        tooltip_position="tooltip-bottom"
-                                        badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 whitespace-nowrap"
-                                    />
-                                    {(!tags.is_empty() && !platforms.is_empty()).then(|| {
+                                {move || {
+                                    let items = tag_items.get();
+                                    view! {
+                                        <OverflowRow
+                                            items=items
+                                            max_visible=2
+                                            tooltip_position="tooltip-bottom"
+                                            badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 whitespace-nowrap"
+                                        />
+                                    }
+                                }}
+                                    {move || (has_tags.get() && has_platforms.get()).then(|| {
                                         view! {
                                             <span class="w-px h-4 bg-base-content/20 self-center mx-1 flex-shrink-0" aria-hidden="true" />
                                         }
                                             .into_any()
                                     })}
-                                    <OverflowRow
-                                        items={platforms
-                                            .iter()
-                                            .map(|platform| OverflowItem::new(platform.label(), platform.color()))
-                                            .collect::<Vec<_>>()}
-                                        max_visible=1
-                                        tooltip_position="tooltip-bottom"
-                                        badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 whitespace-nowrap"
-                                    />
+                                    {move || {
+                                        let items = platform_items.get();
+                                        view! {
+                                            <OverflowRow
+                                                items=items
+                                                max_visible=1
+                                                tooltip_position="tooltip-bottom"
+                                                badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 whitespace-nowrap"
+                                            />
+                                        }
+                                    }}
                                 </div>
                             </div>
 
@@ -364,8 +401,8 @@ mod tests {
             author_username: "author".to_owned(),
             collaborator_ids: vec![],
             description: "A gear with an **extended** markdown description.".to_owned(),
-            tags: vec![Tag::Model3d],
-            supported_platforms: vec![Platform::Blender],
+            tags: vec!["3d_model".to_owned()],
+            supported_platforms: vec!["blender".to_owned()],
             downloads: 1234,
             favorites: vec!["user-1".to_owned(), "user-2".to_owned()],
             timestamp: time::macros::datetime!(2024-01-01 00:00:00 UTC),

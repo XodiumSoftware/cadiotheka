@@ -2,14 +2,11 @@ use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
 use crate::components::ui::turnstile::{TurnstileWidget, reset_turnstile, turnstile_response};
 use crate::contexts::{
-    AddProjectModalContext, CurrentUserContext, LoginModalContext, ProjectsContext,
+    AddProjectModalContext, CurrentUserContext, LoginModalContext, MetadataContext, ProjectsContext,
 };
 use crate::data::{ProjectCreationResult, create_project, new_project_payload};
-use crate::metadata::platforms::Platform;
-use crate::metadata::tags::Tag;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
-use strum::IntoEnumIterator;
 
 /// Client-side validation result for the add-project form.
 #[derive(Debug, Default, Clone)]
@@ -36,13 +33,14 @@ pub fn AddProjectModal() -> impl IntoView {
     let current_user = CurrentUserContext::use_context();
     let login_modal = LoginModalContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
+    let metadata = MetadataContext::use_context();
     let on_close = move |()| modal.close();
 
     let title_input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (title, set_title) = signal(String::new());
     let (description, set_description) = signal(String::new());
-    let (selected_tags, set_selected_tags) = signal(Vec::<Tag>::new());
-    let (selected_platforms, set_selected_platforms) = signal(Vec::<Platform>::new());
+    let (selected_tags, set_selected_tags) = signal(Vec::<String>::new());
+    let (selected_platforms, set_selected_platforms) = signal(Vec::<String>::new());
     let (errors, set_errors) = signal(FormErrors::default());
     let (is_submitting, set_is_submitting) = signal(false);
     let (submit_error, set_submit_error) = signal(Option::<String>::None);
@@ -93,23 +91,23 @@ pub fn AddProjectModal() -> impl IntoView {
         e.is_empty()
     };
 
-    let toggle_tag = move |tag: Tag| {
+    let toggle_tag = move |tag_id: String| {
         set_selected_tags.update(|tags| {
-            if let Some(pos) = tags.iter().position(|t| *t == tag) {
+            if let Some(pos) = tags.iter().position(|t| *t == tag_id) {
                 tags.remove(pos);
             } else {
-                tags.push(tag);
+                tags.push(tag_id);
             }
         });
         set_errors.update(|errs| errs.tags = None);
     };
 
-    let toggle_platform = move |platform: Platform| {
+    let toggle_platform = move |platform_id: String| {
         set_selected_platforms.update(|platforms| {
-            if let Some(pos) = platforms.iter().position(|p| *p == platform) {
+            if let Some(pos) = platforms.iter().position(|p| *p == platform_id) {
                 platforms.remove(pos);
             } else {
-                platforms.push(platform);
+                platforms.push(platform_id);
             }
         });
         set_errors.update(|errs| errs.platforms = None);
@@ -322,13 +320,16 @@ pub fn AddProjectModal() -> impl IntoView {
                                         "Tags"
                                     </span>
                                     <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
-                                        {Tag::iter().map(|tag| {
-                                            let tag_clone = tag;
+                                        {metadata.tags.get().into_iter().map(|tag| {
+                                            let id = tag.id.clone();
+                                            let label = tag.label.clone();
+                                            let id_for_class = id.clone();
+                                            let id_for_aria = id.clone();
                                             view! {
                                                 <button
                                                     type="button"
                                                     class=move || {
-                                                        let selected = selected_tags.get().contains(&tag_clone);
+                                                        let selected = selected_tags.get().contains(&id_for_class);
                                                         format!(
                                                             "badge badge-sm badge-outline rounded-none cursor-pointer transition-colors {}",
                                                             if selected {
@@ -338,11 +339,11 @@ pub fn AddProjectModal() -> impl IntoView {
                                                             }
                                                         )
                                                     }
-                                                    on:click=move |_| toggle_tag(tag_clone)
+                                                    on:click=move |_| toggle_tag(id.clone())
                                                     disabled=move || is_submitting.get()
-                                                    aria-pressed=move || selected_tags.get().contains(&tag_clone).to_string()
+                                                    aria-pressed=move || selected_tags.get().contains(&id_for_aria).to_string()
                                                 >
-                                                    {tag_clone.label()}
+                                                    {label}
                                                 </button>
                                             }
                                         }).collect_view()}
@@ -358,13 +359,16 @@ pub fn AddProjectModal() -> impl IntoView {
                                         "Supported platforms"
                                     </span>
                                     <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                        {Platform::iter().map(|platform| {
-                                            let platform_clone = platform;
+                                        {metadata.platforms.get().into_iter().map(|platform| {
+                                            let id = platform.id.clone();
+                                            let label = platform.label.clone();
+                                            let id_for_class = id.clone();
+                                            let id_for_aria = id.clone();
                                             view! {
                                                 <button
                                                     type="button"
                                                     class=move || {
-                                                        let selected = selected_platforms.get().contains(&platform_clone);
+                                                        let selected = selected_platforms.get().contains(&id_for_class);
                                                         format!(
                                                             "badge badge-sm badge-outline rounded-none cursor-pointer transition-colors {}",
                                                             if selected {
@@ -374,11 +378,11 @@ pub fn AddProjectModal() -> impl IntoView {
                                                             }
                                                         )
                                                     }
-                                                    on:click=move |_| toggle_platform(platform_clone)
+                                                    on:click=move |_| toggle_platform(id.clone())
                                                     disabled=move || is_submitting.get()
-                                                    aria-pressed=move || selected_platforms.get().contains(&platform_clone).to_string()
+                                                    aria-pressed=move || selected_platforms.get().contains(&id_for_aria).to_string()
                                                 >
-                                                    {platform_clone.label()}
+                                                    {label}
                                                 </button>
                                             }
                                         }).collect_view()}

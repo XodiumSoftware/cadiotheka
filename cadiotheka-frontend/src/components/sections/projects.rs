@@ -3,8 +3,8 @@ use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::effects::section_fade::FadeOverlay;
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
 use crate::contexts::{
-    AccountsContext, LayoutContext, ProfileModalContext, ProjectModalContext, ProjectsContext,
-    SearchContext,
+    AccountsContext, LayoutContext, MetadataContext, ProfileModalContext, ProjectModalContext,
+    ProjectsContext, SearchContext,
 };
 use crate::data::ProjectData;
 use crate::engines::SearchEngine;
@@ -42,14 +42,17 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     let layout = LayoutContext::use_context();
     let search = SearchContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
+    let metadata = MetadataContext::use_context();
 
     let (focused_index, set_focused_index) = signal::<Option<usize>>(Some(0));
 
     let filtered = Memo::new(move |_| {
         let query = search.query.get();
         let projects = projects_ctx.projects.get();
+        let tag_labels = metadata.tag_labels();
+        let platform_labels = metadata.platform_labels();
         let parsed = SearchEngine::parse_query(&query);
-        SearchEngine::new(projects).search_owned(&parsed)
+        SearchEngine::new(projects, tag_labels, platform_labels).search_owned(&parsed)
     });
 
     Effect::new(move |_| {

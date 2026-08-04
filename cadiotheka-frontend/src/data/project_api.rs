@@ -5,8 +5,6 @@ use crate::data::project_types::{
     IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, ValidationErrorResponse,
     icon_src_from_key, ifc_src_from_key,
 };
-use crate::metadata::platforms::Platform;
-use crate::metadata::tags::Tag;
 use crate::utils::api_url;
 use gloo_net::http::Request;
 use serde::Deserialize;
@@ -106,7 +104,7 @@ pub async fn update_project_title(id: &str, title: String) -> Result<String, Req
 /// Updates the tags of an existing project via `PATCH /data/projects/:id`.
 ///
 /// On success it returns the new tag list; on failure it returns a [`RequestError`].
-pub async fn update_project_tags(id: &str, tags: Vec<Tag>) -> Result<Vec<Tag>, RequestError> {
+pub async fn update_project_tags(id: &str, tags: Vec<String>) -> Result<Vec<String>, RequestError> {
     let url = api_url(&format!("/projects/{id}"));
     let body = serde_json::to_string(&serde_json::json!({ "tags": tags })).map_err(|err| {
         RequestError::Serialize(format!("Failed to serialize tags update: {err}"))
@@ -121,8 +119,8 @@ pub async fn update_project_tags(id: &str, tags: Vec<Tag>) -> Result<Vec<Tag>, R
 /// On success it returns the new platform list; on failure it returns a [`RequestError`].
 pub async fn update_project_platforms(
     id: &str,
-    supported_platforms: Vec<Platform>,
-) -> Result<Vec<Platform>, RequestError> {
+    supported_platforms: Vec<String>,
+) -> Result<Vec<String>, RequestError> {
     let url = api_url(&format!("/projects/{id}"));
     let body =
         serde_json::to_string(&serde_json::json!({ "supported_platforms": supported_platforms }))

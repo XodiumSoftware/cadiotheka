@@ -3,7 +3,7 @@ use crate::components::{
 };
 use crate::contexts::{
     AccountsContext, AddProjectModalContext, CurrentUserContext, LayoutContext, LoginModalContext,
-    ProfileModalContext, ProjectModalContext, ProjectsContext, SearchContext,
+    MetadataContext, ProfileModalContext, ProjectModalContext, ProjectsContext, SearchContext,
 };
 use crate::utils::window_event_listener;
 use leptos::prelude::*;
@@ -18,6 +18,7 @@ pub fn App() -> impl IntoView {
     LayoutContext::provide_with_default(false);
     AccountsContext::provide();
     ProjectsContext::provide();
+    MetadataContext::provide();
     SearchContext::provide_with_default();
     ProjectModalContext::provide_with_default();
     ProfileModalContext::provide_with_default();

@@ -114,7 +114,7 @@ cadiotheka/
 - When adding crate dependencies, look up the latest version on [crates.io](https://crates.io) rather than guessing or reusing an old version from another crate in the workspace.
 - Backend route handlers live under `cadiotheka-backend/src/api/` and are wired in `cadiotheka-backend/src/lib.rs`.
 - Backend `DB_BINDING` is a single `pub(crate) const` in `cadiotheka-backend/src/lib.rs` reused by API modules.
-- Tags and platforms are stored as JSON arrays in D1 and deserialize into the frontend enums via `serde(rename)`.
+- Tags and platforms live in the `tags` and `platforms` D1 tables and are served over `GET /data/tags` and `GET /data/platforms`. Project rows store tag/platform wire ids as JSON arrays; the frontend resolves labels and colors through `MetadataContext`.
 - `verified` columns are stored as SQLite integers (`0`/`1`), not booleans, because D1 returns them as numbers.
 - **Do not add `//` inline comments.** Use `///` doc comments (or `//!` module docs) to explain intent; keep the code itself self-documenting.
 

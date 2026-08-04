@@ -1,5 +1,3 @@
-use crate::metadata::platforms::Platform;
-use crate::metadata::tags::Tag;
 use crate::utils::api_url;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
@@ -9,81 +7,24 @@ use std::collections::HashMap;
 #[serde(transparent)]
 pub struct IconUrl(pub String);
 
-/// Serde adapter for tags stored as a JSON-text column.
+/// Serde adapter for a JSON-text column holding an array of strings.
 ///
-/// D1 stores tags as TEXT containing a JSON array, so the frontend first parses
-/// that JSON string into a list of strings and then deserializes each string
-/// into a strongly-typed [`Tag`] via `serde(rename)`.
-mod tag_json_string {
-    use crate::metadata::tags::Tag;
+/// D1 stores tags, platforms, favorites, and collaborators as TEXT containing
+/// a JSON array, so the frontend parses that JSON string into a `Vec<String>`.
+/// Tags and platforms store the wire ids of records in the `tags` and
+/// `platforms` tables; their labels and colors are resolved from metadata.
+mod string_array_json {
     use serde::{Deserialize, Deserializer, Serializer};
 
-    pub fn serialize<S: Serializer>(value: &[Tag], serializer: S) -> Result<S::Ok, S::Error> {
-        let strings: Vec<String> = value
-            .iter()
-            .map(|v| {
-                serde_json::to_value(v)
-                    .map_err(serde::ser::Error::custom)
-                    .and_then(|val| match val {
-                        serde_json::Value::String(s) => Ok(s),
-                        _ => Err(serde::ser::Error::custom("expected string tag")),
-                    })
-            })
-            .collect::<Result<_, _>>()?;
-        serializer
-            .serialize_str(&serde_json::to_string(&strings).map_err(serde::ser::Error::custom)?)
-    }
-
-    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<Tag>, D::Error> {
-        let s = String::deserialize(deserializer)?;
-        let strings: Vec<String> = serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
-        strings
-            .into_iter()
-            .map(|item| {
-                serde_json::from_value::<Tag>(serde_json::Value::String(item))
-                    .map_err(serde::de::Error::custom)
-            })
-            .collect::<Result<_, _>>()
-    }
-}
-
-/// Serde adapter for platforms stored as a JSON-text column.
-///
-/// D1 stores platforms as TEXT containing a JSON array, so the frontend first
-/// parses that JSON string into a list of strings and then deserializes each
-/// string into a strongly-typed [`Platform`] via `serde(rename)`.
-mod platform_json_string {
-    use crate::metadata::platforms::Platform;
-    use serde::{Deserialize, Deserializer, Serializer};
-
-    pub fn serialize<S: Serializer>(value: &[Platform], serializer: S) -> Result<S::Ok, S::Error> {
-        let strings: Vec<String> = value
-            .iter()
-            .map(|v| {
-                serde_json::to_value(v)
-                    .map_err(serde::ser::Error::custom)
-                    .and_then(|val| match val {
-                        serde_json::Value::String(s) => Ok(s),
-                        _ => Err(serde::ser::Error::custom("expected string platform")),
-                    })
-            })
-            .collect::<Result<_, _>>()?;
-        serializer
-            .serialize_str(&serde_json::to_string(&strings).map_err(serde::ser::Error::custom)?)
+    pub fn serialize<S: Serializer>(value: &[String], serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
     }
 
     pub fn deserialize<'de, D: Deserializer<'de>>(
         deserializer: D,
-    ) -> Result<Vec<Platform>, D::Error> {
+    ) -> Result<Vec<String>, D::Error> {
         let s = String::deserialize(deserializer)?;
-        let strings: Vec<String> = serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
-        strings
-            .into_iter()
-            .map(|item| {
-                serde_json::from_value::<Platform>(serde_json::Value::String(item))
-                    .map_err(serde::de::Error::custom)
-            })
-            .collect::<Result<_, _>>()
+        serde_json::from_str(&s).map_err(serde::de::Error::custom)
     }
 }
 
@@ -122,12 +63,12 @@ pub struct ProjectData {
     /// Extended markdown description shown in the project detail modal.
     #[serde(default)]
     pub description: String,
-    /// Categorized tags for the content.
-    #[serde(with = "tag_json_string")]
-    pub tags: Vec<Tag>,
-    /// Supported platforms for the content.
-    #[serde(with = "platform_json_string")]
-    pub supported_platforms: Vec<Platform>,
+    /// Wire ids of the tags categorizing this content.
+    #[serde(with = "string_array_json")]
+    pub tags: Vec<String>,
+    /// Wire ids of the platforms this content supports.
+    #[serde(with = "string_array_json")]
+    pub supported_platforms: Vec<String>,
     /// Download count.
     pub downloads: u64,
     /// Account ids of users who have favorited the project.
@@ -183,8 +124,8 @@ pub fn now_utc() -> time::OffsetDateTime {
 pub fn new_project_payload(
     title: String,
     description: String,
-    tags: Vec<Tag>,
-    supported_platforms: Vec<Platform>,
+    tags: Vec<String>,
+    supported_platforms: Vec<String>,
 ) -> ProjectData {
     ProjectData {
         id: uuid::Uuid::new_v4().to_string(),
@@ -228,8 +169,8 @@ pub(crate) struct ValidationErrorResponse {
 pub struct ProjectPatch {
     pub title: Option<String>,
     pub icon_key: Option<Option<String>>,
-    pub tags: Option<Vec<Tag>>,
-    pub supported_platforms: Option<Vec<Platform>>,
+    pub tags: Option<Vec<String>>,
+    pub supported_platforms: Option<Vec<String>>,
     pub collaborator_ids: Option<Vec<String>>,
     pub description: Option<String>,
 }
@@ -257,8 +198,8 @@ mod tests {
             author_username: "trailblazer".to_owned(),
             collaborator_ids: vec![],
             description: "Extended description.".to_owned(),
-            tags: vec![Tag::Model3d, Tag::Vehicle],
-            supported_platforms: vec![Platform::Blender, Platform::FreeCAD],
+            tags: vec!["3d_model".to_owned(), "vehicle".to_owned()],
+            supported_platforms: vec!["blender".to_owned(), "freecad".to_owned()],
             downloads: 1200,
             favorites: vec![
                 "11111111-1111-1111-1111-111111111111".to_owned(),
@@ -324,16 +265,12 @@ mod tests {
         assert!(projects[0].collaborator_ids.is_empty());
     }
 
-    /// Validates that known tags and platforms serialize and deserialize
-    /// correctly. This catches stale enum definitions.
+    /// Tags and platforms are stored as wire-id strings resolved against the
+    /// metadata fetched from `/data/tags` and `/data/platforms`.
     #[test]
     fn project_uses_known_tags_and_platforms() {
         let project = sample_project();
-        for tag in project.tags {
-            let _ = tag.label();
-        }
-        for platform in project.supported_platforms {
-            let _ = platform.label();
-        }
+        assert_eq!(project.tags, vec!["3d_model", "vehicle"]);
+        assert_eq!(project.supported_platforms, vec!["blender", "freecad"]);
     }
 }
