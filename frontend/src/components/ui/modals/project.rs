@@ -2,7 +2,6 @@ use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProp
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::search::SearchModal;
-use crate::components::ui::three_d_viewer::IfcViewer;
 use crate::components::ui::toast::Toast;
 use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
 
@@ -20,7 +19,7 @@ use crate::data::{
 use crate::metadata::VersionState;
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
-use crate::utils::{api_url, placeholder_color, placeholder_letter};
+use crate::utils::{placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -796,12 +795,11 @@ fn ProjectModalContent(
                             }
                         });
                         modal.set_card.update(|opt| {
-                            if let Some(card) = opt.as_mut() {
-                                if let Some(version) =
+                            if let Some(card) = opt.as_mut()
+                                && let Some(version) =
                                     card.versions.iter_mut().find(|v| v.id == version_id)
-                                {
-                                    version.state = state;
-                                }
+                            {
+                                version.state = state;
                             }
                         });
                         show_toast("Version state updated".to_string());
@@ -1350,13 +1348,13 @@ fn ProjectModalContent(
                                 {move || match active_tab.get() {
                                 ProjectDetailsTab::Viewer3d => view! {
                                     {
-                                        let viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
+                                        let _viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
                                         let fps = RwSignal::new(0.0_f64);
                                         let show_debug = RwSignal::new(false);
                                         let show_grid = RwSignal::new(true);
                                         let show_axes = RwSignal::new(true);
                                         let shadows = RwSignal::new(true);
-                                        let debug_text = RwSignal::new(String::new());
+                                        let _debug_text = RwSignal::new(String::new());
                                         let reset_view = RwSignal::new(false);
 
                                         view! {

@@ -9,7 +9,7 @@ use crate::PROJECT_ASSETS_R2_BINDING;
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::api::turnstile::verify_turnstile_token;
-use crate::utils::{check_rate_limit, error_response, js_option, now_utc};
+use crate::utils::{check_rate_limit, error_response, now_utc};
 use ifc_lite_export::{GltfOptions, export_glb};
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, platforms, downloads, favorites, timestamp FROM projects";
