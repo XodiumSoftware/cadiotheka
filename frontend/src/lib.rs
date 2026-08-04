@@ -90,22 +90,16 @@ pub mod data {
     pub mod account;
     pub mod error;
     pub mod metadata;
-    pub mod project;
     pub mod project_api;
     pub mod project_types;
 
     pub use account::{AccountData, AccountRole, fetch_accounts};
     pub use error::RequestError;
     pub use metadata::{fetch_platforms, fetch_tags};
-    pub use project::{
+    pub use project_api::*;
+    pub use project_types::{
         IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, ProjectVersion, VersionState,
-        convert_project_glb, create_project, delete_project, delete_project_ifc,
-        delete_project_version, fetch_project_versions, fetch_projects, icon_src_from_key,
-        ifc_src_from_key, increment_project_downloads, latest_visible_ifc_url, new_project_payload,
-        toggle_project_favorite, update_project, update_project_collaborators,
-        update_project_description, update_project_platforms, update_project_tags,
-        update_project_title, update_project_version_state, upload_project_icon,
-        upload_project_ifc,
+        icon_src_from_key, ifc_src_from_key, latest_visible_ifc_url, new_project_payload,
     };
 }
 
