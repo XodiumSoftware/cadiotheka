@@ -121,10 +121,10 @@ pub mod three_d_viewer {
 
     pub use controls::OrbitControls;
     pub use renderer::Renderer;
-    pub use state::{ViewState, ViewerTheme};
+    pub use state::{ViewState, ViewerSettings, ViewerTheme};
 }
 
-pub use three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerTheme};
+pub use three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerSettings, ViewerTheme};
 
 pub mod utils {
     pub mod color;

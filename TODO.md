@@ -2,6 +2,7 @@
 
 A0a. [ ] Fix tag/platform overflow on project cards where the `+<int>` on hover is not showing the remaining tags/platforms.
 A0b. [x] Fix the 3D viewer fullscreen showing an empty project modal instead of the 3D viewer only.
+A0c. [ ] 3D-viewer controls do not work (pan/move)
 
 # `three-d` Viewer Enhancement TODO
 
@@ -38,7 +39,7 @@ A18. [ ] Project thumbnail generation from the viewer for use in cards.
 
 A19. [x] IFC upload-to-GLB conversion pipeline status UI. After upload, the backend eagerly converts and caches the GLB via `POST /data/projects/:id/glb`; the Versions tab shows `Converting`/`Ready`/`NoGeometry`/`Failed` states.
 A20. [ ] Lightweight static preview on project cards instead of full 3D.
-A21. [ ] Persist per-project viewer settings in local storage alongside `ViewState`.
+A21. [x] Persist per-project viewer settings in local storage alongside `ViewState`.
 A22. [ ] Add headless test coverage for the 3D viewer (scene/camera math and control event handling) so orbit/pan/zoom behavior is verified without a browser.
 
 ## Library Migration / Manual Work Replacement

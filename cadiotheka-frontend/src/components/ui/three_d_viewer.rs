@@ -3,7 +3,7 @@
 //! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`)
 //! and renders it with the `three-d` renderer in [`crate::three_d_viewer`].
 
-use crate::three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerTheme};
+use crate::three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerSettings, ViewerTheme};
 use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
@@ -99,6 +99,47 @@ pub fn IfcViewer(
                     && let Ok(Some(storage)) = window.local_storage()
                 {
                     let _ = storage.set_item(&key, &state_json);
+                }
+            });
+        }
+    };
+
+    let settings_generation: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
+
+    let schedule_save_settings = {
+        let settings_generation = Rc::clone(&settings_generation);
+        move || {
+            let Some(key) = storage_key
+                .as_ref()
+                .map(|s| s.get())
+                .filter(|k| !k.is_empty())
+            else {
+                return;
+            };
+            let settings = ViewerSettings {
+                show_grid: show_grid.get(),
+                show_axes: show_axes.get(),
+                show_debug: show_debug.get(),
+            };
+            let settings_json = settings.to_json();
+            let settings_key = format!("{key}.settings");
+
+            let expected = {
+                let mut generation = settings_generation.borrow_mut();
+                *generation = generation.wrapping_add(1);
+                *generation
+            };
+
+            let generation = Rc::clone(&settings_generation);
+            leptos::task::spawn_local(async move {
+                TimeoutFuture::new(500).await;
+                if *generation.borrow() != expected {
+                    return;
+                }
+                if let Some(window) = leptos::web_sys::window()
+                    && let Ok(Some(storage)) = window.local_storage()
+                {
+                    let _ = storage.set_item(&settings_key, &settings_json);
                 }
             });
         }
@@ -291,6 +332,7 @@ pub fn IfcViewer(
     Effect::new({
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
+        let schedule_save_settings = schedule_save_settings.clone();
         move |_| {
             let show = show_grid.get();
             {
@@ -300,12 +342,14 @@ pub fn IfcViewer(
                 }
             }
             request_render.borrow_mut()();
+            schedule_save_settings();
         }
     });
 
     Effect::new({
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
+        let schedule_save_settings = schedule_save_settings.clone();
         move |_| {
             let show = show_axes.get();
             {
@@ -315,6 +359,15 @@ pub fn IfcViewer(
                 }
             }
             request_render.borrow_mut()();
+            schedule_save_settings();
+        }
+    });
+
+    Effect::new({
+        let schedule_save_settings = schedule_save_settings.clone();
+        move |_| {
+            show_debug.get();
+            schedule_save_settings();
         }
     });
 
@@ -330,6 +383,24 @@ pub fn IfcViewer(
                 }
             }
             request_render.borrow_mut()();
+        }
+    });
+
+    Effect::new({
+        move |_| {
+            let Some(key) = storage_key
+                .as_ref()
+                .map(|s| s.get())
+                .filter(|k| !k.is_empty())
+            else {
+                return;
+            };
+            let Some(settings) = load_viewer_settings(&format!("{key}.settings")) else {
+                return;
+            };
+            show_grid.set(settings.show_grid);
+            show_axes.set(settings.show_axes);
+            show_debug.set(settings.show_debug);
         }
     });
 
@@ -397,7 +468,9 @@ pub fn IfcViewer(
                 Some(glb_bytes) => {
                     state.set(IfcViewerState::Processing);
 
-                    if let Some(new_renderer) = Renderer::new(&canvas, &glb_bytes) {
+                    if let Some(mut new_renderer) = Renderer::new(&canvas, &glb_bytes) {
+                        new_renderer.set_show_grid(show_grid.get());
+                        new_renderer.set_show_axes(show_axes.get());
                         *renderer.borrow_mut() = Some(new_renderer);
                         state.set(IfcViewerState::Rendering);
 
@@ -496,4 +569,11 @@ fn load_view_state(key: &str) -> Option<ViewState> {
     let storage = window.local_storage().ok().flatten()?;
     let json = storage.get_item(key).ok().flatten()?;
     ViewState::from_json(&json)
+}
+
+fn load_viewer_settings(key: &str) -> Option<ViewerSettings> {
+    let window = leptos::web_sys::window()?;
+    let storage = window.local_storage().ok().flatten()?;
+    let json = storage.get_item(key).ok().flatten()?;
+    ViewerSettings::from_json(&json)
 }
