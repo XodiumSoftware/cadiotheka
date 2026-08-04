@@ -361,6 +361,34 @@ fn ProjectModalContent(
         }
     });
 
+    Effect::new(move |_| {
+        crate::utils::window_event_listener::<web_sys::KeyboardEvent, _>("keydown", {
+            let toggle_fullscreen = toggle_fullscreen;
+            move |ev| {
+                if active_tab.get() == ProjectDetailsTab::Viewer3d
+                    && ev.key().eq_ignore_ascii_case("f")
+                    && !ev.ctrl_key()
+                    && !ev.alt_key()
+                    && !ev.meta_key()
+                {
+                    let target = ev
+                        .target()
+                        .and_then(|t| t.dyn_into::<web_sys::HtmlElement>().ok());
+                    if let Some(target) = target
+                        && matches!(
+                            target.tag_name().to_ascii_uppercase().as_str(),
+                            "INPUT" | "TEXTAREA" | "SELECT"
+                        )
+                    {
+                        return;
+                    }
+                    ev.prevent_default();
+                    toggle_fullscreen.run(());
+                }
+            }
+        });
+    });
+
     let (toast_visible, set_toast_visible) = signal(false);
     let (toast_message, set_toast_message) = signal(String::new());
     let show_toast = move |message: String| {
@@ -942,181 +970,6 @@ fn ProjectModalContent(
                 node_ref=ifc_file_input
                 on:change=on_ifc_input_change
             />
-            <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-start gap-4 relative p-2 pr-3".to_string() }>
-                <div class="min-w-0 flex-1 flex flex-col gap-1">
-                    {move || {
-                        if editing_title.get() {
-                            view! {
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-2">
-                                        <input
-                                            class=move || {
-                                                let at_max = draft_title.get().len() >= MAX_TITLE_LENGTH;
-                                                format!(
-                                                    "input input-sm input-bordered flex-1 text-base-content text-xl font-bold {}",
-                                                    if at_max { "hover:border-error" } else { "" }
-                                                )
-                                            }
-                                            type="text"
-                                            maxlength=MAX_TITLE_LENGTH.to_string()
-                                            prop:value=draft_title.get()
-                                            on:input=move |ev| set_draft_title.set(event_target_value(&ev))
-                                            on:keyup=move |ev| {
-                                                match ev.key().as_str() {
-                                                    "Enter" => commit_edit_title.run(draft_title.get()),
-                                                    "Escape" => cancel_edit_title(),
-                                                    _ => {}
-                                                }
-                                            }
-                                            autofocus
-                                        />
-                                        <span class=move || {
-                                            if draft_title.get().len() >= MAX_TITLE_LENGTH {
-                                                "text-xs text-error flex-shrink-0"
-                                            } else {
-                                                "text-xs text-base-content/50 flex-shrink-0"
-                                            }
-                                        }>
-                                            {move || format!("{}/{}", draft_title.get().len(), MAX_TITLE_LENGTH)}
-                                        </span>
-                                    </div>
-                                    <div class="flex justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            class="btn btn-ghost btn-xs"
-                                            on:click=move |_| cancel_edit_title()
-                                        >"Cancel"</button>
-                                        <button
-                                            type="button"
-                                            class="btn btn-primary btn-xs"
-                                            on:click=move |_| commit_edit_title.run(draft_title.get())
-                                        >"Save"</button>
-                                    </div>
-                                </div>
-                            }
-                                .into_any()
-                        } else {
-                            view! {
-                                <div class="flex items-center gap-2">
-                                    <h2
-                                        class="text-xl font-bold text-primary leading-tight truncate tooltip tooltip-top"
-                                        data-tip={title.get()}
-                                    >
-                                        {title.get()}
-                                        </h2>
-                                        {move || (is_editable.get() && edit_mode.get()).then(|| view! {
-                                        <button
-                                            type="button"
-                                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary"
-                                            aria-label="Edit title"
-                                            on:click=move |_| start_edit_title()
-                                        >
-                                            {edit_pencil_icon("w-4 h-4")}
-                                        </button>
-                                    }.into_any())}
-                                </div>
-                            }
-                                .into_any()
-                        }
-                    }}
-                </div>
-                <div class="hidden sm:flex items-center gap-2 text-xs flex-shrink-0">
-                    {
-                        move || {
-                            let has_ifc = ifc_url.get().is_some();
-                            let downloading = is_downloading.get();
-                            let label = if downloading {
-                                "Downloading IFC..."
-                            } else if has_ifc {
-                                "Download IFC"
-                            } else {
-                                "No IFC model available"
-                            };
-                            view! {
-                                <button
-                                    type="button"
-                                    class=move || {
-                                        if !has_ifc || downloading {
-                                            "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
-                                        } else {
-                                            "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
-                                        }
-                                    }
-                                    aria-label=label
-                                    data-tip=label
-                                    disabled=move || !has_ifc || downloading
-                                    on:click={
-                                        let cb = increment_downloads;
-                                        move |_| cb.run(())
-                                    }
-                                >
-                                    <span class="flex items-center gap-1">
-                                        {if downloading {
-                                            view! {
-                                                <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                            }.into_any()
-                                        } else {
-                                            view! { <DownloadIcon /> }.into_any()
-                                        }}
-                                    </span>
-                                </button>
-                            }
-                        }
-                    }
-                    <button
-                        type="button"
-                        class=move || {
-                            if is_favorited.get() {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50 tooltip tooltip-bottom"
-                            } else {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error tooltip tooltip-bottom"
-                            }
-                        }
-                        aria-label=move || {
-                            if is_favorited.get() {
-                                format!("Remove {} from favorites", title.get())
-                            } else {
-                                format!("Add {} to favorites", title.get())
-                            }
-                        }
-                        data-tip=move || {
-                            if is_favorited.get() {
-                                "Remove favorite".to_string()
-                            } else {
-                                "Add favorite".to_string()
-                            }
-                        }
-                        on:click={
-                            let cb = toggle_favorite_click;
-                            move |_| cb.run(())
-                        }
-                    >
-                        <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
-                        <span>{move || favorite_count.get().to_string()}</span>
-                    </button>
-                    {move || is_editable.get().then(|| view! {
-                    <button
-                        type="button"
-                        class=move || {
-                            if edit_mode.get() {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-primary tooltip tooltip-bottom"
-                            } else {
-                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
-                            }
-                        }
-                        aria-label=move || if edit_mode.get() { "Leave edit mode" } else { "Enter edit mode" }
-                        data-tip=move || if edit_mode.get() { "Done editing" } else { "Edit project" }
-                        on:click=move |_| toggle_edit_mode()
-                    >
-                        {edit_pencil_icon("w-4 h-4")}
-                    </button>
-                }.into_any())}
-                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
-                    <span class="text-base-content/50">to close</span>
-                </div>
-            </div>
-
-            <hr class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "border-base-content/10".to_string() } />
 
             <div class=move || if viewer_fullscreen.get() { "flex flex-col min-h-0 overflow-hidden flex-1".to_string() } else { "flex flex-col min-h-0 overflow-hidden flex-1 py-2".to_string() }>
                 <div class=move || if viewer_fullscreen.get() { "flex-1 min-h-0".to_string() } else { "overflow-y-auto flex-1 min-h-0 p-2 pr-3".to_string() }>
@@ -1127,7 +980,7 @@ fn ProjectModalContent(
                             "grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_1px_18rem] gap-6 items-start h-full".to_string()
                         }
                     }>
-                        <div class=move || if viewer_fullscreen.get() { "min-w-0 h-full flex flex-col".to_string() } else { "min-w-0 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4".to_string() }>
+                        <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "min-w-0 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4".to_string() }>
                             <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-center justify-between gap-3 pb-2 flex-shrink-0".to_string() }>
                                 <div class="tabs tabs-border">
                                     <button
@@ -1402,6 +1255,185 @@ fn ProjectModalContent(
                         <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "hidden xl:block self-stretch w-px bg-base-content/10".to_string() } aria-hidden="true"></div>
 
                         <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "space-y-4".to_string() }>
+                            {move || {
+                                if editing_title.get() {
+                                    view! {
+                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-2">
+                                            <div class="flex items-center gap-2">
+                                                <input
+                                                    class=move || {
+                                                        let at_max = draft_title.get().len() >= MAX_TITLE_LENGTH;
+                                                        format!(
+                                                            "input input-sm input-bordered flex-1 text-base-content text-lg font-bold {}",
+                                                            if at_max { "hover:border-error" } else { "" }
+                                                        )
+                                                    }
+                                                    type="text"
+                                                    maxlength=MAX_TITLE_LENGTH.to_string()
+                                                    prop:value=draft_title.get()
+                                                    on:input=move |ev| set_draft_title.set(event_target_value(&ev))
+                                                    on:keyup=move |ev| {
+                                                        match ev.key().as_str() {
+                                                            "Enter" => commit_edit_title.run(draft_title.get()),
+                                                            "Escape" => cancel_edit_title(),
+                                                            _ => {}
+                                                        }
+                                                    }
+                                                    autofocus
+                                                />
+                                                <span class=move || {
+                                                    if draft_title.get().len() >= MAX_TITLE_LENGTH {
+                                                        "text-xs text-error flex-shrink-0"
+                                                    } else {
+                                                        "text-xs text-base-content/50 flex-shrink-0"
+                                                    }
+                                                }>
+                                                    {move || format!("{}/{}", draft_title.get().len(), MAX_TITLE_LENGTH)}
+                                                </span>
+                                            </div>
+                                            <div class="flex justify-end gap-2">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-ghost btn-xs"
+                                                    on:click=move |_| cancel_edit_title()
+                                                >"Cancel"</button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-primary btn-xs"
+                                                    on:click=move |_| commit_edit_title.run(draft_title.get())
+                                                >"Save"</button>
+                                            </div>
+                                        </div>
+                                    }
+                                        .into_any()
+                                } else {
+                                    view! {
+                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                            <div class="flex items-center gap-2">
+                                                <h2
+                                                    class="text-lg font-bold text-primary leading-tight truncate tooltip tooltip-top"
+                                                    data-tip={title.get()}
+                                                >
+                                                    {title.get()}
+                                                </h2>
+                                                {move || (is_editable.get() && edit_mode.get()).then(|| view! {
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary"
+                                                        aria-label="Edit title"
+                                                        on:click=move |_| start_edit_title()
+                                                    >
+                                                        {edit_pencil_icon("w-4 h-4")}
+                                                    </button>
+                                                }.into_any())}
+                                            </div>
+                                        </div>
+                                    }
+                                        .into_any()
+                                }
+                            }}
+
+                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                    <div class="flex items-center gap-2">
+                                        {
+                                            move || {
+                                                let has_ifc = ifc_url.get().is_some();
+                                                let downloading = is_downloading.get();
+                                                let label = if downloading {
+                                                    "Downloading IFC..."
+                                                } else if has_ifc {
+                                                    "Download IFC"
+                                                } else {
+                                                    "No IFC model available"
+                                                };
+                                                view! {
+                                                    <button
+                                                        type="button"
+                                                        class=move || {
+                                                            if !has_ifc || downloading {
+                                                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
+                                                            } else {
+                                                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                                            }
+                                                        }
+                                                        aria-label=label
+                                                        data-tip=label
+                                                        disabled=move || !has_ifc || downloading
+                                                        on:click={
+                                                            let cb = increment_downloads;
+                                                            move |_| cb.run(())
+                                                        }
+                                                    >
+                                                        <span class="flex items-center gap-1">
+                                                            {if downloading {
+                                                                view! {
+                                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                }.into_any()
+                                                            } else {
+                                                                view! { <DownloadIcon /> }.into_any()
+                                                            }}
+                                                        </span>
+                                                    </button>
+                                                }
+                                            }
+                                        }
+                                        <button
+                                            type="button"
+                                            class=move || {
+                                                if is_favorited.get() {
+                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50 tooltip tooltip-bottom"
+                                                } else {
+                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error tooltip tooltip-bottom"
+                                                }
+                                            }
+                                            aria-label=move || {
+                                                if is_favorited.get() {
+                                                    format!("Remove {} from favorites", title.get())
+                                                } else {
+                                                    format!("Add {} to favorites", title.get())
+                                                }
+                                            }
+                                            data-tip=move || {
+                                                if is_favorited.get() {
+                                                    "Remove favorite".to_string()
+                                                } else {
+                                                    "Add favorite".to_string()
+                                                }
+                                            }
+                                            on:click={
+                                                let cb = toggle_favorite_click;
+                                                move |_| cb.run(())
+                                            }
+                                        >
+                                            <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
+                                            <span>{move || favorite_count.get().to_string()}</span>
+                                        </button>
+                                        {move || is_editable.get().then(|| view! {
+                                            <button
+                                                type="button"
+                                                class=move || {
+                                                    if edit_mode.get() {
+                                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-primary tooltip tooltip-bottom"
+                                                    } else {
+                                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                                    }
+                                                }
+                                                aria-label=move || if edit_mode.get() { "Leave edit mode" } else { "Enter edit mode" }
+                                                data-tip=move || if edit_mode.get() { "Done editing" } else { "Edit project" }
+                                                on:click=move |_| toggle_edit_mode()
+                                            >
+                                                {edit_pencil_icon("w-4 h-4")}
+                                            </button>
+                                        }.into_any())}
+                                    </div>
+                                    <div class="flex items-center gap-2 text-base-content/50">
+                                        <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
+                                        <span>"to close"</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             {move || {
                                 if editing_description.get() {
                                     view! {
