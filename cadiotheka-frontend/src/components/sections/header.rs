@@ -483,7 +483,8 @@ pub fn Header() -> impl IntoView {
                         href="https://buymeacoffee.com/illyrius"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="btn btn-primary btn-lift flex items-center justify-center w-10 min-w-0 px-0"
+                        class="btn btn-primary btn-lift flex items-center justify-center w-10 min-w-0 px-0 tooltip tooltip-bottom"
+                        data-tip="Buy Me A Coffee"
                         aria-label="Buy me a coffee"
                     >
                         <BuyMeACoffeeLogo class="w-6 h-6" />
@@ -491,7 +492,8 @@ pub fn Header() -> impl IntoView {
 
                     <button
                         type="button"
-                        class="btn btn-primary hover:btn-warning btn-lift"
+                        class="btn btn-primary hover:btn-warning btn-lift tooltip tooltip-bottom"
+                        data-tip="Search"
                         on:click=move |_| set_search_open.set(true)
                         aria-label="Open search"
                     >
@@ -519,7 +521,8 @@ pub fn Header() -> impl IntoView {
                         Some(view! {
                             <button
                                 type="button"
-                                class="btn btn-primary btn-lift hidden sm:flex items-center gap-2"
+                                class="btn btn-primary btn-lift hidden sm:flex items-center gap-2 tooltip tooltip-bottom"
+                                data-tip="Create New Project"
                                 aria-label="Add project"
                                 on:click=move |_| {
                                     AddProjectModalContext::use_context().open();
@@ -557,7 +560,8 @@ pub fn Header() -> impl IntoView {
                                 <div class="relative">
                                     <button
                                         type="button"
-                                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden hover:border-base-content/30"
+                                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden hover:border-base-content/30 tooltip tooltip-bottom"
+                                        data-tip="Profile"
                                         aria-label="Open account menu"
                                         aria-controls="account-menu"
                                         aria-expanded=move || account_menu_open.get().to_string()
@@ -703,7 +707,8 @@ pub fn Header() -> impl IntoView {
                             None => view! {
                                 <button
                                     type="button"
-                                    class="btn btn-primary btn-lift flex items-center gap-2"
+                                    class="btn btn-primary btn-lift flex items-center gap-2 tooltip tooltip-bottom"
+                                    data-tip="Login"
                                     aria-label="Log in"
                                     on:click=move |_| login_modal.open()
                                 >
