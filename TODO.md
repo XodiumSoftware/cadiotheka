@@ -35,6 +35,7 @@ A18. [ ] Project thumbnail generation from the viewer for use in cards.
 A19. [ ] IFC upload-to-GLB conversion pipeline status UI.
 A20. [ ] Lightweight static preview on project cards instead of full 3D.
 A21. [ ] Persist per-project viewer settings in local storage alongside `ViewState`.
+A22. [ ] Add headless test coverage for the 3D viewer (scene/camera math and control event handling) so orbit/pan/zoom behavior is verified without a browser.
 
 ## Library Migration / Manual Work Replacement
 
