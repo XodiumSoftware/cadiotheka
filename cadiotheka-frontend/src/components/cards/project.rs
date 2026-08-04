@@ -15,7 +15,7 @@ pub struct ProjectCardProperties {
     pub collaborator_ids: Vec<String>,
     pub description: String,
     pub tags: Vec<String>,
-    pub supported_platforms: Vec<String>,
+    pub platforms: Vec<String>,
     pub downloads: u64,
     pub favorites: Vec<String>,
     pub timestamp: time::OffsetDateTime,
@@ -39,7 +39,7 @@ pub fn project_card_properties_from_project_data(project: ProjectData) -> Projec
         collaborator_ids: project.collaborator_ids,
         description: project.description,
         tags: project.tags,
-        supported_platforms: project.supported_platforms,
+        platforms: project.platforms,
         downloads: project.downloads,
         favorites: project.favorites,
         timestamp: project.timestamp,
@@ -127,7 +127,7 @@ pub fn ProjectCard(
         collaborator_ids: _,
         description: _,
         tags,
-        supported_platforms,
+        platforms,
         downloads,
         favorites: _,
         timestamp,
@@ -196,7 +196,6 @@ pub fn ProjectCard(
             card_author_for_aria.clone()
         )
     });
-    let platforms = supported_platforms;
 
     let tag_items = {
         let tags = tags.clone();
@@ -402,7 +401,7 @@ mod tests {
             collaborator_ids: vec![],
             description: "A gear with an **extended** markdown description.".to_owned(),
             tags: vec!["3d_model".to_owned()],
-            supported_platforms: vec!["blender".to_owned()],
+            platforms: vec!["blender".to_owned()],
             downloads: 1234,
             favorites: vec!["user-1".to_owned(), "user-2".to_owned()],
             timestamp: time::macros::datetime!(2024-01-01 00:00:00 UTC),
@@ -414,6 +413,6 @@ mod tests {
         assert_eq!(props.author, "Author");
         assert_eq!(props.downloads, 1234);
         assert_eq!(props.tags.len(), 1);
-        assert_eq!(props.supported_platforms.len(), 1);
+        assert_eq!(props.platforms.len(), 1);
     }
 }

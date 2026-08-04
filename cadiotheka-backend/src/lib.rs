@@ -264,7 +264,7 @@ mod tests {
         collaborator_ids: String,
         description: String,
         tags: String,
-        supported_platforms: String,
+        platforms: String,
         downloads: u64,
         #[serde(default)]
         favorites: String,
@@ -352,7 +352,7 @@ mod tests {
             collaborator_ids: vec!["acc-2".to_string()],
             description: "Extended description.".to_string(),
             tags: vec!["3d_model".to_string(), "vehicle".to_string()],
-            supported_platforms: vec!["blender".to_string(), "freecad".to_string()],
+            platforms: vec!["blender".to_string(), "freecad".to_string()],
             downloads: 1200,
             favorites: vec!["fav-1".to_string()],
             timestamp: "2026-07-07T14:30:00Z".to_string(),
@@ -371,7 +371,7 @@ mod tests {
         assert_eq!(parsed.collaborator_ids, "[\"acc-2\"]");
         assert_eq!(parsed.description, project.description);
         assert_eq!(parsed.tags, "[\"3d_model\",\"vehicle\"]");
-        assert_eq!(parsed.supported_platforms, "[\"blender\",\"freecad\"]");
+        assert_eq!(parsed.platforms, "[\"blender\",\"freecad\"]");
         assert_eq!(parsed.downloads, project.downloads);
         assert_eq!(parsed.favorites, "[\"fav-1\"]");
         assert_eq!(parsed.timestamp, project.timestamp);

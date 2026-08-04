@@ -119,19 +119,16 @@ pub async fn update_project_tags(id: &str, tags: Vec<String>) -> Result<Vec<Stri
 /// On success it returns the new platform list; on failure it returns a [`RequestError`].
 pub async fn update_project_platforms(
     id: &str,
-    supported_platforms: Vec<String>,
+    platforms: Vec<String>,
 ) -> Result<Vec<String>, RequestError> {
     let url = api_url(&format!("/projects/{id}"));
     let body =
-        serde_json::to_string(&serde_json::json!({ "supported_platforms": supported_platforms }))
-            .map_err(|err| {
-            RequestError::Serialize(format!(
-                "Failed to serialize supported platforms update: {err}"
-            ))
+        serde_json::to_string(&serde_json::json!({ "platforms": platforms })).map_err(|err| {
+            RequestError::Serialize(format!("Failed to serialize platforms update: {err}"))
         })?;
 
-    patch_project(&url, body, "supported platforms").await?;
-    Ok(supported_platforms)
+    patch_project(&url, body, "platforms").await?;
+    Ok(platforms)
 }
 
 /// Updates the description of an existing project via `PATCH /data/projects/:id`.

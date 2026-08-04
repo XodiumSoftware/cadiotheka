@@ -93,7 +93,7 @@ pub fn from_cards(
                 tags.insert(label.clone());
             }
         }
-        for id in &card.supported_platforms {
+        for id in &card.platforms {
             if let Some(label) = platform_labels.get(id) {
                 platforms.insert(label.clone());
             }
@@ -214,7 +214,7 @@ mod tests {
             collaborator_ids: vec![],
             description: "A sample gear with markdown description.".to_owned(),
             tags: vec!["parametric".to_owned(), "3d_model".to_owned()],
-            supported_platforms: vec!["blender".to_owned(), "freecad".to_owned()],
+            platforms: vec!["blender".to_owned(), "freecad".to_owned()],
             downloads: 100,
             favorites: vec!["favorite-user".to_owned(); 10],
             timestamp: datetime!(2024-06-01 10:00:00 UTC),

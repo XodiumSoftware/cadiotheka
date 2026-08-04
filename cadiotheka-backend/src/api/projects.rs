@@ -12,7 +12,7 @@ use crate::api::turnstile::verify_turnstile_token;
 use crate::utils::{check_rate_limit, error_response, js_option};
 use ifc_lite_export::{GltfOptions, export_glb};
 
-const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, supported_platforms, downloads, favorites, timestamp, ifc_url FROM projects";
+const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, platforms, downloads, favorites, timestamp, ifc_url FROM projects";
 
 /// Maximum allowed length for a project title.
 const MAX_TITLE_LENGTH: usize = 100;
@@ -48,7 +48,7 @@ pub struct Project {
     #[serde(with = "json_string")]
     pub tags: Vec<String>,
     #[serde(with = "json_string")]
-    pub supported_platforms: Vec<String>,
+    pub platforms: Vec<String>,
     pub downloads: u64,
     #[serde(with = "json_string")]
     pub favorites: Vec<String>,
@@ -70,7 +70,7 @@ pub struct ProjectPayload {
     #[serde(with = "json_string")]
     pub tags: Vec<String>,
     #[serde(with = "json_string")]
-    pub supported_platforms: Vec<String>,
+    pub platforms: Vec<String>,
     pub downloads: u64,
     #[serde(with = "json_string")]
     pub favorites: Vec<String>,
@@ -140,8 +140,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let project_id = payload.id.clone();
 
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
-    let platforms =
-        serde_json::to_string(&payload.supported_platforms).unwrap_or_else(|_| "[]".to_string());
+    let platforms = serde_json::to_string(&payload.platforms).unwrap_or_else(|_| "[]".to_string());
     let favorites = serde_json::to_string(&payload.favorites).unwrap_or_else(|_| "[]".to_string());
     let collaborator_ids =
         serde_json::to_string(&payload.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
@@ -151,7 +150,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, tags, supported_platforms, downloads, favorites, timestamp, ifc_url) \
+            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, tags, platforms, downloads, favorites, timestamp, ifc_url) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
         )
         .bind(
@@ -186,7 +185,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 pub struct ProjectPatch {
     title: Option<String>,
     tags: Option<Vec<String>>,
-    supported_platforms: Option<Vec<String>>,
+    platforms: Option<Vec<String>>,
     collaborator_ids: Option<Vec<String>>,
     description: Option<String>,
 }
@@ -224,12 +223,11 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
             .await?;
     }
 
-    if let Some(supported_platforms) = patch.supported_platforms {
-        let supported_platforms =
-            serde_json::to_string(&supported_platforms).unwrap_or_else(|_| "[]".to_string());
+    if let Some(platforms) = patch.platforms {
+        let platforms = serde_json::to_string(&platforms).unwrap_or_else(|_| "[]".to_string());
         db(&ctx)?
-            .prepare("UPDATE projects SET supported_platforms = ?1 WHERE id = ?2")
-            .bind(&[supported_platforms.into(), id.clone().into()])?
+            .prepare("UPDATE projects SET platforms = ?1 WHERE id = ?2")
+            .bind(&[platforms.into(), id.clone().into()])?
             .run()
             .await?;
     }
@@ -279,8 +277,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     payload.author = project.author;
     payload.author_username = project.author_username;
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
-    let platforms =
-        serde_json::to_string(&payload.supported_platforms).unwrap_or_else(|_| "[]".to_string());
+    let platforms = serde_json::to_string(&payload.platforms).unwrap_or_else(|_| "[]".to_string());
     payload.collaborator_ids = project.collaborator_ids.clone();
     let favorites = serde_json::to_string(&project.favorites).unwrap_or_else(|_| "[]".to_string());
     let collaborator_ids =
@@ -292,7 +289,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     db(&ctx)?
         .prepare(
             "UPDATE projects \
-             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, tags = ?7, supported_platforms = ?8, downloads = ?9, favorites = ?10, timestamp = ?11, ifc_url = ?12 \
+             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, tags = ?7, platforms = ?8, downloads = ?9, favorites = ?10, timestamp = ?11, ifc_url = ?12 \
              WHERE id = ?13",
         )
         .bind(
@@ -732,7 +729,7 @@ mod tests {
             collaborator_ids: vec![],
             description: String::new(),
             tags: vec![],
-            supported_platforms: vec![],
+            platforms: vec![],
             downloads: 0,
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
@@ -750,7 +747,7 @@ mod tests {
             collaborator_ids: vec![],
             description: String::new(),
             tags: vec![],
-            supported_platforms: vec![],
+            platforms: vec![],
             downloads: 0,
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),

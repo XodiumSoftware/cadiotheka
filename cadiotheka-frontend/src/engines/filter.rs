@@ -103,7 +103,7 @@ impl SearchEngine {
             card.tags.iter().any(|id| {
                 self.tag_label(id)
                     .is_some_and(|label| Self::label_matches(label, filter))
-            }) || card.supported_platforms.iter().any(|id| {
+            }) || card.platforms.iter().any(|id| {
                 self.platform_label(id)
                     .is_some_and(|label| Self::label_matches(label, filter))
             })
@@ -198,7 +198,7 @@ impl SearchEngine {
             .collect::<Vec<_>>()
             .join(" ");
         let platforms = card
-            .supported_platforms
+            .platforms
             .iter()
             .filter_map(|id| platform_labels.get(id))
             .cloned()
@@ -274,7 +274,7 @@ mod tests {
             collaborator_ids: vec![],
             description: format!("Markdown summary for {title}."),
             tags: tags.iter().map(|s| (*s).to_owned()).collect(),
-            supported_platforms: platforms.iter().map(|s| (*s).to_owned()).collect(),
+            platforms: platforms.iter().map(|s| (*s).to_owned()).collect(),
             downloads,
             favorites: vec!["favorite-user".to_owned(); favorites_trunc],
             timestamp: datetime!(2024-01-15 12:00:00 UTC),

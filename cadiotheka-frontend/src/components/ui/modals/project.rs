@@ -377,8 +377,8 @@ fn ProjectModalContent(
     let (tags, set_tags) = signal(card.tags.clone());
 
     let (editing_platforms, set_editing_platforms) = signal(false);
-    let (draft_platforms, set_draft_platforms) = signal(card.supported_platforms.clone());
-    let (supported_platforms, set_supported_platforms) = signal(card.supported_platforms.clone());
+    let (draft_platforms, set_draft_platforms) = signal(card.platforms.clone());
+    let (platforms, set_platforms) = signal(card.platforms.clone());
 
     let (editing_description, set_editing_description) = signal(false);
     let (draft_description, set_draft_description) = signal(card.description.clone());
@@ -654,12 +654,12 @@ fn ProjectModalContent(
     };
 
     let start_edit_platforms = move || {
-        set_draft_platforms.set(supported_platforms.get());
+        set_draft_platforms.set(platforms.get());
         set_editing_platforms.set(true);
     };
 
     let cancel_edit_platforms = move || {
-        set_draft_platforms.set(supported_platforms.get());
+        set_draft_platforms.set(platforms.get());
         set_editing_platforms.set(false);
     };
 
@@ -819,7 +819,7 @@ fn ProjectModalContent(
         let project_id = project_id.clone();
         Callback::new(move |draft_value: Vec<String>| {
             let project_id = project_id.clone();
-            let set_supported_platforms = set_supported_platforms;
+            let set_platforms = set_platforms;
             let set_draft_platforms = set_draft_platforms;
             let set_editing_platforms = set_editing_platforms;
             let modal_card = modal.set_card;
@@ -828,17 +828,17 @@ fn ProjectModalContent(
             leptos::task::spawn_local(async move {
                 match update_project_platforms(&project_id, draft_value).await {
                     Ok(new_platforms) => {
-                        set_supported_platforms.set(new_platforms.clone());
+                        set_platforms.set(new_platforms.clone());
                         set_draft_platforms.set(new_platforms.clone());
                         modal_card.update(|opt| {
                             if let Some(card) = opt.as_mut() {
-                                card.supported_platforms.clone_from(&new_platforms);
+                                card.platforms.clone_from(&new_platforms);
                             }
                         });
                         set_projects.update(|projects| {
                             for project in projects.iter_mut() {
                                 if project.id == project_id {
-                                    project.supported_platforms.clone_from(&new_platforms);
+                                    project.platforms.clone_from(&new_platforms);
                                     break;
                                 }
                             }
@@ -1599,7 +1599,7 @@ fn ProjectModalContent(
                                             <EditableChipSection
                                                 title="Supported platforms"
                                                 aria_label="Supported platforms"
-                                                items=supported_platforms.get()
+                                                items=platforms.get()
                                                 all_items={metadata.platforms.get()}
                                                 editing=editing_platforms.into()
                                                 on_cancel=Callback::new(move |()| cancel_edit_platforms())
@@ -1631,7 +1631,7 @@ fn ProjectModalContent(
                                         >
                                             <span class="text-sm font-semibold text-base-content mb-3 block">"Supported platforms"</span>
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                                {supported_platforms.get().iter().filter_map(|id| {
+                                                {platforms.get().iter().filter_map(|id| {
                                                     let platform = metadata.platform_by_id(id)?;
                                                     let color = platform.color.clone();
                                                     let label = platform.label.clone();
@@ -1656,7 +1656,7 @@ fn ProjectModalContent(
                                         <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
                                             <h3 class="text-sm font-semibold text-base-content mb-3">"Supported platforms"</h3>
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                                {supported_platforms.get().iter().filter_map(|id| {
+                                                {platforms.get().iter().filter_map(|id| {
                                                     let platform = metadata.platform_by_id(id)?;
                                                     let color = platform.color.clone();
                                                     let label = platform.label.clone();

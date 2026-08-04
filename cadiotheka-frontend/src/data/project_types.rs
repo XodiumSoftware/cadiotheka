@@ -68,7 +68,7 @@ pub struct ProjectData {
     pub tags: Vec<String>,
     /// Wire ids of the platforms this content supports.
     #[serde(with = "string_array_json")]
-    pub supported_platforms: Vec<String>,
+    pub platforms: Vec<String>,
     /// Download count.
     pub downloads: u64,
     /// Account ids of users who have favorited the project.
@@ -125,7 +125,7 @@ pub fn new_project_payload(
     title: String,
     description: String,
     tags: Vec<String>,
-    supported_platforms: Vec<String>,
+    platforms: Vec<String>,
 ) -> ProjectData {
     ProjectData {
         id: uuid::Uuid::new_v4().to_string(),
@@ -136,7 +136,7 @@ pub fn new_project_payload(
         collaborator_ids: vec![],
         description,
         tags,
-        supported_platforms,
+        platforms,
         downloads: 0,
         favorites: vec![],
         timestamp: now_utc(),
@@ -170,7 +170,7 @@ pub struct ProjectPatch {
     pub title: Option<String>,
     pub icon_key: Option<Option<String>>,
     pub tags: Option<Vec<String>>,
-    pub supported_platforms: Option<Vec<String>>,
+    pub platforms: Option<Vec<String>>,
     pub collaborator_ids: Option<Vec<String>>,
     pub description: Option<String>,
 }
@@ -199,7 +199,7 @@ mod tests {
             collaborator_ids: vec![],
             description: "Extended description.".to_owned(),
             tags: vec!["3d_model".to_owned(), "vehicle".to_owned()],
-            supported_platforms: vec!["blender".to_owned(), "freecad".to_owned()],
+            platforms: vec!["blender".to_owned(), "freecad".to_owned()],
             downloads: 1200,
             favorites: vec![
                 "11111111-1111-1111-1111-111111111111".to_owned(),
@@ -213,12 +213,12 @@ mod tests {
 
     #[test]
     fn project_deserializes_backend_json_string_columns() {
-        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","collaborator_ids":"[]","description":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","supported_platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","collaborator_ids":"[]","description":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).expect("backend JSON parses");
         assert_eq!(projects.len(), 1);
         assert_eq!(projects[0].title, "Mountain Bike");
         assert_eq!(projects[0].tags.len(), 5);
-        assert_eq!(projects[0].supported_platforms.len(), 5);
+        assert_eq!(projects[0].platforms.len(), 5);
         assert_eq!(projects[0].favorites.len(), 2);
     }
 
@@ -245,7 +245,7 @@ mod tests {
         let project = sample_project();
         let value = serde_json::to_value(&project).unwrap();
         let tags = value.get("tags").unwrap().as_str().unwrap();
-        let platforms = value.get("supported_platforms").unwrap().as_str().unwrap();
+        let platforms = value.get("platforms").unwrap().as_str().unwrap();
         let favorites = value.get("favorites").unwrap().as_str().unwrap();
         let collaborators = value.get("collaborator_ids").unwrap().as_str().unwrap();
         assert!(tags.starts_with('[') && tags.ends_with(']'));
@@ -256,11 +256,11 @@ mod tests {
 
     #[test]
     fn project_deserializes_empty_json_string_columns() {
-        let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","description":"E","tags":"[]","supported_platforms":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","description":"E","tags":"[]","platforms":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).unwrap();
         assert_eq!(projects.len(), 1);
         assert!(projects[0].tags.is_empty());
-        assert!(projects[0].supported_platforms.is_empty());
+        assert!(projects[0].platforms.is_empty());
         assert!(projects[0].favorites.is_empty());
         assert!(projects[0].collaborator_ids.is_empty());
     }
@@ -271,6 +271,6 @@ mod tests {
     fn project_uses_known_tags_and_platforms() {
         let project = sample_project();
         assert_eq!(project.tags, vec!["3d_model", "vehicle"]);
-        assert_eq!(project.supported_platforms, vec!["blender", "freecad"]);
+        assert_eq!(project.platforms, vec!["blender", "freecad"]);
     }
 }
