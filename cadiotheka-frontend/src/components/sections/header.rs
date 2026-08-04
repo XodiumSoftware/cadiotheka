@@ -560,7 +560,7 @@ pub fn Header() -> impl IntoView {
                                 <div class="relative">
                                     <button
                                         type="button"
-                                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 hover:border-primary tooltip tooltip-bottom"
+                                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden hover:border-primary tooltip tooltip-bottom"
                                         data-tip="Profile"
                                         aria-label="Open account menu"
                                         aria-controls="account-menu"
