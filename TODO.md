@@ -47,7 +47,7 @@ B3. [x] Derive `Display` for `RequestError` in `frontend/src/data/error.rs` with
 ## Medium Value
 
 B4. [x] Remove brittle `html.replace(...)` class injection in `frontend/src/components/ui/markdown.rs`. Style via `ammonia`'s `set_tag_attribute_value` (DOM-level injection during sanitization) instead of string-replacing the rendered HTML; the forced value overrides any user-supplied `class`, so there is no class-injection vector.
-B5. [ ] Apply `derive_more` (`Display`, `From`, `Constructor`, `AsRef`) to trim generic boilerplate across the workspace.
+B5. [x] Add `derive_more` and use it where it genuinely trims boilerplate. Derived `Display` for `AccountRole`, replacing the manual role->label match arm in `profile.rs`. After B1 (`strum`) and B3 (`thiserror`), the workspace had little remaining `Display`/`From`/`Constructor`/`AsRef` boilerplate; `OverflowItem`/`Suggestion`/`IconUrl` don't fit cleanly (e.g. `impl Into` constructor params, per-variant kinds), so those were left as-is.
 
 ## Lower Priority
 

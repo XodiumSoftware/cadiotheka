@@ -5,7 +5,7 @@ use crate::utils::api_url;
 use serde::{Deserialize, Serialize};
 
 /// Account role for a registered user.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, derive_more::Display)]
 #[serde(rename_all = "snake_case")]
 pub enum AccountRole {
     /// Regular content creator.
@@ -143,6 +143,12 @@ mod tests {
             serde_json::to_string(&AccountRole::Admin).unwrap(),
             "\"admin\""
         );
+    }
+
+    #[test]
+    fn account_role_displays_as_human_label() {
+        assert_eq!(AccountRole::Creator.to_string(), "Creator");
+        assert_eq!(AccountRole::Admin.to_string(), "Admin");
     }
 
     #[test]

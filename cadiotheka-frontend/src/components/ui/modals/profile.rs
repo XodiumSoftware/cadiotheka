@@ -92,10 +92,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
     let display_name = account.display_name.clone();
     let username = account.username.clone();
     let avatar_alt = format!("{display_name}'s avatar");
-    let role_label = move || match account.role {
-        crate::data::AccountRole::Creator => "Creator".to_string(),
-        crate::data::AccountRole::Admin => "Admin".to_string(),
-    };
+    let role_label = move || account.role.to_string();
 
     let (toast_visible, set_toast_visible) = signal(false);
     let show_toast = move || {
