@@ -60,7 +60,7 @@ pub fn IfcViewer(
     let screenshot = screenshot_signal.unwrap_or_else(|| RwSignal::new(false));
 
     let renderer: Rc<RefCell<Option<Renderer>>> = Rc::new(RefCell::new(None));
-    let controls: Rc<RefCell<Option<OrbitControls>>> = Rc::new(RefCell::new(None));
+    let controls: Rc<RefCell<OrbitControls>> = Rc::new(RefCell::new(OrbitControls::default()));
     let dirty = Rc::new(RefCell::new(false));
     let pending_frame = Rc::new(RefCell::new(false));
     let animation_handle: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
@@ -226,7 +226,6 @@ pub fn IfcViewer(
     on_cleanup({
         let animation_handle = SendWrapper::new(Rc::clone(&animation_handle));
         let renderer = SendWrapper::new(Rc::clone(&renderer));
-        let controls = SendWrapper::new(Rc::clone(&controls));
         move || {
             if let Some(handle) = (*animation_handle).borrow_mut().take()
                 && let Some(window) = leptos::web_sys::window()
@@ -234,7 +233,6 @@ pub fn IfcViewer(
                 let _ = window.cancel_animation_frame(handle);
             }
             *(*renderer).borrow_mut() = None;
-            *(*controls).borrow_mut() = None;
         }
     });
 
@@ -372,6 +370,50 @@ pub fn IfcViewer(
         }
     });
 
+    let on_mouse_down = {
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        let controls = Rc::clone(&controls);
+        move |ev: leptos::web_sys::MouseEvent| {
+            let mut state = controls.borrow_mut();
+            if state.on_mouse_down(&ev, &renderer) {
+                request_render.borrow_mut()();
+            }
+        }
+    };
+    let on_mouse_move = {
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        let controls = Rc::clone(&controls);
+        move |ev: leptos::web_sys::MouseEvent| {
+            let state = controls.borrow();
+            if state.on_mouse_move(&ev, &renderer) {
+                request_render.borrow_mut()();
+            }
+        }
+    };
+    let on_mouse_up = {
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        let controls = Rc::clone(&controls);
+        move |ev: leptos::web_sys::MouseEvent| {
+            let mut state = controls.borrow_mut();
+            if state.on_mouse_up(&ev, &renderer) {
+                request_render.borrow_mut()();
+            }
+        }
+    };
+    let on_wheel = {
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |ev: leptos::web_sys::WheelEvent| {
+            if OrbitControls::on_wheel(&ev, &renderer) {
+                request_render.borrow_mut()();
+            }
+        }
+    };
+    let on_context_menu = |ev: leptos::web_sys::MouseEvent| ev.prevent_default();
+
     Effect::new(move |_| {
         let Some(canvas) = canvas_ref.get() else {
             return;
@@ -383,7 +425,6 @@ pub fn IfcViewer(
 
         state.set(IfcViewerState::Loading);
         let renderer = Rc::clone(&renderer);
-        let controls = Rc::clone(&controls);
         let state = state;
         let request_render = Rc::clone(&request_render);
         let update_debug = update_debug.clone();
@@ -395,16 +436,6 @@ pub fn IfcViewer(
 
                     if let Some(new_renderer) = Renderer::new(&canvas, &glb_bytes) {
                         *renderer.borrow_mut() = Some(new_renderer);
-                        let render_callback = {
-                            let request_render = Rc::clone(&request_render);
-                            let update_debug = update_debug.clone();
-                            move || {
-                                request_render.borrow_mut()();
-                                update_debug();
-                            }
-                        };
-                        let new_controls = OrbitControls::attach(&renderer, render_callback);
-                        *controls.borrow_mut() = Some(new_controls);
                         state.set(IfcViewerState::Rendering);
 
                         let restored = storage_key
@@ -440,6 +471,11 @@ pub fn IfcViewer(
                 node_ref=canvas_ref
                 class="w-full h-full block cursor-grab active:cursor-grabbing"
                 aria-label="IFC 3D viewer"
+                on:mouse:down=on_mouse_down
+                on:mouse:move=on_mouse_move
+                on:mouse:up=on_mouse_up
+                on:wheel=on_wheel
+                on:contextmenu=on_context_menu
             />
             {move || match state.get() {
                 IfcViewerState::NoModel => view! {
