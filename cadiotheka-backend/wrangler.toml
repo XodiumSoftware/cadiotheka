@@ -11,6 +11,14 @@ database_id = "c4694439-e7f4-48e0-9e2a-a7e431a8fbce"
 binding = "AUTH"
 id = "ba027b7e98784b0dae06ab649b1738e4"
 
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "843579668967"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
 [[r2_buckets]]
 binding = "PROJECT_ASSETS"
 bucket_name = "cadiotheka-assets"

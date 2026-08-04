@@ -1,12 +1,7 @@
 use worker::{Request, Response, Result, RouteContext, wasm_bindgen};
 
-/// KV binding used for rate-limit counters. Shared with the auth module so
-/// only one KV namespace is required.
-const RATE_LIMIT_KV_BINDING: &str = "AUTH";
-/// Sliding window duration for rate limiting, in seconds.
-const RATE_LIMIT_WINDOW_SECONDS: u64 = 60;
-/// Maximum requests allowed per window per client IP.
-const RATE_LIMIT_MAX_REQUESTS: u32 = 30;
+/// Rate Limiting binding used to throttle requests per client and namespace.
+const RATE_LIMIT_BINDING: &str = "RATE_LIMITER";
 
 /// Builds a JSON error response with the given message and HTTP status.
 ///
@@ -42,30 +37,14 @@ pub async fn check_rate_limit(
     ctx: &RouteContext<()>,
     namespace: &str,
 ) -> Result<Option<Response>> {
-    let ip = client_ip(req);
-    let key = format!("rate_limit:{namespace}:{ip}");
-    let kv = ctx.env.kv(RATE_LIMIT_KV_BINDING)?;
-
-    let count: u32 = kv
-        .get(&key)
-        .text()
-        .await?
-        .and_then(|text| text.parse().ok())
-        .unwrap_or(0);
-
-    if count >= RATE_LIMIT_MAX_REQUESTS {
+    let key = format!("{namespace}:{}", client_ip(req));
+    let outcome = ctx.env.rate_limiter(RATE_LIMIT_BINDING)?.limit(key).await?;
+    if !outcome.success {
         return Ok(Some(error_response(
             "Rate limit exceeded. Please try again later.",
             429,
         )?));
     }
-
-    let next = (count + 1).to_string();
-    kv.put(&key, &next)?
-        .expiration_ttl(RATE_LIMIT_WINDOW_SECONDS)
-        .execute()
-        .await?;
-
     Ok(None)
 }
 
