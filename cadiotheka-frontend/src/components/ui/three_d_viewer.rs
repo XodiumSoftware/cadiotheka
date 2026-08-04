@@ -507,9 +507,9 @@ pub fn IfcViewer(
                 node_ref=canvas_ref
                 class="w-full h-full block cursor-grab active:cursor-grabbing"
                 aria-label="IFC 3D viewer"
-                on:mouse:down=on_mouse_down
-                on:mouse:move=on_mouse_move
-                on:mouse:up=on_mouse_up
+                on:mousedown=on_mouse_down
+                on:mousemove=on_mouse_move
+                on:mouseup=on_mouse_up
                 on:wheel=on_wheel
                 on:contextmenu=on_context_menu
             />

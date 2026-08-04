@@ -2,7 +2,7 @@
 
 A0a. [ ] Fix tag/platform overflow on project cards where the `+<int>` on hover is not showing the remaining tags/platforms.
 A0b. [x] Fix the 3D viewer fullscreen showing an empty project modal instead of the 3D viewer only.
-A0c. [ ] 3D-viewer controls do not work (pan/move)
+A0c. [x] 3D-viewer controls do not work (pan/move)
 
 # `three-d` Viewer Enhancement TODO
 
