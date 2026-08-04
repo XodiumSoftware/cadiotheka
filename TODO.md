@@ -1,7 +1,7 @@
 # Bugs / Fixes
 
 A0a. [ ] Fix tag/platform overflow on project cards where the `+<int>` on hover is not showing the remaining tags/platforms.
-A0b. [ ] Fix the 3D viewer fullscreen showing an empty project modal instead of the 3D viewer only.
+A0b. [x] Fix the 3D viewer fullscreen showing an empty project modal instead of the 3D viewer only.
 
 # `three-d` Viewer Enhancement TODO
 
