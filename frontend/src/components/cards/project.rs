@@ -1,7 +1,7 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::contexts::{CurrentUserContext, MetadataContext, ProjectModalContext, ProjectsContext};
-use crate::data::{IconUrl, ProjectData, ProjectVersion};
+use crate::data::{ProjectData, ProjectVersion};
 use crate::utils::{format_number, format_number_full, format_time_ago, format_time_full};
 use leptos::prelude::*;
 
@@ -19,7 +19,6 @@ pub struct ProjectCardProperties {
     pub downloads: u64,
     pub favorites: Vec<String>,
     pub timestamp: time::OffsetDateTime,
-    pub icon_url: Option<IconUrl>,
     pub versions: Vec<ProjectVersion>,
 }
 
@@ -43,7 +42,6 @@ pub fn project_card_properties_from_project_data(project: ProjectData) -> Projec
         downloads: project.downloads,
         favorites: project.favorites,
         timestamp: project.timestamp,
-        icon_url: project.icon_url,
         versions: project.versions,
     }
 }
@@ -131,7 +129,6 @@ pub fn ProjectCard(
         downloads,
         favorites: _,
         timestamp,
-        icon_url: _,
         versions: _,
     } = props;
 
@@ -388,7 +385,6 @@ pub fn ProjectCard(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::data::IconUrl;
 
     #[test]
     fn test_project_card_properties_from_project_data() {
@@ -405,7 +401,6 @@ mod tests {
             downloads: 1234,
             favorites: vec!["user-1".to_owned(), "user-2".to_owned()],
             timestamp: time::macros::datetime!(2024-01-01 00:00:00 UTC),
-            icon_url: Some(IconUrl("https://example.com/gear.svg".to_owned())),
             versions: vec![],
         };
         let props: ProjectCardProperties = project.into();

@@ -2,8 +2,7 @@
 
 use crate::data::error::RequestError;
 use crate::data::project_types::{
-    IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, ProjectVersion,
-    ValidationErrorResponse, icon_src_from_key,
+    ProjectCreationResult, ProjectData, ProjectPatch, ProjectVersion, ValidationErrorResponse,
 };
 use crate::utils::api_url;
 use gloo_net::http::Request;
@@ -268,55 +267,6 @@ pub async fn increment_project_downloads(id: &str) -> Result<ProjectData, Reques
         }
         Err(err) => Err(RequestError::Network(format!(
             "Failed to increment project downloads: {err}"
-        ))),
-    }
-}
-
-/// Uploads a project icon and returns its public URL.
-pub async fn upload_project_icon(id: &str, file: web_sys::File) -> Result<IconUrl, RequestError> {
-    #[derive(Deserialize)]
-    struct UploadResponse {
-        icon_key: String,
-    }
-
-    let url = api_url(&format!("/projects/{id}/icon"));
-    let form = web_sys::FormData::new().map_err(|err| {
-        RequestError::BuildRequest(format!("Failed to create icon upload form data: {err:?}"))
-    })?;
-
-    form.append_with_blob_and_filename("icon", &file, &file.name())
-        .map_err(|err| {
-            RequestError::BuildRequest(format!("Failed to append icon file to form data: {err:?}"))
-        })?;
-
-    let request = Request::post(&url)
-        .credentials(RequestCredentials::Include)
-        .body(form)
-        .map_err(|err| {
-            RequestError::BuildRequest(format!("Failed to build icon upload request: {err}"))
-        })?;
-
-    match request.send().await {
-        Ok(response) if response.ok() => {
-            let status = response.status();
-            let text = response.text().await.unwrap_or_default();
-            let upload = serde_json::from_str::<UploadResponse>(&text).map_err(|err| {
-                RequestError::Parse(format!(
-                    "Failed to parse project icon upload response (status={status}): {err}\n{text}"
-                ))
-            })?;
-            Ok(icon_src_from_key(&upload.icon_key))
-        }
-        Ok(response) => {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            Err(RequestError::Server {
-                status,
-                body: format!("Failed to upload project icon: {body}"),
-            })
-        }
-        Err(err) => Err(RequestError::Network(format!(
-            "Failed to upload project icon: {err}"
         ))),
     }
 }

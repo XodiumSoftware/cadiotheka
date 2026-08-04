@@ -1,12 +1,7 @@
 pub use crate::metadata::version_state::VersionState;
 use crate::utils::api_url;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
-/// A URL pointing to a project's icon asset.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(transparent)]
-pub struct IconUrl(pub String);
 
 /// Serde adapter for a JSON-text column holding an array of strings.
 ///
@@ -95,20 +90,9 @@ pub struct ProjectData {
     /// Official timestamp for when the project was published or updated.
     #[serde(with = "time::serde::rfc3339")]
     pub timestamp: time::OffsetDateTime,
-    /// Optional icon URL (when absent, a colored placeholder is generated).
-    #[serde(default, deserialize_with = "deserialize_icon_key")]
-    pub icon_url: Option<IconUrl>,
     /// IFC file versions attached to the project.
     #[serde(default)]
     pub versions: Vec<ProjectVersion>,
-}
-
-fn deserialize_icon_key<'de, D>(deserializer: D) -> Result<Option<IconUrl>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let key = Option::<String>::deserialize(deserializer)?;
-    Ok(key.map(|key| icon_src_from_key(&key)))
 }
 
 /// Builds a frontend URL from an IFC R2 object key (`ifcs/{version_id}/{filename}`).
@@ -158,7 +142,6 @@ pub fn new_project_payload(
         downloads: 0,
         favorites: vec![],
         timestamp: now_utc(),
-        icon_url: None,
         versions: vec![],
     }
 }
@@ -186,20 +169,10 @@ pub(crate) struct ValidationErrorResponse {
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct ProjectPatch {
     pub title: Option<String>,
-    pub icon_key: Option<Option<String>>,
     pub tags: Option<Vec<String>>,
     pub platforms: Option<Vec<String>>,
     pub collaborator_ids: Option<Vec<String>>,
     pub description: Option<String>,
-}
-
-/// Converts a stored R2 icon key into the backend URL used by `<img src>`.
-pub fn icon_src_from_key(key: &str) -> IconUrl {
-    let mut parts = key.split('/');
-    let _prefix = parts.next();
-    let project_id = parts.next().unwrap_or_default();
-    let icon_id = parts.next().unwrap_or_default();
-    IconUrl(api_url(&format!("/icons/{project_id}/{icon_id}")))
 }
 
 #[cfg(test)]
@@ -224,7 +197,6 @@ mod tests {
                 "22222222-2222-2222-2222-222222222222".to_owned(),
             ],
             timestamp: datetime!(2026-07-07 14:30:00 UTC),
-            icon_url: None,
             versions: vec![],
         }
     }
@@ -270,7 +242,7 @@ mod tests {
 
     #[test]
     fn project_deserializes_backend_json_string_columns() {
-        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","collaborator_ids":"[]","description":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","collaborator_ids":"[]","description":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z"}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).expect("backend JSON parses");
         assert_eq!(projects.len(), 1);
         assert_eq!(projects[0].title, "Mountain Bike");
@@ -285,16 +257,6 @@ mod tests {
         let json = serde_json::to_string(&project).expect("project serializes");
         let decoded: ProjectData = serde_json::from_str(&json).expect("project deserializes");
         assert_eq!(decoded, project);
-    }
-
-    #[test]
-    fn icon_url_serializes_transparently() {
-        let url = IconUrl("https://example.com/icon.svg".to_owned());
-        let json = serde_json::to_string(&url).unwrap();
-        assert_eq!(json, "\"https://example.com/icon.svg\"");
-
-        let decoded: IconUrl = serde_json::from_str(&json).unwrap();
-        assert_eq!(decoded, url);
     }
 
     #[test]
@@ -313,7 +275,7 @@ mod tests {
 
     #[test]
     fn project_deserializes_empty_json_string_columns() {
-        let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","description":"E","tags":"[]","platforms":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z","icon_url":null}]"#;
+        let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","description":"E","tags":"[]","platforms":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z"}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).unwrap();
         assert_eq!(projects.len(), 1);
         assert!(projects[0].tags.is_empty());

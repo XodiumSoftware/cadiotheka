@@ -31,7 +31,6 @@ pub mod components {
             pub mod search;
         }
         pub mod overflow_row;
-        pub mod project_icon_picker;
         pub mod toast;
         pub mod toggle;
         pub mod toolbar_button;
@@ -54,7 +53,6 @@ pub mod components {
     pub use ui::modals::project::{ProjectDetailsTab, ProjectModal};
     pub use ui::modals::search::SearchModal;
     pub use ui::overflow_row::OverflowRow;
-    pub use ui::project_icon_picker::ProjectIconPicker;
     pub use ui::three_d_viewer::{IfcViewer, IfcViewerState};
     pub use ui::toast::Toast;
     pub use ui::toggle::{ToggleSlider, ToggleSliderWithSlashLabel};
@@ -98,8 +96,8 @@ pub mod data {
     pub use metadata::{fetch_platforms, fetch_tags};
     pub use project_api::*;
     pub use project_types::{
-        IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, ProjectVersion, VersionState,
-        icon_src_from_key, ifc_src_from_key, latest_visible_ifc_url, new_project_payload,
+        ProjectCreationResult, ProjectData, ProjectPatch, ProjectVersion, VersionState,
+        ifc_src_from_key, latest_visible_ifc_url, new_project_payload,
     };
 }
 

@@ -291,8 +291,6 @@ mod tests {
         #[serde(default)]
         favorites: String,
         timestamp: String,
-        #[serde(default)]
-        icon_url: Option<String>,
     }
 
     #[test]
@@ -394,6 +392,5 @@ mod tests {
         assert_eq!(parsed.downloads, project.downloads);
         assert_eq!(parsed.favorites, "[\"fav-1\"]");
         assert_eq!(parsed.timestamp, project.timestamp);
-        assert_eq!(parsed.icon_url, None);
     }
 }
