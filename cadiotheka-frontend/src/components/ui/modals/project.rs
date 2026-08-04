@@ -11,9 +11,10 @@ use crate::contexts::{
     SearchContext,
 };
 use crate::data::{
-    AccountData, AccountRole, delete_project, delete_project_ifc, fetch_projects,
-    increment_project_downloads, update_project_collaborators, update_project_description,
-    update_project_platforms, update_project_tags, update_project_title, upload_project_ifc,
+    AccountData, AccountRole, convert_project_glb, delete_project, delete_project_ifc,
+    fetch_projects, increment_project_downloads, update_project_collaborators,
+    update_project_description, update_project_platforms, update_project_tags,
+    update_project_title, upload_project_ifc,
 };
 use crate::utils::{api_url, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
@@ -27,6 +28,21 @@ const MAX_DESCRIPTION_LENGTH: usize = 100;
 pub enum ProjectDetailsTab {
     Viewer3d,
     Versions,
+}
+
+/// Pipeline status for converting a project's IFC model to a viewable GLB.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum GlbConversionStatus {
+    /// No IFC model, or conversion not yet triggered.
+    Idle,
+    /// The IFC model is being converted to GLB on the backend.
+    Converting,
+    /// The GLB is ready to view.
+    Ready,
+    /// The IFC model produced no renderable geometry.
+    NoGeometry,
+    /// The conversion request failed.
+    Failed,
 }
 
 /// Modal dialog that displays detailed information about a selected project.
@@ -327,6 +343,7 @@ fn ProjectModalContent(
     let (ifc_url, set_ifc_url) = signal(card.ifc_url.clone());
     let (is_uploading_ifc, set_is_uploading_ifc) = signal(false);
     let (is_downloading, set_is_downloading) = signal(false);
+    let (glb_status, set_glb_status) = signal(GlbConversionStatus::Idle);
 
     let project_id = card.id.clone();
     let viewer_ref = NodeRef::<leptos::html::Div>::new();
@@ -415,6 +432,7 @@ fn ProjectModalContent(
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
                 set_is_uploading_ifc.set(true);
+                set_glb_status.set(GlbConversionStatus::Idle);
                 match upload_project_ifc(&project_id, file).await {
                     Ok(url) => {
                         set_ifc_url.set(Some(url.clone()));
@@ -428,10 +446,30 @@ fn ProjectModalContent(
                         });
                         modal.set_card.update(|opt| {
                             if let Some(card) = opt.as_mut() {
-                                card.ifc_url = Some(url);
+                                card.ifc_url = Some(url.clone());
                             }
                         });
-                        show_toast("IFC model uploaded".to_string());
+
+                        // Trigger the IFC-to-GLB conversion and surface its status.
+                        set_glb_status.set(GlbConversionStatus::Converting);
+                        match convert_project_glb(&project_id).await {
+                            Ok(true) => {
+                                set_glb_status.set(GlbConversionStatus::Ready);
+                                show_toast("IFC model converted to 3D".to_string());
+                            }
+                            Ok(false) => {
+                                set_glb_status.set(GlbConversionStatus::NoGeometry);
+                                show_toast("IFC model has no renderable geometry".to_string());
+                            }
+                            Err(err) => {
+                                leptos::web_sys::console::error_1(
+                                    &format!("Failed to convert IFC model: {}", err.message())
+                                        .into(),
+                                );
+                                set_glb_status.set(GlbConversionStatus::Failed);
+                                show_toast("Failed to convert IFC model".to_string());
+                            }
+                        }
                     }
                     Err(err) => {
                         leptos::web_sys::console::error_1(
@@ -476,6 +514,7 @@ fn ProjectModalContent(
                 match delete_project_ifc(&project_id).await {
                     Ok(()) => {
                         set_ifc_url.set(None);
+                        set_glb_status.set(GlbConversionStatus::Idle);
                         projects_ctx.set_projects.update(|projects| {
                             for project in projects.iter_mut() {
                                 if project.id == project_id {
@@ -1152,6 +1191,24 @@ fn ProjectModalContent(
                                                             <div class="flex-1 min-w-0">
                                                                 <p class="text-sm font-medium text-base-content truncate">"model.ifc"</p>
                                                                 <p class="text-xs text-base-content/50">"Latest version"</p>
+                                                                {move || match glb_status.get() {
+                                                                    GlbConversionStatus::Idle => ().into_any(),
+                                                                    GlbConversionStatus::Converting => view! {
+                                                                        <p class="text-xs text-primary flex items-center gap-1.5">
+                                                                            <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                            <span>"Converting to 3D model..."</span>
+                                                                        </p>
+                                                                    }.into_any(),
+                                                                    GlbConversionStatus::Ready => view! {
+                                                                        <p class="text-xs text-success flex items-center gap-1.5">"Ready to view in 3D"</p>
+                                                                    }.into_any(),
+                                                                    GlbConversionStatus::NoGeometry => view! {
+                                                                        <p class="text-xs text-warning">"No renderable geometry"</p>
+                                                                    }.into_any(),
+                                                                    GlbConversionStatus::Failed => view! {
+                                                                        <p class="text-xs text-error">"Conversion failed"</p>
+                                                                    }.into_any(),
+                                                                }}
                                                             </div>
                                                             {move || {
                                                                 if is_editable.get() && edit_mode.get() {

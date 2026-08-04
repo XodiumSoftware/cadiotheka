@@ -407,6 +407,40 @@ pub async fn upload_project_ifc(id: &str, file: web_sys::File) -> Result<String,
     }
 }
 
+/// Eagerly converts a project's IFC model to GLB on the backend and caches it.
+///
+/// Returns `Ok(true)` when the GLB is ready to view, or `Ok(false)` when the IFC
+/// model contained no renderable geometry.
+pub async fn convert_project_glb(id: &str) -> Result<bool, RequestError> {
+    let url = api_url(&format!("/projects/{id}/glb"));
+    let request = Request::post(&url)
+        .credentials(RequestCredentials::Include)
+        .body(web_sys::FormData::new().map_err(|err| {
+            RequestError::BuildRequest(format!(
+                "Failed to create GLB conversion form data: {err:?}"
+            ))
+        })?)
+        .map_err(|err| {
+            RequestError::BuildRequest(format!("Failed to build GLB conversion request: {err}"))
+        })?;
+
+    match request.send().await {
+        Ok(response) if response.status() == 422 => Ok(false),
+        Ok(response) if response.ok() => Ok(true),
+        Ok(response) => {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to convert IFC model: {body}"),
+            })
+        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to convert IFC model: {err}"
+        ))),
+    }
+}
+
 /// Deletes a project via `DELETE /data/projects/:id`.
 ///
 /// Returns `Ok(())` if the deletion succeeded.

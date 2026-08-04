@@ -92,7 +92,7 @@ The backend API is available at <http://localhost:8787/data/accounts> by default
 
 Project assets (IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). The database stores only the generated R2 object key, and the frontend loads assets through backend asset routes.
 
-The project details modal includes a built-in 3D IFC/GLB viewer with orbit controls, a ground grid, an axes gizmo, view reset, fullscreen, and a debug overlay. Camera state is persisted per project in `localStorage` and restored on the next visit.
+The project details modal includes a built-in 3D IFC/GLB viewer with orbit controls, a ground grid, an axes gizmo, view reset, fullscreen, and a debug overlay. Uploaded IFC models are converted to GLB with a visible pipeline status. Camera state is persisted per project in `localStorage` and restored on the next visit.
 
 To use your real Cloudflare resources during local development, run Wrangler in remote mode:
 

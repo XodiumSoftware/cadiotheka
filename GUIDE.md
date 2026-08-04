@@ -127,6 +127,7 @@ Project assets (IFC models) are uploaded through the backend and stored in the `
 
 The project details modal includes a built-in IFC/GLB viewer built on `three-d`. Once an IFC model has been uploaded and converted, the viewer offers:
 
+- A conversion-pipeline status that shows upload, IFC-to-GLB conversion, and geometry-readiness state after uploading a model.
 - Orbit, pan, and zoom controls via mouse.
 - A reset-view button that clears any persisted camera state and reframes the model.
 - A browser-fullscreen toggle for the viewer panel.

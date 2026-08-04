@@ -94,11 +94,11 @@ pub mod data {
     pub use account::{AccountData, AccountRole, fetch_accounts};
     pub use error::RequestError;
     pub use project::{
-        IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, create_project, delete_project,
-        delete_project_ifc, fetch_projects, increment_project_downloads, new_project_payload,
-        toggle_project_favorite, update_project, update_project_collaborators,
-        update_project_description, update_project_platforms, update_project_tags,
-        update_project_title, upload_project_icon, upload_project_ifc,
+        IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, convert_project_glb,
+        create_project, delete_project, delete_project_ifc, fetch_projects,
+        increment_project_downloads, new_project_payload, toggle_project_favorite, update_project,
+        update_project_collaborators, update_project_description, update_project_platforms,
+        update_project_tags, update_project_title, upload_project_icon, upload_project_ifc,
     };
 }
 

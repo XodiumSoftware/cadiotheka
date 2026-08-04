@@ -497,11 +497,102 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
         return Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers));
     }
 
-    let object = ifcs_bucket(&ctx)?.get(&key).execute().await?;
-    let Some(object) = object else {
-        return error_response("IFC model not found", 404);
+    match ensure_glb_cached(&ctx, &id, &key).await? {
+        Some(GlbConversion::Success(bytes)) => {
+            let headers = Headers::new();
+            headers.set("Content-Type", "model/gltf-binary")?;
+            headers.set("Cache-Control", "public, max-age=3600")?;
+            Response::from_bytes(bytes).map(|resp| resp.with_headers(headers))
+        }
+        Some(GlbConversion::NoGeometry) => {
+            error_response("IFC model has no renderable geometry", 422)
+        }
+        // The cache was populated between the check above and this call; serve it.
+        None => {
+            let cached = ifcs_bucket(&ctx)?
+                .get(glb_key_for_project(&id))
+                .execute()
+                .await?
+                .ok_or_else(|| worker::Error::RustError("GLB cache object has no body".into()))?;
+            let body = cached
+                .body()
+                .ok_or_else(|| worker::Error::RustError("GLB cache object has no body".into()))?;
+            let http_metadata = cached.http_metadata();
+            let content_type = http_metadata
+                .content_type
+                .unwrap_or_else(|| "model/gltf-binary".to_string());
+            let headers = Headers::new();
+            headers.set("Content-Type", &content_type)?;
+            headers.set("Cache-Control", "public, max-age=3600")?;
+            Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
+        }
+    }
+}
+
+/// Eagerly converts a project's IFC model to GLB and caches it, returning the
+/// pipeline status so the client can report progress without waiting for the
+/// first viewer open.
+///
+/// The caller must be able to edit the project. Returns a JSON body describing
+/// whether the conversion succeeded, failed, or found no renderable geometry.
+pub async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    if let Some(response) = check_rate_limit(&req, &ctx, "glb_convert").await? {
+        return Ok(response);
+    }
+    let account = require_account(&req, &ctx).await?;
+    let id = ctx.param("id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    if !can_edit_project(&account, &project) {
+        return error_response("Forbidden", 403);
+    }
+
+    let Some(key) = project.ifc_url else {
+        return error_response("No IFC model uploaded for this project", 404);
     };
 
+    match ensure_glb_cached(&ctx, &id, &key).await? {
+        Some(GlbConversion::Success(_)) | None => {
+            Response::from_json(&serde_json::json!({ "status": "ready" }))
+        }
+        Some(GlbConversion::NoGeometry) => {
+            error_response("IFC model has no renderable geometry", 422)
+        }
+    }
+}
+
+/// Outcome of converting a project's IFC model to GLB.
+enum GlbConversion {
+    /// The conversion produced valid geometry.
+    Success(Vec<u8>),
+    /// The IFC model contained no renderable geometry.
+    NoGeometry,
+}
+
+/// Converts the IFC object at `key` to GLB, caches it under the project's GLB
+/// key, and returns the outcome. Cache hits return `None` so callers can serve
+/// the cached body directly.
+async fn ensure_glb_cached(
+    ctx: &RouteContext<()>,
+    id: &str,
+    ifc_key: &str,
+) -> Result<Option<GlbConversion>> {
+    let glb_cache_key = glb_key_for_project(id);
+    if ifcs_bucket(ctx)?
+        .get(&glb_cache_key)
+        .execute()
+        .await?
+        .is_some()
+    {
+        return Ok(None);
+    }
+
+    let object = ifcs_bucket(ctx)?
+        .get(ifc_key)
+        .execute()
+        .await?
+        .ok_or_else(|| worker::Error::RustError("IFC model not found".into()))?;
     let body = object
         .body()
         .ok_or_else(|| worker::Error::RustError("IFC object has no body".into()))?;
@@ -515,23 +606,20 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
         },
     );
     if glb_bytes.len() <= 12 {
-        return error_response("IFC model has no renderable geometry", 422);
+        return Ok(Some(GlbConversion::NoGeometry));
     }
 
     let cache_metadata = HttpMetadata {
         content_type: Some("model/gltf-binary".to_string()),
         ..Default::default()
     };
-    let _ = ifcs_bucket(&ctx)?
+    ifcs_bucket(ctx)?
         .put(&glb_cache_key, glb_bytes.clone())
         .http_metadata(cache_metadata)
         .execute()
-        .await;
+        .await?;
 
-    let headers = Headers::new();
-    headers.set("Content-Type", "model/gltf-binary")?;
-    headers.set("Cache-Control", "public, max-age=3600")?;
-    Response::from_bytes(glb_bytes).map(|resp| resp.with_headers(headers))
+    Ok(Some(GlbConversion::Success(glb_bytes)))
 }
 
 /// Whether the given account may edit or delete the project.

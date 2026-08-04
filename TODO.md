@@ -1,3 +1,8 @@
+# Bugs / Fixes
+
+A0a. [ ] Fix tag/platform overflow on project cards where the `+<int>` on hover is not showing the remaining tags/platforms.
+A0b. [ ] Fix the 3D viewer fullscreen showing an empty project modal instead of the 3D viewer only.
+
 # `three-d` Viewer Enhancement TODO
 
 ## Rendering Quality
@@ -27,12 +32,11 @@ A13. [ ] View-cube or preset view buttons (front, top, isometric).
 A14. [ ] GLB animation playback and skinning support.
 A15. [ ] Extra model stats: surface area, bounding-box dimensions.
 A16. [ ] Multi-model comparison / diff overlay with per-model tinting.
-A17. [ ] 2D drawing / SVG export from the current camera view.
 A18. [ ] Project thumbnail generation from the viewer for use in cards.
 
 ## App Integration
 
-A19. [ ] IFC upload-to-GLB conversion pipeline status UI.
+A19. [x] IFC upload-to-GLB conversion pipeline status UI. After upload, the backend eagerly converts and caches the GLB via `POST /data/projects/:id/glb`; the Versions tab shows `Converting`/`Ready`/`NoGeometry`/`Failed` states.
 A20. [ ] Lightweight static preview on project cards instead of full 3D.
 A21. [ ] Persist per-project viewer settings in local storage alongside `ViewState`.
 A22. [ ] Add headless test coverage for the 3D viewer (scene/camera math and control event handling) so orbit/pan/zoom behavior is verified without a browser.
