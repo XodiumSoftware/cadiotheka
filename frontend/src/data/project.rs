@@ -7,6 +7,6 @@
 
 pub use super::project_api::*;
 pub use super::project_types::{
-    IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, icon_src_from_key, ifc_src_from_key,
-    new_project_payload,
+    IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, ProjectVersion, VersionState,
+    icon_src_from_key, ifc_src_from_key, latest_visible_ifc_url, new_project_payload,
 };

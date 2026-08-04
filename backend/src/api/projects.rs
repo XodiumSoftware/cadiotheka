@@ -9,10 +9,10 @@ use crate::PROJECT_ASSETS_R2_BINDING;
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::api::turnstile::verify_turnstile_token;
-use crate::utils::{check_rate_limit, error_response, js_option};
+use crate::utils::{check_rate_limit, error_response, js_option, now_utc};
 use ifc_lite_export::{GltfOptions, export_glb};
 
-const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, platforms, downloads, favorites, timestamp, ifc_url FROM projects";
+const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, platforms, downloads, favorites, timestamp FROM projects";
 
 /// Maximum allowed length for a project title.
 const MAX_TITLE_LENGTH: usize = 100;
@@ -21,6 +21,61 @@ const MAX_DESCRIPTION_LENGTH: usize = 5000;
 /// Maximum allowed size for an uploaded project IFC model, in bytes.
 const MAX_IFC_SIZE_BYTES: usize = 25 * 1024 * 1024; // 25 MiB
 
+/// A version state for an IFC file.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum VersionState {
+    Undefined,
+    Alpha,
+    Beta,
+    Stable,
+}
+
+impl VersionState {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Undefined => "undefined",
+            Self::Alpha => "alpha",
+            Self::Beta => "beta",
+            Self::Stable => "stable",
+        }
+    }
+
+    fn parse(value: &str) -> Result<Self> {
+        match value {
+            "undefined" => Ok(Self::Undefined),
+            "alpha" => Ok(Self::Alpha),
+            "beta" => Ok(Self::Beta),
+            "stable" => Ok(Self::Stable),
+            _ => Err(worker::Error::RustError(format!(
+                "invalid version state: {value}"
+            ))),
+        }
+    }
+}
+
+/// A single IFC file version attached to a project.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProjectVersion {
+    pub id: String,
+    pub project_id: String,
+    pub filename: String,
+    pub ifc_key: String,
+    pub state: VersionState,
+    pub created_at: String,
+}
+
+/// Payload used to update a version's state.
+#[derive(Deserialize, Debug)]
+pub struct VersionPatch {
+    pub state: String,
+}
+
+/// Row shape used when looking up an IFC key by version id.
+#[derive(Deserialize)]
+struct VersionKey {
+    ifc_key: String,
+}
 /// Validates the project payload and returns a map of field names to error
 /// messages. An empty map means the payload is valid.
 fn validate_project_payload(payload: &ProjectPayload) -> std::collections::HashMap<String, String> {
@@ -53,7 +108,6 @@ pub struct Project {
     #[serde(with = "json_string")]
     pub favorites: Vec<String>,
     pub timestamp: String,
-    pub ifc_url: Option<String>,
 }
 
 /// Payload used to create or update a project.
@@ -75,7 +129,6 @@ pub struct ProjectPayload {
     #[serde(with = "json_string")]
     pub favorites: Vec<String>,
     pub timestamp: String,
-    pub ifc_url: Option<String>,
 }
 
 /// Serde adapter that stores a `Vec<String>` as a single JSON string column.
@@ -150,8 +203,8 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, tags, platforms, downloads, favorites, timestamp, ifc_url) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, tags, platforms, downloads, favorites, timestamp) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
         )
         .bind(
             &[
@@ -167,7 +220,6 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
                 downloads_value.into(),
                 favorites.into(),
                 payload.timestamp.into(),
-                js_option(payload.ifc_url),
             ])?
         .run()
         .await?;
@@ -289,8 +341,8 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     db(&ctx)?
         .prepare(
             "UPDATE projects \
-             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, tags = ?7, platforms = ?8, downloads = ?9, favorites = ?10, timestamp = ?11, ifc_url = ?12 \
-             WHERE id = ?13",
+             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, tags = ?7, platforms = ?8, downloads = ?9, favorites = ?10, timestamp = ?11 \
+             WHERE id = ?12",
         )
         .bind(
             &[
@@ -305,7 +357,6 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
                 downloads_value.into(),
                 favorites.into(),
                 payload.timestamp.into(),
-                js_option(payload.ifc_url),
                 id.into(),
             ])?
         .run()
@@ -338,16 +389,15 @@ fn ifcs_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
     ctx.env.bucket(PROJECT_ASSETS_R2_BINDING)
 }
 
-/// Handles a multipart upload of a project IFC model, validates it, stores it in R2,
-/// and updates the project's `ifc_url` column with the R2 object key.
-/// and updates the project's `ifc_url` column with the R2 object key.
+/// Handles a multipart upload of a project IFC model, stores it in R2,
+/// and creates a new `project_versions` row with state `undefined`.
 pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(response) = check_rate_limit(&req, &ctx, "ifc_upload").await? {
         return Ok(response);
     }
     let account = require_account(&req, &ctx).await?;
-    let id = ctx.param("id").cloned().unwrap_or_default();
-    let project = fetch_project(&ctx, &id)
+    let project_id = ctx.param("id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &project_id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
@@ -364,13 +414,13 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
         return error_response("IFC model must be 25 MiB or smaller", 413);
     }
 
-    let file_name = file.name();
-    if !file_name.to_lowercase().ends_with(".ifc") {
+    let filename = file.name();
+    if !filename.to_lowercase().ends_with(".ifc") {
         return error_response("IFC file must have a .ifc extension", 400);
     }
 
-    let old_key = project.ifc_url.clone();
-    let key = format!("ifcs/{id}/model.ifc");
+    let version_id = uuid::Uuid::new_v4().to_string();
+    let key = format!("ifcs/{version_id}/{filename}");
     let http_metadata = HttpMetadata {
         content_type: Some("application/ifc".to_string()),
         ..Default::default()
@@ -382,61 +432,169 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
         .execute()
         .await?;
 
+    let created_at = now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .map_err(|e| worker::Error::RustError(format!("failed to format timestamp: {e}")))?;
+
     db(&ctx)?
-        .prepare("UPDATE projects SET ifc_url = ?1 WHERE id = ?2")
-        .bind(&[key.clone().into(), id.clone().into()])?
+        .prepare(
+            "INSERT INTO project_versions (id, project_id, filename, ifc_key, state, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        )
+        .bind(&[
+            version_id.clone().into(),
+            project_id.clone().into(),
+            filename.into(),
+            key.clone().into(),
+            VersionState::Undefined.as_str().into(),
+            created_at.into(),
+        ])?
         .run()
         .await?;
 
-    if let Some(old_key) = old_key.filter(|k| k != &key) {
-        let _ = ifcs_bucket(&ctx)?.delete(&old_key).await;
-    }
-
-    let glb_cache_key = glb_key_for_project(&id);
+    // Clear any cached GLB for this project so the new version can be reconverted.
+    let glb_cache_key = glb_key_for_project(&project_id);
     let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
 
-    Response::from_json(&serde_json::json!({ "ifc_key": key, "content_type": "application/ifc" }))
+    Response::from_json(
+        &serde_json::json!({ "ifc_key": key, "version_id": version_id, "content_type": "application/ifc" }),
+    )
 }
 
-/// Deletes a project's IFC model from R2 and clears the `ifc_url` column.
+/// Deletes all IFC versions for a project from R2 and the `project_versions`
+/// table. Restricted to project editors.
 pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(response) = check_rate_limit(&req, &ctx, "ifc_delete").await? {
         return Ok(response);
     }
     let account = require_account(&req, &ctx).await?;
-    let id = ctx.param("id").cloned().unwrap_or_default();
-    let project = fetch_project(&ctx, &id)
+    let project_id = ctx.param("id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &project_id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
         return error_response("Forbidden", 403);
     }
 
-    if let Some(key) = project.ifc_url {
-        let _ = ifcs_bucket(&ctx)?.delete(&key).await;
-        let glb_cache_key = glb_key_for_project(&id);
-        let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
+    let versions = fetch_project_versions(&ctx, &project_id, true).await?;
+    for version in versions {
+        let _ = ifcs_bucket(&ctx)?.delete(&version.ifc_key).await;
     }
 
+    let glb_cache_key = glb_key_for_project(&project_id);
+    let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
+
     db(&ctx)?
-        .prepare("UPDATE projects SET ifc_url = NULL WHERE id = ?1")
-        .bind(&[id.into()])?
+        .prepare("DELETE FROM project_versions WHERE project_id = ?1")
+        .bind(&[project_id.into()])?
         .run()
         .await?;
 
     Response::from_json(&serde_json::json!({ "deleted": true }))
 }
 
-/// Serves an IFC model from R2 by its project id and filename.
+/// Responds with the IFC versions for a project. Undefined versions are omitted
+/// unless the caller can edit the project.
+pub async fn list_project_versions(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let project_id = ctx.param("id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &project_id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+
+    let include_undefined = match require_account(&req, &ctx).await {
+        Ok(account) => can_edit_project(&account, &project),
+        Err(_) => false,
+    };
+
+    let versions = fetch_project_versions(&ctx, &project_id, include_undefined).await?;
+    Response::from_json(&versions)
+}
+
+/// Updates the state of a single project version. Restricted to project editors.
+pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let account = require_account(&req, &ctx).await?;
+    let project_id = ctx.param("id").cloned().unwrap_or_default();
+    let version_id = ctx.param("version_id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &project_id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    if !can_edit_project(&account, &project) {
+        return error_response("Forbidden", 403);
+    }
+
+    let patch: VersionPatch = req.json().await?;
+    let state = VersionState::parse(&patch.state)?;
+
+    db(&ctx)?
+        .prepare("UPDATE project_versions SET state = ?1 WHERE id = ?2 AND project_id = ?3")
+        .bind(&[
+            state.as_str().into(),
+            version_id.clone().into(),
+            project_id.into(),
+        ])?
+        .run()
+        .await?;
+
+    // Clear the GLB cache so the visibility change can be reflected on next fetch.
+    let glb_cache_key = glb_key_for_project(&project.id);
+    let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
+
+    Response::empty()
+}
+
+/// Deletes a single project version. Restricted to project editors.
+pub async fn delete_project_version(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let account = require_account(&req, &ctx).await?;
+    let project_id = ctx.param("id").cloned().unwrap_or_default();
+    let version_id = ctx.param("version_id").cloned().unwrap_or_default();
+    let project = fetch_project(&ctx, &project_id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    if !can_edit_project(&account, &project) {
+        return error_response("Forbidden", 403);
+    }
+
+    let result = db(&ctx)?
+        .prepare("SELECT ifc_key FROM project_versions WHERE id = ?1 AND project_id = ?2")
+        .bind(&[version_id.clone().into(), project_id.clone().into()])?
+        .all()
+        .await?;
+    let keys: Vec<VersionKey> = result.results::<VersionKey>()?;
+
+    db(&ctx)?
+        .prepare("DELETE FROM project_versions WHERE id = ?1 AND project_id = ?2")
+        .bind(&[version_id.into(), project_id.clone().into()])?
+        .run()
+        .await?;
+
+    for key in keys {
+        let _ = ifcs_bucket(&ctx)?.delete(&key.ifc_key).await;
+    }
+
+    let glb_cache_key = glb_key_for_project(&project_id);
+    let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
+
+    Response::empty()
+}
+
+/// Serves an IFC model from R2 by its version id and filename.
 pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let project_id = ctx.param("project_id").cloned().unwrap_or_default();
+    let version_id = ctx.param("version_id").cloned().unwrap_or_default();
     let filename = ctx.param("filename").cloned().unwrap_or_default();
-    if project_id.is_empty() || filename.is_empty() {
+    if version_id.is_empty() || filename.is_empty() {
         return error_response("Invalid IFC key", 400);
     }
-    let key = format!("ifcs/{project_id}/{filename}");
 
-    let object = ifcs_bucket(&ctx)?.get(&key).execute().await?;
+    let result = db(&ctx)?
+        .prepare("SELECT ifc_key FROM project_versions WHERE id = ?1 AND filename = ?2")
+        .bind(&[version_id.into(), filename.clone().into()])?
+        .all()
+        .await?;
+    let keys: Vec<VersionKey> = result.results::<VersionKey>()?;
+    let Some(key) = keys.into_iter().next() else {
+        return error_response("Not found", 404);
+    };
+
+    let object = ifcs_bucket(&ctx)?.get(&key.ifc_key).execute().await?;
 
     let Some(object) = object else {
         return error_response("Not found", 404);
@@ -471,11 +629,7 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
         return error_response("Invalid project id", 400);
     }
 
-    let project = fetch_project(&ctx, &id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
-
-    let Some(key) = project.ifc_url else {
+    let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
         return error_response("No IFC model uploaded for this project", 404);
     };
 
@@ -545,7 +699,7 @@ pub async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> Result<
         return error_response("Forbidden", 403);
     }
 
-    let Some(key) = project.ifc_url else {
+    let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
         return error_response("No IFC model uploaded for this project", 404);
     };
 
@@ -621,7 +775,9 @@ async fn ensure_glb_cached(
 
 /// Whether the given account may edit or delete the project.
 fn can_edit_project(account: &Account, project: &Project) -> bool {
-    account.role == "admin" || account.id == project.author_id
+    account.role == "admin"
+        || account.id == project.author_id
+        || project.collaborator_ids.contains(&account.id)
 }
 
 pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Result<Response> {
@@ -690,6 +846,39 @@ pub async fn increment_project_downloads(req: Request, ctx: RouteContext<()>) ->
     Response::from_json(&updated)
 }
 
+/// Fetches all versions for a project, optionally including undefined-state
+/// versions. Versions are ordered newest first.
+async fn fetch_project_versions(
+    ctx: &RouteContext<()>,
+    project_id: &str,
+    include_undefined: bool,
+) -> Result<Vec<ProjectVersion>> {
+    let sql = if include_undefined {
+        "SELECT id, project_id, filename, ifc_key, state, created_at FROM project_versions WHERE project_id = ?1 ORDER BY created_at DESC"
+    } else {
+        "SELECT id, project_id, filename, ifc_key, state, created_at FROM project_versions WHERE project_id = ?1 AND state != 'undefined' ORDER BY created_at DESC"
+    };
+    let result = db(ctx)?
+        .prepare(sql)
+        .bind(&[project_id.into()])?
+        .all()
+        .await?;
+    result.results::<ProjectVersion>()
+}
+
+/// Returns the R2 key of the best visible IFC version for a project.
+///
+/// Prefers the newest version with the most mature state among visible
+/// versions. Returns `None` when no visible version exists.
+async fn latest_visible_ifc_key(
+    ctx: &RouteContext<()>,
+    project_id: &str,
+) -> Result<Option<String>> {
+    let versions = fetch_project_versions(ctx, project_id, false).await?;
+    let key = versions.into_iter().next().map(|version| version.ifc_key);
+    Ok(key)
+}
+
 /// Fetches a single project by id, returning `None` when no row matches.
 async fn fetch_project(ctx: &RouteContext<()>, id: &str) -> Result<Option<Project>> {
     let result = db(ctx)?
@@ -697,8 +886,8 @@ async fn fetch_project(ctx: &RouteContext<()>, id: &str) -> Result<Option<Projec
         .bind(&[id.into()])?
         .all()
         .await?;
-    let mut projects: Vec<Project> = result.results::<Project>()?;
-    Ok(projects.pop())
+    let projects: Vec<Project> = result.results::<Project>()?;
+    Ok(projects.into_iter().next())
 }
 
 #[cfg(test)]
@@ -733,7 +922,6 @@ mod tests {
             downloads: 0,
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
-            ifc_url: None,
         }
     }
 
@@ -751,7 +939,6 @@ mod tests {
             downloads: 0,
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
-            ifc_url: None,
         }
     }
 

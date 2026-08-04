@@ -2,8 +2,8 @@
 
 use crate::data::error::RequestError;
 use crate::data::project_types::{
-    IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, ValidationErrorResponse,
-    icon_src_from_key, ifc_src_from_key,
+    IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, ProjectVersion,
+    ValidationErrorResponse, icon_src_from_key,
 };
 use crate::utils::api_url;
 use gloo_net::http::Request;
@@ -354,10 +354,14 @@ pub async fn delete_project_ifc(id: &str) -> Result<(), RequestError> {
 ///
 /// The backend stores the file in R2 and returns the object key, which is
 /// converted into a frontend download URL.
-pub async fn upload_project_ifc(id: &str, file: web_sys::File) -> Result<String, RequestError> {
+pub async fn upload_project_ifc(
+    id: &str,
+    file: web_sys::File,
+) -> Result<ProjectVersion, RequestError> {
     #[derive(Deserialize)]
     struct UploadResponse {
         ifc_key: String,
+        version_id: String,
     }
 
     let url = api_url(&format!("/projects/{id}/ifc"));
@@ -386,7 +390,16 @@ pub async fn upload_project_ifc(id: &str, file: web_sys::File) -> Result<String,
                     "Failed to parse IFC upload response (status={status}): {err}\n{text}"
                 ))
             })?;
-            Ok(ifc_src_from_key(&upload.ifc_key))
+            Ok(ProjectVersion {
+                id: upload.version_id,
+                project_id: id.to_string(),
+                filename: file.name(),
+                ifc_key: upload.ifc_key.clone(),
+                state: crate::metadata::version_state::VersionState::Undefined,
+                created_at: crate::data::project_types::now_utc()
+                    .format(&time::format_description::well_known::Rfc3339)
+                    .unwrap_or_default(),
+            })
         }
         Ok(response) => {
             let status = response.status();
@@ -398,6 +411,109 @@ pub async fn upload_project_ifc(id: &str, file: web_sys::File) -> Result<String,
         }
         Err(err) => Err(RequestError::Network(format!(
             "Failed to upload IFC model: {err}"
+        ))),
+    }
+}
+
+/// Fetches the IFC versions for the given project.
+///
+/// Undefined versions are only included when the caller can edit the project.
+pub async fn fetch_project_versions(id: &str) -> Result<Vec<ProjectVersion>, RequestError> {
+    let url = api_url(&format!("/projects/{id}/versions"));
+    match Request::get(&url)
+        .credentials(RequestCredentials::Include)
+        .send()
+        .await
+    {
+        Ok(response) if response.ok() => {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            serde_json::from_str::<Vec<ProjectVersion>>(&text).map_err(|err| {
+                RequestError::Parse(format!(
+                    "Failed to parse versions JSON from {url}: {err:?} (status={status}, body={text:?})"
+                ))
+            })
+        }
+        Ok(response) => {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to fetch versions from {url}: {body}"),
+            })
+        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to fetch versions from {url}: {err:?}"
+        ))),
+    }
+}
+
+/// Updates the state of a single project version.
+pub async fn update_project_version_state(
+    project_id: &str,
+    version_id: &str,
+    state: crate::metadata::version_state::VersionState,
+) -> Result<(), RequestError> {
+    let url = api_url(&format!("/projects/{project_id}/versions/{version_id}"));
+    let body = serde_json::to_string(&serde_json::json!({
+        "state": serde_json::to_string(&state).unwrap_or_default().trim_matches('"')
+    }))
+    .map_err(|err| {
+        RequestError::Serialize(format!("Failed to serialize version state update: {err}"))
+    })?;
+
+    let request = Request::patch(&url)
+        .credentials(RequestCredentials::Include)
+        .header("Content-Type", "application/json")
+        .body(body)
+        .map_err(|err| {
+            RequestError::BuildRequest(format!(
+                "Failed to build version state update request: {err}"
+            ))
+        })?;
+
+    match request.send().await {
+        Ok(response) if response.ok() => Ok(()),
+        Ok(response) => {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to update version state: {body}"),
+            })
+        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to update version state: {err}"
+        ))),
+    }
+}
+
+/// Deletes a single project version.
+pub async fn delete_project_version(
+    project_id: &str,
+    version_id: &str,
+) -> Result<(), RequestError> {
+    let url = api_url(&format!("/projects/{project_id}/versions/{version_id}"));
+    let request = Request::delete(&url)
+        .credentials(RequestCredentials::Include)
+        .header("Content-Type", "application/json")
+        .body("{}")
+        .map_err(|err| {
+            RequestError::BuildRequest(format!("Failed to build version delete request: {err}"))
+        })?;
+
+    match request.send().await {
+        Ok(response) if response.ok() => Ok(()),
+        Ok(response) => {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to delete version: {body}"),
+            })
+        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to delete version: {err}"
         ))),
     }
 }

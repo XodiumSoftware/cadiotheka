@@ -11,11 +11,13 @@ use crate::contexts::{
     ProjectsContext, SearchContext,
 };
 use crate::data::{
-    AccountData, AccountRole, convert_project_glb, delete_project, delete_project_ifc,
-    fetch_projects, increment_project_downloads, update_project_collaborators,
+    AccountData, AccountRole, ProjectVersion, convert_project_glb, delete_project,
+    delete_project_version, fetch_project_versions, fetch_projects, ifc_src_from_key,
+    increment_project_downloads, latest_visible_ifc_url, update_project_collaborators,
     update_project_description, update_project_platforms, update_project_tags,
-    update_project_title, upload_project_ifc,
+    update_project_title, update_project_version_state, upload_project_ifc,
 };
+use crate::metadata::VersionState;
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use crate::utils::{api_url, placeholder_color, placeholder_letter};
@@ -201,6 +203,195 @@ fn edit_pencil_icon(class: &'static str) -> impl IntoView {
     }
 }
 
+/// File icon used for IFC version cards.
+fn ifc_file_icon(class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="12" y1="18" x2="12" y2="12" />
+            <line x1="9" y1="15" x2="15" y2="15" />
+        </svg>
+    }
+}
+
+/// Dropdown menu that lets editors change a version's maturity state.
+#[component]
+fn VersionStateDropdown(
+    #[prop(into)] state: Signal<VersionState>,
+    #[prop(into)] on_change: Callback<VersionState>,
+) -> impl IntoView {
+    view! {
+        <div class="dropdown dropdown-bottom">
+            <div
+                tabindex="0"
+                role="button"
+                class=move || format!("w-10 h-10 rounded-none flex items-center justify-center cursor-pointer {}", state.get().badge_class())
+                aria-label=move || format!("Current state: {}. Open state selector.", state.get().label())
+            >
+                {ifc_file_icon("w-5 h-5")}
+            </div>
+            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-none z-50 w-40 p-2 shadow border border-base-content/10">
+                {VersionState::VARIANTS.iter().map(|variant| {
+                    let variant = *variant;
+                    let label = variant.label();
+                    let is_current = move || state.get() == variant;
+                    view! {
+                        <li>
+                            <button
+                                type="button"
+                                class=move || {
+                                    if is_current() {
+                                        "flex items-center gap-2 text-base-content font-medium".to_string()
+                                    } else {
+                                        "flex items-center gap-2 text-base-content/70".to_string()
+                                    }
+                                }
+                                on:click=move |_| on_change.run(variant)
+                            >
+                                <span class=format!("badge badge-xs {}", variant.badge_class())></span>
+                                <span>{label}</span>
+                            </button>
+                        </li>
+                    }
+                }).collect_view()}
+            </ul>
+        </div>
+    }
+}
+
+/// Static badge that shows a version's state color to non-editors.
+#[component]
+fn VersionStateBadge(#[prop(into)] state: Signal<VersionState>) -> impl IntoView {
+    view! {
+        <div
+            class=move || format!("w-10 h-10 rounded-none flex items-center justify-center {}", state.get().badge_class())
+            aria-label=move || format!("State: {}", state.get().label())
+        >
+            {ifc_file_icon("w-5 h-5")}
+        </div>
+    }
+}
+
+/// Card displaying a single IFC version with state, metadata, and actions.
+#[component]
+fn VersionCard(
+    #[prop(into)] version: ProjectVersion,
+    #[prop(into)] can_edit: Signal<bool>,
+    #[prop(into)] is_deleting: Signal<bool>,
+    #[prop(into)] on_state_change: Callback<VersionState>,
+    #[prop(into)] on_delete: Callback<()>,
+    #[prop(into)] on_download: Callback<()>,
+) -> impl IntoView {
+    let state = Signal::derive({
+        let version = version.clone();
+        move || version.state
+    });
+    let filename = version.filename.clone();
+    let created_at = version.created_at.clone();
+
+    view! {
+        <div class="relative group rounded-none border border-base-content/10 bg-base-200/30 p-4 flex items-center gap-3 hover:border-primary transition-colors">
+            {move || {
+                if can_edit.get() {
+                    view! {
+                        <VersionStateDropdown
+                            state=state
+                            on_change=Callback::new({
+                                let on_state_change = on_state_change;
+                                move |new_state: VersionState| on_state_change.run(new_state)
+                            })
+                        />
+                    }
+                        .into_any()
+                } else {
+                    view! { <VersionStateBadge state=state /> }.into_any()
+                }
+            }}
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-base-content truncate">{filename.clone()}</p>
+                <p class="text-xs text-base-content/50">{created_at.clone()}</p>
+                <p class="text-xs">
+                    <span class=move || format!("badge badge-xs {}", state.get().badge_class())>
+                        {move || state.get().label()}
+                    </span>
+                </p>
+            </div>
+            {move || {
+                if can_edit.get() {
+                    view! {
+                        <button
+                            type="button"
+                            class=move || {
+                                if is_deleting.get() {
+                                    "btn btn-ghost btn-xs rounded-none text-base-content/50 tooltip tooltip-top"
+                                } else {
+                                    "btn btn-ghost btn-xs rounded-none text-error hover:text-error tooltip tooltip-top"
+                                }
+                            }
+                            data-tip="Delete version"
+                            disabled=move || is_deleting.get()
+                            on:click=move |_| on_delete.run(())
+                        >
+                            {move || if is_deleting.get() {
+                                view! {
+                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                }
+                                    .into_any()
+                            } else {
+                                view! {
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M3 6h18" />
+                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                    </svg>
+                                }
+                                    .into_any()
+                            }}
+                        </button>
+                    }
+                        .into_any()
+                } else {
+                    ().into_any()
+                }
+            }}
+            {move || {
+                if can_edit.get() {
+                    ().into_any()
+                } else {
+                    let filename_for_label = filename.clone();
+                    let filename_for_tip = filename.clone();
+                    view! {
+                        <button
+                            type="button"
+                            class="absolute inset-0 z-10 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border border-transparent group-hover:border-primary"
+                            aria-label=move || format!("Download {filename_for_label}")
+                            data-tip=move || format!("Download {filename_for_tip}")
+                            on:click=move |_| on_download.run(())
+                        >
+                            <svg
+                                class="w-8 h-8 text-primary"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                        </button>
+                    }
+                        .into_any()
+                }
+            }}
+        </div>
+    }
+}
+
 /// Returns a platform's wire id.
 fn platform_id(platform: &Platform) -> String {
     platform.id.clone()
@@ -355,11 +546,13 @@ fn ProjectModalContent(
     let metadata = MetadataContext::use_context();
     let is_editable = Signal::derive({
         let author_id = card.author_id.clone();
+        let collaborator_ids = card.collaborator_ids.clone();
         move || {
-            current_user
-                .account
-                .get()
-                .is_some_and(|me| me.role == AccountRole::Admin || me.id == author_id)
+            current_user.account.get().is_some_and(|me| {
+                me.role == AccountRole::Admin
+                    || me.id == author_id
+                    || collaborator_ids.contains(&me.id)
+            })
         }
     });
 
@@ -390,13 +583,30 @@ fn ProjectModalContent(
     let (draft_collaborator_ids, set_draft_collaborator_ids) =
         signal(card.collaborator_ids.clone());
 
-    let (ifc_url, set_ifc_url) = signal(card.ifc_url.clone());
+    let (versions, set_versions) = signal(Vec::<ProjectVersion>::new());
     let (is_uploading_ifc, set_is_uploading_ifc) = signal(false);
     let (is_downloading, set_is_downloading) = signal(false);
     let (glb_status, set_glb_status) = signal(GlbConversionStatus::Idle);
 
     let project_id = card.id.clone();
     let viewer_ref = NodeRef::<leptos::html::Div>::new();
+
+    Effect::new({
+        let project_id = project_id.clone();
+        move |_| {
+            let project_id = project_id.clone();
+            leptos::task::spawn_local(async move {
+                match fetch_project_versions(&project_id).await {
+                    Ok(fetched) => set_versions.set(fetched),
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to load project versions: {}", err.message()).into(),
+                        );
+                    }
+                }
+            });
+        }
+    });
 
     Effect::new({
         move |_| {
@@ -484,19 +694,22 @@ fn ProjectModalContent(
                 set_is_uploading_ifc.set(true);
                 set_glb_status.set(GlbConversionStatus::Idle);
                 match upload_project_ifc(&project_id, file).await {
-                    Ok(url) => {
-                        set_ifc_url.set(Some(url.clone()));
+                    Ok(version) => {
+                        let version_for_projects = version.clone();
+                        set_versions.update(|versions| {
+                            versions.insert(0, version);
+                        });
                         projects_ctx.set_projects.update(|projects| {
                             for project in projects.iter_mut() {
                                 if project.id == project_id {
-                                    project.ifc_url = Some(url.clone());
+                                    project.versions.insert(0, version_for_projects.clone());
                                     break;
                                 }
                             }
                         });
                         modal.set_card.update(|opt| {
                             if let Some(card) = opt.as_mut() {
-                                card.ifc_url = Some(url.clone());
+                                card.versions.insert(0, version_for_projects.clone());
                             }
                         });
 
@@ -553,41 +766,94 @@ fn ProjectModalContent(
         }
     };
 
-    let (is_deleting_ifc, set_is_deleting_ifc) = signal(false);
+    let (deleting_version_id, set_deleting_version_id) = signal(Option::<String>::None);
 
-    let delete_ifc = {
+    let update_version_state = {
         let project_id = project_id.clone();
-        Callback::new(move |()| {
+        Callback::new(move |(version_id, state): (String, VersionState)| {
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
-                set_is_deleting_ifc.set(true);
-                match delete_project_ifc(&project_id).await {
+                match update_project_version_state(&project_id, &version_id, state).await {
                     Ok(()) => {
-                        set_ifc_url.set(None);
-                        set_glb_status.set(GlbConversionStatus::Idle);
+                        set_versions.update(|versions| {
+                            for version in versions.iter_mut() {
+                                if version.id == version_id {
+                                    version.state = state;
+                                    break;
+                                }
+                            }
+                        });
                         projects_ctx.set_projects.update(|projects| {
                             for project in projects.iter_mut() {
                                 if project.id == project_id {
-                                    project.ifc_url = None;
+                                    if let Some(version) =
+                                        project.versions.iter_mut().find(|v| v.id == version_id)
+                                    {
+                                        version.state = state;
+                                    }
                                     break;
                                 }
                             }
                         });
                         modal.set_card.update(|opt| {
                             if let Some(card) = opt.as_mut() {
-                                card.ifc_url = None;
+                                if let Some(version) =
+                                    card.versions.iter_mut().find(|v| v.id == version_id)
+                                {
+                                    version.state = state;
+                                }
                             }
                         });
-                        show_toast("IFC model deleted".to_string());
+                        show_toast("Version state updated".to_string());
                     }
                     Err(err) => {
                         leptos::web_sys::console::error_1(
-                            &format!("Failed to delete IFC model: {}", err.message()).into(),
+                            &format!("Failed to update version state: {}", err.message()).into(),
                         );
-                        show_toast("Failed to delete IFC model".to_string());
+                        show_toast("Failed to update version state".to_string());
                     }
                 }
-                set_is_deleting_ifc.set(false);
+            });
+        })
+    };
+
+    let delete_version = {
+        let project_id = project_id.clone();
+        Callback::new(move |version_id: String| {
+            let project_id = project_id.clone();
+            leptos::task::spawn_local(async move {
+                set_deleting_version_id.set(Some(version_id.clone()));
+                match delete_project_version(&project_id, &version_id).await {
+                    Ok(()) => {
+                        set_versions.update(|versions| {
+                            versions.retain(|version| version.id != version_id);
+                        });
+                        if latest_visible_ifc_url(&versions.get_untracked()).is_none() {
+                            set_glb_status.set(GlbConversionStatus::Idle);
+                        }
+                        projects_ctx.set_projects.update(|projects| {
+                            for project in projects.iter_mut() {
+                                if project.id == project_id {
+                                    project.versions.retain(|v| v.id != version_id);
+                                    break;
+                                }
+                            }
+                        });
+                        modal.set_card.update(|opt| {
+                            if let Some(card) = opt.as_mut() {
+                                card.versions.retain(|v| v.id != version_id);
+                            }
+                        });
+                        show_toast("Version deleted".to_string());
+                    }
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to delete version: {}", err.message()).into(),
+                        );
+                        show_toast("Failed to delete version".to_string());
+                    }
+                }
+                set_deleting_version_id.set(None);
             });
         })
     };
@@ -963,16 +1229,14 @@ fn ProjectModalContent(
     let increment_downloads = {
         let project_id = card.id.clone();
         let set_projects = projects_ctx.set_projects;
-        Callback::new(move |()| {
+        Callback::new(move |url: String| {
             if is_downloading.get_untracked() {
                 return;
             }
-            let Some(url) = ifc_url.get() else {
-                return;
-            };
 
             let project_id = project_id.clone();
-            let url = url.clone();
+            let set_is_downloading = set_is_downloading;
+            let set_projects = set_projects;
             set_is_downloading.set(true);
             leptos::task::spawn_local(async move {
                 match increment_project_downloads(&project_id).await {
@@ -1157,11 +1421,12 @@ fn ProjectModalContent(
                                                     </div>
                                                 </div>
                                                 <div class="flex-1 min-h-0 relative">
-                                                    <IfcViewer
+                                                    IfcViewer
                                                         url=Signal::derive({
                                                             let project_id = project_id.clone();
                                                             move || {
-                                                                ifc_url.get().map(|_| api_url(&format!("/projects/{project_id}/glb")))
+                                                                latest_visible_ifc_url(&versions.get()
+                                                                ).map(|_| api_url(&format!("/projects/{project_id}/glb")))
                                                             }
                                                         })
                                                         storage_key=Signal::derive({
@@ -1184,7 +1449,7 @@ fn ProjectModalContent(
                                 }
                                     .into_any(),
                                 ProjectDetailsTab::Versions => view! {
-                                    <div class="min-h-0 h-full flex flex-col space-y-4">
+                                    <div class="min-h-0 h-full flex flex-col space-y-4 overflow-y-auto pr-1">
                                         {move || {
                                             if is_editable.get() && edit_mode.get() {
                                                 view! {
@@ -1223,132 +1488,27 @@ fn ProjectModalContent(
                                                 ().into_any()
                                             }
                                         }}
+                                        {move || match glb_status.get() {
+                                            GlbConversionStatus::Idle => ().into_any(),
+                                            GlbConversionStatus::Converting => view! {
+                                                <p class="text-xs text-primary flex items-center gap-1.5">
+                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                    <span>"Converting latest IFC to 3D model..."</span>
+                                                </p>
+                                            }.into_any(),
+                                            GlbConversionStatus::Ready => view! {
+                                                <p class="text-xs text-success flex items-center gap-1.5">"Latest IFC is ready to view in 3D"</p>
+                                            }.into_any(),
+                                            GlbConversionStatus::NoGeometry => view! {
+                                                <p class="text-xs text-warning">"Latest IFC has no renderable geometry"</p>
+                                            }.into_any(),
+                                            GlbConversionStatus::Failed => view! {
+                                                <p class="text-xs text-error">"Failed to convert latest IFC to 3D"</p>
+                                            }.into_any(),
+                                        }}
                                         {move || {
-                                            if ifc_url.get().is_some() {
-                                                view! {
-                                                    <div class="relative group rounded-none border border-base-content/10 bg-base-200/30 p-4 space-y-3 flex-shrink-0 hover:border-primary transition-colors">
-                                                        <div class="flex items-center gap-3">
-                                                            <div class="w-10 h-10 rounded-none bg-primary/10 text-primary flex items-center justify-center">
-                                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                                                    <polyline points="14 2 14 8 20 8" />
-                                                                    <line x1="12" y1="18" x2="12" y2="12" />
-                                                                    <line x1="9" y1="15" x2="15" y2="15" />
-                                                                </svg>
-                                                            </div>
-                                                            <div class="flex-1 min-w-0">
-                                                                <p class="text-sm font-medium text-base-content truncate">"model.ifc"</p>
-                                                                <p class="text-xs text-base-content/50">"Latest version"</p>
-                                                                {move || match glb_status.get() {
-                                                                    GlbConversionStatus::Idle => ().into_any(),
-                                                                    GlbConversionStatus::Converting => view! {
-                                                                        <p class="text-xs text-primary flex items-center gap-1.5">
-                                                                            <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                                                            <span>"Converting to 3D model..."</span>
-                                                                        </p>
-                                                                    }.into_any(),
-                                                                    GlbConversionStatus::Ready => view! {
-                                                                        <p class="text-xs text-success flex items-center gap-1.5">"Ready to view in 3D"</p>
-                                                                    }.into_any(),
-                                                                    GlbConversionStatus::NoGeometry => view! {
-                                                                        <p class="text-xs text-warning">"No renderable geometry"</p>
-                                                                    }.into_any(),
-                                                                    GlbConversionStatus::Failed => view! {
-                                                                        <p class="text-xs text-error">"Conversion failed"</p>
-                                                                    }.into_any(),
-                                                                }}
-                                                            </div>
-                                                            {move || {
-                                                                if is_editable.get() && edit_mode.get() {
-                                                                    view! {
-                                                                        <button
-                                                                            type="button"
-                                                                            class=move || {
-                                                                                if is_deleting_ifc.get() {
-                                                                                    "relative z-20 btn btn-ghost btn-xs rounded-none text-base-content/50 tooltip tooltip-top"
-                                                                                } else {
-                                                                                    "relative z-20 btn btn-ghost btn-xs rounded-none text-error hover:text-error tooltip tooltip-top"
-                                                                                }
-                                                                            }
-                                                                            data-tip="Delete version"
-                                                                            disabled=move || is_deleting_ifc.get()
-                                                                            on:click=move |_| delete_ifc.run(())
-                                                                        >
-                                                                            {move || if is_deleting_ifc.get() {
-                                                                                view! {
-                                                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                                                                }
-                                                                                    .into_any()
-                                                                            } else {
-                                                                                view! {
-                                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                                                        <path d="M3 6h18" />
-                                                                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                                                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                                                                                    </svg>
-                                                                                }
-                                                                                    .into_any()
-                                                                            }}
-                                                                        </button>
-                                                                    }
-                                                                        .into_any()
-                                                                } else {
-                                                                    ().into_any()
-                                                                }
-                                                            }}
-                                                        </div>
-                                                        {move || {
-                                                            if is_editable.get() && edit_mode.get() {
-                                                                return ().into_any();
-                                                            }
-                                                            let downloading = is_downloading.get();
-                                                            view! {
-                                                                <button
-                                                                    type="button"
-                                                                    class=move || {
-                                                                        if downloading {
-                                                                            "absolute inset-0 z-10 flex items-center justify-center bg-base-100/80 cursor-not-allowed"
-                                                                        } else {
-                                                                            "absolute inset-0 z-10 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border border-transparent group-hover:border-primary"
-                                                                        }
-                                                                    }
-                                                                    disabled=move || downloading
-                                                                    aria-label=move || if downloading { "Downloading IFC..." } else { "Download IFC" }
-                                                                    data-tip=move || if downloading { "Downloading IFC..." } else { "Download IFC" }
-                                                                    on:click={
-                                                                        let cb = increment_downloads;
-                                                                        move |_| cb.run(())
-                                                                    }
-                                                                >
-                                                                    {if downloading {
-                                                                        view! {
-                                                                            <span class="loading loading-spinner loading-md text-primary" aria-hidden="true"></span>
-                                                                        }.into_any()
-                                                                    } else {
-                                                                        view! {
-                                                                            <svg
-                                                                                class="w-8 h-8 text-primary"
-                                                                                viewBox="0 0 24 24"
-                                                                                fill="none"
-                                                                                stroke="currentColor"
-                                                                                stroke-width="2"
-                                                                                stroke-linecap="round"
-                                                                                stroke-linejoin="round"
-                                                                                aria-hidden="true"
-                                                                            >
-                                                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                                                <polyline points="7 10 12 15 17 10" />
-                                                                                <line x1="12" y1="15" x2="12" y2="3" />
-                                                                            </svg>
-                                                                        }.into_any()
-                                                                    }}
-                                                                </button>
-                                                            }.into_any()
-                                                        }}
-                                                    </div>
-                                                }
-                                                    .into_any()
-                                            } else {
+                                            let versions = versions.get();
+                                            if versions.is_empty() {
                                                 view! {
                                                     <div class="rounded-none border border-base-content/10 bg-base-200/30 p-8 text-center space-y-2">
                                                         <p class="text-base-content/50 text-sm">"No IFC model uploaded yet."</p>
@@ -1365,6 +1525,39 @@ fn ProjectModalContent(
                                                     </div>
                                                 }
                                                     .into_any()
+                                            } else {
+                                                versions.into_iter().map(|version| {
+                                                    let version_id = version.id.clone();
+                                                    let version_for_state = version.clone();
+                                                    let version_for_download = version.clone();
+                                                    let is_deleting = Signal::derive({
+                                                        let version_id = version_id.clone();
+                                                        move || deleting_version_id.get().as_ref() == Some(&version_id)
+                                                    });
+                                                    let can_edit_this = Signal::derive(move || is_editable.get() && edit_mode.get());
+                                                    view! {
+                                                        <VersionCard
+                                                            version=version
+                                                            can_edit=can_edit_this
+                                                            is_deleting=is_deleting
+                                                            on_state_change=Callback::new({
+                                                                let version_id = version_for_state.id.clone();
+                                                                move |state: VersionState| update_version_state.run((version_id.clone(), state))
+                                                            })
+                                                            on_delete=Callback::new({
+                                                                let version_id = version_for_state.id.clone();
+                                                                move |()| delete_version.run(version_id.clone())
+                                                            })
+                                                            on_download=Callback::new({
+                                                                let version = version_for_download.clone();
+                                                                move |()| {
+                                                                    let url = ifc_src_from_key(&version.ifc_key);
+                                                                    increment_downloads.run(url);
+                                                                }
+                                                            })
+                                                        />
+                                                    }
+                                                }).collect_view().into_any()
                                             }
                                         }}
                                     </div>
@@ -1460,7 +1653,7 @@ fn ProjectModalContent(
                                     <div class="flex items-center gap-2">
                                         {
                                             move || {
-                                                let has_ifc = ifc_url.get().is_some();
+                                                let has_ifc = latest_visible_ifc_url(&versions.get()).is_some();
                                                 let downloading = is_downloading.get();
                                                 let editing = is_editable.get() && edit_mode.get();
                                                 let label = if downloading {
@@ -1487,7 +1680,11 @@ fn ProjectModalContent(
                                                         disabled=move || !has_ifc || downloading || editing
                                                         on:click={
                                                             let cb = increment_downloads;
-                                                            move |_| cb.run(())
+                                                            move |_| {
+                                                                if let Some(url) = latest_visible_ifc_url(&versions.get()) {
+                                                                    cb.run(url);
+                                                                }
+                                                            }
                                                         }
                                                     >
                                                         <span class="flex items-center gap-1">

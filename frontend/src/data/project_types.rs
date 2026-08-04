@@ -1,3 +1,4 @@
+pub use crate::metadata::version_state::VersionState;
 use crate::utils::api_url;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
@@ -44,6 +45,23 @@ mod favorites_json_string {
     }
 }
 
+/// A single IFC file version attached to a project.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct ProjectVersion {
+    /// Unique version identifier.
+    pub id: String,
+    /// Identifier of the project this version belongs to.
+    pub project_id: String,
+    /// Original filename of the uploaded IFC model.
+    pub filename: String,
+    /// R2 object key for the stored IFC file.
+    pub ifc_key: String,
+    /// Maturity state of this version.
+    pub state: VersionState,
+    /// RFC 3339 timestamp when the version was uploaded.
+    pub created_at: String,
+}
+
 /// Data displayed on a project card.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct ProjectData {
@@ -80,9 +98,9 @@ pub struct ProjectData {
     /// Optional icon URL (when absent, a colored placeholder is generated).
     #[serde(default, deserialize_with = "deserialize_icon_key")]
     pub icon_url: Option<IconUrl>,
-    /// Optional IFC model download URL (when absent, no model has been uploaded).
-    #[serde(default, deserialize_with = "deserialize_ifc_key")]
-    pub ifc_url: Option<String>,
+    /// IFC file versions attached to the project.
+    #[serde(default)]
+    pub versions: Vec<ProjectVersion>,
 }
 
 fn deserialize_icon_key<'de, D>(deserializer: D) -> Result<Option<IconUrl>, D::Error>
@@ -93,21 +111,21 @@ where
     Ok(key.map(|key| icon_src_from_key(&key)))
 }
 
-fn deserialize_ifc_key<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let key = Option::<String>::deserialize(deserializer)?;
-    Ok(key.map(|key| ifc_src_from_key(&key)))
-}
-
-/// Builds a frontend URL from an IFC R2 object key (`ifcs/{project_id}/{filename}`).
+/// Builds a frontend URL from an IFC R2 object key (`ifcs/{version_id}/{filename}`).
 pub fn ifc_src_from_key(key: &str) -> String {
     let mut parts = key.split('/');
     let _prefix = parts.next();
-    let project_id = parts.next().unwrap_or_default();
+    let version_id = parts.next().unwrap_or_default();
     let filename = parts.next().unwrap_or_default();
-    api_url(&format!("/ifcs/{project_id}/{filename}"))
+    api_url(&format!("/ifcs/{version_id}/{filename}"))
+}
+
+/// Returns the public download URL for the latest visible IFC version, if any.
+pub fn latest_visible_ifc_url(versions: &[ProjectVersion]) -> Option<String> {
+    versions
+        .iter()
+        .find(|version| version.state.is_public())
+        .map(|version| ifc_src_from_key(&version.ifc_key))
 }
 
 /// Returns the current UTC time using the JavaScript `Date` API.
@@ -141,7 +159,7 @@ pub fn new_project_payload(
         favorites: vec![],
         timestamp: now_utc(),
         icon_url: None,
-        ifc_url: None,
+        versions: vec![],
     }
 }
 
@@ -207,8 +225,47 @@ mod tests {
             ],
             timestamp: datetime!(2026-07-07 14:30:00 UTC),
             icon_url: None,
-            ifc_url: None,
+            versions: vec![],
         }
+    }
+
+    #[test]
+    fn latest_visible_ifc_url_prefers_first_public_version() {
+        let versions = vec![
+            ProjectVersion {
+                id: "v1".to_owned(),
+                project_id: "p1".to_owned(),
+                filename: "a.ifc".to_owned(),
+                ifc_key: "ifcs/v1/a.ifc".to_owned(),
+                state: VersionState::Undefined,
+                created_at: "2026-01-01T00:00:00Z".to_owned(),
+            },
+            ProjectVersion {
+                id: "v2".to_owned(),
+                project_id: "p1".to_owned(),
+                filename: "b.ifc".to_owned(),
+                ifc_key: "ifcs/v2/b.ifc".to_owned(),
+                state: VersionState::Stable,
+                created_at: "2026-01-02T00:00:00Z".to_owned(),
+            },
+        ];
+        assert_eq!(
+            latest_visible_ifc_url(&versions),
+            Some(api_url("/ifcs/v2/b.ifc"))
+        );
+    }
+
+    #[test]
+    fn latest_visible_ifc_url_returns_none_when_all_undefined() {
+        let versions = vec![ProjectVersion {
+            id: "v1".to_owned(),
+            project_id: "p1".to_owned(),
+            filename: "a.ifc".to_owned(),
+            ifc_key: "ifcs/v1/a.ifc".to_owned(),
+            state: VersionState::Undefined,
+            created_at: "2026-01-01T00:00:00Z".to_owned(),
+        }];
+        assert_eq!(latest_visible_ifc_url(&versions), None);
     }
 
     #[test]
@@ -267,6 +324,14 @@ mod tests {
 
     /// Tags and platforms are stored as wire-id strings resolved against the
     /// metadata fetched from `/data/tags` and `/data/platforms`.
+    #[test]
+    fn ifc_src_from_key_uses_version_id_segment() {
+        assert_eq!(
+            ifc_src_from_key("ifcs/vid-123/model.ifc"),
+            api_url("/ifcs/vid-123/model.ifc")
+        );
+    }
+
     #[test]
     fn project_uses_known_tags_and_platforms() {
         let project = sample_project();

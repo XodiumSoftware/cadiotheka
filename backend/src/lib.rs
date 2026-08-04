@@ -31,8 +31,10 @@ pub(crate) mod routes {
     pub(crate) const PROJECT_FAVORITES: &str = "/data/projects/:id/favorites";
     pub(crate) const PROJECT_DOWNLOADS: &str = "/data/projects/:id/downloads";
     pub(crate) const PROJECT_IFC: &str = "/data/projects/:id/ifc";
+    pub(crate) const PROJECT_VERSIONS: &str = "/data/projects/:id/versions";
+    pub(crate) const PROJECT_VERSION: &str = "/data/projects/:id/versions/:version_id";
     pub(crate) const PROJECT_GLBS: &str = "/data/projects/:id/glb";
-    pub(crate) const IFCS: &str = "/data/ifcs/:project_id/:filename";
+    pub(crate) const IFCS: &str = "/data/ifcs/:version_id/:filename";
     pub(crate) const LOGIN_GITHUB: &str = "/login/github";
     pub(crate) const AUTH_GITHUB_CALLBACK: &str = "/auth/github/callback";
     pub(crate) const LOGIN_GOOGLE: &str = "/login/google";
@@ -159,6 +161,18 @@ pub fn build_router() -> Router<'static, ()> {
         )
         .post_async(routes::PROJECT_IFC, api::projects::upload_project_ifc)
         .delete_async(routes::PROJECT_IFC, api::projects::delete_project_ifc)
+        .get_async(
+            routes::PROJECT_VERSIONS,
+            api::projects::list_project_versions,
+        )
+        .patch_async(
+            routes::PROJECT_VERSION,
+            api::projects::update_project_version,
+        )
+        .delete_async(
+            routes::PROJECT_VERSION,
+            api::projects::delete_project_version,
+        )
         .get_async(routes::PROJECT_GLBS, api::projects::serve_project_glb)
         .post_async(routes::PROJECT_GLBS, api::projects::convert_project_glb)
         .get_async(routes::IFCS, api::projects::serve_ifc)
@@ -279,8 +293,6 @@ mod tests {
         timestamp: String,
         #[serde(default)]
         icon_url: Option<String>,
-        #[serde(default)]
-        ifc_url: Option<String>,
     }
 
     #[test]
@@ -364,7 +376,6 @@ mod tests {
             downloads: 1200,
             favorites: vec!["fav-1".to_string()],
             timestamp: "2026-07-07T14:30:00Z".to_string(),
-            ifc_url: Some("ifcs/proj-1/model.ifc".to_string()),
         };
 
         let json = serde_json::to_string(&project).expect("project serializes");
@@ -384,6 +395,5 @@ mod tests {
         assert_eq!(parsed.favorites, "[\"fav-1\"]");
         assert_eq!(parsed.timestamp, project.timestamp);
         assert_eq!(parsed.icon_url, None);
-        assert_eq!(parsed.ifc_url, project.ifc_url);
     }
 }
