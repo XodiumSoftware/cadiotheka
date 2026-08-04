@@ -211,7 +211,7 @@ fn platform_label(platform: &Platform) -> String {
     platform.label.clone()
 }
 
-/// Returns a platform's Tailwind color class.
+/// Returns a platform's inline CSS color style.
 fn platform_color(platform: &Platform) -> String {
     platform.color.clone()
 }
@@ -226,7 +226,7 @@ fn tag_label(tag: &Tag) -> String {
     tag.label.clone()
 }
 
-/// Returns a tag's Tailwind color class.
+/// Returns a tag's inline CSS color style.
 fn tag_color(tag: &Tag) -> String {
     tag.color.clone()
 }
@@ -324,7 +324,8 @@ fn EditableChipSection<T: Clone + PartialEq + Send + Sync + 'static>(
                                 view! {
                                     <button
                                         type="button"
-                                        class=format!("{badge_class} {color}")
+                                        class=badge_class
+                                        style=color
                                         on:click=move |_| on_item_click.run(id_for_click.clone())
                                     >
                                         {label}
@@ -1633,13 +1634,13 @@ fn ProjectModalContent(
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
                                                 {platforms.get().iter().filter_map(|id| {
                                                     let platform = metadata.platform_by_id(id)?;
-                                                    let color = platform.color.clone();
+                                                    let style = platform.color.clone();
                                                     let label = platform.label.clone();
                                                     Some(view! {
-                                                        <span class=format!(
-                                                            "badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap {}",
-                                                            color
-                                                        )>
+                                                        <span
+                                                            class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
+                                                            style=style
+                                                        >
                                                             {label}
                                                         </span>
                                                     }.into_any())
@@ -1658,16 +1659,14 @@ fn ProjectModalContent(
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
                                                 {platforms.get().iter().filter_map(|id| {
                                                     let platform = metadata.platform_by_id(id)?;
-                                                    let color = platform.color.clone();
+                                                    let style = platform.color.clone();
                                                     let label = platform.label.clone();
                                                     let label_click = label.clone();
                                                     Some(view! {
                                                         <button
                                                             type="button"
-                                                            class=format!(
-                                                                "badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer {}",
-                                                                color
-                                                            )
+                                                            class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                                            style=style
                                                             on:click=move |_| apply_filter.run(label_click.clone())
                                                         >
                                                             {label}
@@ -1722,13 +1721,13 @@ fn ProjectModalContent(
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
                                                 {tags.get().iter().filter_map(|id| {
                                                     let tag = metadata.tag_by_id(id)?;
-                                                    let color = tag.color.clone();
+                                                    let style = tag.color.clone();
                                                     let label = tag.label.clone();
                                                     Some(view! {
-                                                        <span class=format!(
-                                                            "badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap {}",
-                                                            color
-                                                        )>
+                                                        <span
+                                                            class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
+                                                            style=style
+                                                        >
                                                             {label}
                                                         </span>
                                                     }.into_any())
@@ -1747,16 +1746,14 @@ fn ProjectModalContent(
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
                                                 {tags.get().iter().filter_map(|id| {
                                                     let tag = metadata.tag_by_id(id)?;
-                                                    let color = tag.color.clone();
+                                                    let style = tag.color.clone();
                                                     let label = tag.label.clone();
                                                     let label_click = label.clone();
                                                     Some(view! {
                                                         <button
                                                             type="button"
-                                                            class=format!(
-                                                                "badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer {}",
-                                                                color
-                                                            )
+                                                            class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                                            style=style
                                                             on:click=move |_| apply_filter.run(label_click.clone())
                                                         >
                                                             {label}

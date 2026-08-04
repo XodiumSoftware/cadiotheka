@@ -2,7 +2,7 @@
 //!
 //! Platforms are stored in the backend D1 database (`schemas/platforms.sql`)
 //! and served over `GET /data/platforms`. Each record pairs a stable wire id
-//! with its user-facing label and Tailwind color class.
+//! with its user-facing label and an inline CSS color style string.
 
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +13,7 @@ pub struct Platform {
     pub id: String,
     /// User-facing label (e.g. `Fusion 360`).
     pub label: String,
-    /// Tailwind-compatible CSS color class.
+    /// Inline CSS color style string, applied directly to the rendered element.
     pub color: String,
 }
 
@@ -22,7 +22,7 @@ pub fn platform_label(platform: &Platform) -> &str {
     &platform.label
 }
 
-/// Convenience accessor for a platform's Tailwind color class.
+/// Convenience accessor for a platform's inline CSS color style.
 pub fn platform_color(platform: &Platform) -> &str {
     &platform.color
 }
@@ -35,7 +35,7 @@ mod tests {
         Platform {
             id: "fusion_360".to_owned(),
             label: "Fusion 360".to_owned(),
-            color: "text-yellow-700".to_owned(),
+            color: "color:#a16207".to_owned(),
         }
     }
 
@@ -51,6 +51,6 @@ mod tests {
     fn platform_helpers_expose_fields() {
         let platform = sample();
         assert_eq!(platform_label(&platform), "Fusion 360");
-        assert_eq!(platform_color(&platform), "text-yellow-700");
+        assert_eq!(platform_color(&platform), "color:#a16207");
     }
 }

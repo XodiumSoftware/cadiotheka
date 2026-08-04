@@ -2,7 +2,7 @@
 //!
 //! Tags are stored in the backend D1 database (`schemas/tags.sql`) and served
 //! over `GET /data/tags`. Each record pairs a stable wire id with its
-//! user-facing label and Tailwind color class.
+//! user-facing label and an inline CSS color style string.
 
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +13,7 @@ pub struct Tag {
     pub id: String,
     /// User-facing label (e.g. `3D Model`).
     pub label: String,
-    /// Tailwind-compatible CSS color class.
+    /// Inline CSS color style string, applied directly to the rendered element.
     pub color: String,
 }
 
@@ -22,7 +22,7 @@ pub fn tag_label(tag: &Tag) -> &str {
     &tag.label
 }
 
-/// Convenience accessor for a tag's Tailwind color class.
+/// Convenience accessor for a tag's inline CSS color style.
 pub fn tag_color(tag: &Tag) -> &str {
     &tag.color
 }
@@ -35,7 +35,7 @@ mod tests {
         Tag {
             id: "3d_model".to_owned(),
             label: "3D Model".to_owned(),
-            color: "bg-blue-700 text-white".to_owned(),
+            color: "background-color:#1d4ed8;color:#ffffff".to_owned(),
         }
     }
 
@@ -51,6 +51,6 @@ mod tests {
     fn tag_helpers_expose_fields() {
         let tag = sample();
         assert_eq!(tag_label(&tag), "3D Model");
-        assert_eq!(tag_color(&tag), "bg-blue-700 text-white");
+        assert_eq!(tag_color(&tag), "background-color:#1d4ed8;color:#ffffff");
     }
 }

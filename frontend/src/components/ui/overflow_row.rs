@@ -4,14 +4,18 @@ use leptos::prelude::*;
 #[derive(Clone)]
 pub struct OverflowItem {
     pub label: String,
-    pub color_class: String,
+    /// Inline CSS style string for the item's color, e.g. `"background-color:#1d4ed8;color:#ffffff"`.
+    ///
+    /// Stored colors are applied directly via the `style` attribute so they work
+    /// regardless of Tailwind's build-time class scanning.
+    pub color_style: String,
 }
 
 impl OverflowItem {
-    pub fn new(label: impl Into<String>, color_class: impl Into<String>) -> Self {
+    pub fn new(label: impl Into<String>, color_style: impl Into<String>) -> Self {
         Self {
             label: label.into(),
-            color_class: color_class.into(),
+            color_style: color_style.into(),
         }
     }
 }
@@ -43,9 +47,10 @@ pub fn OverflowRow(
             {visible
                 .into_iter()
                 .map(|item| {
-                    let class = format!("{} {} whitespace-nowrap", badge_class, item.color_class);
+                    let class = format!("{badge_class} whitespace-nowrap");
+                    let style = item.color_style;
                     view! {
-                        <span class=class>{item.label}</span>
+                        <span class=class style=style>{item.label}</span>
                     }
                 })
                 .collect_view()}
