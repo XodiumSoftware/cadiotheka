@@ -45,8 +45,6 @@ pub fn IfcViewer(
     #[prop(optional)] show_grid_signal: Option<RwSignal<bool>>,
     #[prop(optional)] show_axes_signal: Option<RwSignal<bool>>,
     #[prop(optional)] shadows_signal: Option<RwSignal<bool>>,
-    #[prop(optional)] screenshot_signal: Option<RwSignal<bool>>,
-    #[prop(into, optional)] screenshot_filename: Option<Signal<String>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -57,7 +55,6 @@ pub fn IfcViewer(
     let show_grid = show_grid_signal.unwrap_or_else(|| RwSignal::new(true));
     let show_axes = show_axes_signal.unwrap_or_else(|| RwSignal::new(true));
     let shadows = shadows_signal.unwrap_or_else(|| RwSignal::new(true));
-    let screenshot = screenshot_signal.unwrap_or_else(|| RwSignal::new(false));
 
     let renderer: Rc<RefCell<Option<Renderer>>> = Rc::new(RefCell::new(None));
     let controls: Rc<RefCell<OrbitControls>> = Rc::new(RefCell::new(OrbitControls::default()));
@@ -333,40 +330,6 @@ pub fn IfcViewer(
                 }
             }
             request_render.borrow_mut()();
-        }
-    });
-
-    Effect::new({
-        let renderer = Rc::clone(&renderer);
-        move |_| {
-            if !screenshot.get() {
-                return;
-            }
-            screenshot.set(false);
-
-            let filename = screenshot_filename
-                .as_ref()
-                .map(|s| s.get())
-                .filter(|f| !f.is_empty())
-                .unwrap_or_else(|| {
-                    let now = time::OffsetDateTime::now_utc();
-                    format!(
-                        "cadiotheka-{:04}{:02}{:02}-{:02}{:02}{:02}.png",
-                        now.year(),
-                        now.month() as u8,
-                        now.day(),
-                        now.hour(),
-                        now.minute(),
-                        now.second()
-                    )
-                });
-
-            {
-                let mut renderer_ref = renderer.borrow_mut();
-                if let Some(renderer) = renderer_ref.as_mut() {
-                    renderer.download_screenshot(&filename);
-                }
-            }
         }
     });
 

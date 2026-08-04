@@ -289,27 +289,12 @@ impl Renderer {
         self.show_axes = show;
     }
 
-    /// Renders the current view and downloads it as a PNG file.
-    pub fn download_screenshot(&mut self, filename: &str) {
-        self.render();
-        let Some(window) = leptos::web_sys::window() else {
-            return;
-        };
-        let Some(document) = window.document() else {
-            return;
-        };
-        let Ok(data_url) = self.canvas.to_data_url_with_type("image/png") else {
-            return;
-        };
-        let Ok(anchor) = document.create_element("a") else {
-            return;
-        };
-        let _ = anchor.set_attribute("href", &data_url);
-        let _ = anchor.set_attribute("download", filename);
-        let _ = document.body().and_then(|b| b.append_child(&anchor).ok());
-        if let Ok(el) = anchor.dyn_into::<leptos::web_sys::HtmlElement>() {
-            let () = el.click();
-            let _ = el.parent_node().and_then(|p| p.remove_child(&el).ok());
+    /// Resizes the canvas backing store to match its display size.
+    pub fn resize(&self) {
+        let (width, height) = canvas_size(&self.canvas);
+        if self.canvas.width() != width || self.canvas.height() != height {
+            self.canvas.set_width(width);
+            self.canvas.set_height(height);
         }
     }
 
@@ -386,14 +371,5 @@ impl Renderer {
     /// Returns the total number of triangles across all primitives.
     pub fn total_triangles(&self) -> usize {
         self.total_triangles
-    }
-
-    /// Resizes the canvas backing store to match its display size.
-    pub fn resize(&self) {
-        let (width, height) = canvas_size(&self.canvas);
-        if self.canvas.width() != width || self.canvas.height() != height {
-            self.canvas.set_width(width);
-            self.canvas.set_height(height);
-        }
     }
 }

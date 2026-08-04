@@ -5,7 +5,7 @@
 A1. [x] Add ambient fill light + soft shadow mapping for the directional light.
 A2. [ ] Load an HDR skybox for image-based lighting (IBL) on `PhysicalMaterial`.
 A3. [ ] Implement MSAA via an intermediate multi-sampled render target.
-A4. [ ] Add exposure/tone-mapping controls and HDR screenshot output.
+A4. [ ] Add exposure/tone-mapping controls.
 
 ## Model Display
 
@@ -53,5 +53,3 @@ B5. [x] Add `derive_more` and use it where it genuinely trims boilerplate. Deriv
 ## Lower Priority
 
 B6. [x] Simplify `three_d_viewer/controls.rs` DOM event wiring by routing through Leptos `on:mouse:...`/`on:wheel` handlers on the canvas instead of raw `web_sys` closures (`Closure`, `add_event_listener_with_callback`). `OrbitControls` is now a stateful handler set; listener lifecycle is owned by Leptos and cleaned up automatically on unmount.
-B7. [ ] Evaluate `openidconnect` in `backend/src/api/auth.rs` to replace the hand-built token exchange and Google profile fetch (GitHub endpoints stay manual).
-B8. [ ] Keep the custom Markdown textarea editor (`markdown_editor.rs`) unless a mature Leptos/wasm editor crate appears; no good replacement exists yet.

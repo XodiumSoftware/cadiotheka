@@ -133,7 +133,6 @@ The project details modal includes a built-in IFC/GLB viewer built on `three-d`.
 - A ground grid centered on the model footprint for spatial orientation.
 - An X/Y/Z axes gizmo scaled to the model size.
 - Toggles to show or hide the grid, axes, and debug overlay.
-- A screenshot button that downloads the current view as a PNG.
 
 Camera state is persisted per project in `localStorage` so the view is restored on the next visit. Resetting the view clears that saved state.
 
