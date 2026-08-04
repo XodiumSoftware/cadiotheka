@@ -2,9 +2,10 @@ use crate::components::ui::buy_me_a_coffee::BuyMeACoffeeLogo;
 use crate::components::ui::logo::Logo;
 use crate::components::ui::modals::search::SearchModal;
 use crate::contexts::{
-    AddProjectModalContext, CurrentUserContext, LayoutContext, LoginModalContext, MetadataContext,
-    ProfileModalContext, ProjectsContext, SearchContext,
+    AddProjectModalContext, AdminModalContext, CurrentUserContext, LayoutContext,
+    LoginModalContext, MetadataContext, ProfileModalContext, ProjectsContext, SearchContext,
 };
+use crate::data::AccountRole;
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
 use crate::utils::{
     auth_url, encode_redirect_url, placeholder_color, placeholder_letter, window_event_listener,
@@ -110,8 +111,6 @@ fn replace_last_token(parts: &mut Vec<String>, replacement: String) {
 
 #[component]
 pub fn Header() -> impl IntoView {
-    const ACCOUNT_MENU_ITEMS: usize = 4;
-
     let _layout = LayoutContext::use_context();
     let search = SearchContext::use_context();
     let (is_scrolled, set_is_scrolled) = signal(false);
@@ -125,6 +124,7 @@ pub fn Header() -> impl IntoView {
     let profile_ref: NodeRef<leptos::html::Button> = NodeRef::new();
     let my_projects_ref: NodeRef<leptos::html::Button> = NodeRef::new();
     let my_favorites_ref: NodeRef<leptos::html::Button> = NodeRef::new();
+    let admin_ref: NodeRef<leptos::html::Button> = NodeRef::new();
     let logout_ref: NodeRef<leptos::html::Button> = NodeRef::new();
     let (active_menu_index, set_active_menu_index) = signal(0usize);
 
@@ -162,6 +162,18 @@ pub fn Header() -> impl IntoView {
     let login_modal_ctx = LoginModalContext::use_context();
     let profile_modal_ctx = ProfileModalContext::use_context();
 
+    let account_menu_items = Memo::new(move |_| {
+        if current_user_ctx
+            .account
+            .get()
+            .is_some_and(|account| account.role == AccountRole::Admin)
+        {
+            5usize
+        } else {
+            4usize
+        }
+    });
+
     let focus_avatar = Callback::new(move |()| {
         if let Some(btn) = avatar_button_ref.get() {
             let _ = btn.focus();
@@ -184,6 +196,9 @@ pub fn Header() -> impl IntoView {
                 search.set_query.set(favorites_query);
             }
             3 => {
+                AdminModalContext::use_context().open();
+            }
+            4 => {
                 if let Some(window) = leptos::web_sys::window() {
                     let _ = window
                         .location()
@@ -192,7 +207,7 @@ pub fn Header() -> impl IntoView {
             }
             _ => {}
         }
-        if idx != 3 {
+        if idx != 4 {
             focus_avatar.run(());
         }
     });
@@ -249,10 +264,28 @@ pub fn Header() -> impl IntoView {
                 return;
             }
 
+            if ev.alt_key()
+                && ev.key().eq_ignore_ascii_case("4")
+                && current_user.account.get_untracked().is_some()
+            {
+                ev.prevent_default();
+                activate_menu_item.run(3);
+                return;
+            }
+
+            if ev.alt_key()
+                && ev.key().eq_ignore_ascii_case("5")
+                && current_user.account.get_untracked().is_some()
+            {
+                ev.prevent_default();
+                activate_menu_item.run(4);
+                return;
+            }
+
             if ev.alt_key() && ev.key().eq_ignore_ascii_case("l") {
                 ev.prevent_default();
                 if current_user.account.get_untracked().is_some() {
-                    activate_menu_item.run(3);
+                    activate_menu_item.run(4);
                 } else {
                     login_modal.open();
                 }
@@ -315,7 +348,8 @@ pub fn Header() -> impl IntoView {
                 0 => profile_ref.get(),
                 1 => my_projects_ref.get(),
                 2 => my_favorites_ref.get(),
-                3 => logout_ref.get(),
+                3 => admin_ref.get().or_else(|| logout_ref.get()),
+                4 => logout_ref.get(),
                 _ => None,
             };
             if let Some(el) = target {
@@ -332,7 +366,7 @@ pub fn Header() -> impl IntoView {
             if ev.default_prevented() {
                 return;
             }
-            let last = ACCOUNT_MENU_ITEMS.saturating_sub(1);
+            let last = account_menu_items.get_untracked().saturating_sub(1);
             match ev.key().as_str() {
                 "ArrowDown" => {
                     ev.prevent_default();
@@ -679,11 +713,41 @@ pub fn Header() -> impl IntoView {
                                                         </button>
                                                     </li>
                                                     <li role="none">
+                                                        {move || {
+                                                            if account.role == AccountRole::Admin {
+                                                                Some(view! {
+                                                                    <button
+                                                                        type="button"
+                                                                        class=move || {
+                                                                            let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 flex items-center justify-between gap-3 whitespace-nowrap";
+                                                                            if active_menu_index.get() == 3 {
+                                                                                format!("{base} bg-base-content/10")
+                                                                            } else {
+                                                                                base.to_string()
+                                                                            }
+                                                                        }
+                                                                        role="menuitem"
+                                                                        tabindex="-1"
+                                                                        aria-keyshortcuts="Alt+4"
+                                                                        node_ref=admin_ref
+                                                                        on:mouseenter=move |_| set_active_menu_index.set(3)
+                                                                        on:click=move |_| activate_menu_item.run(3)
+                                                                    >
+                                                                        <span>"Admin"</span>
+                                                                        <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd" aria-hidden="true">"Alt + 4"</kbd>
+                                                                    </button>
+                                                                })
+                                                            } else {
+                                                                None
+                                                            }
+                                                        }}
+                                                    </li>
+                                                    <li role="none">
                                                         <button
                                                             type="button"
                                                             class=move || {
                                                                 let base = "w-full text-left px-4 py-2 hover:bg-base-content/10 text-error font-semibold flex items-center justify-between gap-3 whitespace-nowrap";
-                                                                if active_menu_index.get() == 3 {
+                                                                if active_menu_index.get() == 4 {
                                                                     format!("{base} bg-base-content/10")
                                                                 } else {
                                                                     base.to_string()
@@ -693,8 +757,8 @@ pub fn Header() -> impl IntoView {
                                                             tabindex="-1"
                                                             aria-keyshortcuts="Alt+L"
                                                             node_ref=logout_ref
-                                                            on:mouseenter=move |_| set_active_menu_index.set(3)
-                                                            on:click=move |_| activate_menu_item.run(3)
+                                                            on:mouseenter=move |_| set_active_menu_index.set(4)
+                                                            on:click=move |_| activate_menu_item.run(4)
                                                         >
                                                             <span>"Log out"</span>
                                                             <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd" aria-hidden="true">"Alt + L"</kbd>

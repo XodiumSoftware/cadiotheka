@@ -23,7 +23,9 @@ pub(crate) mod routes {
     pub(crate) const ACCOUNTS: &str = "/data/accounts";
     pub(crate) const ACCOUNT: &str = "/data/accounts/:id";
     pub(crate) const TAGS: &str = "/data/tags";
+    pub(crate) const TAG: &str = "/data/tags/:id";
     pub(crate) const PLATFORMS: &str = "/data/platforms";
+    pub(crate) const PLATFORM: &str = "/data/platforms/:id";
     pub(crate) const PROJECTS: &str = "/data/projects";
     pub(crate) const PROJECT: &str = "/data/projects/:id";
     pub(crate) const PROJECT_FAVORITES: &str = "/data/projects/:id/favorites";
@@ -137,7 +139,13 @@ pub fn build_router() -> Router<'static, ()> {
         .put_async(routes::ACCOUNT, api::accounts::update_account)
         .delete_async(routes::ACCOUNT, api::accounts::delete_account)
         .get_async(routes::TAGS, api::metadata::list_tags)
+        .post_async(routes::TAGS, api::metadata::create_tag)
+        .put_async(routes::TAG, api::metadata::update_tag)
+        .delete_async(routes::TAG, api::metadata::delete_tag)
         .get_async(routes::PLATFORMS, api::metadata::list_platforms)
+        .post_async(routes::PLATFORMS, api::metadata::create_platform)
+        .put_async(routes::PLATFORM, api::metadata::update_platform)
+        .delete_async(routes::PLATFORM, api::metadata::delete_platform)
         .get_async(routes::PROJECTS, api::projects::list_projects)
         .post_async(routes::PROJECTS, api::projects::create_project)
         .get_async(routes::PROJECT, api::projects::read_project)

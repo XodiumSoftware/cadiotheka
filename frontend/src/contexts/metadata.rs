@@ -57,6 +57,33 @@ impl MetadataContext {
         });
     }
 
+    /// Refetch tags and platforms from the backend and update the signals.
+    pub fn refresh(&self) {
+        let set_tags = self.set_tags;
+        let set_platforms = self.set_platforms;
+        let set_is_loading = self.set_is_loading;
+        leptos::task::spawn_local(async move {
+            set_is_loading.set(true);
+            match fetch_tags().await {
+                Ok(fetched) => set_tags.set(fetched),
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to refresh tags: {}", err.message()).into(),
+                    );
+                }
+            }
+            match fetch_platforms().await {
+                Ok(fetched) => set_platforms.set(fetched),
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to refresh platforms: {}", err.message()).into(),
+                    );
+                }
+            }
+            set_is_loading.set(false);
+        });
+    }
+
     /// Returns the tag record matching an id, or `None` if it is not loaded.
     pub fn tag_by_id(&self, id: &str) -> Option<Tag> {
         self.tags.get().into_iter().find(|t| t.id == id)
