@@ -42,7 +42,7 @@ A21. [ ] Persist per-project viewer settings in local storage alongside `ViewSta
 
 B1. [x] Adopt `strum`/`strum_macros` for the Tag/Platform enums (`metadata/tags.rs`, `metadata/platforms.rs`) to remove the hand-written `label()`, `all()`, and `Display` match arms. Keep the per-variant `#[serde(rename)]` wire values (they are not snake_case-derivable: `3d_model`, `freecad`, `fusion_360`, `wip`) and the custom `color()` match; drive labels via `#[strum(serialize)]`.
 B2. [x] Replace the hand-rolled KV rate limiter in `backend/src/utils.rs` (`RATE_LIMIT_WINDOW_SECONDS`/`RATE_LIMIT_MAX_REQUESTS` consts and the KV-based `check_rate_limit`) with Cloudflare's native Rate Limiting binding (`env.rate_limiter(...).limit(key)`), configured via `[[ratelimits]]` in `wrangler.toml`. Note: the `namespace_id` in `wrangler.toml` is a placeholder that must be set to a unique integer for the account before deploying.
-B3. [ ] Derive `Display` for `RequestError` in `frontend/src/data/error.rs` with `thiserror` instead of the manual `message()`/`Display` impl.
+B3. [x] Derive `Display` for `RequestError` in `frontend/src/data/error.rs` with `thiserror` instead of the manual `Display` impl. `message()` is kept as a one-line `self.to_string()` delegate because many call sites use it directly.
 
 ## Medium Value
 
