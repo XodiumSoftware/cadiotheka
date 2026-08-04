@@ -9,6 +9,7 @@ use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
+use strum::IntoEnumIterator;
 
 /// Client-side validation result for the add-project form.
 #[derive(Debug, Default, Clone)]
@@ -321,7 +322,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                         "Tags"
                                     </span>
                                     <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
-                                        {Tag::all().into_iter().map(|tag| {
+                                        {Tag::iter().map(|tag| {
                                             let tag_clone = tag;
                                             view! {
                                                 <button
@@ -357,7 +358,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                         "Supported platforms"
                                     </span>
                                     <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                        {Platform::all().into_iter().map(|platform| {
+                                        {Platform::iter().map(|platform| {
                                             let platform_clone = platform;
                                             view! {
                                                 <button

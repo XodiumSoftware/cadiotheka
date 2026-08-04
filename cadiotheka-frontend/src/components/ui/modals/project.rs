@@ -18,6 +18,7 @@ use crate::data::{
 use crate::utils::{api_url, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
+use strum::IntoEnumIterator;
 
 const MAX_TITLE_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 100;
@@ -1506,7 +1507,7 @@ fn ProjectModalContent(
                                                 title="Supported platforms"
                                                 aria_label="Supported platforms"
                                                 items=supported_platforms.get()
-                                                all_items=crate::metadata::platforms::Platform::all().to_vec()
+                                                all_items={crate::metadata::platforms::Platform::iter().collect::<Vec<_>>()}
                                                 editing=editing_platforms.into()
                                                 on_cancel=Callback::new(move |()| cancel_edit_platforms())
                                                 on_toggle=toggle_platform
@@ -1582,7 +1583,7 @@ fn ProjectModalContent(
                                                 title="Tags"
                                                 aria_label="Tags"
                                                 items=tags.get()
-                                                all_items=crate::metadata::tags::Tag::all().to_vec()
+                                                all_items={crate::metadata::tags::Tag::iter().collect::<Vec<_>>()}
                                                 editing=editing_tags.into()
                                                 on_cancel=Callback::new(move |()| cancel_edit_tags())
                                                 on_toggle=toggle_tag

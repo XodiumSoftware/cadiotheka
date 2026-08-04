@@ -1,99 +1,112 @@
 //! Content tags and categories for Cadiotheka.
 
+use strum::{Display, EnumIter, IntoStaticStr};
+
 /// Predefined content tags used to categorize cards and enable filtering.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    serde::Deserialize,
+    serde::Serialize,
+    EnumIter,
+    Display,
+    IntoStaticStr,
+)]
 pub enum Tag {
     /// 3D models and meshes.
     #[serde(rename = "3d_model")]
+    #[strum(serialize = "3D Model")]
     Model3d,
     /// 2D drawings, blueprints, or schematics.
     #[serde(rename = "2d_drawing")]
+    #[strum(serialize = "2D Drawing")]
     Drawing2d,
     /// Parametric or script-driven designs.
     #[serde(rename = "parametric")]
+    #[strum(serialize = "Parametric")]
     Parametric,
     /// Physical parts intended for fabrication.
     #[serde(rename = "fabrication")]
+    #[strum(serialize = "Fabrication")]
     Fabrication,
     /// Robotics, mechanisms, or moving assemblies.
     #[serde(rename = "robotics")]
+    #[strum(serialize = "Robotics")]
     Robotics,
     /// Furniture and interior objects.
     #[serde(rename = "furniture")]
+    #[strum(serialize = "Furniture")]
     Furniture,
     /// Vehicles and transportation.
     #[serde(rename = "vehicle")]
+    #[strum(serialize = "Vehicle")]
     Vehicle,
     /// Architectural structures and spaces.
     #[serde(rename = "architecture")]
+    #[strum(serialize = "Architecture")]
     Architecture,
     /// Electronics, PCBs, and wiring.
     #[serde(rename = "electronics")]
+    #[strum(serialize = "Electronics")]
     Electronics,
     /// Tools, jigs, and workshop accessories.
     #[serde(rename = "tooling")]
+    #[strum(serialize = "Tooling")]
     Tooling,
     /// Lighting and light fixtures.
     #[serde(rename = "lighting")]
+    #[strum(serialize = "Lighting")]
     Lighting,
     /// Do-it-yourself projects and hobby builds.
     #[serde(rename = "diy")]
+    #[strum(serialize = "DIY")]
     Diy,
     /// Interior design and household objects.
     #[serde(rename = "interior")]
+    #[strum(serialize = "Interior")]
     Interior,
     /// Mechanical or structural engineering.
     #[serde(rename = "engineering")]
+    #[strum(serialize = "Engineering")]
     Engineering,
     /// Aerospace and aviation.
     #[serde(rename = "aerospace")]
+    #[strum(serialize = "Aerospace")]
     Aerospace,
     /// Decorative objects and ornaments.
     #[serde(rename = "decor")]
+    #[strum(serialize = "Decor")]
     Decor,
     /// Medical devices, prosthetics, and anatomy.
     #[serde(rename = "medical")]
+    #[strum(serialize = "Medical")]
     Medical,
     /// Game-ready assets.
     #[serde(rename = "game_asset")]
+    #[strum(serialize = "Game Asset")]
     GameAsset,
     /// Art, sculptures, and decorative objects.
     #[serde(rename = "art")]
+    #[strum(serialize = "Art")]
     Art,
     /// Educational or tutorial content.
     #[serde(rename = "educational")]
+    #[strum(serialize = "Educational")]
     Educational,
     /// Work in progress or experimental content.
     #[serde(rename = "wip")]
+    #[strum(serialize = "WIP")]
     WorkInProgress,
 }
 
 impl Tag {
     /// Returns the user-facing label for this tag.
-    pub const fn label(&self) -> &'static str {
-        match self {
-            Self::Model3d => "3D Model",
-            Self::Drawing2d => "2D Drawing",
-            Self::Parametric => "Parametric",
-            Self::Fabrication => "Fabrication",
-            Self::Robotics => "Robotics",
-            Self::Furniture => "Furniture",
-            Self::Vehicle => "Vehicle",
-            Self::Architecture => "Architecture",
-            Self::Electronics => "Electronics",
-            Self::Tooling => "Tooling",
-            Self::Lighting => "Lighting",
-            Self::Diy => "DIY",
-            Self::Interior => "Interior",
-            Self::Engineering => "Engineering",
-            Self::Aerospace => "Aerospace",
-            Self::Decor => "Decor",
-            Self::Medical => "Medical",
-            Self::GameAsset => "Game Asset",
-            Self::Art => "Art",
-            Self::Educational => "Educational",
-            Self::WorkInProgress => "WIP",
-        }
+    pub fn label(&self) -> &'static str {
+        self.into()
     }
 
     /// Returns a Tailwind-compatible CSS color class for this tag.
@@ -122,39 +135,6 @@ impl Tag {
             Self::WorkInProgress => "bg-lime-700 text-white",
         }
     }
-
-    /// All available tags in a stable order.
-    pub const fn all() -> [Self; 21] {
-        [
-            Self::Model3d,
-            Self::Drawing2d,
-            Self::Parametric,
-            Self::Fabrication,
-            Self::Robotics,
-            Self::Furniture,
-            Self::Vehicle,
-            Self::Architecture,
-            Self::Electronics,
-            Self::Tooling,
-            Self::Lighting,
-            Self::Diy,
-            Self::Interior,
-            Self::Engineering,
-            Self::Aerospace,
-            Self::Decor,
-            Self::Medical,
-            Self::GameAsset,
-            Self::Art,
-            Self::Educational,
-            Self::WorkInProgress,
-        ]
-    }
-}
-
-impl std::fmt::Display for Tag {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.label())
-    }
 }
 
 /// Convenience accessor for a tag's user-facing label.
@@ -170,6 +150,7 @@ pub fn tag_color(tag: &Tag) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use strum::IntoEnumIterator;
 
     #[test]
     fn tag_label_roundtrips() {
@@ -183,5 +164,10 @@ mod tests {
         assert_eq!(json, "\"3d_model\"");
         let tag: Tag = serde_json::from_str("\"3d_model\"").unwrap();
         assert_eq!(tag, Tag::Model3d);
+    }
+
+    #[test]
+    fn tag_iteration_covers_all_variants() {
+        assert_eq!(Tag::iter().count(), 21);
     }
 }
