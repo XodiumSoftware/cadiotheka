@@ -4,8 +4,9 @@ use pulldown_cmark::{Options, Parser, html};
 
 /// Renders CommonMark markdown as a Leptos view.
 ///
-/// Markdown is converted to HTML by `pulldown-cmark`, sanitized with `ammonia`,
-/// and then styled with project-specific Tailwind classes.
+/// Markdown is converted to HTML by `pulldown-cmark`, then sanitized and styled
+/// with project-specific Tailwind classes by `ammonia`, which injects the class
+/// attributes during parsing rather than string-matching the rendered markup.
 #[component]
 pub fn MarkdownView(#[prop(into)] source: String) -> impl IntoView {
     let html = leptos::prelude::Memo::new(move |_| render_markdown(&source));
@@ -20,52 +21,60 @@ fn render_markdown(source: &str) -> String {
     let mut raw = String::new();
     html::push_html(&mut raw, parser);
 
-    let safe = Builder::default()
-        .link_rel(Some("noopener noreferrer"))
-        .url_relative(UrlRelative::PassThrough)
-        .clean(&raw)
-        .to_string();
-
-    apply_classes(&safe)
+    style_markdown(&raw)
 }
 
-fn apply_classes(html: &str) -> String {
-    html.replace("<p>", r#"<p class="mb-3">"#)
-        .replace(
-            "<h1>",
-            r#"<h1 class="text-xl font-bold text-primary mt-4 mb-2">"#,
+/// Sanitizes raw HTML with `ammonia` while forcing project Tailwind classes and
+/// link behavior onto the styled tags.
+///
+/// `class` is whitelisted per tag and its value forced via
+/// [`Builder::set_tag_attribute_value`], so any user-supplied `class` attribute
+/// in the source is overridden rather than trusted.
+fn style_markdown(html: &str) -> String {
+    Builder::default()
+        .link_rel(Some("noopener noreferrer"))
+        .url_relative(UrlRelative::PassThrough)
+        .add_tag_attributes("p", &["class"])
+        .set_tag_attribute_value("p", "class", "mb-3")
+        .add_tag_attributes("h1", &["class"])
+        .set_tag_attribute_value("h1", "class", "text-xl font-bold text-primary mt-4 mb-2")
+        .add_tag_attributes("h2", &["class"])
+        .set_tag_attribute_value("h2", "class", "text-lg font-bold text-primary mt-3 mb-2")
+        .add_tag_attributes("h3", &["class"])
+        .set_tag_attribute_value(
+            "h3",
+            "class",
+            "text-base font-semibold text-base-content mt-2 mb-1",
         )
-        .replace(
-            "<h2>",
-            r#"<h2 class="text-lg font-bold text-primary mt-3 mb-2">"#,
+        .add_tag_attributes("h4", &["class"])
+        .set_tag_attribute_value(
+            "h4",
+            "class",
+            "text-base font-semibold text-base-content mt-2 mb-1",
         )
-        .replace(
-            "<h3>",
-            r#"<h3 class="text-base font-semibold text-base-content mt-2 mb-1">"#,
+        .add_tag_attributes("h5", &["class"])
+        .set_tag_attribute_value(
+            "h5",
+            "class",
+            "text-base font-semibold text-base-content mt-2 mb-1",
         )
-        .replace(
-            "<h4>",
-            r#"<h4 class="text-base font-semibold text-base-content mt-2 mb-1">"#,
+        .add_tag_attributes("h6", &["class"])
+        .set_tag_attribute_value(
+            "h6",
+            "class",
+            "text-base font-semibold text-base-content mt-2 mb-1",
         )
-        .replace(
-            "<h5>",
-            r#"<h5 class="text-base font-semibold text-base-content mt-2 mb-1">"#,
-        )
-        .replace(
-            "<h6>",
-            r#"<h6 class="text-base font-semibold text-base-content mt-2 mb-1">"#,
-        )
-        .replace("<ul>", r#"<ul class="list-disc list-inside mb-3 pl-1">"#)
-        .replace("<li>", r#"<li class="mb-1">"#)
-        .replace("<hr>", r#"<hr class="border-base-content/10 my-3">"#)
-        .replace(
-            "<a ",
-            r#"<a target="_blank" class="text-primary hover:underline" "#,
-        )
-        .replace(
-            "<a>",
-            r#"<a target="_blank" class="text-primary hover:underline">"#,
-        )
+        .add_tag_attributes("ul", &["class"])
+        .set_tag_attribute_value("ul", "class", "list-disc list-inside mb-3 pl-1")
+        .add_tag_attributes("li", &["class"])
+        .set_tag_attribute_value("li", "class", "mb-1")
+        .add_tag_attributes("hr", &["class"])
+        .set_tag_attribute_value("hr", "class", "border-base-content/10 my-3")
+        .add_tag_attributes("a", &["target", "class"])
+        .set_tag_attribute_value("a", "target", "_blank")
+        .set_tag_attribute_value("a", "class", "text-primary hover:underline")
+        .clean(html)
+        .to_string()
 }
 
 #[cfg(test)]
@@ -120,8 +129,16 @@ mod tests {
     #[test]
     fn render_markdown_links_open_in_new_tab() {
         let html = render_markdown("[example](https://example.com)");
-        assert!(html.contains("<a target=\"_blank\""));
+        assert!(html.contains("target=\"_blank\""));
+        assert!(html.contains("class=\"text-primary hover:underline\""));
         assert!(html.contains("rel=\"noopener noreferrer\""));
         assert!(html.contains("href=\"https://example.com\""));
+    }
+
+    #[test]
+    fn render_markdown_overrides_user_class_attribute() {
+        let html = render_markdown("<p class=\"injected\">text</p>");
+        assert!(!html.contains("injected"));
+        assert!(html.contains("<p class=\"mb-3\">"));
     }
 }

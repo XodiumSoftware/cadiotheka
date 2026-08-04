@@ -46,7 +46,7 @@ B3. [x] Derive `Display` for `RequestError` in `frontend/src/data/error.rs` with
 
 ## Medium Value
 
-B4. [ ] Remove brittle `html.replace(...)` class injection in `frontend/src/components/ui/markdown.rs` by inserting classes via `pulldown-cmark` events, or switch to `comrak` for custom renderer hooks.
+B4. [x] Remove brittle `html.replace(...)` class injection in `frontend/src/components/ui/markdown.rs`. Style via `ammonia`'s `set_tag_attribute_value` (DOM-level injection during sanitization) instead of string-replacing the rendered HTML; the forced value overrides any user-supplied `class`, so there is no class-injection vector.
 B5. [ ] Apply `derive_more` (`Display`, `From`, `Constructor`, `AsRef`) to trim generic boilerplate across the workspace.
 
 ## Lower Priority
