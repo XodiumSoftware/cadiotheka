@@ -118,6 +118,7 @@ pub mod metadata {
 
 pub mod three_d_viewer {
     pub mod controls;
+    pub mod environment;
     pub mod renderer;
     pub mod scene;
     pub mod state;

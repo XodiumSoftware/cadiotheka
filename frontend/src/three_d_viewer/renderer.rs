@@ -2,6 +2,8 @@
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
+#[cfg(target_arch = "wasm32")]
+use crate::three_d_viewer::environment::{build_ibl_ambient, build_skybox};
 use crate::three_d_viewer::scene::{
     build_axes, build_framing_camera, build_ground_grid, canvas_size,
 };
@@ -19,6 +21,7 @@ use three_d::renderer::AmbientLight;
 use three_d::renderer::Camera as ThreeDCamera;
 use three_d::renderer::DirectionalLight;
 use three_d::renderer::Object;
+use three_d::renderer::Skybox;
 use three_d::renderer::control::{Event, OrbitControl};
 use three_d_asset::vec3;
 #[cfg(target_arch = "wasm32")]
@@ -35,6 +38,7 @@ pub struct Renderer {
     pub(crate) models: Vec<Box<dyn Object>>,
     pub(crate) ground_grid: Option<Box<dyn Object>>,
     pub(crate) axes: Option<Box<dyn Object>>,
+    pub(crate) skybox: Option<Skybox>,
     pub(crate) show_grid: bool,
     pub(crate) show_axes: bool,
     pub(crate) total_vertices: usize,
@@ -100,7 +104,8 @@ impl Renderer {
 
             let light =
                 DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(0.3_f32, -0.8, -0.5));
-            let ambient = AmbientLight::new(&context, 0.4, Srgba::WHITE);
+            let ambient = build_ibl_ambient(&context);
+            let skybox = Some(build_skybox(&context));
 
             let ground_grid = Some(build_ground_grid(
                 &context,
@@ -119,6 +124,7 @@ impl Renderer {
                 models,
                 ground_grid,
                 axes,
+                skybox,
                 show_grid: true,
                 show_axes: true,
                 total_vertices,
@@ -239,6 +245,7 @@ impl Renderer {
                     .filter(|_| self.show_axes)
                     .map(AsRef::as_ref),
             )
+            .chain(self.skybox.iter().flatten())
             .collect();
         let (background, light_intensity) = match self.theme {
             ViewerTheme::Dark => ((0.05, 0.05, 0.05, 1.0, 1.0), 1.0),
