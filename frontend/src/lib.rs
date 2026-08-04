@@ -25,7 +25,6 @@ pub mod components {
         pub mod three_d_viewer;
         pub mod modals {
             pub mod add_project;
-            pub mod admin;
             pub mod login;
             pub mod profile;
             pub mod project;
@@ -50,7 +49,6 @@ pub mod components {
     pub use ui::markdown::MarkdownView;
     pub use ui::markdown_editor::MarkdownEditor;
     pub use ui::modals::add_project::AddProjectModal;
-    pub use ui::modals::admin::AdminModal;
     pub use ui::modals::login::LoginModal;
     pub use ui::modals::profile::ProfileModal;
     pub use ui::modals::project::{ProjectDetailsTab, ProjectModal};
@@ -67,7 +65,6 @@ pub mod components {
 pub mod contexts {
     pub mod accounts;
     pub mod add_project;
-    pub mod admin;
     pub mod current_user;
     pub mod layout;
     pub mod login;
@@ -79,7 +76,6 @@ pub mod contexts {
 
     pub use accounts::AccountsContext;
     pub use add_project::AddProjectModalContext;
-    pub use admin::AdminModalContext;
     pub use current_user::CurrentUserContext;
     pub use layout::LayoutContext;
     pub use login::LoginModalContext;
@@ -100,10 +96,7 @@ pub mod data {
 
     pub use account::{AccountData, AccountRole, fetch_accounts};
     pub use error::RequestError;
-    pub use metadata::{
-        create_platform, create_tag, delete_platform, delete_tag, fetch_platforms, fetch_tags,
-        update_platform, update_tag,
-    };
+    pub use metadata::{fetch_platforms, fetch_tags};
     pub use project::{
         IconUrl, ProjectCreationResult, ProjectData, ProjectPatch, convert_project_glb,
         create_project, delete_project, delete_project_ifc, fetch_projects,
