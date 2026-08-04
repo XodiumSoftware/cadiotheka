@@ -1298,6 +1298,9 @@ fn ProjectModalContent(
                                                             }}
                                                         </div>
                                                         {move || {
+                                                            if is_editable.get() && edit_mode.get() {
+                                                                return ().into_any();
+                                                            }
                                                             let downloading = is_downloading.get();
                                                             view! {
                                                                 <button
@@ -1340,7 +1343,7 @@ fn ProjectModalContent(
                                                                         }.into_any()
                                                                     }}
                                                                 </button>
-                                                            }
+                                                            }.into_any()
                                                         }}
                                                     </div>
                                                 }
