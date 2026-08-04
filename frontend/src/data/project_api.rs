@@ -2,7 +2,7 @@
 
 use crate::data::error::RequestError;
 use crate::data::project_types::{
-    ProjectCreationResult, ProjectData, ProjectPatch, ProjectVersion, ValidationErrorResponse,
+    ProjectCreationResult, ProjectData, ProjectVersion, ValidationErrorResponse,
 };
 use crate::utils::api_url;
 use gloo_net::http::Request;
@@ -162,39 +162,6 @@ pub async fn update_project_collaborators(
 
     patch_project(&url, body, "collaborators").await?;
     Ok(collaborator_ids)
-}
-
-/// Applies a partial update to an existing project via `PATCH /data/projects/:id`.
-///
-/// On success it returns `true`; on failure it returns a [`RequestError`].
-pub async fn update_project(id: &str, patch: ProjectPatch) -> Result<(), RequestError> {
-    let url = api_url(&format!("/projects/{id}"));
-    let body = serde_json::to_string(&patch).map_err(|err| {
-        RequestError::Serialize(format!("Failed to serialize project update: {err}"))
-    })?;
-
-    let request = Request::post(&url)
-        .credentials(RequestCredentials::Include)
-        .header("Content-Type", "application/json")
-        .body(body)
-        .map_err(|err| {
-            RequestError::BuildRequest(format!("Failed to build project update request: {err}"))
-        })?;
-
-    match request.send().await {
-        Ok(response) if response.ok() => Ok(()),
-        Ok(response) => {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            Err(RequestError::Server {
-                status,
-                body: format!("Failed to update project: {body}"),
-            })
-        }
-        Err(err) => Err(RequestError::Network(format!(
-            "Failed to update project: {err}"
-        ))),
-    }
 }
 
 /// Toggles the favorite status of a project for the current user.

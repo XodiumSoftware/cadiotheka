@@ -164,17 +164,6 @@ pub(crate) struct ValidationErrorResponse {
     pub(crate) errors: HashMap<String, String>,
 }
 
-/// Partial project update payload. Only fields with a value are sent to the
-/// backend; `None` values are omitted from the JSON body.
-#[derive(Debug, Clone, Default, Serialize)]
-pub struct ProjectPatch {
-    pub title: Option<String>,
-    pub tags: Option<Vec<String>>,
-    pub platforms: Option<Vec<String>>,
-    pub collaborator_ids: Option<Vec<String>>,
-    pub description: Option<String>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
