@@ -1226,7 +1226,7 @@ fn ProjectModalContent(
                                         {move || {
                                             if ifc_url.get().is_some() {
                                                 view! {
-                                                    <div class="rounded-none border border-base-content/10 bg-base-200/30 p-4 space-y-3 flex-shrink-0">
+                                                    <div class="relative group rounded-none border border-base-content/10 bg-base-200/30 p-4 space-y-3 flex-shrink-0">
                                                         <div class="flex items-center gap-3">
                                                             <div class="w-10 h-10 rounded-none bg-primary/10 text-primary flex items-center justify-center">
                                                                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1265,9 +1265,9 @@ fn ProjectModalContent(
                                                                             type="button"
                                                                             class=move || {
                                                                                 if is_deleting_ifc.get() {
-                                                                                    "btn btn-ghost btn-xs rounded-none text-base-content/50 tooltip tooltip-top"
+                                                                                    "relative z-20 btn btn-ghost btn-xs rounded-none text-base-content/50 tooltip tooltip-top"
                                                                                 } else {
-                                                                                    "btn btn-ghost btn-xs rounded-none text-error hover:text-error tooltip tooltip-top"
+                                                                                    "relative z-20 btn btn-ghost btn-xs rounded-none text-error hover:text-error tooltip tooltip-top"
                                                                                 }
                                                                             }
                                                                             data-tip="Delete version"
@@ -1304,27 +1304,41 @@ fn ProjectModalContent(
                                                                     type="button"
                                                                     class=move || {
                                                                         if downloading {
-                                                                            "btn btn-primary btn-sm w-full rounded-none cursor-not-allowed"
+                                                                            "absolute inset-0 z-10 flex items-center justify-center bg-base-100/80 cursor-not-allowed"
                                                                         } else {
-                                                                            "btn btn-primary btn-sm w-full rounded-none"
+                                                                            "absolute inset-0 z-10 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                                                         }
                                                                     }
                                                                     disabled=move || downloading
+                                                                    aria-label=move || if downloading { "Downloading IFC..." } else { "Download IFC" }
+                                                                    data-tip=move || if downloading { "Downloading IFC..." } else { "Download IFC" }
                                                                     on:click={
                                                                         let cb = increment_downloads;
                                                                         move |_| cb.run(())
                                                                     }
                                                                 >
-                                                                    <span class="flex items-center justify-center gap-2">
-                                                                        {if downloading {
-                                                                            view! {
-                                                                                <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                                                                <span>"Downloading..."</span>
-                                                                            }.into_any()
-                                                                        } else {
-                                                                            view! { <span>"Download IFC"</span> }.into_any()
-                                                                        }}
-                                                                    </span>
+                                                                    {if downloading {
+                                                                        view! {
+                                                                            <span class="loading loading-spinner loading-md text-primary" aria-hidden="true"></span>
+                                                                        }.into_any()
+                                                                    } else {
+                                                                        view! {
+                                                                            <svg
+                                                                                class="w-8 h-8 text-primary"
+                                                                                viewBox="0 0 24 24"
+                                                                                fill="none"
+                                                                                stroke="currentColor"
+                                                                                stroke-width="2"
+                                                                                stroke-linecap="round"
+                                                                                stroke-linejoin="round"
+                                                                                aria-hidden="true"
+                                                                            >
+                                                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                                                <polyline points="7 10 12 15 17 10" />
+                                                                                <line x1="12" y1="15" x2="12" y2="3" />
+                                                                            </svg>
+                                                                        }.into_any()
+                                                                    }}
                                                                 </button>
                                                             }
                                                         }}
