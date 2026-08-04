@@ -1226,7 +1226,7 @@ fn ProjectModalContent(
                                         {move || {
                                             if ifc_url.get().is_some() {
                                                 view! {
-                                                    <div class="relative group rounded-none border border-base-content/10 bg-base-200/30 p-4 space-y-3 flex-shrink-0">
+                                                    <div class="relative group rounded-none border border-base-content/10 bg-base-200/30 p-4 space-y-3 flex-shrink-0 hover:border-primary transition-colors">
                                                         <div class="flex items-center gap-3">
                                                             <div class="w-10 h-10 rounded-none bg-primary/10 text-primary flex items-center justify-center">
                                                                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1306,7 +1306,7 @@ fn ProjectModalContent(
                                                                         if downloading {
                                                                             "absolute inset-0 z-10 flex items-center justify-center bg-base-100/80 cursor-not-allowed"
                                                                         } else {
-                                                                            "absolute inset-0 z-10 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                                                            "absolute inset-0 z-10 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border border-transparent group-hover:border-primary"
                                                                         }
                                                                     }
                                                                     disabled=move || downloading
