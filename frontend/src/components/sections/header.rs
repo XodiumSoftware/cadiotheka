@@ -563,7 +563,7 @@ pub fn Header() -> impl IntoView {
                                 <div class="relative">
                                     <button
                                         type="button"
-                                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 overflow-hidden hover:border-primary tooltip tooltip-bottom"
+                                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 hover:border-primary tooltip tooltip-bottom"
                                         data-tip="Profile"
                                         aria-label="Open account menu"
                                         aria-controls="account-menu"
@@ -578,29 +578,31 @@ pub fn Header() -> impl IntoView {
                                             }
                                         }
                                     >
-                                        {move || {
-                                            let username = account.username.clone();
-                                            let avatar_letter = placeholder_letter(&username);
-                                            let avatar_bg = placeholder_color(&username);
-                                            let avatar_alt = format!("{}'s avatar", account.display_name);
-                                            match account.avatar_url.clone() {
-                                                Some(url) => view! {
-                                                    <img
-                                                        class="w-full h-full object-cover"
-                                                        src=url
-                                                        alt=avatar_alt
-                                                        loading="lazy"
-                                                    />
+                                        <div class="w-full h-full overflow-hidden">
+                                            {move || {
+                                                let username = account.username.clone();
+                                                let avatar_letter = placeholder_letter(&username);
+                                                let avatar_bg = placeholder_color(&username);
+                                                let avatar_alt = format!("{}'s avatar", account.display_name);
+                                                match account.avatar_url.clone() {
+                                                    Some(url) => view! {
+                                                        <img
+                                                            class="w-full h-full object-cover"
+                                                            src=url
+                                                            alt=avatar_alt
+                                                            loading="lazy"
+                                                        />
+                                                    }
+                                                    .into_any(),
+                                                    None => view! {
+                                                        <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
+                                                            {avatar_letter}
+                                                        </div>
+                                                    }
+                                                    .into_any(),
                                                 }
-                                                .into_any(),
-                                                None => view! {
-                                                    <div class=format!("w-full h-full flex items-center justify-center text-white font-bold text-lg {}", avatar_bg)>
-                                                        {avatar_letter}
-                                                    </div>
-                                                }
-                                                .into_any(),
-                                            }
-                                        }}
+                                            }}
+                                        </div>
                                     </button>
                                     {move || {
                                         if account_menu_open.get() {
