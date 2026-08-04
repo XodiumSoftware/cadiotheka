@@ -1,6 +1,6 @@
 # Cadiotheka API
 
-This document describes the HTTP endpoints exposed by `cadiotheka-backend`.
+This document describes the HTTP endpoints exposed by `backend`.
 All `/data/*` and `/auth/*` responses include CORS headers for the frontend.
 
 ## Error format

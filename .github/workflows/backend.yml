@@ -4,14 +4,14 @@ on:
   push:
     branches: [main, dev]
     paths:
-      - "cadiotheka-backend/**"
+      - "backend/**"
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/backend.yml"
   pull_request:
     branches: [main, dev]
     paths:
-      - "cadiotheka-backend/**"
+      - "backend/**"
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/backend.yml"
@@ -30,7 +30,7 @@ env:
 
 defaults:
   run:
-    working-directory: cadiotheka-backend
+    working-directory: backend
 
 jobs:
   lint:
@@ -199,7 +199,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: worker
-          path: cadiotheka-backend/build/
+          path: backend/build/
 
   deploy:
     name: Deploy
@@ -219,7 +219,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: worker
-          path: cadiotheka-backend/build
+          path: backend/build
 
       - id: deploy
         name: Deploy Worker
@@ -227,5 +227,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: cadiotheka-backend
+          workingDirectory: backend
           command: deploy

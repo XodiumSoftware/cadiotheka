@@ -1,5 +1,5 @@
 [package]
-name = "cadiotheka-backend"
+name = "backend"
 edition.workspace = true
 license.workspace = true
 publish = false

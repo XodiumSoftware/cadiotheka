@@ -2,8 +2,8 @@
 name: turnstile-spin
 description: Set up Cloudflare Turnstile end-to-end in the Cadiotheka project. Scan the codebase, embed the widget on protected forms, add the server-side siteverify call, and validate.
 references:
-  - cadiotheka-frontend
-  - cadiotheka-backend
+  - frontend
+  - backend
 ---
 
 # Turnstile Spin skill for Cadiotheka
@@ -18,8 +18,8 @@ Leptos CSR + Cloudflare Pages Functions Rust backend project.
 
 ## Detection
 
-- Frontend: Rust + Leptos CSR (`cadiotheka-frontend/src/components/ui/modals/*.rs`)
-- Backend: Cloudflare Pages Functions in `cadiotheka-backend/src/api/*.rs`
+- Frontend: Rust + Leptos CSR (`frontend/src/components/ui/modals/*.rs`)
+- Backend: Cloudflare Pages Functions in `backend/src/api/*.rs`
 - Existing CAPTCHA: look for `cf-turnstile`, `g-recaptcha`, `h-captcha`, `siteverify`
 
 ## Insertion points
@@ -30,7 +30,7 @@ Leptos CSR + Cloudflare Pages Functions Rust backend project.
 ## Frontend contract
 
 - Load `<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` in `index.html`.
-- Render the shared `<TurnstileWidget id="<unique-id>" visible=... />` component from `cadiotheka-frontend/src/components/ui/turnstile.rs` in each protected modal, giving each instance a unique `id`.
+- Render the shared `<TurnstileWidget id="<unique-id>" visible=... />` component from `frontend/src/components/ui/turnstile.rs` in each protected modal, giving each instance a unique `id`.
 - Read the token via `turnstile_response("<unique-id>")` so the correct scoped widget token is used.
 - Pass the token to the backend via the `X-Turnstile-Token` request header in the existing request helpers.
 - Reset the widget after any non-redirect error: `reset_turnstile()` is safe to call even before the widget has rendered.

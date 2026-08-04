@@ -3,7 +3,7 @@
 <h1 align="center">
   <br />
     <a href="https://xodium.org/">
-        <img src="cadiotheka-frontend/public/favicon.svg" alt="Cadiotheka Logo" width="200">
+        <img src="frontend/public/favicon.svg" alt="Cadiotheka Logo" width="200">
     </a>
   <br /><br />
   Cadiotheka
@@ -55,21 +55,21 @@ cargo install --locked trunk
 
 ## Running Locally
 
-Cadiotheka is a Cargo workspace with two members: `cadiotheka-frontend` and `cadiotheka-backend`.
+Cadiotheka is a Cargo workspace with two members: `frontend` and `backend`.
 
 ### Frontend
 
 Start a local Trunk dev server (the backend must already be running):
 
 ```bash
-cd cadiotheka-frontend
+cd frontend
 trunk serve --port 8080
 ```
 
 In a second terminal, start the backend first:
 
 ```bash
-cd cadiotheka-backend
+cd backend
 npx wrangler dev
 ```
 
@@ -82,7 +82,7 @@ Trunk proxies `/data/*` requests to the backend dev server on `http://127.0.0.1:
 The backend is a Cloudflare Pages Functions Rust worker. First build the WASM bundle, then run Wrangler:
 
 ```bash
-cd cadiotheka-backend
+cd backend
 cargo install worker-build --version 0.7.5 --force
 worker-build
 npx wrangler dev
@@ -97,12 +97,12 @@ The project details modal includes a built-in 3D IFC/GLB viewer with orbit contr
 To use your real Cloudflare resources during local development, run Wrangler in remote mode:
 
 ```bash
-cd cadiotheka-backend
+cd backend
 worker-build
 npx wrangler dev --remote
 ```
 
-This uses the bindings configured in `cadiotheka-backend/wrangler.toml`:
+This uses the bindings configured in `backend/wrangler.toml`:
 - `DB` for D1
 - `AUTH` for KV
 - `PROJECT_ASSETS` for R2
@@ -112,7 +112,7 @@ Be careful: `--remote` reads and writes real data in those bound resources, incl
 To create the local D1 database tables:
 
 ```bash
-cd cadiotheka-backend
+cd backend
 npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/tags.sql --local
@@ -140,9 +140,9 @@ cargo test
 Lint each crate:
 
 ```bash
-cd cadiotheka-frontend
+cd frontend
 cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
-cd ../cadiotheka-backend
+cd ../backend
 cargo clippy --all-targets --all-features
 ```
 
@@ -151,11 +151,11 @@ cargo clippy --all-targets --all-features
 For a release build:
 
 ```bash
-cd cadiotheka-frontend
+cd frontend
 trunk build --release
 ```
 
-The static site is placed in `cadiotheka-frontend/dist/`.
+The static site is placed in `frontend/dist/`.
 
 ## Backend Deployment
 
@@ -164,7 +164,7 @@ The static site is placed in `cadiotheka-frontend/dist/`.
    npx wrangler d1 create cadiotheka-db
    ```
 
-2. Update `cadiotheka-backend/wrangler.toml` with the database ID from step 1.
+2. Update `backend/wrangler.toml` with the database ID from step 1.
 
    The backend uses these short Worker bindings:
    - `DB` for the D1 database
@@ -176,7 +176,7 @@ The static site is placed in `cadiotheka-frontend/dist/`.
    npx wrangler kv:namespace create AUTH
    ```
 
-   Then copy the resulting ID into `cadiotheka-backend/wrangler.toml` under `[[kv_namespaces]]`.
+   Then copy the resulting ID into `backend/wrangler.toml` under `[[kv_namespaces]]`.
 
 4. Configure secrets for OAuth, session signing, and Turnstile:
    ```bash
@@ -198,10 +198,10 @@ The static site is placed in `cadiotheka-frontend/dist/`.
 
 5. Apply the schema:
    ```bash
-   npx wrangler d1 execute cadiotheka --file=cadiotheka-backend/schemas/accounts.sql
-   npx wrangler d1 execute cadiotheka --file=cadiotheka-backend/schemas/projects.sql
-   npx wrangler d1 execute cadiotheka --file=cadiotheka-backend/schemas/tags.sql
-   npx wrangler d1 execute cadiotheka --file=cadiotheka-backend/schemas/platforms.sql
+   npx wrangler d1 execute cadiotheka --file=backend/schemas/accounts.sql
+   npx wrangler d1 execute cadiotheka --file=backend/schemas/projects.sql
+   npx wrangler d1 execute cadiotheka --file=backend/schemas/tags.sql
+   npx wrangler d1 execute cadiotheka --file=backend/schemas/platforms.sql
    ```
 
    Create the first accounts and projects through the deployed application UI or API.

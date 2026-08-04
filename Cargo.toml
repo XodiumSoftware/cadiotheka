@@ -1,5 +1,5 @@
 [workspace]
-members = ["cadiotheka-frontend", "cadiotheka-backend"]
+members = ["frontend", "backend"]
 resolver = "2"
 
 [workspace.package]

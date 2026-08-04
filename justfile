@@ -6,19 +6,19 @@ _default:
 
 # Lint the frontend for the WASM target (lints configured in workspace Cargo.toml)
 lint-frontend:
-    cd cadiotheka-frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
+    cd frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
 
 # Lint the frontend for the native target (lints configured in workspace Cargo.toml)
 lint-frontend-native:
-    cd cadiotheka-frontend && cargo clippy --all-targets --all-features
+    cd frontend && cargo clippy --all-targets --all-features
 
 # Lint the backend for the native target (lints configured in workspace Cargo.toml)
 lint-backend:
-    cd cadiotheka-backend && cargo clippy --all-targets --all-features
+    cd backend && cargo clippy --all-targets --all-features
 
 # Lint the backend for the WASM target (lints configured in workspace Cargo.toml)
 lint-backend-wasm:
-    cd cadiotheka-backend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
+    cd backend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
 
 # Run all lints (native + WASM for both crates)
 lint: lint-frontend lint-frontend-native lint-backend lint-backend-wasm
@@ -37,11 +37,11 @@ test:
 
 # Run frontend tests only
 test-frontend:
-    cargo test -p cadiotheka-frontend --lib
+    cargo test -p frontend --lib
 
 # Run backend tests only
 test-backend:
-    cargo test -p cadiotheka-backend
+    cargo test -p backend
 
 # Find unused dependencies
 machete:
@@ -52,16 +52,16 @@ validate: lint fmt-check test machete
 
 # Serve the backend locally with Wrangler
 serve-backend:
-    cd cadiotheka-backend && npx wrangler dev
+    cd backend && npx wrangler dev
 
 # Serve the frontend locally (backend must be running on port 8787)
 serve-frontend:
-    cd cadiotheka-frontend && trunk serve --port 8080
+    cd frontend && trunk serve --port 8080
 
 # Build the frontend for release
 build-frontend:
-    cd cadiotheka-frontend && trunk build --release
+    cd frontend && trunk build --release
 
 # Build the backend worker bundle for Wrangler
 build-backend:
-    cd cadiotheka-backend && worker-build
+    cd backend && worker-build

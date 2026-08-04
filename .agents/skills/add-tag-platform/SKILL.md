@@ -12,8 +12,8 @@ adding one is a schema/seed change only.
 ## Steps
 
 1. Add a row to the seed schema for the entity:
-   - `cadiotheka-backend/schemas/tags.sql` for content tags
-   - `cadiotheka-backend/schemas/platforms.sql` for supported CAD platforms
+   - `backend/schemas/tags.sql` for content tags
+   - `backend/schemas/platforms.sql` for supported CAD platforms
 
 2. Use the existing `INSERT OR IGNORE INTO ... VALUES (...)` block. Each row is
    `(id, label, color)`:
@@ -25,7 +25,7 @@ adding one is a schema/seed change only.
 
 3. Re-apply the schema to refresh local data:
    ```bash
-   cd cadiotheka-backend
+   cd backend
    npx wrangler d1 execute cadiotheka --file=schemas/tags.sql --local
    npx wrangler d1 execute cadiotheka --file=schemas/platforms.sql --local
    ```

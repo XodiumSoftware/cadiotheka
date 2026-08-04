@@ -1,4 +1,4 @@
-use cadiotheka_frontend::App;
+use frontend::App;
 use leptos::prelude::*;
 
 fn main() {

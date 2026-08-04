@@ -21,7 +21,7 @@ Use this skill when the user wants to verify the project state or before finishi
 
 3. Run clippy on the backend (lints are configured in the workspace `Cargo.toml`):
    ```bash
-   cargo clippy --all-targets --all-features -p cadiotheka-backend
+   cargo clippy --all-targets --all-features -p backend
    ```
 
 4. Check formatting:

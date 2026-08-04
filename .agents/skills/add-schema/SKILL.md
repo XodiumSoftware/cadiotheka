@@ -1,16 +1,16 @@
 ---
 name: add-schema
-description: Add a new D1 SQL schema file for the cadiotheka-backend, name it consistently, and update the deployment docs in README.md and GUIDE.md.
+description: Add a new D1 SQL schema file for the backend, name it consistently, and update the deployment docs in README.md and GUIDE.md.
 ---
 
 # Add a new backend schema
 
-Use this skill when the user wants to add a new D1 database schema file under `cadiotheka-backend/schemas/`.
+Use this skill when the user wants to add a new D1 database schema file under `backend/schemas/`.
 
 ## Steps
 
 1. Ask the user for the schema name (e.g. `projects`, `likes`, `comments`) if it isn't already clear from their request.
-2. Create the new SQL file at `cadiotheka-backend/schemas/<name>.sql`.
+2. Create the new SQL file at `backend/schemas/<name>.sql`.
 3. Write clean SQLite/D1-compatible SQL. Prefer:
    - `IF NOT EXISTS` on table creation.
    - `TEXT` for UUID/id fields.

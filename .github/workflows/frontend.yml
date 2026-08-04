@@ -4,14 +4,14 @@ on:
   push:
     branches: [main, dev]
     paths:
-      - "cadiotheka-frontend/**"
+      - "frontend/**"
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/frontend.yml"
   pull_request:
     branches: [main, dev]
     paths:
-      - "cadiotheka-frontend/**"
+      - "frontend/**"
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/frontend.yml"
@@ -30,7 +30,7 @@ env:
 
 defaults:
   run:
-    working-directory: cadiotheka-frontend
+    working-directory: frontend
 
 jobs:
   lint:
@@ -213,7 +213,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: dist
-          path: cadiotheka-frontend/dist/
+          path: frontend/dist/
 
   deploy:
     name: Deploy

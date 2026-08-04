@@ -4,8 +4,8 @@
 
 - **Name:** Cadiotheka
 - **Type:** Rust workspace with two members:
-  - `cadiotheka-frontend` — browser-only WebAssembly Leptos CSR app.
-  - `cadiotheka-backend` — Cloudflare Pages Functions Rust worker with D1 database.
+  - `frontend` — browser-only WebAssembly Leptos CSR app.
+  - `backend` — Cloudflare Pages Functions Rust worker with D1 database.
 - **Language:** Rust (edition 2024)
 - **Build Tool:** Cargo + [Trunk](https://trunkrs.dev/)
 - **Target:** `wasm32-unknown-unknown`
@@ -26,47 +26,47 @@
 ```bash
 # Lint the frontend
 # Pedantic lints are configured in the workspace Cargo.toml and denied by default.
-cd cadiotheka-frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
+cd frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
 
 # Lint the backend
-cd cadiotheka-backend && cargo clippy --all-targets --all-features
+cd backend && cargo clippy --all-targets --all-features
 
 # Run the test suite
 cargo test
 
 # Serve the web app locally (backend must be running on port 8787)
-cd cadiotheka-backend && npx wrangler dev
-cd cadiotheka-frontend && trunk serve --port 8080
+cd backend && npx wrangler dev
+cd frontend && trunk serve --port 8080
 
 # Build for the web (WASM)
-cd cadiotheka-frontend && trunk build
+cd frontend && trunk build
 
 # Build for release
-cd cadiotheka-frontend && trunk build --release
+cd frontend && trunk build --release
 
 # Build the backend WASM bundle for Wrangler
-cd cadiotheka-backend && worker-build
+cd backend && worker-build
 ```
 
 ## Testing
 
 - Use `cargo test` to run the full workspace test suite.
-- Run frontend tests with `cargo test -p cadiotheka-frontend --lib`.
-- Run backend tests with `cargo test -p cadiotheka-backend`.
+- Run frontend tests with `cargo test -p frontend --lib`.
+- Run backend tests with `cargo test -p backend`.
 - Add tests for new modules and edge cases where applicable.
 
 ## Data Sources
 
 - The backend owns the canonical data in D1.
 - The frontend does **not** embed JSON fixtures; it fetches accounts from `/data/accounts` and projects from `/data/projects`.
-- Schemas live in `cadiotheka-backend/schemas/` (one entity per file, e.g. `accounts.sql`, `projects.sql`).
+- Schemas live in `backend/schemas/` (one entity per file, e.g. `accounts.sql`, `projects.sql`).
 
 ## Project Structure
 
 ```
 cadiotheka/
 ├── Cargo.toml                         # Workspace configuration
-├── cadiotheka-frontend/
+├── frontend/
 │   ├── Cargo.toml
 │   ├── Trunk.toml                     # Trunk dev server + API proxy
 │   ├── index.html
@@ -80,7 +80,7 @@ cadiotheka/
 │       ├── engines/                   # Search/suggestion logic
 │       ├── metadata/                  # Tag and platform enums
 │       └── utils.rs
-├── cadiotheka-backend/
+├── backend/
 │   ├── Cargo.toml
 │   ├── wrangler.toml                  # D1 binding, worker entry
 │   ├── schemas/                       # D1 schema files
@@ -96,11 +96,11 @@ cadiotheka/
 
 ### Entry Points
 
-1. **`cadiotheka-frontend/src/main.rs`** — Web entry point. Uses `leptos::mount_to_body` when compiled for `wasm32` via Trunk.
-2. **`cadiotheka-frontend/src/lib.rs`** — Public re-export of the `App` component and explicit module registration.
-3. **`cadiotheka-frontend/src/app.rs`** — `App` state and [`leptos::IntoView`] UI implementation.
-4. **`cadiotheka-backend/src/lib.rs`** — Cloudflare Worker entry point with `#[event(fetch)]` and route definitions.
-5. **`cadiotheka-backend/src/api/*.rs`** — Route handlers grouped by entity.
+1. **`frontend/src/main.rs`** — Web entry point. Uses `leptos::mount_to_body` when compiled for `wasm32` via Trunk.
+2. **`frontend/src/lib.rs`** — Public re-export of the `App` component and explicit module registration.
+3. **`frontend/src/app.rs`** — `App` state and [`leptos::IntoView`] UI implementation.
+4. **`backend/src/lib.rs`** — Cloudflare Worker entry point with `#[event(fetch)]` and route definitions.
+5. **`backend/src/api/*.rs`** — Route handlers grouped by entity.
 
 ## Key Conventions
 
@@ -109,11 +109,11 @@ cadiotheka/
 - Address all `cargo clippy` warnings.
 - Use clear module boundaries as the project grows.
 - Prefer immutable data and explicit error handling (`Result`, `Option`).
-- **Register modules and re-exports in `src/lib.rs` explicitly.** Do not use `mod.rs` files. Modules may be grouped in `src/lib.rs` using nested `mod` blocks (e.g. `components { pub mod cards; }`) to mirror the directory structure, but do not nest `mod` declarations inside any other `.rs` file. Every crate-level module must be declared in `src/lib.rs` for `cadiotheka-frontend` and `cadiotheka-backend`.
+- **Register modules and re-exports in `src/lib.rs` explicitly.** Do not use `mod.rs` files. Modules may be grouped in `src/lib.rs` using nested `mod` blocks (e.g. `components { pub mod cards; }`) to mirror the directory structure, but do not nest `mod` declarations inside any other `.rs` file. Every crate-level module must be declared in `src/lib.rs` for `frontend` and `backend`.
 - Use `snake_case` for all Rust source filenames. Compound module names should be split with underscores (e.g. `project_card.rs`, `search_modal.rs`, `corner_frame.rs`, `project_list.rs`), not concatenated.
 - When adding crate dependencies, look up the latest version on [crates.io](https://crates.io) rather than guessing or reusing an old version from another crate in the workspace.
-- Backend route handlers live under `cadiotheka-backend/src/api/` and are wired in `cadiotheka-backend/src/lib.rs`.
-- Backend `DB_BINDING` is a single `pub(crate) const` in `cadiotheka-backend/src/lib.rs` reused by API modules.
+- Backend route handlers live under `backend/src/api/` and are wired in `backend/src/lib.rs`.
+- Backend `DB_BINDING` is a single `pub(crate) const` in `backend/src/lib.rs` reused by API modules.
 - Tags and platforms live in the `tags` and `platforms` D1 tables and are served over `GET /data/tags` and `GET /data/platforms`. Project rows store tag/platform wire ids as JSON arrays; the frontend resolves labels and colors through `MetadataContext`.
 - `verified` columns are stored as SQLite integers (`0`/`1`), not booleans, because D1 returns them as numbers.
 - **Do not add `//` inline comments.** Use `///` doc comments (or `//!` module docs) to explain intent; keep the code itself self-documenting.

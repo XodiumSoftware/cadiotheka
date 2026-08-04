@@ -50,8 +50,8 @@ trunk --version
 
 This repository is a Cargo workspace with two members:
 
-- `cadiotheka-frontend/` — Leptos CSR browser app compiled to `wasm32-unknown-unknown`.
-- `cadiotheka-backend/` — Cloudflare Pages Functions Rust backend using D1.
+- `frontend/` — Leptos CSR browser app compiled to `wasm32-unknown-unknown`.
+- `backend/` — Cloudflare Pages Functions Rust backend using D1.
 
 Most day-to-day development commands are run from inside one of those crates.
 
@@ -60,7 +60,7 @@ Most day-to-day development commands are run from inside one of those crates.
 1. Clone the repository:
    ```bash
    git clone https://github.com/XodiumSoftware/cadiotheka.git
-   cd cadiotheka/cadiotheka-frontend
+   cd cadiotheka/frontend
    ```
 
 2. Build and bundle the web app with Trunk:
@@ -73,7 +73,7 @@ Most day-to-day development commands are run from inside one of those crates.
    trunk build --release
    ```
 
-The output is placed in `cadiotheka-frontend/dist/`.
+The output is placed in `frontend/dist/`.
 
 ## Run Frontend Locally
 
@@ -83,14 +83,14 @@ proxy `/data/*` requests there automatically.
 Start the backend first:
 
 ```bash
-cd cadiotheka-backend
+cd backend
 npx wrangler dev
 ```
 
 In a second terminal, start Trunk:
 
 ```bash
-cd cadiotheka-frontend
+cd frontend
 trunk serve --port 8080
 ```
 
@@ -101,7 +101,7 @@ Trunk rebuilds automatically when you edit the project.
 If you want local development to use your real Cloudflare resources instead of local emulation, start the backend with remote bindings:
 
 ```bash
-cd cadiotheka-backend
+cd backend
 worker-build
 npx wrangler dev --remote
 ```
@@ -113,7 +113,7 @@ That uses the `DB`, `AUTH`, and `PROJECT_ASSETS` bindings from `wrangler.toml`. 
 The backend is a Cloudflare Pages Functions Rust worker. First build the WASM bundle, then run Wrangler:
 
 ```bash
-cd cadiotheka-backend
+cd backend
 cargo install worker-build --version 0.7.5 --force
 worker-build
 npx wrangler dev
@@ -144,7 +144,7 @@ For local emulation, use plain `npx wrangler dev`. To hit the bound remote Cloud
 Apply the schemas to the local D1 database:
 
 ```bash
-cd cadiotheka-backend
+cd backend
 npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/tags.sql --local
@@ -173,20 +173,20 @@ To apply the schema to a production database, omit the `--local` flag after upda
 Build the WASM bundle that Wrangler serves:
 
 ```bash
-cd cadiotheka-backend
+cd backend
 worker-build
 ```
 
-The generated worker shim is placed in `cadiotheka-backend/build/`.
+The generated worker shim is placed in `backend/build/`.
 
 ## Build for Release
 
 ```bash
-cd cadiotheka-frontend
+cd frontend
 trunk build --release
 ```
 
-The release site is placed in `cadiotheka-frontend/dist/`. Upload that folder to
+The release site is placed in `frontend/dist/`. Upload that folder to
 your static host (e.g. Cloudflare Pages alongside the backend).
 
 ## Run Tests
@@ -200,13 +200,13 @@ cargo test
 To run only the frontend tests:
 
 ```bash
-cargo test -p cadiotheka-frontend
+cargo test -p frontend
 ```
 
 To run only the backend tests:
 
 ```bash
-cargo test -p cadiotheka-backend
+cargo test -p backend
 ```
 
 ## Run Linting
@@ -214,14 +214,14 @@ cargo test -p cadiotheka-backend
 Lint the frontend with the WASM target:
 
 ```bash
-cd cadiotheka-frontend
+cd frontend
 cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
 ```
 
 Lint the backend:
 
 ```bash
-cd cadiotheka-backend
+cd backend
 cargo clippy --all-targets --all-features -- -D warnings
 ```
 
@@ -258,14 +258,14 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
 
 ### Backend local dev issues
 
-- Ensure `npx wrangler dev` is run from `cadiotheka-backend/`.
+- Ensure `npx wrangler dev` is run from `backend/`.
 - The D1 database ID in `wrangler.toml` must match the database you created for production; local dev uses a local D1 binding automatically.
 
 ## Deploy the Backend
 
 1. Create a D1 database:
    ```bash
-   cd cadiotheka-backend
+   cd backend
    npx wrangler d1 create cadiotheka-db
    ```
 
