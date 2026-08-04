@@ -24,7 +24,7 @@ impl OverflowItem {
 ///
 /// The container is `flex-nowrap` so it never wraps. Items beyond `max_visible`
 /// are hidden and summarized by the overflow box, which shows a DaisyUI tooltip
-/// listing all hidden labels vertically.
+/// listing all hidden labels separated by middots.
 #[component]
 pub fn OverflowRow(
     #[prop(into)] items: Vec<OverflowItem>,
@@ -40,7 +40,7 @@ pub fn OverflowRow(
         .iter()
         .map(|item| item.label.as_str())
         .collect::<Vec<_>>()
-        .join("\n");
+        .join(" · ");
 
     view! {
         <div class="flex flex-nowrap items-center gap-1 overflow-hidden">
