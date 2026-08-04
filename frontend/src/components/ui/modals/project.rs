@@ -1462,8 +1462,11 @@ fn ProjectModalContent(
                                             move || {
                                                 let has_ifc = ifc_url.get().is_some();
                                                 let downloading = is_downloading.get();
+                                                let editing = is_editable.get() && edit_mode.get();
                                                 let label = if downloading {
                                                     "Downloading IFC..."
+                                                } else if editing {
+                                                    "Editing project"
                                                 } else if has_ifc {
                                                     "Download IFC"
                                                 } else {
@@ -1473,7 +1476,7 @@ fn ProjectModalContent(
                                                     <button
                                                         type="button"
                                                         class=move || {
-                                                            if !has_ifc || downloading {
+                                                            if !has_ifc || downloading || editing {
                                                                 "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
                                                             } else {
                                                                 "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
@@ -1481,7 +1484,7 @@ fn ProjectModalContent(
                                                         }
                                                         aria-label=label
                                                         data-tip=label
-                                                        disabled=move || !has_ifc || downloading
+                                                        disabled=move || !has_ifc || downloading || editing
                                                         on:click={
                                                             let cb = increment_downloads;
                                                             move |_| cb.run(())
