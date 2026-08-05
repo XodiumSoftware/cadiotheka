@@ -558,11 +558,8 @@ fn ProjectModalContent(
         }
     });
 
-    let (active_tab, set_active_tab) = signal(ProjectDetailsTab::Viewer3d);
-
-    Effect::new(move |_| {
-        modal.set_active_tab.set(active_tab.get());
-    });
+    let active_tab = modal.active_tab;
+    let set_active_tab = modal.set_active_tab;
 
     let (editing_title, set_editing_title) = signal(false);
     let (draft_title, set_draft_title) = signal(card.title.clone());
