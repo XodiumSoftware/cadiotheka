@@ -23,7 +23,7 @@ impl VersionState {
     /// Returns a text color utility class representing the state's severity.
     pub const fn color_class(self) -> &'static str {
         match self {
-            Self::Undefined => "text-neutral",
+            Self::Undefined => "text-base-content/50",
             Self::Alpha => "text-error",
             Self::Beta => "text-warning",
             Self::Stable => "text-success",
@@ -33,7 +33,7 @@ impl VersionState {
     /// Returns the `DaisyUI` badge class used to color the version icon.
     pub const fn badge_class(self) -> &'static str {
         match self {
-            Self::Undefined => "badge-neutral",
+            Self::Undefined => "badge-ghost",
             Self::Alpha => "badge-error",
             Self::Beta => "badge-warning",
             Self::Stable => "badge-success",
