@@ -83,7 +83,8 @@ cadiotheka/
 ├── backend/
 │   ├── Cargo.toml
 │   ├── wrangler.toml                  # D1 binding, worker entry
-│   ├── schemas/                       # D1 schema files
+│   ├── schemas/                       # D1 schema files (new tables)
+│   ├── migrations/                    # Numbered ALTER TABLE migrations for existing deployments
 │   ├── scripts/                       # Seed SQL scripts
 │   └── src/
 │       ├── lib.rs                     # Router, DB_BINDING constant
