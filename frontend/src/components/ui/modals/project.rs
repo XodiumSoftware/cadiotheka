@@ -246,10 +246,13 @@ fn VersionStateDropdown(
             <div
                 tabindex="0"
                 role="button"
-                class="w-10 h-10 rounded-none flex items-center justify-center cursor-pointer bg-base-200/50 border border-base-content/10 hover:border-primary transition-colors"
+                class="group relative w-10 h-10 rounded-none flex items-center justify-center cursor-pointer bg-base-200/50 border border-base-content/10 hover:border-primary transition-colors"
                 aria-label=move || format!("Current state: {}. Open state selector.", state.get().label())
             >
                 {move || ifc_file_icon("w-5 h-5", state.get().color_class())}
+                <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {edit_pencil_icon("w-4 h-4 text-primary")}
+                </div>
             </div>
             <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-none z-50 w-40 p-2 shadow border border-base-content/10">
                 {VersionState::VARIANTS.iter().map(|variant| {
