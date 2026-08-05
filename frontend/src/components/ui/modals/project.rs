@@ -1626,14 +1626,12 @@ fn ProjectModalContent(
                                                                                             ().into_any()
                                                                                         } else {
                                                                                             let version = version_for_download.clone();
-                                                                                            let filename = version.filename.clone();
-                                                                                            let filename_for_tip = filename.clone();
                                                                                             view! {
                                                                                                 <button
                                                                                                     type="button"
                                                                                                     class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-left"
-                                                                                                    aria-label=move || format!("Download {filename}")
-                                                                                                    data-tip=move || format!("Download {filename_for_tip}")
+                                                                                                    aria-label="Download"
+                                                                                                    data-tip="Download"
                                                                                                     on:click=move |_| {
                                                                                                         let url = ifc_download_url(&version);
                                                                                                         increment_downloads.run(url);
@@ -1805,7 +1803,7 @@ fn ProjectModalContent(
                                                 } else if editing {
                                                     "Editing project"
                                                 } else if has_ifc {
-                                                    "Download IFC"
+                                                    "Download latest"
                                                 } else {
                                                     "No IFC model available"
                                                 };
