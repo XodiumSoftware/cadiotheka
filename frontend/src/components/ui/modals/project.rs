@@ -249,7 +249,17 @@ fn VersionStateDropdown(
                 class="group relative w-10 h-10 rounded-none flex items-center justify-center cursor-pointer bg-base-200/50 border border-base-content/10 hover:border-primary transition-colors"
                 aria-label=move || format!("Current state: {}. Open state selector.", state.get().label())
             >
-                {move || ifc_file_icon("w-5 h-5", state.get().color_class())}
+                {move || {
+                    let s = state.get();
+                    if s == VersionState::Undefined {
+                        ifc_file_icon("w-5 h-5", s.color_class()).into_any()
+                    } else {
+                        view! {
+                            <span class=format!("text-sm font-semibold {}", s.color_class())>{s.letter()}</span>
+                        }
+                            .into_any()
+                    }
+                }}
                 <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                     {edit_pencil_icon("w-4 h-4 text-primary")}
                 </div>
@@ -291,7 +301,17 @@ fn VersionStateBadge(#[prop(into)] state: Signal<VersionState>) -> impl IntoView
             class="w-10 h-10 rounded-none flex items-center justify-center bg-base-200/50 border border-base-content/10"
             aria-label=move || format!("State: {}", state.get().label())
         >
-            {move || ifc_file_icon("w-5 h-5", state.get().color_class())}
+            {move || {
+                let s = state.get();
+                if s == VersionState::Undefined {
+                    ifc_file_icon("w-5 h-5", s.color_class()).into_any()
+                } else {
+                    view! {
+                        <span class=format!("text-sm font-semibold {}", s.color_class())>{s.letter()}</span>
+                    }
+                        .into_any()
+                }
+            }}
         </div>
     }
 }

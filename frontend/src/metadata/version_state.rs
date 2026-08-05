@@ -46,7 +46,17 @@ impl VersionState {
             Self::Undefined => "Undefined",
             Self::Alpha => "Alpha",
             Self::Beta => "Beta",
-            Self::Stable => "Stable",
+            Self::Stable => "Release",
+        }
+    }
+
+    /// Returns the single-letter abbreviation shown in the versions table.
+    pub const fn letter(self) -> &'static str {
+        match self {
+            Self::Undefined => "-",
+            Self::Alpha => "A",
+            Self::Beta => "B",
+            Self::Stable => "R",
         }
     }
 
