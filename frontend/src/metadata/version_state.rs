@@ -70,6 +70,16 @@ impl VersionState {
         }
     }
 
+    /// Returns the single-letter abbreviation shown in the versions table.
+    pub const fn letter(self) -> &'static str {
+        match self {
+            Self::Undefined => "-",
+            Self::Alpha => "A",
+            Self::Beta => "B",
+            Self::Stable => "R",
+        }
+    }
+
     /// Returns true if the version is visible to the public.
     pub const fn is_public(self) -> bool {
         !matches!(self, Self::Undefined)
