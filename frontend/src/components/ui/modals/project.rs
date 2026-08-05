@@ -65,6 +65,24 @@ pub fn ProjectModal() -> impl IntoView {
         modal.close();
     });
 
+    // Keep a stable card for the lifetime of the open modal so that updates to
+    // the context card (e.g. added/removed versions) do not remount the whole
+    // modal content and reset the active tab.
+    let stable_card = RwSignal::new(None::<ProjectCardProperties>);
+    Effect::new(move |_| {
+        let maybe_card = modal.card.get();
+        stable_card.update(|current| {
+            let should_update = match (current.as_ref(), maybe_card.as_ref()) {
+                (None, Some(_)) => true,
+                (Some(current), Some(new)) if current.id != new.id => true,
+                _ => false,
+            };
+            if should_update {
+                *current = maybe_card;
+            }
+        });
+    });
+
     Effect::new(move |_| {
         if !modal.open.get() {
             set_viewer_fullscreen.set(false);
@@ -94,7 +112,7 @@ pub fn ProjectModal() -> impl IntoView {
             })
         >
             {move || {
-                let maybe_card = modal.card.get();
+                let maybe_card = stable_card.get();
                 match maybe_card {
                     Some(card) => view! {
                         <ProjectModalContent
