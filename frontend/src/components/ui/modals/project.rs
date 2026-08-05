@@ -1,3 +1,4 @@
+use crate::components::IfcViewer;
 use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProperties};
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
@@ -19,7 +20,7 @@ use crate::data::{
 use crate::metadata::VersionState;
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
-use crate::utils::{placeholder_color, placeholder_letter};
+use crate::utils::{api_url, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -1346,107 +1347,104 @@ fn ProjectModalContent(
                             </div>
                             <div class="flex-1 min-h-0">
                                 {move || match active_tab.get() {
-                                ProjectDetailsTab::Viewer3d => view! {
-                                    {
-                                        let _viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
+                                    ProjectDetailsTab::Viewer3d => {
+                                        let viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
                                         let fps = RwSignal::new(0.0_f64);
                                         let show_debug = RwSignal::new(false);
                                         let show_grid = RwSignal::new(true);
                                         let show_axes = RwSignal::new(true);
                                         let shadows = RwSignal::new(true);
-                                        let _debug_text = RwSignal::new(String::new());
+                                        let debug_text = RwSignal::new(String::new());
                                         let reset_view = RwSignal::new(false);
 
                                         view! {
-                                            <div node_ref=viewer_ref class="h-full flex flex-col">
-                                                <div class="flex items-center justify-between gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
-                                                    <div class="text-xs font-mono text-base-content/70 px-2">
-                                                        {move || format!("{fps:.1} FPS", fps = fps.get())}
-                                                    </div>
-                                                    <div class="flex gap-1">
-                                                        <ToolbarButton
-                                                            label="Toggle debug overlay"
-                                                            tooltip_position=TooltipPosition::Bottom
-                                                            on_click=Callback::new(move |()| {
-                                                                show_debug.update(|v| *v = !*v);
-                                                            })
-                                                        >
-                                                            {move || if show_debug.get() { "🐞" } else { "🐛" }}
-                                                        </ToolbarButton>
-                                                        <ToolbarButton
-                                                            label="Toggle ground grid"
-                                                            tooltip_position=TooltipPosition::Bottom
-                                                            on_click=Callback::new(move |()| {
-                                                                show_grid.update(|v| *v = !*v);
-                                                            })
-                                                        >
-                                                            {move || if show_grid.get() { "▦" } else { "▨" }}
-                                                        </ToolbarButton>
-                                                        <ToolbarButton
-                                                            label="Toggle axes gizmo"
-                                                            tooltip_position=TooltipPosition::Bottom
-                                                            on_click=Callback::new(move |()| {
-                                                                show_axes.update(|v| *v = !*v);
-                                                            })
-                                                        >
-                                                            {move || if show_axes.get() { "📍" } else { "⚪" }}
-                                                        </ToolbarButton>
-                                                        <ToolbarButton
-                                                            label="Toggle shadows"
-                                                            tooltip_position=TooltipPosition::Bottom
-                                                            on_click=Callback::new(move |()| {
-                                                                shadows.update(|v| *v = !*v);
-                                                            })
-                                                        >
-                                                            {move || if shadows.get() { "🌑" } else { "☀" }}
-                                                        </ToolbarButton>
-                                                        <ToolbarButton
-                                                            label="Reset view"
-                                                            tooltip_position=TooltipPosition::Bottom
-                                                            on_click=Callback::new(move |()| {
-                                                                reset_view.set(true);
-                                                            })
-                                                        >
-                                                            "⟲"
-                                                        </ToolbarButton>
-                                                        <ToolbarButton
-                                                            label="Toggle fullscreen"
-                                                            tooltip_position=TooltipPosition::Bottom
-                                                            on_click=toggle_fullscreen
-                                                        >
-                                                            {move || if viewer_fullscreen.get() { "🗗" } else { "⛶" }}
-                                                        </ToolbarButton>
-                                                    </div>
-                                                </div>
-                                                <div class="flex-1 min-h-0 relative">
-                                                    IfcViewer
-                                                        url=Signal::derive({
-                                                            let project_id = project_id.clone();
-                                                            move || {
-                                                                latest_visible_ifc_url(&versions.get()
-                                                                ).map(|_| api_url(&format!("/projects/{project_id}/glb")))
-                                                            }
-                                                        })
-                                                        storage_key=Signal::derive({
-                                                            let project_id = project_id.clone();
-                                                            move || format!("cadiotheka.three_d_viewer.{project_id}")
-                                                        })
-                                                        state_signal=viewer_state
-                                                        fps_signal=fps
-                                                        show_debug_signal=show_debug
-                                                        debug_text_signal=debug_text
-                                                        reset_view_signal=reset_view
-                                                        show_grid_signal=show_grid
-                                                        show_axes_signal=show_axes
-                                                        shadows_signal=shadows
-                                                    />
-                                                </div>
+                                    <div node_ref=viewer_ref class="h-full flex flex-col">
+                                        <div class="flex items-center justify-between gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
+                                            <div class="text-xs font-mono text-base-content/70 px-2">
+                                                {move || format!("{fps:.1} FPS", fps = fps.get())}
                                             </div>
-                                        }
-                                    }
-                                }
-                                    .into_any(),
-                                ProjectDetailsTab::Versions => view! {
+                                            <div class="flex gap-1">
+                                                <ToolbarButton
+                                                    label="Toggle debug overlay"
+                                                    tooltip_position=TooltipPosition::Bottom
+                                                    on_click=Callback::new(move |()| {
+                                                        show_debug.update(|v| *v = !*v);
+                                                    })
+                                                >
+                                                    {move || if show_debug.get() { "🐞" } else { "🐛" }}
+                                                </ToolbarButton>
+                                                <ToolbarButton
+                                                    label="Toggle ground grid"
+                                                    tooltip_position=TooltipPosition::Bottom
+                                                    on_click=Callback::new(move |()| {
+                                                        show_grid.update(|v| *v = !*v);
+                                                    })
+                                                >
+                                                    {move || if show_grid.get() { "▦" } else { "▨" }}
+                                                </ToolbarButton>
+                                                <ToolbarButton
+                                                    label="Toggle axes gizmo"
+                                                    tooltip_position=TooltipPosition::Bottom
+                                                    on_click=Callback::new(move |()| {
+                                                        show_axes.update(|v| *v = !*v);
+                                                    })
+                                                >
+                                                    {move || if show_axes.get() { "📍" } else { "⚪" }}
+                                                </ToolbarButton>
+                                                <ToolbarButton
+                                                    label="Toggle shadows"
+                                                    tooltip_position=TooltipPosition::Bottom
+                                                    on_click=Callback::new(move |()| {
+                                                        shadows.update(|v| *v = !*v);
+                                                    })
+                                                >
+                                                    {move || if shadows.get() { "🌑" } else { "☀" }}
+                                                </ToolbarButton>
+                                                <ToolbarButton
+                                                    label="Reset view"
+                                                    tooltip_position=TooltipPosition::Bottom
+                                                    on_click=Callback::new(move |()| {
+                                                        reset_view.set(true);
+                                                    })
+                                                >
+                                                    "⟲"
+                                                </ToolbarButton>
+                                                <ToolbarButton
+                                                    label="Toggle fullscreen"
+                                                    tooltip_position=TooltipPosition::Bottom
+                                                    on_click=toggle_fullscreen
+                                                >
+                                                    {move || if viewer_fullscreen.get() { "🗗" } else { "⛶" }}
+                                                </ToolbarButton>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-h-0 relative">
+                                            <IfcViewer
+                                                url=Signal::derive({
+                                                    let project_id = project_id.clone();
+                                                    move || {
+                                                        latest_visible_ifc_url(&versions.get()
+                                                        ).map(|_| api_url(&format!("/projects/{project_id}/glb")))
+                                                    }
+                                                })
+                                                storage_key=Signal::derive({
+                                                    let project_id = project_id.clone();
+                                                    move || format!("cadiotheka.three_d_viewer.{project_id}")
+                                                })
+                                                state_signal=viewer_state
+                                                fps_signal=fps
+                                                show_debug_signal=show_debug
+                                                debug_text_signal=debug_text
+                                                reset_view_signal=reset_view
+                                                show_grid_signal=show_grid
+                                                show_axes_signal=show_axes
+                                                shadows_signal=shadows
+                                            />
+                                        </div>
+                                    </div>
+                                }.into_any()
+                            }
+                            ProjectDetailsTab::Versions => view! {
                                     <div class="min-h-0 h-full flex flex-col space-y-4 overflow-y-auto pr-1">
                                         {move || {
                                             if is_editable.get() && edit_mode.get() {
