@@ -2192,12 +2192,12 @@ fn ProjectModalContent(
                                                     {owner_account.as_ref().map(|account| {
                                                         let account = account.clone();
                                                         view! {
-                                                            {avatar_button(&account, None)}
+                                                            {avatar_button(&account, Some("w-12 h-12 hover:border-primary".to_string()))}
                                                         }
                                                     })}
                                                     {collaborators.into_iter().map(|account| {
                                                         view! {
-                                                            {avatar_button(&account, None)}
+                                                            {avatar_button(&account, Some("w-12 h-12 hover:border-primary".to_string()))}
                                                         }
                                                     }).collect_view()}
                                                 </div>
@@ -2222,7 +2222,7 @@ fn ProjectModalContent(
                                                                     profile_modal.open(account_for_click.clone());
                                                                 }
                                                             >
-                                                                {avatar_button(account, None)}
+                                                                {avatar_button(account, Some("w-12 h-12 hover:border-primary".to_string()))}
                                                             </button>
                                                         }
                                                     })}
@@ -2236,7 +2236,7 @@ fn ProjectModalContent(
                                                                     profile_modal.open(account_for_click.clone());
                                                                 }
                                                             >
-                                                                {avatar_button(&account, None)}
+                                                                {avatar_button(&account, Some("w-12 h-12 hover:border-primary".to_string()))}
                                                             </button>
                                                         }
                                                     }).collect_view()}
