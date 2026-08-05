@@ -1765,7 +1765,7 @@ fn ProjectModalContent(
                             if viewer_fullscreen.get() || sidebar_collapsed.get() {
                                 "hidden".to_string()
                             } else {
-                                "w-72 flex-shrink-0 space-y-4".to_string()
+                                "w-full xl:w-72 flex-shrink-0 space-y-4".to_string()
                             }
                         }>
                             {move || {
