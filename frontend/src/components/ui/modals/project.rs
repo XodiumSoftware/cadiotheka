@@ -21,13 +21,14 @@ use crate::metadata::VersionState;
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use crate::utils::{
-    api_url, format_file_size, format_version_timestamp, placeholder_color, placeholder_letter,
+    api_url, format_number, format_version_timestamp, placeholder_color, placeholder_letter,
 };
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
 const MAX_TITLE_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 100;
+const VERSIONS_PER_PAGE: usize = 20;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ProjectDetailsTab {
@@ -296,125 +297,6 @@ fn VersionStateBadge(#[prop(into)] state: Signal<VersionState>) -> impl IntoView
     }
 }
 
-/// Card displaying a single IFC version with state, metadata, and actions.
-#[component]
-fn VersionCard(
-    #[prop(into)] version: ProjectVersion,
-    #[prop(into)] can_edit: Signal<bool>,
-    #[prop(into)] is_deleting: Signal<bool>,
-    #[prop(into)] on_state_change: Callback<VersionState>,
-    #[prop(into)] on_delete: Callback<()>,
-    #[prop(into)] on_download: Callback<()>,
-) -> impl IntoView {
-    let state = Signal::derive({
-        let version = version.clone();
-        move || version.state
-    });
-    let filename = version.filename.clone();
-    let created_at = version.created_at.clone();
-    let file_size = version.file_size;
-
-    view! {
-        <div class="relative group rounded-none border border-base-content/10 bg-base-200/30 p-4 flex items-center gap-3 hover:border-primary transition-colors">
-            {move || {
-                if can_edit.get() {
-                    view! {
-                        <VersionStateDropdown
-                            state=state
-                            on_change=Callback::new({
-                                let on_state_change = on_state_change;
-                                move |new_state: VersionState| on_state_change.run(new_state)
-                            })
-                        />
-                    }
-                        .into_any()
-                } else {
-                    view! { <VersionStateBadge state=state /> }.into_any()
-                }
-            }}
-            <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-base-content truncate">{filename.clone()}</p>
-                <p class="text-xs text-base-content/50" title=created_at.clone()>
-                    {format_version_timestamp(&created_at)}
-                    " · "
-                    {format_file_size(file_size)}
-                </p>
-            </div>
-            {move || {
-                if can_edit.get() {
-                    view! {
-                        <button
-                            type="button"
-                            class=move || {
-                                if is_deleting.get() {
-                                    "btn btn-outline btn-error btn-xs flex items-center justify-center gap-1 tooltip tooltip-left opacity-50 cursor-not-allowed"
-                                } else {
-                                    "btn btn-outline btn-error btn-xs flex items-center justify-center gap-1 tooltip tooltip-left"
-                                }
-                            }
-                            data-tip="Delete version"
-                            disabled=move || is_deleting.get()
-                            on:click=move |_| on_delete.run(())
-                        >
-                            {move || if is_deleting.get() {
-                                view! {
-                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                }
-                                    .into_any()
-                            } else {
-                                view! {
-                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                        <path d="M3 6h18" />
-                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                                    </svg>
-                                }
-                                    .into_any()
-                            }}
-                        </button>
-                    }
-                        .into_any()
-                } else {
-                    ().into_any()
-                }
-            }}
-            {move || {
-                if can_edit.get() || state.get() == VersionState::Undefined {
-                    ().into_any()
-                } else {
-                    let filename_for_label = filename.clone();
-                    let filename_for_tip = filename.clone();
-                    view! {
-                        <button
-                            type="button"
-                            class="absolute inset-0 z-10 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border border-transparent group-hover:border-primary"
-                            aria-label=move || format!("Download {filename_for_label}")
-                            data-tip=move || format!("Download {filename_for_tip}")
-                            on:click=move |_| on_download.run(())
-                        >
-                            <svg
-                                class="w-8 h-8 text-primary"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="7 10 12 15 17 10" />
-                                <line x1="12" y1="15" x2="12" y2="3" />
-                            </svg>
-                        </button>
-                    }
-                        .into_any()
-                }
-            }}
-        </div>
-    }
-}
-
 /// Returns a platform's wire id.
 fn platform_id(platform: &Platform) -> String {
     platform.id.clone()
@@ -604,6 +486,16 @@ fn ProjectModalContent(
         signal(card.collaborator_ids.clone());
 
     let (versions, set_versions) = signal(Vec::<ProjectVersion>::new());
+    let (versions_page, set_versions_page) = signal(0usize);
+    let versions_total_pages = Signal::derive(move || {
+        let total = versions.get().len();
+        total.div_ceil(VERSIONS_PER_PAGE)
+    });
+    let clamped_versions_page = Signal::derive(move || {
+        versions_page
+            .get()
+            .min(versions_total_pages.get().saturating_sub(1))
+    });
     let (is_uploading_ifc, set_is_uploading_ifc) = signal(false);
     let (is_downloading, set_is_downloading) = signal(false);
     let (glb_status, set_glb_status) = signal(GlbConversionStatus::Idle);
@@ -713,7 +605,7 @@ fn ProjectModalContent(
             leptos::task::spawn_local(async move {
                 set_is_uploading_ifc.set(true);
                 set_glb_status.set(GlbConversionStatus::Idle);
-                match upload_project_ifc(&project_id, file).await {
+                match upload_project_ifc(&project_id, file, "1.0.0", "blender").await {
                     Ok(version) => {
                         let version_for_projects = version.clone();
                         set_versions.update(|versions| {
@@ -1542,38 +1434,197 @@ fn ProjectModalContent(
                                                 }
                                                     .into_any()
                                             } else {
-                                                versions.into_iter().map(|version| {
-                                                    let version_id = version.id.clone();
-                                                    let version_for_state = version.clone();
-                                                    let version_for_download = version.clone();
-                                                    let is_deleting = Signal::derive({
-                                                        let version_id = version_id.clone();
-                                                        move || deleting_version_id.get().as_ref() == Some(&version_id)
-                                                    });
-                                                    let can_edit_this = Signal::derive(move || is_editable.get() && edit_mode.get());
-                                                    view! {
-                                                        <VersionCard
-                                                            version=version
-                                                            can_edit=can_edit_this
-                                                            is_deleting=is_deleting
-                                                            on_state_change=Callback::new({
-                                                                let version_id = version_for_state.id.clone();
-                                                                move |state: VersionState| update_version_state.run((version_id.clone(), state))
-                                                            })
-                                                            on_delete=Callback::new({
-                                                                let version_id = version_for_state.id.clone();
-                                                                move |()| delete_version.run(version_id.clone())
-                                                            })
-                                                            on_download=Callback::new({
-                                                                let version = version_for_download.clone();
-                                                                move |()| {
-                                                                    let url = ifc_download_url(&version);
-                                                                    increment_downloads.run(url);
+                                                let page = clamped_versions_page.get();
+                                                let start = page * VERSIONS_PER_PAGE;
+                                                let paginated: Vec<_> = versions
+                                                    .into_iter()
+                                                    .skip(start)
+                                                    .take(VERSIONS_PER_PAGE)
+                                                    .collect();
+                                                let total_pages = versions_total_pages.get();
+                                                view! {
+                                                    <div class="space-y-2">
+                                                        <div class="overflow-x-auto rounded-none border border-base-content/10">
+                                                            <table class="w-full text-left text-sm">
+                                                                <thead class="bg-base-200/50 text-xs uppercase text-base-content/70">
+                                                                    <tr>
+                                                                        <th class="p-2 w-10"></th>
+                                                                        <th class="p-2">"Version"</th>
+                                                                        <th class="p-2">"Platform"</th>
+                                                                        <th class="p-2">"Published"</th>
+                                                                        <th class="p-2">"Downloads"</th>
+                                                                        <th class="p-2 w-10"></th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {paginated.into_iter().map(|version| {
+                                                                        let version_id = version.id.clone();
+                                                                        let version_id_for_state = version.id.clone();
+                                                                        let version_id_for_delete = version.id.clone();
+                                                                        let version_for_download = version.clone();
+                                                                        let is_deleting = Signal::derive({
+                                                                            let version_id = version_id.clone();
+                                                                            move || deleting_version_id.get().as_ref() == Some(&version_id)
+                                                                        });
+                                                                        let state = Signal::derive({
+                                                                            let version = version.clone();
+                                                                            move || version.state
+                                                                        });
+                                                                        let platform_info = metadata.platform_by_id(&version.platform);
+                                                                        view! {
+                                                                            <tr class="even:bg-base-200/30 border-b border-base-content/10 last:border-b-0">
+                                                                                <td class="p-2">
+                                                                                    <div class="flex items-center gap-2">
+                                                                                        {move || {
+                                                                                            if is_editable.get() && edit_mode.get() {
+                                                                                                view! {
+                                                                                                    <VersionStateDropdown
+                                                                                                        state=state
+                                                                                                        on_change=Callback::new({
+                                                                                                            let version_id = version_id_for_state.clone();
+                                                                                                            move |new_state: VersionState| update_version_state.run((version_id.clone(), new_state))
+                                                                                                        })
+                                                                                                    />
+                                                                                                }
+                                                                                                    .into_any()
+                                                                                            } else {
+                                                                                                view! { <VersionStateBadge state=state /> }.into_any()
+                                                                                            }
+                                                                                        }}
+                                                                                        {move || {
+                                                                                            if is_editable.get() && edit_mode.get() {
+                                                                                                view! {
+                                                                                                    <button
+                                                                                                        type="button"
+                                                                                                        class=move || {
+                                                                                                            if is_deleting.get() {
+                                                                                                                "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 opacity-50 cursor-not-allowed"
+                                                                                                            } else {
+                                                                                                                "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0"
+                                                                                                            }
+                                                                                                        }
+                                                                                                        disabled=move || is_deleting.get()
+                                                                                                        on:click={
+                                                                                                            let version_id = version_id_for_delete.clone();
+                                                                                                            move |_| delete_version.run(version_id.clone())
+                                                                                                        }
+                                                                                                        aria-label="Delete version"
+                                                                                                    >
+                                                                                                        {trash_icon("w-3.5 h-3.5")}
+                                                                                                    </button>
+                                                                                                }
+                                                                                                    .into_any()
+                                                                                            } else {
+                                                                                                ().into_any()
+                                                                                            }
+                                                                                        }}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td class="p-2 font-medium text-base-content" title=version.filename.clone()>
+                                                                                    {version.version.clone()}
+                                                                                </td>
+                                                                                <td class="p-2">
+                                                                                    {platform_info.map_or_else(|| {
+                                                                                        let id = version.platform.clone();
+                                                                                        view! { <span class="text-base-content/50">{id}</span> }.into_any()
+                                                                                    }, |platform| {
+                                                                                        let style = platform.color.clone();
+                                                                                        let label = platform.label.clone();
+                                                                                        view! {
+                                                                                            <span
+                                                                                                class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
+                                                                                                style=style
+                                                                                            >
+                                                                                                {label}
+                                                                                            </span>
+                                                                                        }
+                                                                                            .into_any()
+                                                                                    })}
+                                                                                </td>
+                                                                                <td class="p-2 text-base-content/70">{format_version_timestamp(&version.created_at)}</td>
+                                                                                <td class="p-2 text-base-content/70">{format_number(version.downloads.max(0).cast_unsigned())}</td>
+                                                                                <td class="p-2 text-right">
+                                                                                    {move || {
+                                                                                        if version_for_download.state == VersionState::Undefined {
+                                                                                            ().into_any()
+                                                                                        } else {
+                                                                                            let version = version_for_download.clone();
+                                                                                            let filename = version.filename.clone();
+                                                                                            let filename_for_tip = filename.clone();
+                                                                                            view! {
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-left"
+                                                                                                    aria-label=move || format!("Download {filename}")
+                                                                                                    data-tip=move || format!("Download {filename_for_tip}")
+                                                                                                    on:click=move |_| {
+                                                                                                        let url = ifc_download_url(&version);
+                                                                                                        increment_downloads.run(url);
+                                                                                                    }
+                                                                                                >
+                                                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                                                                        <polyline points="7 10 12 15 17 10" />
+                                                                                                        <line x1="12" y1="15" x2="12" y2="3" />
+                                                                                                    </svg>
+                                                                                                </button>
+                                                                                            }
+                                                                                                .into_any()
+                                                                                        }
+                                                                                    }}
+                                                                                </td>
+                                                                            </tr>
+                                                                        }
+                                                                    }).collect_view().into_any()}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                        {move || {
+                                                            if total_pages > 1 {
+                                                                view! {
+                                                                    <div class="flex items-center justify-between text-sm">
+                                                                        <span class="text-base-content/50">
+                                                                            "Page "
+                                                                            {page + 1}
+                                                                            " of "
+                                                                            {total_pages}
+                                                                        </span>
+                                                                        <div class="flex gap-2">
+                                                                            <button
+                                                                                type="button"
+                                                                                class=move || {
+                                                                                    if page == 0 {
+                                                                                        "btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
+                                                                                    } else {
+                                                                                        "btn btn-xs btn-outline rounded-none"
+                                                                                    }
+                                                                                }
+                                                                                disabled=move || page == 0
+                                                                                on:click=move |_| set_versions_page.update(|p| *p = p.saturating_sub(1))
+                                                                            >"Previous"</button>
+                                                                            <button
+                                                                                type="button"
+                                                                                class=move || {
+                                                                                    if page + 1 >= total_pages {
+                                                                                        "btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
+                                                                                    } else {
+                                                                                        "btn btn-xs btn-outline rounded-none"
+                                                                                    }
+                                                                                }
+                                                                                disabled=move || page + 1 >= total_pages
+                                                                                on:click=move |_| set_versions_page.update(|p| *p = (*p + 1).min(total_pages.saturating_sub(1)))
+                                                                            >"Next"</button>
+                                                                        </div>
+                                                                    </div>
                                                                 }
-                                                            })
-                                                        />
-                                                    }
-                                                }).collect_view().into_any()
+                                                                    .into_any()
+                                                            } else {
+                                                                ().into_any()
+                                                            }
+                                                        }}
+                                                    </div>
+                                                }
+                                                    .into_any()
                                             }
                                         }}
                                     </div>

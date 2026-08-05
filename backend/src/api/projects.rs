@@ -64,6 +64,9 @@ pub struct ProjectVersion {
     pub state: VersionState,
     pub created_at: String,
     pub file_size: i64,
+    pub version: String,
+    pub platform: String,
+    pub downloads: i64,
 }
 
 /// Payload used to update a version's state.
@@ -409,6 +412,14 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
     let Some(FormEntry::File(file)) = form_data.get("ifc") else {
         return error_response("missing IFC file", 400);
     };
+    let version = match form_data.get("version") {
+        Some(FormEntry::Field(value)) if !value.is_empty() => value,
+        _ => "1.0.0".to_string(),
+    };
+    let platform = match form_data.get("platform") {
+        Some(FormEntry::Field(value)) if !value.is_empty() => value,
+        _ => "blender".to_string(),
+    };
 
     let bytes = file.bytes().await?;
     #[allow(clippy::cast_possible_wrap)]
@@ -444,7 +455,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO project_versions (id, project_id, filename, ifc_key, state, created_at, file_size) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT INTO project_versions (id, project_id, filename, ifc_key, state, created_at, file_size, version, platform, downloads) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         )
         .bind(&[
             version_id.clone().into(),
@@ -454,6 +465,9 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
             VersionState::Undefined.as_str().into(),
             created_at.into(),
             file_size_value.into(),
+            version.clone().into(),
+            platform.clone().into(),
+            0_i64.into(),
         ])?
         .run()
         .await?;
@@ -462,9 +476,15 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
     let glb_cache_key = glb_key_for_project(&project_id);
     let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
 
-    Response::from_json(
-        &serde_json::json!({ "ifc_key": key, "version_id": version_id, "content_type": "application/ifc", "file_size": file_size_i64 }),
-    )
+    Response::from_json(&serde_json::json!({
+        "ifc_key": key,
+        "version_id": version_id,
+        "content_type": "application/ifc",
+        "file_size": file_size_i64,
+        "version": version,
+        "platform": platform,
+        "downloads": 0,
+    }))
 }
 
 /// Deletes all IFC versions for a project from R2 and the `project_versions`
@@ -593,7 +613,7 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
 
     let result = db(&ctx)?
         .prepare("SELECT ifc_key FROM project_versions WHERE id = ?1 AND filename = ?2")
-        .bind(&[version_id.into(), filename.clone().into()])?
+        .bind(&[version_id.clone().into(), filename.clone().into()])?
         .all()
         .await?;
     let keys: Vec<VersionKey> = result.results::<VersionKey>()?;
@@ -621,6 +641,14 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
         "Content-Disposition",
         &format!("attachment; filename=\"{filename}\""),
     )?;
+
+    // Increment the per-version download counter.
+    let _ = db(&ctx)?
+        .prepare("UPDATE project_versions SET downloads = downloads + 1 WHERE id = ?1")
+        .bind(&[version_id.into()])?
+        .run()
+        .await;
+
     Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
 }
 
@@ -861,9 +889,9 @@ async fn fetch_project_versions(
     include_undefined: bool,
 ) -> Result<Vec<ProjectVersion>> {
     let sql = if include_undefined {
-        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size FROM project_versions WHERE project_id = ?1 ORDER BY created_at DESC"
+        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, platform, downloads FROM project_versions WHERE project_id = ?1 ORDER BY created_at DESC"
     } else {
-        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size FROM project_versions WHERE project_id = ?1 AND state != 'undefined' ORDER BY created_at DESC"
+        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, platform, downloads FROM project_versions WHERE project_id = ?1 AND state != 'undefined' ORDER BY created_at DESC"
     };
     let result = db(ctx)?
         .prepare(sql)

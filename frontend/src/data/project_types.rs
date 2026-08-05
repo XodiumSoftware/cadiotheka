@@ -58,6 +58,15 @@ pub struct ProjectVersion {
     /// Size of the IFC file in bytes.
     #[serde(default)]
     pub file_size: i64,
+    /// Semantic version string for this release (e.g. "1.0.0").
+    #[serde(default)]
+    pub version: String,
+    /// Platform tag id associated with this version.
+    #[serde(default)]
+    pub platform: String,
+    /// Number of times this version has been downloaded.
+    #[serde(default)]
+    pub downloads: i64,
 }
 
 /// Data displayed on a project card.
@@ -208,6 +217,9 @@ mod tests {
                 state: VersionState::Undefined,
                 created_at: "2026-01-01T00:00:00Z".to_owned(),
                 file_size: 1_024,
+                version: "1.0.0".to_owned(),
+                platform: "blender".to_owned(),
+                downloads: 0,
             },
             ProjectVersion {
                 id: "v2".to_owned(),
@@ -217,6 +229,9 @@ mod tests {
                 state: VersionState::Stable,
                 created_at: "2026-01-02T00:00:00Z".to_owned(),
                 file_size: 2_097_152,
+                version: "1.1.0".to_owned(),
+                platform: "freecad".to_owned(),
+                downloads: 42,
             },
         ];
         assert_eq!(
@@ -235,6 +250,9 @@ mod tests {
             state: VersionState::Undefined,
             created_at: "2026-01-01T00:00:00Z".to_owned(),
             file_size: 0,
+            version: "1.0.0".to_owned(),
+            platform: "blender".to_owned(),
+            downloads: 0,
         }];
         assert_eq!(latest_visible_ifc_url(&versions), None);
     }
@@ -284,6 +302,7 @@ mod tests {
     }
 
     /// Tags and platforms are stored as wire-id strings resolved against the
+    /// metadata fetched from `/data/tags` and `/data/platforms`.
     #[test]
     fn ifc_download_url_uses_version_id_and_filename() {
         let version = ProjectVersion {
@@ -294,6 +313,9 @@ mod tests {
             state: VersionState::Stable,
             created_at: "2026-01-01T00:00:00Z".to_owned(),
             file_size: 0,
+            version: "1.0.0".to_owned(),
+            platform: "blender".to_owned(),
+            downloads: 0,
         };
         assert_eq!(
             ifc_download_url(&version),

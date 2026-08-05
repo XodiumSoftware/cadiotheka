@@ -274,12 +274,17 @@ pub async fn delete_project_ifc(id: &str) -> Result<(), RequestError> {
 pub async fn upload_project_ifc(
     id: &str,
     file: web_sys::File,
+    version: &str,
+    platform: &str,
 ) -> Result<ProjectVersion, RequestError> {
     #[derive(Deserialize)]
     struct UploadResponse {
         ifc_key: String,
         version_id: String,
         file_size: i64,
+        version: String,
+        platform: String,
+        downloads: i64,
     }
 
     let url = api_url(&format!("/projects/{id}/ifc"));
@@ -291,6 +296,12 @@ pub async fn upload_project_ifc(
         .map_err(|err| {
             RequestError::BuildRequest(format!("Failed to append IFC file to form data: {err:?}"))
         })?;
+    form.append_with_str("version", version).map_err(|err| {
+        RequestError::BuildRequest(format!("Failed to append version field: {err:?}"))
+    })?;
+    form.append_with_str("platform", platform).map_err(|err| {
+        RequestError::BuildRequest(format!("Failed to append platform field: {err:?}"))
+    })?;
 
     let request = Request::post(&url)
         .credentials(RequestCredentials::Include)
@@ -318,6 +329,9 @@ pub async fn upload_project_ifc(
                     .format(&time::format_description::well_known::Rfc3339)
                     .unwrap_or_default(),
                 file_size: upload.file_size,
+                version: upload.version,
+                platform: upload.platform,
+                downloads: upload.downloads,
             })
         }
         Ok(response) => {
