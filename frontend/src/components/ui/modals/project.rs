@@ -1524,51 +1524,22 @@ fn ProjectModalContent(
                                                                         view! {
                                                                             <tr class="even:bg-base-200/30 border-b border-base-content/10 last:border-b-0">
                                                                                 <td class="p-2">
-                                                                                    <div class="flex items-center gap-2">
-                                                                                        {move || {
-                                                                                            if is_editable.get() && edit_mode.get() {
-                                                                                                view! {
-                                                                                                    <VersionStateDropdown
-                                                                                                        state=state
-                                                                                                        on_change=Callback::new({
-                                                                                                            let version_id = version_id_for_state.clone();
-                                                                                                            move |new_state: VersionState| update_version_state.run((version_id.clone(), new_state))
-                                                                                                        })
-                                                                                                    />
-                                                                                                }
-                                                                                                    .into_any()
-                                                                                            } else {
-                                                                                                view! { <VersionStateBadge state=state /> }.into_any()
+                                                                                    {move || {
+                                                                                        if is_editable.get() && edit_mode.get() {
+                                                                                            view! {
+                                                                                                <VersionStateDropdown
+                                                                                                    state=state
+                                                                                                    on_change=Callback::new({
+                                                                                                        let version_id = version_id_for_state.clone();
+                                                                                                        move |new_state: VersionState| update_version_state.run((version_id.clone(), new_state))
+                                                                                                    })
+                                                                                                />
                                                                                             }
-                                                                                        }}
-                                                                                        {move || {
-                                                                                            if is_editable.get() && edit_mode.get() {
-                                                                                                view! {
-                                                                                                    <button
-                                                                                                        type="button"
-                                                                                                        class=move || {
-                                                                                                            if is_deleting.get() {
-                                                                                                                "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 opacity-50 cursor-not-allowed"
-                                                                                                            } else {
-                                                                                                                "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0"
-                                                                                                            }
-                                                                                                        }
-                                                                                                        disabled=move || is_deleting.get()
-                                                                                                        on:click={
-                                                                                                            let version_id = version_id_for_delete.clone();
-                                                                                                            move |_| delete_version.run(version_id.clone())
-                                                                                                        }
-                                                                                                        aria-label="Delete version"
-                                                                                                    >
-                                                                                                        {trash_icon("w-3.5 h-3.5")}
-                                                                                                    </button>
-                                                                                                }
-                                                                                                    .into_any()
-                                                                                            } else {
-                                                                                                ().into_any()
-                                                                                            }
-                                                                                        }}
-                                                                                    </div>
+                                                                                                .into_any()
+                                                                                        } else {
+                                                                                            view! { <VersionStateBadge state=state /> }.into_any()
+                                                                                        }
+                                                                                    }}
                                                                                 </td>
                                                                                 <td class="p-2 font-medium text-base-content" title=version.filename.clone()>
                                                                                     {version.version.clone()}
@@ -1595,7 +1566,29 @@ fn ProjectModalContent(
                                                                                 <td class="p-2 text-base-content/70">{format_number(version.downloads.max(0).cast_unsigned())}</td>
                                                                                 <td class="p-2 text-right">
                                                                                     {move || {
-                                                                                        if version_for_download.state == VersionState::Undefined {
+                                                                                        if is_editable.get() && edit_mode.get() {
+                                                                                            view! {
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    class=move || {
+                                                                                                        if is_deleting.get() {
+                                                                                                            "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 opacity-50 cursor-not-allowed"
+                                                                                                        } else {
+                                                                                                            "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0"
+                                                                                                        }
+                                                                                                    }
+                                                                                                    disabled=move || is_deleting.get()
+                                                                                                    on:click={
+                                                                                                        let version_id = version_id_for_delete.clone();
+                                                                                                        move |_| delete_version.run(version_id.clone())
+                                                                                                    }
+                                                                                                    aria-label="Delete version"
+                                                                                                >
+                                                                                                    {trash_icon("w-3.5 h-3.5")}
+                                                                                                </button>
+                                                                                            }
+                                                                                                .into_any()
+                                                                                        } else if version_for_download.state == VersionState::Undefined {
                                                                                             ().into_any()
                                                                                         } else {
                                                                                             let version = version_for_download.clone();
