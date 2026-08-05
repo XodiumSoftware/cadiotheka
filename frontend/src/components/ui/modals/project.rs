@@ -635,13 +635,13 @@ fn ProjectModalContent(
     let (show_upload_modal, set_show_upload_modal) = signal(false);
     let (upload_file, set_upload_file) = signal(None::<web_sys::File>);
     let (upload_version, set_upload_version) = signal(String::new());
-    let (upload_platform, set_upload_platform) = signal(String::new());
+    let (upload_platforms, set_upload_platforms) = signal(Vec::<String>::new());
     let upload_modal_file_input = NodeRef::<leptos::html::Input>::new();
 
     let trigger_upload_modal = move || {
         set_upload_file.set(None);
         set_upload_version.set(String::new());
-        set_upload_platform.set(String::new());
+        set_upload_platforms.set(Vec::new());
         set_show_upload_modal.set(true);
     };
 
@@ -649,7 +649,7 @@ fn ProjectModalContent(
         set_show_upload_modal.set(false);
         set_upload_file.set(None);
         set_upload_version.set(String::new());
-        set_upload_platform.set(String::new());
+        set_upload_platforms.set(Vec::new());
     };
 
     let on_upload_file_selected = move |ev: leptos::web_sys::Event| {
@@ -682,25 +682,16 @@ fn ProjectModalContent(
                     return;
                 };
                 let version = upload_version.get_untracked();
-                let platform = upload_platform.get_untracked();
+                let platforms = upload_platforms.get_untracked();
                 let version = if version.trim().is_empty() {
                     "1.0.0".to_string()
                 } else {
                     version
                 };
-                let platform = if platform.trim().is_empty() {
-                    metadata
-                        .platforms
-                        .get_untracked()
-                        .first()
-                        .map_or_else(|| "blender".to_string(), |p| p.id.clone())
-                } else {
-                    platform
-                };
 
                 set_is_uploading_ifc.set(true);
                 set_glb_status.set(GlbConversionStatus::Idle);
-                match upload_project_ifc(&project_id, file, &version, &platform).await {
+                match upload_project_ifc(&project_id, file, &version, &platforms).await {
                     Ok(version) => {
                         let version_for_projects = version.clone();
                         set_versions.update(|versions| {
@@ -1101,9 +1092,11 @@ fn ProjectModalContent(
     let supported_platform_ids = Signal::derive(move || {
         let mut ids: Vec<String> = Vec::new();
         for version in versions.get() {
-            let id = version.platform.trim();
-            if !id.is_empty() && !ids.iter().any(|existing| existing == id) {
-                ids.push(id.to_string());
+            for id in &version.platforms {
+                let trimmed = id.trim();
+                if !trimmed.is_empty() && !ids.iter().any(|existing| existing == trimmed) {
+                    ids.push(trimmed.to_string());
+                }
             }
         }
         ids
@@ -1303,25 +1296,47 @@ fn ProjectModalContent(
                         />
                     </div>
                     <div class="space-y-2">
-                        <label class="text-xs text-base-content/70 block" for="upload-platform-select">
-                            "Platform"
+                        <span class="text-xs text-base-content/70 block">
+                            "Platforms"
                             <span class="text-error ml-0.5" aria-hidden="true">"*"</span>
-                        </label>
-                        <select
-                            id="upload-platform-select"
-                            class="select select-sm select-bordered w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
-                            on:change=move |ev| set_upload_platform.set(event_target_value(&ev))
-                            prop:value=move || upload_platform.get()
-                        >
-                            <option value="">"Select platform"</option>
+                        </span>
+                        <div class="flex flex-wrap gap-2" role="group" aria-label="Upload platforms">
                             {move || metadata.platforms.get().into_iter().map(|platform| {
-                                let value = platform.id.clone();
+                                let id = platform.id.clone();
                                 let label = platform.label.clone();
+                                let id_for_class = id.clone();
+                                let id_for_aria = id.clone();
                                 view! {
-                                    <option value=value>{label}</option>
+                                    <button
+                                        type="button"
+                                        class=move || {
+                                            let selected = upload_platforms.get().contains(&id_for_class);
+                                            format!(
+                                                "badge badge-sm badge-outline rounded-none cursor-pointer transition-colors {}",
+                                                if selected {
+                                                    "bg-primary/20 border-primary text-primary"
+                                                } else {
+                                                    "border-base-content/20 text-base-content/70 hover:border-primary/50"
+                                                }
+                                            )
+                                        }
+                                        on:click=move |_| {
+                                            set_upload_platforms.update(|platforms| {
+                                                if let Some(pos) = platforms.iter().position(|p| *p == id) {
+                                                    platforms.remove(pos);
+                                                } else {
+                                                    platforms.push(id.clone());
+                                                }
+                                            });
+                                        }
+                                        disabled=move || is_uploading_ifc.get()
+                                        aria-pressed=move || upload_platforms.get().contains(&id_for_aria).to_string()
+                                    >
+                                        {label.clone()}
+                                    </button>
                                 }
                             }).collect_view()}
-                        </select>
+                        </div>
                     </div>
                     <div class="flex justify-end gap-2">
                         <button
@@ -1334,7 +1349,7 @@ fn ProjectModalContent(
                             class=move || {
                                 let can_upload = upload_file.get().is_some()
                                     && !upload_version.get().trim().is_empty()
-                                    && !upload_platform.get().is_empty();
+                                    && !upload_platforms.get().is_empty();
                                 if is_uploading_ifc.get() || !can_upload {
                                     "btn btn-primary btn-xs opacity-50 cursor-not-allowed"
                                 } else {
@@ -1344,7 +1359,7 @@ fn ProjectModalContent(
                             disabled=move || {
                                 let can_upload = upload_file.get().is_some()
                                     && !upload_version.get().trim().is_empty()
-                                    && !upload_platform.get().is_empty();
+                                    && !upload_platforms.get().is_empty();
                                 is_uploading_ifc.get() || !can_upload
                             }
                             on:click=move |_| upload_ifc.run(())
@@ -1531,7 +1546,7 @@ fn ProjectModalContent(
                                                                         <tr>
                                                                             <th class="p-2 w-10"></th>
                                                                             <th class="p-2">"Version"</th>
-                                                                            <th class="p-2">"Platform"</th>
+                                                                            <th class="p-2">"Platforms"</th>
                                                                             <th class="p-2">"Published"</th>
                                                                             <th class="p-2">"Downloads"</th>
                                                                             <th class="p-2 w-10"></th>
@@ -1588,7 +1603,7 @@ fn ProjectModalContent(
                                                                     <tr>
                                                                         <th class="p-2 w-10"></th>
                                                                         <th class="p-2">"Version"</th>
-                                                                        <th class="p-2">"Platform"</th>
+                                                                        <th class="p-2">"Platforms"</th>
                                                                         <th class="p-2">"Published"</th>
                                                                         <th class="p-2">"Downloads"</th>
                                                                         <th class="p-2 w-10"></th>
@@ -1609,7 +1624,11 @@ fn ProjectModalContent(
                                                                             let version = version.clone();
                                                                             move || version.state
                                                                         });
-                                                                        let platform_info = metadata.platform_by_id(&version.platform);
+                                                                        let platform_badges: Vec<_> = version
+                                                                            .platforms
+                                                                            .iter()
+                                                                            .map(|id| (id.clone(), metadata.platform_by_id(id)))
+                                                                            .collect();
                                                                         view! {
                                                                             <tr class="even:bg-base-200/30 border-b border-base-content/10 last:border-b-0">
                                                                                 <td class="p-2">
@@ -1634,22 +1653,28 @@ fn ProjectModalContent(
                                                                                     {version.version.clone()}
                                                                                 </td>
                                                                                 <td class="p-2">
-                                                                                    {platform_info.map_or_else(|| {
-                                                                                        let id = version.platform.clone();
-                                                                                        view! { <span class="text-base-content/50">{id}</span> }.into_any()
-                                                                                    }, |platform| {
-                                                                                        let style = platform.color.clone();
-                                                                                        let label = platform.label.clone();
-                                                                                        view! {
-                                                                                            <span
-                                                                                                class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
-                                                                                                style=style
-                                                                                            >
-                                                                                                {label}
-                                                                                            </span>
-                                                                                        }
-                                                                                            .into_any()
-                                                                                    })}
+                                                                                    <div class="flex flex-wrap gap-1">
+                                                                                        {platform_badges.into_iter().map(|(id, platform)| {
+                                                                                            match platform {
+                                                                                                Some(p) => {
+                                                                                                    let style = p.color.clone();
+                                                                                                    let label = p.label.clone();
+                                                                                                    view! {
+                                                                                                        <span
+                                                                                                            class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
+                                                                                                            style=style
+                                                                                                        >
+                                                                                                            {label}
+                                                                                                        </span>
+                                                                                                    }
+                                                                                                        .into_any()
+                                                                                                }
+                                                                                                None => {
+                                                                                                    view! { <span class="text-base-content/50">{id}</span> }.into_any()
+                                                                                                }
+                                                                                            }
+                                                                                        }).collect_view()}
+                                                                                    </div>
                                                                                 </td>
                                                                                 <td class="p-2 text-base-content/70">{format_version_timestamp(&version.created_at)}</td>
                                                                                 <td class="p-2 text-base-content/70">{format_number(version.downloads.max(0).cast_unsigned())}</td>

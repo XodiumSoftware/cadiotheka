@@ -61,11 +61,28 @@ pub struct ProjectVersion {
     /// Semantic version string for this release (e.g. "1.0.0").
     #[serde(default)]
     pub version: String,
-    /// Platform tag id associated with this version.
+    /// Platform wire ids associated with this version.
     #[serde(default)]
-    pub platform: String,
+    pub platforms: Vec<String>,
     /// Number of times this version has been downloaded.
     #[serde(default)]
+    pub downloads: i64,
+}
+
+/// A single IFC file version returned by the backend after an upload.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct VersionUploadResponse {
+    /// R2 object key for the stored IFC file.
+    pub ifc_key: String,
+    /// Unique version identifier.
+    pub version_id: String,
+    /// Size of the IFC file in bytes.
+    pub file_size: i64,
+    /// Semantic version string for this release.
+    pub version: String,
+    /// Platform wire ids associated with this version.
+    pub platforms: Vec<String>,
+    /// Number of times this version has been downloaded.
     pub downloads: i64,
 }
 
@@ -218,7 +235,7 @@ mod tests {
                 created_at: "2026-01-01T00:00:00Z".to_owned(),
                 file_size: 1_024,
                 version: "1.0.0".to_owned(),
-                platform: "blender".to_owned(),
+                platforms: vec!["blender".to_owned()],
                 downloads: 0,
             },
             ProjectVersion {
@@ -230,7 +247,7 @@ mod tests {
                 created_at: "2026-01-02T00:00:00Z".to_owned(),
                 file_size: 2_097_152,
                 version: "1.1.0".to_owned(),
-                platform: "freecad".to_owned(),
+                platforms: vec!["freecad".to_owned()],
                 downloads: 42,
             },
         ];
@@ -251,7 +268,7 @@ mod tests {
             created_at: "2026-01-01T00:00:00Z".to_owned(),
             file_size: 0,
             version: "1.0.0".to_owned(),
-            platform: "blender".to_owned(),
+            platforms: vec!["blender".to_owned()],
             downloads: 0,
         }];
         assert_eq!(latest_visible_ifc_url(&versions), None);
@@ -314,7 +331,7 @@ mod tests {
             created_at: "2026-01-01T00:00:00Z".to_owned(),
             file_size: 0,
             version: "1.0.0".to_owned(),
-            platform: "blender".to_owned(),
+            platforms: vec!["blender".to_owned()],
             downloads: 0,
         };
         assert_eq!(

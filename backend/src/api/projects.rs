@@ -65,7 +65,9 @@ pub struct ProjectVersion {
     pub created_at: String,
     pub file_size: i64,
     pub version: String,
-    pub platform: String,
+    /// Platform wire ids associated with this version, stored as a JSON array.
+    #[serde(with = "json_string")]
+    pub platforms: Vec<String>,
     pub downloads: i64,
 }
 
@@ -80,6 +82,7 @@ pub struct VersionPatch {
 struct VersionKey {
     ifc_key: String,
 }
+
 /// Validates the project payload and returns a map of field names to error
 /// messages. An empty map means the payload is valid.
 fn validate_project_payload(payload: &ProjectPayload) -> std::collections::HashMap<String, String> {
@@ -416,10 +419,17 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
         Some(FormEntry::Field(value)) if !value.is_empty() => value,
         _ => "1.0.0".to_string(),
     };
-    let platform = match form_data.get("platform") {
-        Some(FormEntry::Field(value)) if !value.is_empty() => value,
-        _ => "blender".to_string(),
-    };
+    let mut platforms: Vec<String> = Vec::new();
+    if let Some(entries) = form_data.get_all("platform") {
+        for entry in entries {
+            if let FormEntry::Field(value) = &entry {
+                let trimmed = value.trim();
+                if !trimmed.is_empty() && !platforms.iter().any(|p| p == trimmed) {
+                    platforms.push(trimmed.to_string());
+                }
+            }
+        }
+    }
 
     let bytes = file.bytes().await?;
     #[allow(clippy::cast_possible_wrap)]
@@ -455,7 +465,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO project_versions (id, project_id, filename, ifc_key, state, created_at, file_size, version, platform, downloads) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO project_versions (id, project_id, filename, ifc_key, state, created_at, file_size, version, platforms, downloads) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         )
         .bind(&[
             version_id.clone().into(),
@@ -466,7 +476,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
             created_at.into(),
             file_size_value.into(),
             version.clone().into(),
-            platform.clone().into(),
+            serde_json::to_string(&platforms).unwrap_or_else(|_| "[]".to_string()).into(),
             0_i64.into(),
         ])?
         .run()
@@ -482,7 +492,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
         "content_type": "application/ifc",
         "file_size": file_size_i64,
         "version": version,
-        "platform": platform,
+        "platforms": platforms,
         "downloads": 0,
     }))
 }
@@ -889,9 +899,9 @@ async fn fetch_project_versions(
     include_undefined: bool,
 ) -> Result<Vec<ProjectVersion>> {
     let sql = if include_undefined {
-        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, platform, downloads FROM project_versions WHERE project_id = ?1 ORDER BY created_at DESC"
+        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, platforms, downloads FROM project_versions WHERE project_id = ?1 ORDER BY created_at DESC"
     } else {
-        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, platform, downloads FROM project_versions WHERE project_id = ?1 AND state != 'undefined' ORDER BY created_at DESC"
+        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, platforms, downloads FROM project_versions WHERE project_id = ?1 AND state != 'undefined' ORDER BY created_at DESC"
     };
     let result = db(ctx)?
         .prepare(sql)

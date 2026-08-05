@@ -275,7 +275,7 @@ pub async fn upload_project_ifc(
     id: &str,
     file: web_sys::File,
     version: &str,
-    platform: &str,
+    platforms: &[String],
 ) -> Result<ProjectVersion, RequestError> {
     #[derive(Deserialize)]
     struct UploadResponse {
@@ -283,7 +283,7 @@ pub async fn upload_project_ifc(
         version_id: String,
         file_size: i64,
         version: String,
-        platform: String,
+        platforms: Vec<String>,
         downloads: i64,
     }
 
@@ -299,9 +299,11 @@ pub async fn upload_project_ifc(
     form.append_with_str("version", version).map_err(|err| {
         RequestError::BuildRequest(format!("Failed to append version field: {err:?}"))
     })?;
-    form.append_with_str("platform", platform).map_err(|err| {
-        RequestError::BuildRequest(format!("Failed to append platform field: {err:?}"))
-    })?;
+    for platform in platforms {
+        form.append_with_str("platform", platform).map_err(|err| {
+            RequestError::BuildRequest(format!("Failed to append platform field: {err:?}"))
+        })?;
+    }
 
     let request = Request::post(&url)
         .credentials(RequestCredentials::Include)
@@ -330,7 +332,7 @@ pub async fn upload_project_ifc(
                     .unwrap_or_default(),
                 file_size: upload.file_size,
                 version: upload.version,
-                platform: upload.platform,
+                platforms: upload.platforms,
                 downloads: upload.downloads,
             })
         }
