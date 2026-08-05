@@ -636,13 +636,11 @@ fn ProjectModalContent(
     let (show_upload_modal, set_show_upload_modal) = signal(false);
     let (upload_file, set_upload_file) = signal(None::<web_sys::File>);
     let (upload_version, set_upload_version) = signal(String::new());
-    let (upload_platforms, set_upload_platforms) = signal(Vec::<String>::new());
     let upload_modal_file_input = NodeRef::<leptos::html::Input>::new();
 
     let trigger_upload_modal = move || {
         set_upload_file.set(None);
         set_upload_version.set(String::new());
-        set_upload_platforms.set(Vec::new());
         set_show_upload_modal.set(true);
     };
 
@@ -650,7 +648,6 @@ fn ProjectModalContent(
         set_show_upload_modal.set(false);
         set_upload_file.set(None);
         set_upload_version.set(String::new());
-        set_upload_platforms.set(Vec::new());
     };
 
     let on_upload_file_selected = move |ev: leptos::web_sys::Event| {
@@ -683,7 +680,6 @@ fn ProjectModalContent(
                     return;
                 };
                 let version = upload_version.get_untracked();
-                let platforms = upload_platforms.get_untracked();
                 let version = if version.trim().is_empty() {
                     "1.0.0".to_string()
                 } else {
@@ -692,7 +688,7 @@ fn ProjectModalContent(
 
                 set_is_uploading_ifc.set(true);
                 set_glb_status.set(GlbConversionStatus::Idle);
-                match upload_project_ifc(&project_id, file, &version, &platforms).await {
+                match upload_project_ifc(&project_id, file, &version).await {
                     Ok(version) => {
                         let version_for_projects = version.clone();
                         set_versions.update(|versions| {
@@ -1090,19 +1086,6 @@ fn ProjectModalContent(
         })
     };
 
-    let supported_platform_ids = Signal::derive(move || {
-        let mut ids: Vec<String> = Vec::new();
-        for version in versions.get() {
-            for id in &version.platforms {
-                let trimmed = id.trim();
-                if !trimmed.is_empty() && !ids.iter().any(|existing| existing == trimmed) {
-                    ids.push(trimmed.to_string());
-                }
-            }
-        }
-        ids
-    });
-
     let toggle_favorite_click = {
         let project_id = card.id.clone();
         let set_projects = projects_ctx.set_projects;
@@ -1296,49 +1279,6 @@ fn ProjectModalContent(
                             on:input=move |ev| set_upload_version.set(event_target_value(&ev))
                         />
                     </div>
-                    <div class="space-y-2">
-                        <span class="text-xs text-base-content/70 block">
-                            "Platforms"
-                            <span class="text-error ml-0.5" aria-hidden="true">"*"</span>
-                        </span>
-                        <div class="flex flex-wrap gap-2" role="group" aria-label="Upload platforms">
-                            {move || metadata.platforms.get().into_iter().map(|platform| {
-                                let id = platform.id.clone();
-                                let label = platform.label.clone();
-                                let id_for_class = id.clone();
-                                let id_for_aria = id.clone();
-                                view! {
-                                    <button
-                                        type="button"
-                                        class=move || {
-                                            let selected = upload_platforms.get().contains(&id_for_class);
-                                            format!(
-                                                "badge badge-sm badge-outline rounded-none cursor-pointer transition-colors {}",
-                                                if selected {
-                                                    "bg-primary/20 border-primary text-primary"
-                                                } else {
-                                                    "border-base-content/20 text-base-content/70 hover:border-primary/50"
-                                                }
-                                            )
-                                        }
-                                        on:click=move |_| {
-                                            set_upload_platforms.update(|platforms| {
-                                                if let Some(pos) = platforms.iter().position(|p| *p == id) {
-                                                    platforms.remove(pos);
-                                                } else {
-                                                    platforms.push(id.clone());
-                                                }
-                                            });
-                                        }
-                                        disabled=move || is_uploading_ifc.get()
-                                        aria-pressed=move || upload_platforms.get().contains(&id_for_aria).to_string()
-                                    >
-                                        {label.clone()}
-                                    </button>
-                                }
-                            }).collect_view()}
-                        </div>
-                    </div>
                     <div class="flex justify-end gap-2">
                         <button
                             type="button"
@@ -1349,8 +1289,7 @@ fn ProjectModalContent(
                             type="button"
                             class=move || {
                                 let can_upload = upload_file.get().is_some()
-                                    && !upload_version.get().trim().is_empty()
-                                    && !upload_platforms.get().is_empty();
+                                    && !upload_version.get().trim().is_empty();
                                 if is_uploading_ifc.get() || !can_upload {
                                     "btn btn-primary btn-xs opacity-50 cursor-not-allowed"
                                 } else {
@@ -1359,8 +1298,7 @@ fn ProjectModalContent(
                             }
                             disabled=move || {
                                 let can_upload = upload_file.get().is_some()
-                                    && !upload_version.get().trim().is_empty()
-                                    && !upload_platforms.get().is_empty();
+                                    && !upload_version.get().trim().is_empty();
                                 is_uploading_ifc.get() || !can_upload
                             }
                             on:click=move |_| upload_ifc.run(())
@@ -1500,263 +1438,239 @@ fn ProjectModalContent(
                                         </div>
                                     </div>
                                 }.into_any()
-                            }
-                            ProjectDetailsTab::Versions => view! {
-                                    <div class="min-h-0 h-full flex flex-col space-y-4 overflow-y-auto pr-1">
-                                        {move || match glb_status.get() {
-                                            GlbConversionStatus::Idle => ().into_any(),
-                                            GlbConversionStatus::Converting => view! {
-                                                <p class="text-xs text-primary flex items-center gap-1.5">
-                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                                    <span>"Converting latest IFC to 3D model..."</span>
-                                                </p>
-                                            }.into_any(),
-                                            GlbConversionStatus::Ready => view! {
-                                                <p class="text-xs text-success flex items-center gap-1.5">"Latest IFC is ready to view in 3D"</p>
-                                            }.into_any(),
-                                            GlbConversionStatus::NoGeometry => view! {
-                                                <p class="text-xs text-warning">"Latest IFC has no renderable geometry"</p>
-                                            }.into_any(),
-                                            GlbConversionStatus::Failed => view! {
-                                                <p class="text-xs text-error">"Failed to convert latest IFC to 3D"</p>
-                                            }.into_any(),
-                                        }}
-                                        {move || {
-                                            let versions = versions.get();
-                                            let editing = is_editable.get() && edit_mode.get();
-                                            let add_row = move || {
-                                                if editing {
-                                                    view! {
-                                                        <AddVersionRow
-                                                            is_uploading=Signal::derive(move || is_uploading_ifc.get())
-                                                            on_click=Callback::new(move |()| trigger_upload_modal())
-                                                        />
-                                                    }
-                                                        .into_any()
-                                                } else {
-                                                    ().into_any()
-                                                }
-                                            };
-                                            if versions.is_empty() {
-                                                if editing {
-                                                    view! {
-                                                        <div class="space-y-2">
-                                                            <div class="overflow-x-auto rounded-none border border-base-content/10">
-                                                                <table class="w-full text-left text-sm">
-                                                                    <thead class="bg-base-200/50 text-xs uppercase text-base-content/70">
-                                                                        <tr>
-                                                                            <th class="p-2 w-10"></th>
-                                                                            <th class="p-2">"Version"</th>
-                                                                            <th class="p-2">"Platforms"</th>
-                                                                            <th class="p-2">"Published"</th>
-                                                                            <th class="p-2">"Downloads"</th>
-                                                                            <th class="p-2 w-10"></th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {add_row()}
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                            <div class="flex items-center justify-between text-sm">
-                                                                <span class="text-base-content/50">
-                                                                    "Page 1 of 1"
-                                                                </span>
-                                                                <Pagination
-                                                                    page=versions_page
-                                                                    set_page=set_versions_page
-                                                                    total_pages=Signal::derive(|| 1usize)
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    }
-                                                        .into_any()
-                                                } else {
-                                                    view! {
-                                                        <div class="rounded-none border border-base-content/10 bg-base-200/30 p-8 text-center space-y-2">
-                                                            <p class="text-base-content/50 text-sm">"No IFC model uploaded yet."</p>
-                                                            <p class="text-base-content/40 text-xs">"Enter edit mode to add a version."</p>
-                                                        </div>
-                                                    }
-                                                        .into_any()
-                                                }
-                                            } else {
-                                                let page = clamped_versions_page.get();
-                                                let start = page * VERSIONS_PER_PAGE;
-                                                let paginated: Vec<_> = versions
-                                                    .into_iter()
-                                                    .skip(start)
-                                                    .take(VERSIONS_PER_PAGE)
-                                                    .collect();
-                                                view! {
-                                                    <div class="space-y-2">
-                                                        <div class="overflow-x-auto rounded-none border border-base-content/10">
-                                                            <table class="w-full text-left text-sm">
-                                                                <thead class="bg-base-200/50 text-xs uppercase text-base-content/70">
-                                                                    <tr>
-                                                                        <th class="p-2 w-10"></th>
-                                                                        <th class="p-2">"Version"</th>
-                                                                        <th class="p-2">"Platforms"</th>
-                                                                        <th class="p-2">"Published"</th>
-                                                                        <th class="p-2">"Downloads"</th>
-                                                                        <th class="p-2 w-10"></th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {add_row()}
-                                                                    {paginated.into_iter().map(|version| {
-                                                                        let version_id = version.id.clone();
-                                                                        let version_id_for_state = version.id.clone();
-                                                                        let version_id_for_delete = version.id.clone();
-                                                                        let version_for_download = version.clone();
-                                                                        let is_deleting = Signal::derive({
-                                                                            let version_id = version_id.clone();
-                                                                            move || deleting_version_id.get().as_ref() == Some(&version_id)
-                                                                        });
-                                                                        let state = Signal::derive({
-                                                                            let version = version.clone();
-                                                                            move || version.state
-                                                                        });
-                                                                        let platform_badges: Vec<_> = version
-                                                                            .platforms
-                                                                            .iter()
-                                                                            .map(|id| (id.clone(), metadata.platform_by_id(id)))
-                                                                            .collect();
-                                                                        view! {
-                                                                            <tr class="even:bg-base-200/30 border-b border-base-content/10 last:border-b-0">
-                                                                                <td class="p-2">
-                                                                                    {move || {
-                                                                                        if is_editable.get() && edit_mode.get() {
-                                                                                            view! {
-                                                                                                <VersionStateDropdown
-                                                                                                    state=state
-                                                                                                    on_change=Callback::new({
-                                                                                                        let version_id = version_id_for_state.clone();
-                                                                                                        move |new_state: VersionState| update_version_state.run((version_id.clone(), new_state))
-                                                                                                    })
-                                                                                                />
-                                                                                            }
-                                                                                                .into_any()
-                                                                                        } else {
-                                                                                            view! { <VersionStateBadge state=state /> }.into_any()
-                                                                                        }
-                                                                                    }}
-                                                                                </td>
-                                                                                <td class="p-2 font-medium text-base-content" title=version.filename.clone()>
-                                                                                    {version.version.clone()}
-                                                                                </td>
-                                                                                <td class="p-2">
-                                                                                    <div class="flex flex-wrap gap-1">
-                                                                                        {platform_badges.into_iter().map(|(id, platform)| {
-                                                                                            match platform {
-                                                                                                Some(p) => {
-                                                                                                    let style = p.color.clone();
-                                                                                                    let label = p.label.clone();
-                                                                                                    view! {
-                                                                                                        <span
-                                                                                                            class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
-                                                                                                            style=style
-                                                                                                        >
-                                                                                                            {label}
-                                                                                                        </span>
-                                                                                                    }
-                                                                                                        .into_any()
-                                                                                                }
-                                                                                                None => {
-                                                                                                    view! { <span class="text-base-content/50">{id}</span> }.into_any()
-                                                                                                }
-                                                                                            }
-                                                                                        }).collect_view()}
-                                                                                    </div>
-                                                                                </td>
-                                                                                <td class="p-2 text-base-content/70">{format_version_timestamp(&version.created_at)}</td>
-                                                                                <td class="p-2 text-base-content/70">{format_number(version.downloads.max(0).cast_unsigned())}</td>
-                                                                                <td class="p-2 text-right">
-                                                                                    {move || {
-                                                                                        if is_editable.get() && edit_mode.get() {
-                                                                                            view! {
-                                                                                                <button
-                                                                                                    type="button"
-                                                                                                    class=move || {
-                                                                                                        if is_deleting.get() {
-                                                                                                            "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 opacity-50 cursor-not-allowed tooltip tooltip-left"
-                                                                                                        } else {
-                                                                                                            "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 tooltip tooltip-left"
-                                                                                                        }
-                                                                                                    }
-                                                                                                    disabled=move || is_deleting.get()
-                                                                                                    on:click={
-                                                                                                        let version_id = version_id_for_delete.clone();
-                                                                                                        move |_| delete_version.run(version_id.clone())
-                                                                                                    }
-                                                                                                    aria-label="Delete version"
-                                                                                                    data-tip="Delete"
-                                                                                                >
-                                                                                                    {trash_icon("w-3.5 h-3.5")}
-                                                                                                </button>
-                                                                                            }
-                                                                                                .into_any()
-                                                                                        } else if version_for_download.state == VersionState::Undefined {
-                                                                                            ().into_any()
-                                                                                        } else {
-                                                                                            let version = version_for_download.clone();
-                                                                                            view! {
-                                                                                                <button
-                                                                                                    type="button"
-                                                                                                    class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-left"
-                                                                                                    aria-label="Download"
-                                                                                                    data-tip="Download"
-                                                                                                    on:click=move |_| {
-                                                                                                        let url = ifc_download_url(&version);
-                                                                                                        increment_downloads.run(url);
-                                                                                                    }
-                                                                                                >
-                                                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                                                                        <polyline points="7 10 12 15 17 10" />
-                                                                                                        <line x1="12" y1="15" x2="12" y2="3" />
-                                                                                                    </svg>
-                                                                                                </button>
-                                                                                            }
-                                                                                                .into_any()
-                                                                                        }
-                                                                                    }}
-                                                                                </td>
-                                                                            </tr>
-                                                                        }
-                                                                    }).collect_view().into_any()}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                        {move || {
+                                    }
+                                    ProjectDetailsTab::Versions => view! {
+                                            <div class="min-h-0 h-full flex flex-col space-y-4 overflow-y-auto pr-1">
+                                                {move || match glb_status.get() {
+                                                    GlbConversionStatus::Idle => ().into_any(),
+                                                    GlbConversionStatus::Converting => view! {
+                                                        <p class="text-xs text-primary flex items-center gap-1.5">
+                                                            <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                            <span>"Converting latest IFC to 3D model..."</span>
+                                                        </p>
+                                                    }.into_any(),
+                                                    GlbConversionStatus::Ready => view! {
+                                                        <p class="text-xs text-success flex items-center gap-1.5">"Latest IFC is ready to view in 3D"</p>
+                                                    }.into_any(),
+                                                    GlbConversionStatus::NoGeometry => view! {
+                                                        <p class="text-xs text-warning">"Latest IFC has no renderable geometry"</p>
+                                                    }.into_any(),
+                                                    GlbConversionStatus::Failed => view! {
+                                                        <p class="text-xs text-error">"Failed to convert latest IFC to 3D"</p>
+                                                    }.into_any(),
+                                                }}
+                                                {move || {
+                                                    let versions = versions.get();
+                                                    let editing = is_editable.get() && edit_mode.get();
+                                                    let add_row = move || {
+                                                        if editing {
                                                             view! {
-                                                                <div class="flex items-center justify-between text-sm">
-                                                                    <span class="text-base-content/50">
-                                                                        "Page "
-                                                                        {clamped_versions_page.get() + 1}
-                                                                        " of "
-                                                                        {versions_total_pages.get()}
-                                                                    </span>
-                                                                    <Pagination
-                                                                        page=versions_page
-                                                                        set_page=set_versions_page
-                                                                        total_pages=versions_total_pages
-                                                                    />
+                                                                <AddVersionRow
+                                                                    is_uploading=Signal::derive(move || is_uploading_ifc.get())
+                                                                    on_click=Callback::new(move |()| trigger_upload_modal())
+                                                                />
+                                                            }
+                                                                .into_any()
+                                                        } else {
+                                                            ().into_any()
+                                                        }
+                                                    };
+                                                    if versions.is_empty() {
+                                                        if editing {
+                                                            view! {
+                                                                <div class="space-y-2">
+                                                                    <div class="overflow-x-auto rounded-none border border-base-content/10">
+                                                                        <table class="w-full text-left text-sm">
+                                                                            <thead class="bg-base-200/50 text-xs uppercase text-base-content/70">
+                                                                                <tr>
+                                                                                    <th class="p-2 w-10"></th>
+                                                                                    <th class="p-2">"Version"</th>
+                                                                                    <th class="p-2">"Type"</th>
+                                                                                    <th class="p-2">"Published"</th>
+                                                                                    <th class="p-2">"Downloads"</th>
+                                                                                    <th class="p-2 w-10"></th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {add_row()}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                    <div class="flex items-center justify-between text-sm">
+                                                                        <span class="text-base-content/50">
+                                                                            "Page 1 of 1"
+                                                                        </span>
+                                                                        <Pagination
+                                                                            page=versions_page
+                                                                            set_page=set_versions_page
+                                                                            total_pages=Signal::derive(|| 1usize)
+                                                                        />
+                                                                    </div>
                                                                 </div>
                                                             }
                                                                 .into_any()
-                                                        }}
-                                                    </div>
-                                                }
-                                                    .into_any()
-                                            }
-                                        }}
-                                    </div>
-                                }
-                                    .into_any(),
-                            }}
+                                                        } else {
+                                                            view! {
+                                                                <div class="rounded-none border border-base-content/10 bg-base-200/30 p-8 text-center space-y-2">
+                                                                    <p class="text-base-content/50 text-sm">"No IFC model uploaded yet."</p>
+                                                                    <p class="text-base-content/40 text-xs">"Enter edit mode to add a version."</p>
+                                                                </div>
+                                                            }
+                                                                .into_any()
+                                                        }
+                                                    } else {
+                                                        let page = clamped_versions_page.get();
+                                                        let start = page * VERSIONS_PER_PAGE;
+                                                        let paginated: Vec<_> = versions
+                                                            .into_iter()
+                                                            .skip(start)
+                                                            .take(VERSIONS_PER_PAGE)
+                                                            .collect();
+                                                        view! {
+                                                            <div class="space-y-2">
+                                                                <div class="overflow-x-auto rounded-none border border-base-content/10">
+                                                                    <table class="w-full text-left text-sm">
+                                                                        <thead class="bg-base-200/50 text-xs uppercase text-base-content/70">
+                                                                            <tr>
+                                                                                <th class="p-2 w-10"></th>
+                                                                                <th class="p-2">"Version"</th>
+                                                                                <th class="p-2">"Type"</th>
+                                                                                <th class="p-2">"Published"</th>
+                                                                                <th class="p-2">"Downloads"</th>
+                                                                                <th class="p-2 w-10"></th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {add_row()}
+                                                                            {paginated.into_iter().map(|version| {
+                                                                                let version_id = version.id.clone();
+                                                                                let version_id_for_state = version.id.clone();
+                                                                                let version_id_for_delete = version.id.clone();
+                                                                                let version_for_download = version.clone();
+                                                                                let is_deleting = Signal::derive({
+                                                                                    let version_id = version_id.clone();
+                                                                                    move || deleting_version_id.get().as_ref() == Some(&version_id)
+                                                                                });
+                                                                                let state = Signal::derive({
+                                                                                    let version = version.clone();
+                                                                                    move || version.state
+                                                                                });
+                                                                                view! {
+                                                                                    <tr class="even:bg-base-200/30 border-b border-base-content/10 last:border-b-0">
+                                                                                        <td class="p-2">
+                                                                                            {move || {
+                                                                                                if is_editable.get() && edit_mode.get() {
+                                                                                                    view! {
+                                                                                                        <VersionStateDropdown
+                                                                                                            state=state
+                                                                                                            on_change=Callback::new({
+                                                                                                                let version_id = version_id_for_state.clone();
+                                                                                                                move |new_state: VersionState| update_version_state.run((version_id.clone(), new_state))
+                                                                                                            })
+                                                                                                        />
+                                                                                                    }
+                                                                                                        .into_any()
+                                                                                                } else {
+                                                                                                    view! { <VersionStateBadge state=state /> }.into_any()
+                                                                                                }
+                                                                                            }}
+                                                                                        </td>
+                                                                                        <td class="p-2 font-medium text-base-content" title=version.filename.clone()>
+                                                                                            {version.version.clone()}
+                                                                                        </td>
+                                                                                        <td class="p-2">
+                                                                                            <span class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap">
+                                                                                                "IFC"
+                                                                                            </span>
+                                                                                        </td>
+                                                                                        <td class="p-2 text-base-content/70">{format_version_timestamp(&version.created_at)}</td>
+                                                                                        <td class="p-2 text-base-content/70">{format_number(version.downloads.max(0).cast_unsigned())}</td>
+                                                                                        <td class="p-2 text-right">
+                                                                                            {move || {
+                                                                                                if is_editable.get() && edit_mode.get() {
+                                                                                                    view! {
+                                                                                                        <button
+                                                                                                            type="button"
+                                                                                                            class=move || {
+                                                                                                                if is_deleting.get() {
+                                                                                                                    "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 opacity-50 cursor-not-allowed tooltip tooltip-left"
+                                                                                                                } else {
+                                                                                                                    "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 tooltip tooltip-left"
+                                                                                                                }
+                                                                                                            }
+                                                                                                            disabled=move || is_deleting.get()
+                                                                                                            on:click={
+                                                                                                                let version_id = version_id_for_delete.clone();
+                                                                                                                move |_| delete_version.run(version_id.clone())
+                                                                                                            }
+                                                                                                            aria-label="Delete version"
+                                                                                                            data-tip="Delete"
+                                                                                                        >
+                                                                                                            {trash_icon("w-3.5 h-3.5")}
+                                                                                                        </button>
+                                                                                                    }
+                                                                                                        .into_any()
+                                                                                                } else if version_for_download.state == VersionState::Undefined {
+                                                                                                    ().into_any()
+                                                                                                } else {
+                                                                                                    let version = version_for_download.clone();
+                                                                                                    view! {
+                                                                                                        <button
+                                                                                                            type="button"
+                                                                                                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-left"
+                                                                                                            aria-label="Download"
+                                                                                                            data-tip="Download"
+                                                                                                            on:click=move |_| {
+                                                                                                                let url = ifc_download_url(&version);
+                                                                                                                increment_downloads.run(url);
+                                                                                                            }
+                                                                                                        >
+                                                                                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                                                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                                                                                <polyline points="7 10 12 15 17 10" />
+                                                                                                                <line x1="12" y1="15" x2="12" y2="3" />
+                                                                                                            </svg>
+                                                                                                        </button>
+                                                                                                    }
+                                                                                                        .into_any()
+                                                                                                }
+                                                                                            }}
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                }
+                                                                            }).collect_view().into_any()}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                                {move || {
+                                                                    view! {
+                                                                        <div class="flex items-center justify-between text-sm">
+                                                                            <span class="text-base-content/50">
+                                                                                "Page "
+                                                                                {clamped_versions_page.get() + 1}
+                                                                                " of "
+                                                                                {versions_total_pages.get()}
+                                                                            </span>
+                                                                            <Pagination
+                                                                                page=versions_page
+                                                                                set_page=set_versions_page
+                                                                                total_pages=versions_total_pages
+                                                                            />
+                                                                        </div>
+                                                                    }
+                                                                        .into_any()
+                                                                }}
+                                                            </div>
+                                                        }
+                                                            .into_any()
+                                                    }
+                                                }}
+                                            </div>
+                                        }
+                                            .into_any(),
+                                }}
+                            </div>
                         </div>
-                    </div>
 
                         <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "hidden xl:block self-stretch w-px bg-base-content/10".to_string() } aria-hidden="true"></div>
 
@@ -1829,8 +1743,8 @@ fn ProjectModalContent(
                                                         aria-label="Edit title"
                                                         on:click=move |_| start_edit_title()
                                                     >
-                                                        {edit_pencil_icon("w-4 h-4")}
-                                                    </button>
+                                                                                {edit_pencil_icon("w-4 h-4")}
+                                                                            </button>
                                                 }.into_any())}
                                             </div>
                                         </div>
@@ -1996,38 +1910,6 @@ fn ProjectModalContent(
                                                     .into_any()
                                             }
                                         }}
-                                    }
-                                        .into_any()
-                                }
-                            }}
-
-                            {move || {
-                                let platform_ids = supported_platform_ids.get();
-                                if platform_ids.is_empty() {
-                                    ().into_any()
-                                } else {
-                                    view! {
-                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                                            <h3 class="text-sm font-semibold text-base-content mb-3">"Supported platforms"</h3>
-                                            <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                                {platform_ids.into_iter().filter_map(|id| {
-                                                    let platform = metadata.platform_by_id(&id)?;
-                                                    let style = platform.color.clone();
-                                                    let label = platform.label.clone();
-                                                    let label_click = label.clone();
-                                                    Some(view! {
-                                                        <button
-                                                            type="button"
-                                                            class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                                                            style=style
-                                                            on:click=move |_| apply_filter.run(label_click.clone())
-                                                        >
-                                                            {label}
-                                                        </button>
-                                                    }.into_any())
-                                                }).collect_view()}
-                                            </div>
-                                        </div>
                                     }
                                         .into_any()
                                 }

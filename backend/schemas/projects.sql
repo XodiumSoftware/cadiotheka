@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS projects (
     collaborator_ids TEXT NOT NULL DEFAULT '[]',
     description TEXT NOT NULL DEFAULT '',
     tags TEXT NOT NULL DEFAULT '[]',
-    platforms TEXT NOT NULL DEFAULT '[]',
     downloads INTEGER NOT NULL DEFAULT 0,
     favorites TEXT NOT NULL DEFAULT '[]',
     timestamp TEXT NOT NULL,

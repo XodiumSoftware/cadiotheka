@@ -135,8 +135,7 @@ pub fn Header() -> impl IntoView {
         let query = search.query.get();
         let projects = projects_ctx.projects.get();
         let tag_labels = metadata.tag_labels();
-        let platform_labels = metadata.platform_labels();
-        let engine = SearchEngine::new(projects, tag_labels, platform_labels);
+        let engine = SearchEngine::new(projects, tag_labels);
         let all = engine.suggestions(&query);
         group_and_filter_suggestions(&all)
     });
@@ -752,7 +751,7 @@ pub fn Header() -> impl IntoView {
                         <input
                             type="text"
                             class="input w-full pr-20 bg-transparent !border-0 !outline-none !ring-0 focus:!outline-none focus:!ring-0"
-                            placeholder="Search projects, tags, platforms, authors..."
+                            placeholder="Search projects, tags, authors..."
                             prop:value=move || search.query.get()
                             role="combobox"
                             aria-expanded=move || {

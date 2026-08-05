@@ -13,7 +13,7 @@ pub enum SuggestionKind {
     Sort,
     /// An author filter such as `ZenFlow` (displayed as `@author:ZenFlow`).
     Author,
-    /// A tag or platform filter such as `Blender` (displayed as `#Blender`).
+    /// A tag filter such as `3D Model` (displayed as `#3D Model`).
     Filter,
     /// A plain search term such as a title or author.
     Plain,
@@ -67,14 +67,13 @@ impl Suggestion {
 /// Suggestions are ranked by fuzzy relevance to `needle` and filtered out when
 /// they do not match a non-empty needle. Sort directives are only included when
 /// `include_sort` is `true`, which is typically when the user has typed `@`.
-/// Tag and platform wire ids are resolved to labels via the provided maps.
+/// Tag wire ids are resolved to labels via the provided map.
 #[allow(clippy::implicit_hasher)]
 pub fn from_cards(
     cards: &[ProjectData],
     include_sort: bool,
     needle: &str,
     tag_labels: &HashMap<String, String>,
-    platform_labels: &HashMap<String, String>,
 ) -> Vec<Suggestion> {
     let matcher = SkimMatcherV2::default();
     let needle_lower = needle.to_lowercase();
@@ -83,7 +82,6 @@ pub fn from_cards(
     let mut titles = HashSet::new();
     let mut authors = HashSet::new();
     let mut tags = HashSet::new();
-    let mut platforms = HashSet::new();
 
     for card in cards {
         titles.insert(card.title.clone());
@@ -91,11 +89,6 @@ pub fn from_cards(
         for id in &card.tags {
             if let Some(label) = tag_labels.get(id) {
                 tags.insert(label.clone());
-            }
-        }
-        for id in &card.platforms {
-            if let Some(label) = platform_labels.get(id) {
-                platforms.insert(label.clone());
             }
         }
     }
@@ -125,7 +118,6 @@ pub fn from_cards(
     push_scored(titles, SuggestionKind::Plain);
     push_scored(authors, SuggestionKind::Author);
     push_scored(tags, SuggestionKind::Filter);
-    push_scored(platforms, SuggestionKind::Filter);
 
     suggestions.sort_by(|a, b| {
         b.score.cmp(&a.score).then_with(|| {
@@ -191,17 +183,11 @@ mod tests {
     use crate::data::ProjectData;
     use time::macros::datetime;
 
-    fn label_maps() -> (HashMap<String, String>, HashMap<String, String>) {
-        (
-            HashMap::from([
-                ("parametric".to_owned(), "Parametric".to_owned()),
-                ("3d_model".to_owned(), "3D Model".to_owned()),
-            ]),
-            HashMap::from([
-                ("blender".to_owned(), "Blender".to_owned()),
-                ("freecad".to_owned(), "FreeCAD".to_owned()),
-            ]),
-        )
+    fn label_map() -> HashMap<String, String> {
+        HashMap::from([
+            ("parametric".to_owned(), "Parametric".to_owned()),
+            ("3d_model".to_owned(), "3D Model".to_owned()),
+        ])
     }
 
     fn sample_card() -> ProjectData {
@@ -214,7 +200,6 @@ mod tests {
             collaborator_ids: vec![],
             description: "A sample gear with markdown description.".to_owned(),
             tags: vec!["parametric".to_owned(), "3d_model".to_owned()],
-            platforms: vec!["blender".to_owned(), "freecad".to_owned()],
             downloads: 100,
             favorites: vec!["favorite-user".to_owned(); 10],
             timestamp: datetime!(2024-06-01 10:00:00 UTC),
@@ -262,14 +247,8 @@ mod tests {
     #[test]
     fn from_cards_extracts_unique_values() {
         let card = sample_card();
-        let (tag_labels, platform_labels) = label_maps();
-        let suggestions = from_cards(
-            &[card.clone(), card],
-            false,
-            "",
-            &tag_labels,
-            &platform_labels,
-        );
+        let tag_labels = label_map();
+        let suggestions = from_cards(&[card.clone(), card], false, "", &tag_labels);
 
         let plain: Vec<_> = suggestions
             .iter()
@@ -291,14 +270,12 @@ mod tests {
         assert_eq!(authors, vec!["testauthor"]);
         assert!(filters.contains(&"Parametric".to_owned()));
         assert!(filters.contains(&"3D Model".to_owned()));
-        assert!(filters.contains(&"Blender".to_owned()));
-        assert!(filters.contains(&"FreeCAD".to_owned()));
     }
 
     #[test]
     fn from_cards_includes_sort_when_requested() {
-        let (tag_labels, platform_labels) = label_maps();
-        let suggestions = from_cards(&[sample_card()], true, "", &tag_labels, &platform_labels);
+        let tag_labels = label_map();
+        let suggestions = from_cards(&[sample_card()], true, "", &tag_labels);
         let sort_count = suggestions
             .iter()
             .filter(|s| s.kind == SuggestionKind::Sort)
@@ -308,8 +285,8 @@ mod tests {
 
     #[test]
     fn from_cards_excludes_sort_when_not_requested() {
-        let (tag_labels, platform_labels) = label_maps();
-        let suggestions = from_cards(&[sample_card()], false, "", &tag_labels, &platform_labels);
+        let tag_labels = label_map();
+        let suggestions = from_cards(&[sample_card()], false, "", &tag_labels);
         assert!(!suggestions.iter().any(|s| s.kind == SuggestionKind::Sort));
     }
 
@@ -320,8 +297,8 @@ mod tests {
         let mut card_b = sample_card();
         card_b.title = "Beta".to_owned();
 
-        let (tag_labels, platform_labels) = label_maps();
-        let suggestions = from_cards(&[card_a, card_b], false, "", &tag_labels, &platform_labels);
+        let tag_labels = label_map();
+        let suggestions = from_cards(&[card_a, card_b], false, "", &tag_labels);
         let plain: Vec<_> = suggestions
             .iter()
             .filter(|s| s.kind == SuggestionKind::Plain)
@@ -338,14 +315,8 @@ mod tests {
         let mut screw = sample_card();
         screw.title = "Machine Screw".to_owned();
 
-        let (tag_labels, platform_labels) = label_maps();
-        let suggestions = from_cards(
-            &[gear, screw],
-            false,
-            "screw",
-            &tag_labels,
-            &platform_labels,
-        );
+        let tag_labels = label_map();
+        let suggestions = from_cards(&[gear, screw], false, "screw", &tag_labels);
         let plain: Vec<_> = suggestions
             .iter()
             .filter(|s| s.kind == SuggestionKind::Plain)
@@ -358,8 +329,8 @@ mod tests {
     #[test]
     fn from_cards_matches_prefixed_needle() {
         let card = sample_card();
-        let (tag_labels, platform_labels) = label_maps();
-        let suggestions = from_cards(&[card], false, "model", &tag_labels, &platform_labels);
+        let tag_labels = label_map();
+        let suggestions = from_cards(&[card], false, "model", &tag_labels);
 
         assert!(
             suggestions

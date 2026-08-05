@@ -15,7 +15,6 @@ pub struct ProjectCardProperties {
     pub collaborator_ids: Vec<String>,
     pub description: String,
     pub tags: Vec<String>,
-    pub platforms: Vec<String>,
     pub downloads: u64,
     pub favorites: Vec<String>,
     pub timestamp: time::OffsetDateTime,
@@ -38,7 +37,6 @@ pub fn project_card_properties_from_project_data(project: ProjectData) -> Projec
         collaborator_ids: project.collaborator_ids,
         description: project.description,
         tags: project.tags,
-        platforms: project.platforms,
         downloads: project.downloads,
         favorites: project.favorites,
         timestamp: project.timestamp,
@@ -125,7 +123,6 @@ pub fn ProjectCard(
         collaborator_ids: _,
         description: _,
         tags,
-        platforms,
         downloads,
         favorites: _,
         timestamp,
@@ -206,27 +203,6 @@ pub fn ProjectCard(
                 .collect::<Vec<_>>()
         })
     };
-    let platform_items = {
-        let platforms = platforms.clone();
-        Signal::derive(move || {
-            platforms
-                .iter()
-                .filter_map(|id| {
-                    metadata
-                        .platform_by_id(id)
-                        .map(|platform| OverflowItem::new(platform.label, platform.color))
-                })
-                .collect::<Vec<_>>()
-        })
-    };
-    let has_tags = {
-        let tags = tags.clone();
-        Signal::derive(move || !tags.is_empty())
-    };
-    let has_platforms = {
-        let platforms = platforms.clone();
-        Signal::derive(move || !platforms.is_empty())
-    };
 
     view! {
         <article
@@ -284,24 +260,7 @@ pub fn ProjectCard(
                                         />
                                     }
                                 }}
-                                    {move || (has_tags.get() && has_platforms.get()).then(|| {
-                                        view! {
-                                            <span class="w-px h-4 bg-base-content/20 self-center mx-1 flex-shrink-0" aria-hidden="true" />
-                                        }
-                                            .into_any()
-                                    })}
-                                    {move || {
-                                        let items = platform_items.get();
-                                        view! {
-                                            <OverflowRow
-                                                items=items
-                                                max_visible=1
-                                                tooltip_position="tooltip-bottom"
-                                                badge_class="badge badge-xs badge-outline rounded-none border-base-content/10 whitespace-nowrap"
-                                            />
-                                        }
-                                    }}
-                                </div>
+                            </div>
                             </div>
 
                             <hr class="border-base-content/10 my-3" />
@@ -397,7 +356,6 @@ mod tests {
             collaborator_ids: vec![],
             description: "A gear with an **extended** markdown description.".to_owned(),
             tags: vec!["3d_model".to_owned()],
-            platforms: vec!["blender".to_owned()],
             downloads: 1234,
             favorites: vec!["user-1".to_owned(), "user-2".to_owned()],
             timestamp: time::macros::datetime!(2024-01-01 00:00:00 UTC),
@@ -408,6 +366,5 @@ mod tests {
         assert_eq!(props.author, "Author");
         assert_eq!(props.downloads, 1234);
         assert_eq!(props.tags.len(), 1);
-        assert_eq!(props.platforms.len(), 1);
     }
 }

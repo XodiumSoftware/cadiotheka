@@ -14,15 +14,11 @@ struct FormErrors {
     title: Option<String>,
     description: Option<String>,
     tags: Option<String>,
-    platforms: Option<String>,
 }
 
 impl FormErrors {
     fn is_empty(&self) -> bool {
-        self.title.is_none()
-            && self.description.is_none()
-            && self.tags.is_none()
-            && self.platforms.is_none()
+        self.title.is_none() && self.description.is_none() && self.tags.is_none()
     }
 }
 
@@ -40,7 +36,6 @@ pub fn AddProjectModal() -> impl IntoView {
     let (title, set_title) = signal(String::new());
     let (description, set_description) = signal(String::new());
     let (selected_tags, set_selected_tags) = signal(Vec::<String>::new());
-    let (selected_platforms, set_selected_platforms) = signal(Vec::<String>::new());
     let (errors, set_errors) = signal(FormErrors::default());
     let (is_submitting, set_is_submitting) = signal(false);
     let (submit_error, set_submit_error) = signal(Option::<String>::None);
@@ -49,7 +44,6 @@ pub fn AddProjectModal() -> impl IntoView {
         set_title.set(String::new());
         set_description.set(String::new());
         set_selected_tags.set(Vec::new());
-        set_selected_platforms.set(Vec::new());
         set_errors.set(FormErrors::default());
         set_submit_error.set(None);
         if let Some(input) = title_input_ref.get() {
@@ -83,10 +77,6 @@ pub fn AddProjectModal() -> impl IntoView {
             e.tags = Some("Select at least one tag.".to_string());
         }
 
-        if selected_platforms.get().is_empty() {
-            e.platforms = Some("Select at least one supported platform.".to_string());
-        }
-
         set_errors.set(e.clone());
         e.is_empty()
     };
@@ -102,22 +92,10 @@ pub fn AddProjectModal() -> impl IntoView {
         set_errors.update(|errs| errs.tags = None);
     };
 
-    let toggle_platform = move |platform_id: String| {
-        set_selected_platforms.update(|platforms| {
-            if let Some(pos) = platforms.iter().position(|p| *p == platform_id) {
-                platforms.remove(pos);
-            } else {
-                platforms.push(platform_id);
-            }
-        });
-        set_errors.update(|errs| errs.platforms = None);
-    };
-
     let can_submit = move || {
         !title.get().trim().is_empty()
             && !description.get().trim().is_empty()
             && !selected_tags.get().is_empty()
-            && !selected_platforms.get().is_empty()
     };
 
     let on_submit = move |ev: leptos::web_sys::SubmitEvent| {
@@ -134,7 +112,6 @@ pub fn AddProjectModal() -> impl IntoView {
             title.get_untracked(),
             description.get_untracked(),
             selected_tags.get_untracked(),
-            selected_platforms.get_untracked(),
         );
 
         set_is_submitting.set(true);
@@ -360,45 +337,6 @@ pub fn AddProjectModal() -> impl IntoView {
                                     })}
                                 </div>
 
-                                <div>
-                                    <span class="block text-sm font-medium text-base-content mb-2">
-                                        <span class="text-error mr-1">"*"</span>
-                                        "Supported platforms"
-                                    </span>
-                                    <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                        {metadata.platforms.get().into_iter().map(|platform| {
-                                            let id = platform.id.clone();
-                                            let label = platform.label.clone();
-                                            let id_for_class = id.clone();
-                                            let id_for_aria = id.clone();
-                                            view! {
-                                                <button
-                                                    type="button"
-                                                    class=move || {
-                                                        let selected = selected_platforms.get().contains(&id_for_class);
-                                                        format!(
-                                                            "badge badge-sm badge-outline rounded-none cursor-pointer transition-colors {}",
-                                                            if selected {
-                                                                "bg-primary/20 border-primary text-primary"
-                                                            } else {
-                                                                "border-base-content/20 text-base-content/70 hover:border-primary/50"
-                                                            }
-                                                        )
-                                                    }
-                                                    on:click=move |_| toggle_platform(id.clone())
-                                                    disabled=move || is_submitting.get()
-                                                    aria-pressed=move || selected_platforms.get().contains(&id_for_aria).to_string()
-                                                >
-                                                    {label}
-                                                </button>
-                                            }
-                                        }).collect_view()}
-                                    </div>
-                                    {move || errors.get().platforms.map(|msg| view! {
-                                        <p class="text-error text-xs mt-1">{msg}</p>
-                                    })}
-                                </div>
-
                                 {move || submit_error.get().map(|msg| view! {
                                     <p class="text-error text-sm">{msg}</p>
                                 })}
@@ -487,7 +425,6 @@ mod tests {
             title: Some("required".to_string()),
             description: None,
             tags: None,
-            platforms: None,
         };
         assert!(!errors.is_empty());
     }
@@ -498,7 +435,6 @@ mod tests {
             title: None,
             description: None,
             tags: None,
-            platforms: None,
         };
         assert!(errors.is_empty());
     }

@@ -12,7 +12,7 @@ use crate::api::turnstile::verify_turnstile_token;
 use crate::utils::{check_rate_limit, error_response, now_utc};
 use ifc_lite_export::{GltfOptions, export_glb};
 
-const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, platforms, downloads, favorites, timestamp FROM projects";
+const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, downloads, favorites, timestamp FROM projects";
 
 /// Maximum allowed length for a project title.
 const MAX_TITLE_LENGTH: usize = 100;
@@ -65,16 +65,13 @@ pub struct ProjectVersion {
     pub created_at: String,
     pub file_size: i64,
     pub version: String,
-    /// Platform wire ids associated with this version, stored as a JSON array.
-    #[serde(with = "json_string")]
-    pub platforms: Vec<String>,
     pub downloads: i64,
 }
 
-/// Payload used to update a version's state.
+/// Payload used to patch a project version.
 #[derive(Deserialize, Debug)]
 pub struct VersionPatch {
-    pub state: String,
+    pub state: Option<String>,
 }
 
 /// Row shape used when looking up an IFC key by version id.
@@ -109,8 +106,6 @@ pub struct Project {
     pub description: String,
     #[serde(with = "json_string")]
     pub tags: Vec<String>,
-    #[serde(with = "json_string")]
-    pub platforms: Vec<String>,
     pub downloads: u64,
     #[serde(with = "json_string")]
     pub favorites: Vec<String>,
@@ -130,8 +125,6 @@ pub struct ProjectPayload {
     pub description: String,
     #[serde(with = "json_string")]
     pub tags: Vec<String>,
-    #[serde(with = "json_string")]
-    pub platforms: Vec<String>,
     pub downloads: u64,
     #[serde(with = "json_string")]
     pub favorites: Vec<String>,
@@ -140,8 +133,9 @@ pub struct ProjectPayload {
 
 /// Serde adapter that stores a `Vec<String>` as a single JSON string column.
 ///
-/// D1 stores tags and platforms as TEXT containing a JSON array, so we serialize
-/// to a JSON string on the way in and parse that JSON string on the way out.
+/// D1 stores tags, favorites, and collaborators as TEXT containing a JSON
+/// array, so we serialize to a JSON string on the way in and parse that JSON
+/// string on the way out.
 mod json_string {
     use serde::{Deserialize, Deserializer, Serializer};
 
@@ -200,7 +194,6 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let project_id = payload.id.clone();
 
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
-    let platforms = serde_json::to_string(&payload.platforms).unwrap_or_else(|_| "[]".to_string());
     let favorites = serde_json::to_string(&payload.favorites).unwrap_or_else(|_| "[]".to_string());
     let collaborator_ids =
         serde_json::to_string(&payload.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
@@ -210,8 +203,8 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, tags, platforms, downloads, favorites, timestamp) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            "INSERT INTO projects (id, title, author, author_id, author_username, collaborator_ids, description, tags, downloads, favorites, timestamp) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         )
         .bind(
             &[
@@ -223,7 +216,6 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
                 collaborator_ids.into(),
                 payload.description.into(),
                 tags.into(),
-                platforms.into(),
                 downloads_value.into(),
                 favorites.into(),
                 payload.timestamp.into(),
@@ -244,7 +236,6 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 pub struct ProjectPatch {
     title: Option<String>,
     tags: Option<Vec<String>>,
-    platforms: Option<Vec<String>>,
     collaborator_ids: Option<Vec<String>>,
     description: Option<String>,
 }
@@ -278,15 +269,6 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         db(&ctx)?
             .prepare("UPDATE projects SET tags = ?1 WHERE id = ?2")
             .bind(&[tags.into(), id.clone().into()])?
-            .run()
-            .await?;
-    }
-
-    if let Some(platforms) = patch.platforms {
-        let platforms = serde_json::to_string(&platforms).unwrap_or_else(|_| "[]".to_string());
-        db(&ctx)?
-            .prepare("UPDATE projects SET platforms = ?1 WHERE id = ?2")
-            .bind(&[platforms.into(), id.clone().into()])?
             .run()
             .await?;
     }
@@ -336,7 +318,6 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     payload.author = project.author;
     payload.author_username = project.author_username;
     let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
-    let platforms = serde_json::to_string(&payload.platforms).unwrap_or_else(|_| "[]".to_string());
     payload.collaborator_ids = project.collaborator_ids.clone();
     let favorites = serde_json::to_string(&project.favorites).unwrap_or_else(|_| "[]".to_string());
     let collaborator_ids =
@@ -348,8 +329,8 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     db(&ctx)?
         .prepare(
             "UPDATE projects \
-             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, tags = ?7, platforms = ?8, downloads = ?9, favorites = ?10, timestamp = ?11 \
-             WHERE id = ?12",
+             SET title = ?1, author = ?2, author_id = ?3, author_username = ?4, collaborator_ids = ?5, description = ?6, tags = ?7, downloads = ?8, favorites = ?9, timestamp = ?10 \
+             WHERE id = ?11",
         )
         .bind(
             &[
@@ -360,7 +341,6 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
                 collaborator_ids.into(),
                 payload.description.into(),
                 tags.into(),
-                platforms.into(),
                 downloads_value.into(),
                 favorites.into(),
                 payload.timestamp.into(),
@@ -419,17 +399,6 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
         Some(FormEntry::Field(value)) if !value.is_empty() => value,
         _ => "1.0.0".to_string(),
     };
-    let mut platforms: Vec<String> = Vec::new();
-    if let Some(entries) = form_data.get_all("platform") {
-        for entry in entries {
-            if let FormEntry::Field(value) = &entry {
-                let trimmed = value.trim();
-                if !trimmed.is_empty() && !platforms.iter().any(|p| p == trimmed) {
-                    platforms.push(trimmed.to_string());
-                }
-            }
-        }
-    }
 
     let bytes = file.bytes().await?;
     #[allow(clippy::cast_possible_wrap)]
@@ -465,7 +434,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO project_versions (id, project_id, filename, ifc_key, state, created_at, file_size, version, platforms, downloads) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO project_versions (id, project_id, filename, ifc_key, state, created_at, file_size, version, downloads) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         )
         .bind(&[
             version_id.clone().into(),
@@ -476,7 +445,6 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
             created_at.into(),
             file_size_value.into(),
             version.clone().into(),
-            serde_json::to_string(&platforms).unwrap_or_else(|_| "[]".to_string()).into(),
             0_f64.into(),
         ])?
         .run()
@@ -492,7 +460,6 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
         "content_type": "application/ifc",
         "file_size": file_size_i64,
         "version": version,
-        "platforms": platforms,
         "downloads": 0,
     }))
 }
@@ -546,7 +513,7 @@ pub async fn list_project_versions(req: Request, ctx: RouteContext<()>) -> Resul
     Response::from_json(&versions)
 }
 
-/// Updates the state of a single project version. Restricted to project editors.
+/// Patches a single project version (state only). Restricted to project editors.
 pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
     let project_id = ctx.param("id").cloned().unwrap_or_default();
@@ -559,21 +526,22 @@ pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> 
     }
 
     let patch: VersionPatch = req.json().await?;
-    let state = VersionState::parse(&patch.state)?;
 
-    db(&ctx)?
-        .prepare("UPDATE project_versions SET state = ?1 WHERE id = ?2 AND project_id = ?3")
-        .bind(&[
-            state.as_str().into(),
-            version_id.clone().into(),
-            project_id.into(),
-        ])?
-        .run()
-        .await?;
+    if let Some(state_str) = patch.state {
+        let state = VersionState::parse(&state_str)?;
+        db(&ctx)?
+            .prepare("UPDATE project_versions SET state = ?1 WHERE id = ?2 AND project_id = ?3")
+            .bind(&[
+                state.as_str().into(),
+                version_id.clone().into(),
+                project_id.clone().into(),
+            ])?
+            .run()
+            .await?;
 
-    // Clear the GLB cache so the visibility change can be reflected on next fetch.
-    let glb_cache_key = glb_key_for_project(&project.id);
-    let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
+        let glb_cache_key = glb_key_for_project(&project.id);
+        let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
+    }
 
     Response::empty()
 }
@@ -899,9 +867,9 @@ async fn fetch_project_versions(
     include_undefined: bool,
 ) -> Result<Vec<ProjectVersion>> {
     let sql = if include_undefined {
-        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, platforms, downloads FROM project_versions WHERE project_id = ?1 ORDER BY created_at DESC"
+        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, downloads FROM project_versions WHERE project_id = ?1 ORDER BY created_at DESC"
     } else {
-        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, platforms, downloads FROM project_versions WHERE project_id = ?1 AND state != 'undefined' ORDER BY created_at DESC"
+        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, downloads FROM project_versions WHERE project_id = ?1 AND state != 'undefined' ORDER BY created_at DESC"
     };
     let result = db(ctx)?
         .prepare(sql)
@@ -971,7 +939,6 @@ mod tests {
             collaborator_ids: vec![],
             description: String::new(),
             tags: vec![],
-            platforms: vec![],
             downloads: 0,
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
@@ -988,7 +955,6 @@ mod tests {
             collaborator_ids: vec![],
             description: String::new(),
             tags: vec![],
-            platforms: vec![],
             downloads: 0,
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),

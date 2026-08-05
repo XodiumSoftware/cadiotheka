@@ -24,8 +24,6 @@ pub(crate) mod routes {
     pub(crate) const ACCOUNT: &str = "/data/accounts/:id";
     pub(crate) const TAGS: &str = "/data/tags";
     pub(crate) const TAG: &str = "/data/tags/:id";
-    pub(crate) const PLATFORMS: &str = "/data/platforms";
-    pub(crate) const PLATFORM: &str = "/data/platforms/:id";
     pub(crate) const PROJECTS: &str = "/data/projects";
     pub(crate) const PROJECT: &str = "/data/projects/:id";
     pub(crate) const PROJECT_FAVORITES: &str = "/data/projects/:id/favorites";
@@ -144,10 +142,6 @@ pub fn build_router() -> Router<'static, ()> {
         .post_async(routes::TAGS, api::metadata::create_tag)
         .put_async(routes::TAG, api::metadata::update_tag)
         .delete_async(routes::TAG, api::metadata::delete_tag)
-        .get_async(routes::PLATFORMS, api::metadata::list_platforms)
-        .post_async(routes::PLATFORMS, api::metadata::create_platform)
-        .put_async(routes::PLATFORM, api::metadata::update_platform)
-        .delete_async(routes::PLATFORM, api::metadata::delete_platform)
         .get_async(routes::PROJECTS, api::projects::list_projects)
         .post_async(routes::PROJECTS, api::projects::create_project)
         .get_async(routes::PROJECT, api::projects::read_project)
@@ -286,7 +280,6 @@ mod tests {
         collaborator_ids: String,
         description: String,
         tags: String,
-        platforms: String,
         downloads: u64,
         #[serde(default)]
         favorites: String,
@@ -370,7 +363,6 @@ mod tests {
             collaborator_ids: vec!["acc-2".to_string()],
             description: "Extended description.".to_string(),
             tags: vec!["3d_model".to_string(), "vehicle".to_string()],
-            platforms: vec!["blender".to_string(), "freecad".to_string()],
             downloads: 1200,
             favorites: vec!["fav-1".to_string()],
             timestamp: "2026-07-07T14:30:00Z".to_string(),
@@ -388,7 +380,6 @@ mod tests {
         assert_eq!(parsed.collaborator_ids, "[\"acc-2\"]");
         assert_eq!(parsed.description, project.description);
         assert_eq!(parsed.tags, "[\"3d_model\",\"vehicle\"]");
-        assert_eq!(parsed.platforms, "[\"blender\",\"freecad\"]");
         assert_eq!(parsed.downloads, project.downloads);
         assert_eq!(parsed.favorites, "[\"fav-1\"]");
         assert_eq!(parsed.timestamp, project.timestamp);

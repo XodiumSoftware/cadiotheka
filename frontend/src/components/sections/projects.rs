@@ -50,9 +50,8 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         let query = search.query.get();
         let projects = projects_ctx.projects.get();
         let tag_labels = metadata.tag_labels();
-        let platform_labels = metadata.platform_labels();
         let parsed = SearchEngine::parse_query(&query);
-        SearchEngine::new(projects, tag_labels, platform_labels).search_owned(&parsed)
+        SearchEngine::new(projects, tag_labels).search_owned(&parsed)
     });
 
     Effect::new(move |_| {

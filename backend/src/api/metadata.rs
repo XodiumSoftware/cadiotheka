@@ -14,14 +14,6 @@ pub struct TagRecord {
     pub color: String,
 }
 
-/// A supported CAD platform stored in D1.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct PlatformRecord {
-    pub id: String,
-    pub label: String,
-    pub color: String,
-}
-
 /// Payload used to create a new tag.
 #[derive(Deserialize, Debug)]
 pub struct TagPayload {
@@ -33,21 +25,6 @@ pub struct TagPayload {
 /// Payload used to update an existing tag.
 #[derive(Deserialize, Debug)]
 pub struct TagUpdatePayload {
-    pub label: String,
-    pub color: String,
-}
-
-/// Payload used to create a new platform.
-#[derive(Deserialize, Debug)]
-pub struct PlatformPayload {
-    pub id: String,
-    pub label: String,
-    pub color: String,
-}
-
-/// Payload used to update an existing platform.
-#[derive(Deserialize, Debug)]
-pub struct PlatformUpdatePayload {
     pub label: String,
     pub color: String,
 }
@@ -103,22 +80,6 @@ async fn tag_exists(ctx: &RouteContext<()>, id: &str) -> Result<bool> {
     Ok(!rows.is_empty())
 }
 
-/// Returns `Ok(true)` if a platform with the given id exists.
-async fn platform_exists(ctx: &RouteContext<()>, id: &str) -> Result<bool> {
-    #[derive(Deserialize)]
-    struct Row {
-        #[allow(dead_code)]
-        id: String,
-    }
-    let result = db(ctx)?
-        .prepare("SELECT id FROM platforms WHERE id = ?1")
-        .bind(&[id.into()])?
-        .all()
-        .await?;
-    let rows: Vec<Row> = result.results::<Row>()?;
-    Ok(!rows.is_empty())
-}
-
 /// Responds with a JSON array of all content tags.
 pub async fn list_tags(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let result = db(&ctx)?
@@ -127,16 +88,6 @@ pub async fn list_tags(_req: Request, ctx: RouteContext<()>) -> Result<Response>
         .await?;
     let tags: Vec<TagRecord> = result.results::<TagRecord>()?;
     Response::from_json(&tags)
-}
-
-/// Responds with a JSON array of all supported CAD platforms.
-pub async fn list_platforms(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let result = db(&ctx)?
-        .prepare("SELECT id, label, color FROM platforms ORDER BY label")
-        .all()
-        .await?;
-    let platforms: Vec<PlatformRecord> = result.results::<PlatformRecord>()?;
-    Response::from_json(&platforms)
 }
 
 /// Creates a new content tag. Restricted to admins.
@@ -213,86 +164,6 @@ pub async fn delete_tag(req: Request, ctx: RouteContext<()>) -> Result<Response>
     let id = ctx.param("id").cloned().unwrap_or_default();
     db(&ctx)?
         .prepare("DELETE FROM tags WHERE id = ?1")
-        .bind(&[id.into()])?
-        .run()
-        .await?;
-    Response::empty()
-}
-
-/// Creates a new supported CAD platform. Restricted to admins.
-pub async fn create_platform(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    require_admin(&req, &ctx).await?;
-    let payload: PlatformPayload = req.json().await?;
-    let id = normalize_metadata_id(&payload.id)?;
-
-    if payload.label.trim().is_empty() {
-        return error_response("label is required", 400);
-    }
-    if payload.color.trim().is_empty() {
-        return error_response("color is required", 400);
-    }
-    if platform_exists(&ctx, &id).await? {
-        return error_response("platform id already exists", 409);
-    }
-
-    db(&ctx)?
-        .prepare("INSERT INTO platforms (id, label, color) VALUES (?1, ?2, ?3)")
-        .bind(&[
-            id.clone().into(),
-            payload.label.clone().into(),
-            payload.color.clone().into(),
-        ])?
-        .run()
-        .await?;
-
-    let record = PlatformRecord {
-        id,
-        label: payload.label,
-        color: payload.color,
-    };
-    Response::from_json(&record)
-}
-
-/// Updates the label and color of an existing platform. Restricted to admins.
-pub async fn update_platform(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    require_admin(&req, &ctx).await?;
-    let id = ctx.param("id").cloned().unwrap_or_default();
-    let payload: PlatformUpdatePayload = req.json().await?;
-
-    if payload.label.trim().is_empty() {
-        return error_response("label is required", 400);
-    }
-    if payload.color.trim().is_empty() {
-        return error_response("color is required", 400);
-    }
-    if !platform_exists(&ctx, &id).await? {
-        return error_response("platform not found", 404);
-    }
-
-    db(&ctx)?
-        .prepare("UPDATE platforms SET label = ?1, color = ?2 WHERE id = ?3")
-        .bind(&[
-            payload.label.clone().into(),
-            payload.color.clone().into(),
-            id.clone().into(),
-        ])?
-        .run()
-        .await?;
-
-    let record = PlatformRecord {
-        id,
-        label: payload.label,
-        color: payload.color,
-    };
-    Response::from_json(&record)
-}
-
-/// Deletes a supported CAD platform. Restricted to admins.
-pub async fn delete_platform(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    require_admin(&req, &ctx).await?;
-    let id = ctx.param("id").cloned().unwrap_or_default();
-    db(&ctx)?
-        .prepare("DELETE FROM platforms WHERE id = ?1")
         .bind(&[id.into()])?
         .run()
         .await?;

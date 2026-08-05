@@ -9,29 +9,23 @@ use std::collections::HashMap;
 
 /// Search engine that owns the loaded cards and answers search queries.
 ///
-/// Cards reference tags and platforms by wire id, so the engine also holds
-/// id-to-label maps (built from `/data/tags` and `/data/platforms`) to resolve
-/// user-facing labels for filtering and searchable text.
+/// Cards reference tags by wire id, so the engine also holds an id-to-label map
+/// (built from `/data/tags`) to resolve user-facing labels for filtering and
+/// searchable text.
 pub struct SearchEngine {
     cards: Vec<ProjectData>,
     matcher: SkimMatcherV2,
     tag_labels: HashMap<String, String>,
-    platform_labels: HashMap<String, String>,
 }
 
 impl SearchEngine {
-    /// Creates a new search engine from a list of projects and id-to-label maps
-    /// for tags and platforms.
-    pub fn new(
-        cards: Vec<ProjectData>,
-        tag_labels: HashMap<String, String>,
-        platform_labels: HashMap<String, String>,
-    ) -> Self {
+    /// Creates a new search engine from a list of projects and an id-to-label map
+    /// for tags.
+    pub fn new(cards: Vec<ProjectData>, tag_labels: HashMap<String, String>) -> Self {
         Self {
             cards,
             matcher: SkimMatcherV2::default(),
             tag_labels,
-            platform_labels,
         }
     }
 
@@ -103,9 +97,6 @@ impl SearchEngine {
             card.tags.iter().any(|id| {
                 self.tag_label(id)
                     .is_some_and(|label| Self::label_matches(label, filter))
-            }) || card.platforms.iter().any(|id| {
-                self.platform_label(id)
-                    .is_some_and(|label| Self::label_matches(label, filter))
             })
         });
         if !matches_filters {
@@ -131,7 +122,7 @@ impl SearchEngine {
             return Some(0);
         }
 
-        let haystack = Self::searchable_text(card, &self.tag_labels, &self.platform_labels);
+        let haystack = Self::searchable_text(card, &self.tag_labels);
         self.matcher.fuzzy_match(&haystack, query)
     }
 
@@ -140,17 +131,12 @@ impl SearchEngine {
         self.tag_labels.get(id).map(String::as_str)
     }
 
-    /// Resolves a platform id to its user-facing label, or `None` if unknown.
-    fn platform_label(&self, id: &str) -> Option<&str> {
-        self.platform_labels.get(id).map(String::as_str)
-    }
-
     /// Checks whether a user-facing label matches a filter needle.
     ///
     /// The label is tokenized on whitespace and non-alphanumeric characters,
     /// then each token is compared case-insensitively using substring
     /// matching. This lets `#model` match `3D Model` while still supporting
-    /// prefixes like `#blend` -> `Blender`.
+    /// prefixes like `#para` -> `Parametric`.
     fn label_matches(label: &str, needle: &str) -> bool {
         let needle = needle.to_lowercase();
         label
@@ -170,13 +156,7 @@ impl SearchEngine {
             .last()
             .is_some_and(|token| token.starts_with('@'));
         let needle = active_needle(query);
-        from_cards(
-            &self.cards,
-            include_sort,
-            &needle,
-            &self.tag_labels,
-            &self.platform_labels,
-        )
+        from_cards(&self.cards, include_sort, &needle, &self.tag_labels)
     }
 
     /// Parses a raw query string into a structured [`ParsedQuery`].
@@ -185,11 +165,7 @@ impl SearchEngine {
     }
 
     /// Combines all searchable project fields into a single lowercase string.
-    fn searchable_text(
-        card: &ProjectData,
-        tag_labels: &HashMap<String, String>,
-        platform_labels: &HashMap<String, String>,
-    ) -> String {
+    fn searchable_text(card: &ProjectData, tag_labels: &HashMap<String, String>) -> String {
         let tags = card
             .tags
             .iter()
@@ -197,14 +173,7 @@ impl SearchEngine {
             .cloned()
             .collect::<Vec<_>>()
             .join(" ");
-        let platforms = card
-            .platforms
-            .iter()
-            .filter_map(|id| platform_labels.get(id))
-            .cloned()
-            .collect::<Vec<_>>()
-            .join(" ");
-        format!("{} {} {} {}", card.title, card.author, tags, platforms).to_lowercase()
+        format!("{} {} {}", card.title, card.author, tags).to_lowercase()
     }
 }
 
@@ -228,23 +197,11 @@ mod tests {
         ])
     }
 
-    fn platform_labels() -> HashMap<String, String> {
-        HashMap::from([
-            ("blender".to_owned(), "Blender".to_owned()),
-            ("freecad".to_owned(), "FreeCAD".to_owned()),
-            ("fusion_360".to_owned(), "Fusion 360".to_owned()),
-            ("sketchup".to_owned(), "SketchUp".to_owned()),
-            ("kicad".to_owned(), "KiCad".to_owned()),
-        ])
-    }
-
-    #[allow(clippy::too_many_arguments)]
     fn card(
         title: &str,
         author: &str,
         author_username: &str,
         tags: &[&str],
-        platforms: &[&str],
         downloads: u64,
         favorites: u64,
     ) -> ProjectData {
@@ -274,7 +231,6 @@ mod tests {
             collaborator_ids: vec![],
             description: format!("Markdown summary for {title}."),
             tags: tags.iter().map(|s| (*s).to_owned()).collect(),
-            platforms: platforms.iter().map(|s| (*s).to_owned()).collect(),
             downloads,
             favorites: vec!["favorite-user".to_owned(); favorites_trunc],
             timestamp: datetime!(2024-01-15 12:00:00 UTC),
@@ -290,7 +246,6 @@ mod tests {
                     "ZenFlow",
                     "zenflow",
                     &["parametric", "3d_model"],
-                    &["blender", "freecad", "fusion_360"],
                     1_200,
                     80,
                 ),
@@ -299,7 +254,6 @@ mod tests {
                     "MakerJoe",
                     "makerjoe",
                     &["furniture", "fabrication", "diy"],
-                    &["sketchup"],
                     3_400,
                     250,
                 ),
@@ -308,13 +262,11 @@ mod tests {
                     "ZenFlow",
                     "zenflow",
                     &["electronics", "tooling"],
-                    &["kicad"],
                     900,
                     45,
                 ),
             ],
             tag_labels(),
-            platform_labels(),
         )
     }
 
@@ -334,15 +286,6 @@ mod tests {
         let results = engine.search(&parsed);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].title, "PCB Holder");
-    }
-
-    #[test]
-    fn platform_filter_matches_card() {
-        let engine = engine();
-        let parsed = parse_query("#sketchup");
-        let results = engine.search(&parsed);
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].title, "Workshop Bench");
     }
 
     #[test]
@@ -418,7 +361,7 @@ mod tests {
         assert!(
             suggestions
                 .iter()
-                .any(|s| { s.kind == SuggestionKind::Filter && s.text == "Blender" })
+                .any(|s| { s.kind == SuggestionKind::Filter && s.text == "3D Model" })
         );
         assert!(
             !suggestions.iter().any(|s| s.kind == SuggestionKind::Sort),
@@ -438,9 +381,9 @@ mod tests {
 
     #[test]
     fn parse_query_exposed_as_method() {
-        let parsed = SearchEngine::parse_query("gear #freecad");
+        let parsed = SearchEngine::parse_query("gear #parametric");
         assert_eq!(parsed.filter, vec!["gear"]);
-        assert_eq!(parsed.filters, vec!["freecad"]);
+        assert_eq!(parsed.filters, vec!["parametric"]);
     }
 
     #[test]
@@ -452,22 +395,14 @@ mod tests {
             results.iter().any(|c| c.title == "Parametric Screw"),
             "#model should match the 3D Model tag"
         );
-
-        let parsed = parse_query("#fusion");
-        let results = engine.search(&parsed);
-        assert!(
-            results.iter().any(|c| c.title == "Parametric Screw"),
-            "#fusion should match the Fusion 360 platform"
-        );
     }
 
     #[test]
     fn label_matches_tokenizes_and_substring_matches() {
         assert!(SearchEngine::label_matches("3D Model", "model"));
         assert!(SearchEngine::label_matches("3D Model", "3d"));
-        assert!(SearchEngine::label_matches("Fusion 360", "fusion"));
-        assert!(SearchEngine::label_matches("Blender", "blend"));
-        assert!(!SearchEngine::label_matches("Blender", "model"));
+        assert!(SearchEngine::label_matches("Parametric", "para"));
+        assert!(!SearchEngine::label_matches("Parametric", "model"));
     }
 
     #[test]

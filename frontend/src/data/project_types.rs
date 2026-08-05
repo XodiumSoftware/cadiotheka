@@ -1,14 +1,13 @@
 pub use crate::metadata::version_state::VersionState;
 use crate::utils::api_url;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Serde adapter for a JSON-text column holding an array of strings.
 ///
-/// D1 stores tags, platforms, favorites, and collaborators as TEXT containing
-/// a JSON array, so the frontend parses that JSON string into a `Vec<String>`.
-/// Tags and platforms store the wire ids of records in the `tags` and
-/// `platforms` tables; their labels and colors are resolved from metadata.
+/// D1 stores tags, favorites, and collaborators as TEXT containing a JSON array,
+/// so the frontend parses that JSON string into a `Vec<String>`. Tags store
+/// the wire ids of records in the `tags` table; their labels and colors are
+/// resolved from metadata.
 mod string_array_json {
     use serde::{Deserialize, Deserializer, Serializer};
 
@@ -61,9 +60,6 @@ pub struct ProjectVersion {
     /// Semantic version string for this release (e.g. "1.0.0").
     #[serde(default)]
     pub version: String,
-    /// Platform wire ids associated with this version.
-    #[serde(default, with = "string_array_json")]
-    pub platforms: Vec<String>,
     /// Number of times this version has been downloaded.
     #[serde(default)]
     pub downloads: i64,
@@ -80,8 +76,6 @@ pub struct VersionUploadResponse {
     pub file_size: i64,
     /// Semantic version string for this release.
     pub version: String,
-    /// Platform wire ids associated with this version.
-    pub platforms: Vec<String>,
     /// Number of times this version has been downloaded.
     pub downloads: i64,
 }
@@ -108,9 +102,6 @@ pub struct ProjectData {
     /// Wire ids of the tags categorizing this content.
     #[serde(with = "string_array_json")]
     pub tags: Vec<String>,
-    /// Wire ids of the platforms this content supports.
-    #[serde(with = "string_array_json")]
-    pub platforms: Vec<String>,
     /// Download count.
     pub downloads: u64,
     /// Account ids of users who have favorited the project.
@@ -156,12 +147,7 @@ pub fn now_utc() -> time::OffsetDateTime {
 /// The backend fills in `author`, `author_id`, and `downloads`,
 /// so this function generates the remaining fields and leaves the computed
 /// ones empty or zeroed.
-pub fn new_project_payload(
-    title: String,
-    description: String,
-    tags: Vec<String>,
-    platforms: Vec<String>,
-) -> ProjectData {
+pub fn new_project_payload(title: String, description: String, tags: Vec<String>) -> ProjectData {
     ProjectData {
         id: uuid::Uuid::new_v4().to_string(),
         title,
@@ -171,7 +157,6 @@ pub fn new_project_payload(
         collaborator_ids: vec![],
         description,
         tags,
-        platforms,
         downloads: 0,
         favorites: vec![],
         timestamp: now_utc(),
@@ -186,7 +171,7 @@ pub enum ProjectCreationResult {
     /// The project was created successfully.
     Created(ProjectData),
     /// The backend rejected one or more fields; map keys are field names.
-    ValidationErrors(HashMap<String, String>),
+    ValidationErrors(std::collections::HashMap<String, String>),
     /// A network, serialization, or unexpected server failure occurred.
     Failed(String),
 }
@@ -194,7 +179,7 @@ pub enum ProjectCreationResult {
 /// Response body returned by the backend when project validation fails.
 #[derive(Debug, Deserialize)]
 pub(crate) struct ValidationErrorResponse {
-    pub(crate) errors: HashMap<String, String>,
+    pub(crate) errors: std::collections::HashMap<String, String>,
 }
 
 #[cfg(test)]
@@ -212,7 +197,6 @@ mod tests {
             collaborator_ids: vec![],
             description: "Extended description.".to_owned(),
             tags: vec!["3d_model".to_owned(), "vehicle".to_owned()],
-            platforms: vec!["blender".to_owned(), "freecad".to_owned()],
             downloads: 1200,
             favorites: vec![
                 "11111111-1111-1111-1111-111111111111".to_owned(),
@@ -235,7 +219,6 @@ mod tests {
                 created_at: "2026-01-01T00:00:00Z".to_owned(),
                 file_size: 1_024,
                 version: "1.0.0".to_owned(),
-                platforms: vec!["blender".to_owned()],
                 downloads: 0,
             },
             ProjectVersion {
@@ -247,7 +230,6 @@ mod tests {
                 created_at: "2026-01-02T00:00:00Z".to_owned(),
                 file_size: 2_097_152,
                 version: "1.1.0".to_owned(),
-                platforms: vec!["freecad".to_owned()],
                 downloads: 42,
             },
         ];
@@ -268,7 +250,6 @@ mod tests {
             created_at: "2026-01-01T00:00:00Z".to_owned(),
             file_size: 0,
             version: "1.0.0".to_owned(),
-            platforms: vec!["blender".to_owned()],
             downloads: 0,
         }];
         assert_eq!(latest_visible_ifc_url(&versions), None);
@@ -276,12 +257,11 @@ mod tests {
 
     #[test]
     fn project_deserializes_backend_json_string_columns() {
-        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","collaborator_ids":"[]","description":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","platforms":"[\"blender\",\"freecad\",\"fusion_360\",\"step\",\"mesh\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z"}]"#;
+        let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","collaborator_ids":"[]","description":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z"}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).expect("backend JSON parses");
         assert_eq!(projects.len(), 1);
         assert_eq!(projects[0].title, "Mountain Bike");
         assert_eq!(projects[0].tags.len(), 5);
-        assert_eq!(projects[0].platforms.len(), 5);
         assert_eq!(projects[0].favorites.len(), 2);
     }
 
@@ -298,28 +278,25 @@ mod tests {
         let project = sample_project();
         let value = serde_json::to_value(&project).unwrap();
         let tags = value.get("tags").unwrap().as_str().unwrap();
-        let platforms = value.get("platforms").unwrap().as_str().unwrap();
         let favorites = value.get("favorites").unwrap().as_str().unwrap();
         let collaborators = value.get("collaborator_ids").unwrap().as_str().unwrap();
         assert!(tags.starts_with('[') && tags.ends_with(']'));
-        assert!(platforms.starts_with('[') && platforms.ends_with(']'));
         assert!(favorites.starts_with('[') && favorites.ends_with(']'));
         assert!(collaborators.starts_with('[') && collaborators.ends_with(']'));
     }
 
     #[test]
     fn project_deserializes_empty_json_string_columns() {
-        let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","description":"E","tags":"[]","platforms":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z"}]"#;
+        let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","description":"E","tags":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z"}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json).unwrap();
         assert_eq!(projects.len(), 1);
         assert!(projects[0].tags.is_empty());
-        assert!(projects[0].platforms.is_empty());
         assert!(projects[0].favorites.is_empty());
         assert!(projects[0].collaborator_ids.is_empty());
     }
 
-    /// Tags and platforms are stored as wire-id strings resolved against the
-    /// metadata fetched from `/data/tags` and `/data/platforms`.
+    /// Tags are stored as wire-id strings resolved against the metadata fetched
+    /// from `/data/tags`.
     #[test]
     fn ifc_download_url_uses_version_id_and_filename() {
         let version = ProjectVersion {
@@ -331,7 +308,6 @@ mod tests {
             created_at: "2026-01-01T00:00:00Z".to_owned(),
             file_size: 0,
             version: "1.0.0".to_owned(),
-            platforms: vec!["blender".to_owned()],
             downloads: 0,
         };
         assert_eq!(
@@ -341,9 +317,8 @@ mod tests {
     }
 
     #[test]
-    fn project_uses_known_tags_and_platforms() {
+    fn project_uses_known_tags() {
         let project = sample_project();
         assert_eq!(project.tags, vec!["3d_model", "vehicle"]);
-        assert_eq!(project.platforms, vec!["blender", "freecad"]);
     }
 }

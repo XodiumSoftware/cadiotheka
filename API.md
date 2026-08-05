@@ -51,11 +51,10 @@ authenticated requests.
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/data/tags` | - | List all content tags. |
-| GET | `/data/platforms` | - | List all supported CAD platforms. |
 
-Tags and platforms live in the `tags` and `platforms` D1 tables. Each record has
-the shape `{ "id": string, "label": string, "color": string }`, where `id` is
-the stable wire value stored on project rows and `color` is a Tailwind class.
+Tags live in the `tags` D1 table. Each record has the shape
+`{ "id": string, "label": string, "color": string }`, where `id` is the stable
+wire value stored on project rows and `color` is a Tailwind class.
 
 ## Projects
 

@@ -113,23 +113,6 @@ pub async fn update_project_tags(id: &str, tags: Vec<String>) -> Result<Vec<Stri
     Ok(tags)
 }
 
-/// Updates the supported platforms of an existing project via `PATCH /data/projects/:id`.
-///
-/// On success it returns the new platform list; on failure it returns a [`RequestError`].
-pub async fn update_project_platforms(
-    id: &str,
-    platforms: Vec<String>,
-) -> Result<Vec<String>, RequestError> {
-    let url = api_url(&format!("/projects/{id}"));
-    let body =
-        serde_json::to_string(&serde_json::json!({ "platforms": platforms })).map_err(|err| {
-            RequestError::Serialize(format!("Failed to serialize platforms update: {err}"))
-        })?;
-
-    patch_project(&url, body, "platforms").await?;
-    Ok(platforms)
-}
-
 /// Updates the description of an existing project via `PATCH /data/projects/:id`.
 ///
 /// On success it returns the new description; on failure it returns a [`RequestError`].
@@ -275,7 +258,6 @@ pub async fn upload_project_ifc(
     id: &str,
     file: web_sys::File,
     version: &str,
-    platforms: &[String],
 ) -> Result<ProjectVersion, RequestError> {
     #[derive(Deserialize)]
     struct UploadResponse {
@@ -283,7 +265,6 @@ pub async fn upload_project_ifc(
         version_id: String,
         file_size: i64,
         version: String,
-        platforms: Vec<String>,
         downloads: i64,
     }
 
@@ -299,11 +280,6 @@ pub async fn upload_project_ifc(
     form.append_with_str("version", version).map_err(|err| {
         RequestError::BuildRequest(format!("Failed to append version field: {err:?}"))
     })?;
-    for platform in platforms {
-        form.append_with_str("platform", platform).map_err(|err| {
-            RequestError::BuildRequest(format!("Failed to append platform field: {err:?}"))
-        })?;
-    }
 
     let request = Request::post(&url)
         .credentials(RequestCredentials::Include)
@@ -332,7 +308,6 @@ pub async fn upload_project_ifc(
                     .unwrap_or_default(),
                 file_size: upload.file_size,
                 version: upload.version,
-                platforms: upload.platforms,
                 downloads: upload.downloads,
             })
         }

@@ -95,7 +95,7 @@ pub mod data {
 
     pub use account::{AccountData, AccountRole, fetch_accounts};
     pub use error::RequestError;
-    pub use metadata::{fetch_platforms, fetch_tags};
+    pub use metadata::fetch_tags;
     pub use project_api::*;
     pub use project_types::{
         ProjectCreationResult, ProjectData, ProjectVersion, VersionState, VersionUploadResponse,
@@ -106,11 +106,9 @@ pub mod data {
 pub mod engines;
 
 pub mod metadata {
-    pub mod platforms;
     pub mod tags;
     pub mod version_state;
 
-    pub use platforms::{platform_color, platform_label};
     pub use tags::{tag_color, tag_label};
     pub use version_state::VersionState;
 }

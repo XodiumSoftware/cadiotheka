@@ -92,7 +92,7 @@ pub struct SortSelection {
 pub struct ParsedQuery<'a> {
     /// Free-text filter tokens with directives and filters removed.
     pub filter: Vec<&'a str>,
-    /// Exact tag/platform filters requested with `#`.
+    /// Exact tag filters requested with `#`.
     pub filters: Vec<&'a str>,
     /// Author filter requested with `@author:`.
     pub author: Option<&'a str>,
@@ -207,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_tag_and_platform_filters() {
+    fn parse_tag_filters() {
         let parsed = parse_query("screw #Blender #FreeCAD");
         assert_eq!(parsed.filter, vec!["screw"]);
         assert_eq!(parsed.filters, vec!["Blender", "FreeCAD"]);
