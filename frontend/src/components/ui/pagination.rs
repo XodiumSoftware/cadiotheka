@@ -84,7 +84,33 @@ fn chevron_right(class: &'static str) -> impl IntoView {
     }
 }
 
-/// Numbered pagination bar with previous/next arrows and ellipsis gaps.
+/// Single numbered page button used inside the pagination bar.
+#[component]
+fn PageButton(
+    n: usize,
+    #[prop(into)] active: Signal<bool>,
+    set_page: WriteSignal<usize>,
+) -> impl IntoView {
+    view! {
+        <button
+            type="button"
+            class=move || {
+                if active.get() {
+                    "join-item btn btn-active".to_string()
+                } else {
+                    "join-item btn".to_string()
+                }
+            }
+            aria-label=format!("Page {}", n + 1)
+            aria-current=move || if active.get() { "page" } else { "" }
+            on:click=move |_| set_page.set(n)
+        >
+            {n + 1}
+        </button>
+    }
+}
+
+/// DaisyUI-styled pagination bar with previous/next arrows and ellipsis gaps.
 #[component]
 pub fn Pagination(
     #[prop(into)] page: Signal<usize>,
@@ -98,10 +124,10 @@ pub fn Pagination(
     });
 
     view! {
-        <nav class="flex items-center gap-1" aria-label="Pagination">
+        <div class="join" role="group" aria-label="Pagination">
             <button
                 type="button"
-                class="btn btn-circle btn-sm btn-ghost"
+                class="join-item btn"
                 disabled=move || display_page.get() == 0
                 aria-label="Previous page"
                 on:click=move |_| set_page.update(|p| *p = p.saturating_sub(1))
@@ -114,31 +140,21 @@ pub fn Pagination(
                 pagination_pages(current, total, sibling_count)
                     .into_iter()
                     .map(|item| match item {
-                        PageItem::Page(n) => view! {
+                        PageItem::Page(n) => {
+                            let active = Signal::derive(move || display_page.get() == n);
+                            view! {
+                                <PageButton n=n active=active set_page=set_page />
+                            }
+                                .into_any()
+                        }
+                        PageItem::Ellipsis => view! {
                             <button
                                 type="button"
-                                class=move || {
-                                    if display_page.get() == n {
-                                        "btn btn-circle btn-sm".to_string()
-                                    } else {
-                                        "btn btn-circle btn-sm btn-ghost".to_string()
-                                    }
-                                }
-                                aria-label=format!("Page {}", n + 1)
-                                aria-current=move || if display_page.get() == n { "page" } else { "" }
-                                on:click=move |_| set_page.set(n)
-                            >
-                                {n + 1}
-                            </button>
-                        }
-                            .into_any(),
-                        PageItem::Ellipsis => view! {
-                            <span
-                                class="w-8 h-8 flex items-center justify-center text-base-content/50 text-sm"
+                                class="join-item btn btn-disabled"
                                 aria-hidden="true"
                             >
                                 "..."
-                            </span>
+                            </button>
                         }
                             .into_any(),
                     })
@@ -147,7 +163,7 @@ pub fn Pagination(
             }}
             <button
                 type="button"
-                class="btn btn-circle btn-sm btn-ghost"
+                class="join-item btn"
                 disabled=move || display_page.get() + 1 >= total_pages.get()
                 aria-label="Next page"
                 on:click=move |_| set_page.update(|p| {
@@ -157,7 +173,7 @@ pub fn Pagination(
             >
                 {chevron_right("w-4 h-4")}
             </button>
-        </nav>
+        </div>
     }
 }
 

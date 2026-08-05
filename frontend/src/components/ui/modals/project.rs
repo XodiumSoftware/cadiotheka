@@ -1645,24 +1645,16 @@ fn ProjectModalContent(
                                                                         </tbody>
                                                                     </table>
                                                                 </div>
-                                                                {move || {
-                                                                    view! {
-                                                                        <div class="flex items-center justify-between text-sm">
-                                                                            <span class="text-base-content/50">
-                                                                                "Page "
-                                                                                {clamped_versions_page.get() + 1}
-                                                                                " of "
-                                                                                {versions_total_pages.get()}
-                                                                            </span>
-                                                                            <Pagination
-                                                                                page=versions_page
-                                                                                set_page=set_versions_page
-                                                                                total_pages=versions_total_pages
-                                                                            />
-                                                                        </div>
-                                                                    }
-                                                                        .into_any()
-                                                                }}
+                                                                <div class="flex items-center justify-between text-sm">
+                                                                    <span class="text-base-content/50">
+                                                                        {move || format!("Page {} of {}", clamped_versions_page.get() + 1, versions_total_pages.get())}
+                                                                    </span>
+                                                                    <Pagination
+                                                                        page=versions_page
+                                                                        set_page=set_versions_page
+                                                                        total_pages=versions_total_pages
+                                                                    />
+                                                                </div>
                                                             </div>
                                                         }
                                                             .into_any()
