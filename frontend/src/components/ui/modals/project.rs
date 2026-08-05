@@ -1562,16 +1562,22 @@ fn ProjectModalContent(
                                                                             </tbody>
                                                                         </table>
                                                                     </div>
-                                                                    <div class="flex items-center justify-between text-sm">
-                                                                        <span class="text-base-content/50">
-                                                                            {move || format!("Page {} of {}", clamped_versions_page.get() + 1, versions_total_pages.get().max(1))}
-                                                                        </span>
-                                                                        <Pagination
-                                                                            page=versions_page
-                                                                            set_page=set_versions_page
-                                                                            total_pages=versions_total_pages
-                                                                        />
-                                                                    </div>
+                                                                    {move || {
+                                                                        if versions_total_pages.get() <= 1 {
+                                                                            ().into_any()
+                                                                        } else {
+                                                                            view! {
+                                                                                <div class="flex items-center justify-end text-sm">
+                                                                                    <Pagination
+                                                                                        page=versions_page
+                                                                                        set_page=set_versions_page
+                                                                                        total_pages=versions_total_pages
+                                                                                    />
+                                                                                </div>
+                                                                            }
+                                                                                .into_any()
+                                                                        }
+                                                                    }}
                                                                 </div>
                                                             }
                                                                 .into_any()
@@ -1708,16 +1714,22 @@ fn ProjectModalContent(
                                                                         </tbody>
                                                                     </table>
                                                                 </div>
-                                                                <div class="flex items-center justify-between text-sm">
-                                                                    <span class="text-base-content/50">
-                                                                        {move || format!("Page {} of {}", clamped_versions_page.get() + 1, versions_total_pages.get())}
-                                                                    </span>
-                                                                    <Pagination
-                                                                        page=versions_page
-                                                                        set_page=set_versions_page
-                                                                        total_pages=versions_total_pages
-                                                                    />
-                                                                </div>
+                                                                {move || {
+                                                                    if versions_total_pages.get() <= 1 {
+                                                                        ().into_any()
+                                                                    } else {
+                                                                        view! {
+                                                                            <div class="flex items-center justify-end text-sm">
+                                                                                <Pagination
+                                                                                    page=versions_page
+                                                                                    set_page=set_versions_page
+                                                                                    total_pages=versions_total_pages
+                                                                                />
+                                                                            </div>
+                                                                        }
+                                                                            .into_any()
+                                                                    }
+                                                                }}
                                                             </div>
                                                         }
                                                             .into_any()
