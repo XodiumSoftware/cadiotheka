@@ -89,13 +89,11 @@ pub mod contexts {
 pub mod data {
     pub mod account;
     pub mod error;
-    pub mod metadata;
     pub mod project_api;
     pub mod project_types;
 
     pub use account::{AccountData, AccountRole, fetch_accounts};
     pub use error::RequestError;
-    pub use metadata::fetch_tags;
     pub use project_api::*;
     pub use project_types::{
         ProjectCreationResult, ProjectData, ProjectVersion, VersionState, VersionUploadResponse,
@@ -109,7 +107,7 @@ pub mod metadata {
     pub mod tags;
     pub mod version_state;
 
-    pub use tags::{tag_color, tag_label};
+    pub use tags::{Tag, tag_color, tag_label};
     pub use version_state::VersionState;
 }
 

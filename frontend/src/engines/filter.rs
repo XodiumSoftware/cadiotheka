@@ -10,8 +10,8 @@ use std::collections::HashMap;
 /// Search engine that owns the loaded cards and answers search queries.
 ///
 /// Cards reference tags by wire id, so the engine also holds an id-to-label map
-/// (built from `/data/tags`) to resolve user-facing labels for filtering and
-/// searchable text.
+/// (built from the hardcoded `Tag` enum) to resolve user-facing labels for
+/// filtering and searchable text.
 pub struct SearchEngine {
     cards: Vec<ProjectData>,
     matcher: SkimMatcherV2,

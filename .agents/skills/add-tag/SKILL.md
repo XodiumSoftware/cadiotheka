@@ -1,43 +1,51 @@
 ---
 name: add-tag
-description: Add a new content Tag to Cadiotheka. Tags are stored in the D1 database, so this means adding a row to the seed schema (schemas/tags.sql); the API serves it automatically and the frontend resolves labels through MetadataContext.
+description: Add a new content Tag to Cadiotheka by adding an enum variant to frontend/src/metadata/tags.rs. No database changes are needed.
 ---
 
 # Add a Tag to Cadiotheka
 
-Tags are database records served over `GET /data/tags`. The frontend resolves
-them through `MetadataContext`, so adding one is a schema/seed change only.
+Tags are hardcoded as the `Tag` enum in `frontend/src/metadata/tags.rs`. Project
+rows still store tag wire ids as JSON arrays, so the frontend resolves labels
+and colors through the enum.
 
 ## Steps
 
-1. Add a row to `backend/schemas/tags.sql`.
+1. Open `frontend/src/metadata/tags.rs`.
 
-2. Use the existing `INSERT OR IGNORE INTO ... VALUES (...)` block. Each row is
-   `(id, label, color)`:
-   - `id`: the stable wire value stored on project rows, in `snake_case`
-     (e.g. `3d_model`, `wip`). It must be unique.
-   - `label`: the user-facing label (e.g. `3D Model`, `WIP`).
-   - `color`: a Tailwind `bg-*` class. Pick one distinct from existing rows.
+2. Add a new variant to the `Tag` enum. Use `snake_case` for the variant name;
+   for ids that start with a digit or contain special characters, add a
+   `#[serde(rename = "...")]` attribute:
 
-3. Re-apply the schema to refresh local data:
-   ```bash
-   cd backend
-   npx wrangler d1 execute cadiotheka --file=schemas/tags.sql --local
+   ```rust
+   #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter, Serialize, Deserialize)]
+   #[serde(rename_all = "snake_case")]
+   pub enum Tag {
+       ...
+       /// Description of the new tag.
+       NewTag,
+   }
    ```
 
-   Existing rows are preserved because inserts use `OR IGNORE`.
+3. Update the three match arms in `impl Tag`:
+   - `id()` returns the stable wire id (`"new_tag"`).
+   - `label()` returns the user-facing label (`"New Tag"`).
+   - `color()` returns a Tailwind `bg-*`/`text-*` inline style string.
 
-4. No frontend changes are needed for a single new tag. If you are building the
-   admin CRUD (TODO C1b), prefer the admin UI so the change is applied to the
-   database at runtime rather than via a migration.
+4. Run `cargo fmt --all`.
 
-5. Run `cargo test` and `cargo clippy` for both crates.
+5. Run `cargo clippy --all-targets --all-features` for the backend and
+   `cd frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features`.
 
-6. Summarize the change and any migration notes (e.g. re-apply the schema in
-   production).
+6. Run `cargo test`.
+
+7. Summarize the change. Existing project rows with the new wire id will render
+   correctly once the enum recognizes it; old ids that are removed from the
+   enum will no longer resolve to a label or color.
 
 ## Conventions
 
-- `id` values are stable wire values in `snake_case`; `label` is user-facing and
-  may differ from the id (e.g. `wip` vs `WIP`, `3d_model` vs `3D Model`).
-- Tag colors should be `bg-*` Tailwind classes.
+- Wire ids are stable, lowercase, and use `snake_case`.
+- Labels are user-facing and may differ from the id (e.g. `WIP` vs `wip`).
+- Color strings are Tailwind-style inline CSS, usually a `background-color` for
+  badge rendering.

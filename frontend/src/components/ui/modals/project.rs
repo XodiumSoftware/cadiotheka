@@ -360,18 +360,21 @@ fn AddVersionRow(
 }
 
 /// Returns a tag's wire id.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn tag_id(tag: &Tag) -> String {
-    tag.id.clone()
+    tag.id().to_string()
 }
 
 /// Returns a tag's user-facing label.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn tag_label(tag: &Tag) -> String {
-    tag.label.clone()
+    tag.label().to_string()
 }
 
 /// Returns a tag's inline CSS color style.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn tag_color(tag: &Tag) -> String {
-    tag.color.clone()
+    tag.color().to_string()
 }
 
 #[component]
@@ -1931,7 +1934,7 @@ fn ProjectModalContent(
                                                 on_item_click=Callback::new(move |id: String| {
                                                     let label = metadata
                                                         .tag_by_id(&id)
-                                                        .map(|tag| tag.label)
+                                                        .map(|tag| tag.label().to_string())
                                                         .unwrap_or_default();
                                                     apply_filter.run(label);
                                                 })
@@ -1956,8 +1959,8 @@ fn ProjectModalContent(
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
                                                 {tags.get().iter().filter_map(|id| {
                                                     let tag = metadata.tag_by_id(id)?;
-                                                    let style = tag.color.clone();
-                                                    let label = tag.label.clone();
+                                                    let style = tag.color().to_string();
+                                                    let label = tag.label().to_string();
                                                     Some(view! {
                                                         <span
                                                             class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
@@ -1981,8 +1984,8 @@ fn ProjectModalContent(
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
                                                 {tags.get().iter().filter_map(|id| {
                                                     let tag = metadata.tag_by_id(id)?;
-                                                    let style = tag.color.clone();
-                                                    let label = tag.label.clone();
+                                                    let style = tag.color().to_string();
+                                                    let label = tag.label().to_string();
                                                     let label_click = label.clone();
                                                     Some(view! {
                                                         <button

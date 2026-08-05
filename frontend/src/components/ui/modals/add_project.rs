@@ -305,8 +305,8 @@ pub fn AddProjectModal() -> impl IntoView {
                                     </span>
                                     <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
                                         {metadata.tags.get().into_iter().map(|tag| {
-                                            let id = tag.id.clone();
-                                            let label = tag.label.clone();
+                                            let id = tag.id().to_string();
+                                            let label = tag.label().to_string();
                                             let id_for_class = id.clone();
                                             let id_for_aria = id.clone();
                                             view! {

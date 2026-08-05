@@ -196,9 +196,9 @@ pub fn ProjectCard(
         Signal::derive(move || {
             tags.iter()
                 .filter_map(|id| {
-                    metadata
-                        .tag_by_id(id)
-                        .map(|tag| OverflowItem::new(tag.label, tag.color))
+                    metadata.tag_by_id(id).map(|tag| {
+                        OverflowItem::new(tag.label().to_string(), tag.color().to_string())
+                    })
                 })
                 .collect::<Vec<_>>()
         })

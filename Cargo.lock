@@ -694,6 +694,7 @@ dependencies = [
  "send_wrapper",
  "serde",
  "serde_json",
+ "strum",
  "thiserror 2.0.19",
  "thousands",
  "three-d",

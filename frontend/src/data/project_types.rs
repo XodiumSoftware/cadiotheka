@@ -295,8 +295,8 @@ mod tests {
         assert!(projects[0].collaborator_ids.is_empty());
     }
 
-    /// Tags are stored as wire-id strings resolved against the metadata fetched
-    /// from `/data/tags`.
+    /// Tags are stored as wire-id strings resolved against the hardcoded enum
+    /// in `frontend/src/metadata/tags.rs`.
     #[test]
     fn ifc_download_url_uses_version_id_and_filename() {
         let version = ProjectVersion {

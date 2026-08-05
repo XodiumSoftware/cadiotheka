@@ -115,7 +115,6 @@ To create the local D1 database tables:
 cd backend
 npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
-npx wrangler d1 execute cadiotheka --file=schemas/tags.sql --local
 ```
 
 For asset uploads, also create or bind an R2 bucket in `wrangler.toml`:
@@ -199,7 +198,6 @@ The static site is placed in `frontend/dist/`.
    ```bash
    npx wrangler d1 execute cadiotheka --file=backend/schemas/accounts.sql
    npx wrangler d1 execute cadiotheka --file=backend/schemas/projects.sql
-   npx wrangler d1 execute cadiotheka --file=backend/schemas/tags.sql
    ```
 
    Create the first accounts and projects through the deployed application UI or API.

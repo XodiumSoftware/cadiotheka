@@ -48,13 +48,9 @@ authenticated requests.
 
 ## Metadata
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/data/tags` | - | List all content tags. |
-
-Tags live in the `tags` D1 table. Each record has the shape
-`{ "id": string, "label": string, "color": string }`, where `id` is the stable
-wire value stored on project rows and `color` is a Tailwind class.
+Tags are hardcoded as an enum in `frontend/src/metadata/tags.rs`. Project rows
+store tag wire ids as JSON arrays and the frontend resolves labels and colors
+from the enum.
 
 ## Projects
 

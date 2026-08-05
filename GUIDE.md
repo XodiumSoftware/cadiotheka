@@ -147,7 +147,6 @@ Apply the schemas to the local D1 database:
 cd backend
 npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
-npx wrangler d1 execute cadiotheka --file=schemas/tags.sql --local
 ```
 
 The backend uses these short Worker bindings:
@@ -287,7 +286,6 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
    ```bash
    npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql
    npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql
-   npx wrangler d1 execute cadiotheka-db --file=schemas/tags.sql
    ```
 
 5. Build and deploy:

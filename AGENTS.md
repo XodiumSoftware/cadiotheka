@@ -115,7 +115,7 @@ cadiotheka/
 - When adding crate dependencies, look up the latest version on [crates.io](https://crates.io) rather than guessing or reusing an old version from another crate in the workspace.
 - Backend route handlers live under `backend/src/api/` and are wired in `backend/src/lib.rs`.
 - Backend `DB_BINDING` is a single `pub(crate) const` in `backend/src/lib.rs` reused by API modules.
-- Tags live in the `tags` D1 table and are served over `GET /data/tags`. Project rows store tag wire ids as JSON arrays; the frontend resolves labels and colors through `MetadataContext`.
+- Tags are hardcoded as an enum in `frontend/src/metadata/tags.rs`. Project rows store tag wire ids as JSON arrays; the frontend resolves labels and colors through the enum.
 - `verified` columns are stored as SQLite integers (`0`/`1`), not booleans, because D1 returns them as numbers.
 - **Do not add `//` inline comments.** Use `///` doc comments (or `//!` module docs) to explain intent; keep the code itself self-documenting.
 
