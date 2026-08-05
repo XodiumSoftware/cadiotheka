@@ -326,9 +326,9 @@ fn VersionCard(
                             type="button"
                             class=move || {
                                 if is_deleting.get() {
-                                    "btn btn-ghost btn-xs rounded-none text-base-content/50 tooltip tooltip-top"
+                                    "btn btn-outline btn-error btn-xs rounded-none flex items-center justify-center gap-1 tooltip tooltip-left opacity-50 cursor-not-allowed"
                                 } else {
-                                    "btn btn-ghost btn-xs rounded-none text-error hover:text-error tooltip tooltip-top"
+                                    "btn btn-outline btn-error btn-xs rounded-none flex items-center justify-center gap-1 tooltip tooltip-left"
                                 }
                             }
                             data-tip="Delete version"
