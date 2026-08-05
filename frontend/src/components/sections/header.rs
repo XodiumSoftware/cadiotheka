@@ -117,7 +117,6 @@ pub fn Header() -> impl IntoView {
     let (is_scrolled, set_is_scrolled) = signal(false);
     let (search_open, set_search_open) = signal(false);
     let (account_menu_open, set_account_menu_open) = signal(false);
-    let (is_hovered, set_is_hovered) = signal(false);
     let account_menu_ref: NodeRef<leptos::html::Div> = NodeRef::new();
     let input_ref: NodeRef<leptos::html::Input> = NodeRef::new();
     let (selected_index, set_selected_index) = signal::<Option<usize>>(None);
@@ -563,14 +562,7 @@ pub fn Header() -> impl IntoView {
                                 <div class="relative">
                                     <button
                                         type="button"
-                                        class=move || {
-                                            let base = "btn btn-ghost btn-lift h-[42px] w-[42px] p-0 hover:border-primary tooltip tooltip-bottom aura";
-                                            if is_hovered.get() {
-                                                format!("{base} aura-primary")
-                                            } else {
-                                                format!("{base} text-primary")
-                                            }
-                                        }
+                                        class="btn btn-ghost btn-lift h-[42px] w-[42px] p-0 hover:border-primary tooltip tooltip-bottom"
                                         data-tip="Profile"
                                         aria-label="Open account menu"
                                         aria-controls="account-menu"
@@ -584,8 +576,6 @@ pub fn Header() -> impl IntoView {
                                                 set_active_menu_index.set(0);
                                             }
                                         }
-                                        on:mouseenter=move |_| set_is_hovered.set(true)
-                                        on:mouseleave=move |_| set_is_hovered.set(false)
                                     >
                                         <div class="w-full h-full overflow-hidden">
                                             {move || {
