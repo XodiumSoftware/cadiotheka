@@ -14,11 +14,10 @@ use crate::data::{
     AccountData, AccountRole, ProjectVersion, convert_project_glb, delete_project,
     delete_project_version, fetch_project_versions, fetch_projects, ifc_download_url,
     increment_project_downloads, latest_visible_ifc_url, update_project_collaborators,
-    update_project_description, update_project_platforms, update_project_tags,
-    update_project_title, update_project_version_state, upload_project_ifc,
+    update_project_description, update_project_tags, update_project_title,
+    update_project_version_state, upload_project_ifc,
 };
 use crate::metadata::VersionState;
-use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
 use crate::utils::{
     api_url, format_number, format_version_timestamp, placeholder_color, placeholder_letter,
@@ -297,21 +296,6 @@ fn VersionStateBadge(#[prop(into)] state: Signal<VersionState>) -> impl IntoView
     }
 }
 
-/// Returns a platform's wire id.
-fn platform_id(platform: &Platform) -> String {
-    platform.id.clone()
-}
-
-/// Returns a platform's user-facing label.
-fn platform_label(platform: &Platform) -> String {
-    platform.label.clone()
-}
-
-/// Returns a platform's inline CSS color style.
-fn platform_color(platform: &Platform) -> String {
-    platform.color.clone()
-}
-
 /// Returns a tag's wire id.
 fn tag_id(tag: &Tag) -> String {
     tag.id.clone()
@@ -472,10 +456,6 @@ fn ProjectModalContent(
     let (draft_tags, set_draft_tags) = signal(card.tags.clone());
     let (tags, set_tags) = signal(card.tags.clone());
 
-    let (editing_platforms, set_editing_platforms) = signal(false);
-    let (draft_platforms, set_draft_platforms) = signal(card.platforms.clone());
-    let (platforms, set_platforms) = signal(card.platforms.clone());
-
     let (editing_description, set_editing_description) = signal(false);
     let (draft_description, set_draft_description) = signal(card.description.clone());
     let (description, set_description) = signal(card.description.clone());
@@ -590,22 +570,75 @@ fn ProjectModalContent(
     };
     let dismiss_toast = Callback::new(move |()| set_toast_visible.set(false));
 
-    let ifc_file_input = NodeRef::<leptos::html::Input>::new();
+    let (show_upload_modal, set_show_upload_modal) = signal(false);
+    let (upload_file, set_upload_file) = signal(None::<web_sys::File>);
+    let (upload_version, set_upload_version) = signal(String::new());
+    let (upload_platform, set_upload_platform) = signal(String::new());
+    let upload_modal_file_input = NodeRef::<leptos::html::Input>::new();
 
-    let trigger_ifc_upload = move || {
-        if let Some(input) = ifc_file_input.get() {
-            input.click();
+    let trigger_upload_modal = move || {
+        set_upload_file.set(None);
+        set_upload_version.set(String::new());
+        set_upload_platform.set(String::new());
+        set_show_upload_modal.set(true);
+    };
+
+    let close_upload_modal = move || {
+        set_show_upload_modal.set(false);
+        set_upload_file.set(None);
+        set_upload_version.set(String::new());
+        set_upload_platform.set(String::new());
+    };
+
+    let on_upload_file_selected = move |ev: leptos::web_sys::Event| {
+        if let Some(input) = ev
+            .target()
+            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+        {
+            if let Some(file) = input.files().and_then(|files| files.get(0)) {
+                let is_ifc = std::path::Path::new(&file.name())
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("ifc"));
+                if !is_ifc {
+                    show_toast("IFC file must have a .ifc extension".to_string());
+                    input.set_value("");
+                    return;
+                }
+                set_upload_file.set(Some(file));
+            }
+            input.set_value("");
         }
     };
 
     let upload_ifc = {
         let project_id = project_id.clone();
-        Callback::new(move |file: web_sys::File| {
+        Callback::new(move |()| {
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
+                let Some(file) = upload_file.get_untracked() else {
+                    show_toast("Select an IFC file to upload".to_string());
+                    return;
+                };
+                let version = upload_version.get_untracked();
+                let platform = upload_platform.get_untracked();
+                let version = if version.trim().is_empty() {
+                    "1.0.0".to_string()
+                } else {
+                    version
+                };
+                let platform = if platform.trim().is_empty() {
+                    metadata
+                        .platforms
+                        .get_untracked()
+                        .first()
+                        .map_or_else(|| "blender".to_string(), |p| p.id.clone())
+                } else {
+                    platform
+                };
+
                 set_is_uploading_ifc.set(true);
                 set_glb_status.set(GlbConversionStatus::Idle);
-                match upload_project_ifc(&project_id, file, "1.0.0", "blender").await {
+                match upload_project_ifc(&project_id, file, &version, &platform).await {
                     Ok(version) => {
                         let version_for_projects = version.clone();
                         set_versions.update(|versions| {
@@ -654,28 +687,9 @@ fn ProjectModalContent(
                     }
                 }
                 set_is_uploading_ifc.set(false);
+                close_upload_modal();
             });
         })
-    };
-
-    let on_ifc_input_change = move |ev: leptos::web_sys::Event| {
-        if let Some(input) = ev
-            .target()
-            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
-        {
-            if let Some(file) = input.files().and_then(|files| files.get(0)) {
-                let is_ifc = std::path::Path::new(&file.name())
-                    .extension()
-                    .is_some_and(|ext| ext.eq_ignore_ascii_case("ifc"));
-                if !is_ifc {
-                    show_toast("IFC file must have a .ifc extension".to_string());
-                    input.set_value("");
-                    return;
-                }
-                upload_ifc.run(file);
-            }
-            input.set_value("");
-        }
     };
 
     let (deleting_version_id, set_deleting_version_id) = signal(Option::<String>::None);
@@ -831,16 +845,6 @@ fn ProjectModalContent(
         set_editing_tags.set(false);
     };
 
-    let start_edit_platforms = move || {
-        set_draft_platforms.set(platforms.get());
-        set_editing_platforms.set(true);
-    };
-
-    let cancel_edit_platforms = move || {
-        set_draft_platforms.set(platforms.get());
-        set_editing_platforms.set(false);
-    };
-
     let start_edit_description = move || {
         set_draft_description.set(description.get());
         set_editing_description.set(true);
@@ -867,7 +871,6 @@ fn ProjectModalContent(
         if !next {
             cancel_edit_title();
             cancel_edit_tags();
-            cancel_edit_platforms();
             cancel_edit_description();
             cancel_edit_collaborators();
         }
@@ -993,46 +996,6 @@ fn ProjectModalContent(
         })
     };
 
-    let commit_edit_platforms = {
-        let project_id = project_id.clone();
-        Callback::new(move |draft_value: Vec<String>| {
-            let project_id = project_id.clone();
-            let set_platforms = set_platforms;
-            let set_draft_platforms = set_draft_platforms;
-            let set_editing_platforms = set_editing_platforms;
-            let modal_card = modal.set_card;
-            let set_projects = projects_ctx.set_projects;
-
-            leptos::task::spawn_local(async move {
-                match update_project_platforms(&project_id, draft_value).await {
-                    Ok(new_platforms) => {
-                        set_platforms.set(new_platforms.clone());
-                        set_draft_platforms.set(new_platforms.clone());
-                        modal_card.update(|opt| {
-                            if let Some(card) = opt.as_mut() {
-                                card.platforms.clone_from(&new_platforms);
-                            }
-                        });
-                        set_projects.update(|projects| {
-                            for project in projects.iter_mut() {
-                                if project.id == project_id {
-                                    project.platforms.clone_from(&new_platforms);
-                                    break;
-                                }
-                            }
-                        });
-                    }
-                    Err(err) => {
-                        leptos::web_sys::console::error_1(
-                            &format!("Failed to update platforms: {}", err.message()).into(),
-                        );
-                    }
-                }
-                set_editing_platforms.set(false);
-            });
-        })
-    };
-
     let commit_edit_collaborators = {
         let project_id = project_id.clone();
         Callback::new(move |draft_value: Vec<String>| {
@@ -1072,6 +1035,17 @@ fn ProjectModalContent(
             });
         })
     };
+
+    let supported_platform_ids = Signal::derive(move || {
+        let mut ids: Vec<String> = Vec::new();
+        for version in versions.get() {
+            let id = version.platform.trim();
+            if !id.is_empty() && !ids.iter().any(|existing| existing == id) {
+                ids.push(id.to_string());
+            }
+        }
+        ids
+    });
 
     let toggle_favorite_click = {
         let project_id = card.id.clone();
@@ -1184,16 +1158,6 @@ fn ProjectModalContent(
         });
     });
 
-    let toggle_platform = Callback::new(move |platform: String| {
-        set_draft_platforms.update(|platforms| {
-            if let Some(pos) = platforms.iter().position(|p| *p == platform) {
-                platforms.remove(pos);
-            } else {
-                platforms.push(platform);
-            }
-        });
-    });
-
     let add_collaborator = Callback::new(move |account_id: String| {
         set_draft_collaborator_ids.update(|ids| {
             if !ids.contains(&account_id) {
@@ -1225,13 +1189,99 @@ fn ProjectModalContent(
                 visible=Signal::derive(move || toast_visible.get())
                 on_dismiss=dismiss_toast
             />
-            <input
-                type="file"
-                accept=".ifc"
-                class="hidden"
-                node_ref=ifc_file_input
-                on:change=on_ifc_input_change
-            />
+            <SearchModal
+                open=Signal::derive(move || show_upload_modal.get())
+                on_close=Callback::new(move |()| close_upload_modal())
+                container_class=Signal::derive(|| "w-full max-w-lg flex flex-col".to_string())
+            >
+                <div class="space-y-4">
+                    <h3 class="text-sm font-semibold text-base-content">"Upload new version"</h3>
+                    <input
+                        type="file"
+                        accept=".ifc"
+                        class="hidden"
+                        node_ref=upload_modal_file_input
+                        on:change=on_upload_file_selected
+                    />
+                    <div class="space-y-2">
+                        <label class="text-xs text-base-content/70 block">"IFC file"</label>
+                        <button
+                            type="button"
+                            class=move || {
+                                if upload_file.get().is_some() {
+                                    "w-full rounded-none border border-base-content/10 bg-base-200/30 p-2 text-left text-sm text-base-content"
+                                } else {
+                                    "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-2 text-left text-sm text-base-content/50 hover:border-primary hover:text-primary transition-colors"
+                                }
+                            }
+                            on:click=move |_| {
+                                if let Some(input) = upload_modal_file_input.get() {
+                                    input.click();
+                                }
+                            }
+                        >
+                            {move || upload_file.get().map_or_else(|| "Choose .ifc file".to_string(), |file| file.name())}
+                        </button>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs text-base-content/70 block" for="upload-version-input">"Version"</label>
+                        <input
+                            id="upload-version-input"
+                            type="text"
+                            class="input input-sm input-bordered w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                            placeholder="1.0.0"
+                            prop:value=move || upload_version.get()
+                            on:input=move |ev| set_upload_version.set(event_target_value(&ev))
+                        />
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs text-base-content/70 block" for="upload-platform-select">"Platform"</label>
+                        <select
+                            id="upload-platform-select"
+                            class="select select-sm select-bordered w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                            on:change=move |ev| set_upload_platform.set(event_target_value(&ev))
+                            prop:value=move || upload_platform.get()
+                        >
+                            <option value="">"Select platform"</option>
+                            {move || metadata.platforms.get().into_iter().map(|platform| {
+                                let value = platform.id.clone();
+                                let label = platform.label.clone();
+                                view! {
+                                    <option value=value>{label}</option>
+                                }
+                            }).collect_view()}
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            class="btn btn-ghost btn-xs"
+                            on:click=move |_| close_upload_modal()
+                        >"Cancel"</button>
+                        <button
+                            type="button"
+                            class=move || {
+                                if is_uploading_ifc.get() || upload_file.get().is_none() {
+                                    "btn btn-primary btn-xs opacity-50 cursor-not-allowed"
+                                } else {
+                                    "btn btn-primary btn-xs"
+                                }
+                            }
+                            disabled=move || is_uploading_ifc.get() || upload_file.get().is_none()
+                            on:click=move |_| upload_ifc.run(())
+                        >
+                            {move || if is_uploading_ifc.get() {
+                                view! {
+                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                }
+                                    .into_any()
+                            } else {
+                                view! { "Upload" }.into_any()
+                            }}
+                        </button>
+                    </div>
+                </div>
+            </SearchModal>
 
             <div class=move || if viewer_fullscreen.get() { "flex flex-col min-h-0 overflow-hidden flex-1".to_string() } else { "flex flex-col min-h-0 overflow-hidden flex-1 py-2".to_string() }>
                 <div class=move || if viewer_fullscreen.get() { "flex-1 min-h-0".to_string() } else { "overflow-y-auto flex-1 min-h-0 p-2 pr-3".to_string() }>
@@ -1371,7 +1421,7 @@ fn ProjectModalContent(
                                                             }
                                                         }
                                                         disabled=move || is_uploading_ifc.get()
-                                                        on:click=move |_| trigger_ifc_upload()
+                                                        on:click=move |_| trigger_upload_modal()
                                                         aria-label="Add version"
                                                         data-tip="Add version"
                                                     >
@@ -1878,71 +1928,16 @@ fn ProjectModalContent(
                             }}
 
                             {move || {
-                                if editing_platforms.get() {
-                                    view! {
-                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                                            <EditableChipSection
-                                                title="Supported platforms"
-                                                aria_label="Supported platforms"
-                                                items=platforms.get()
-                                                all_items={metadata.platforms.get()}
-                                                editing=editing_platforms.into()
-                                                on_cancel=Callback::new(move |()| cancel_edit_platforms())
-                                                on_toggle=toggle_platform
-                                                on_save=Callback::new(move |selected| commit_edit_platforms.run(selected))
-                                                on_item_click=Callback::new(move |id: String| {
-                                                    let label = metadata
-                                                        .platform_by_id(&id)
-                                                        .map(|platform| platform.label)
-                                                        .unwrap_or_default();
-                                                    apply_filter.run(label);
-                                                })
-                                                id_fn=platform_id
-                                                label_fn=platform_label
-                                                color_fn=platform_color
-                                                selected_items=draft_platforms.into()
-                                                badge_class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                                            />
-                                        </div>
-                                    }
-                                        .into_any()
-                                } else if is_editable.get() && edit_mode.get() {
-                                    view! {
-                                        <button
-                                            type="button"
-                                            class="group relative text-left w-full rounded-none border border-base-content/10 bg-base-200/20 p-4 hover:border-primary transition-colors cursor-pointer"
-                                            aria-label="Edit supported platforms"
-                                            on:click=move |_| start_edit_platforms()
-                                        >
-                                            <span class="text-sm font-semibold text-base-content mb-3 block">"Supported platforms"</span>
-                                            <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                                {platforms.get().iter().filter_map(|id| {
-                                                    let platform = metadata.platform_by_id(id)?;
-                                                    let style = platform.color.clone();
-                                                    let label = platform.label.clone();
-                                                    Some(view! {
-                                                        <span
-                                                            class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap"
-                                                            style=style
-                                                        >
-                                                            {label}
-                                                        </span>
-                                                    }.into_any())
-                                                }).collect_view()}
-                                            </div>
-                                            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {edit_pencil_icon("w-5 h-5 text-primary")}
-                                            </div>
-                                        </button>
-                                    }
-                                        .into_any()
+                                let platform_ids = supported_platform_ids.get();
+                                if platform_ids.is_empty() {
+                                    ().into_any()
                                 } else {
                                     view! {
                                         <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
                                             <h3 class="text-sm font-semibold text-base-content mb-3">"Supported platforms"</h3>
                                             <div class="flex flex-wrap gap-2" role="group" aria-label="Supported platforms">
-                                                {platforms.get().iter().filter_map(|id| {
-                                                    let platform = metadata.platform_by_id(id)?;
+                                                {platform_ids.into_iter().filter_map(|id| {
+                                                    let platform = metadata.platform_by_id(&id)?;
                                                     let style = platform.color.clone();
                                                     let label = platform.label.clone();
                                                     let label_click = label.clone();
