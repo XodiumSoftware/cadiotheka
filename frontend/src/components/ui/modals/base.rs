@@ -5,11 +5,7 @@
 //! method="dialog" class="modal-backdrop"` to close when clicking outside.
 //! Native `dialog` handles `Esc` to close, backdrop focus trapping, and
 //! scrollbar management automatically.
-//!
-//! This component also applies the shared corner-frame visual style used by
-//! every modal in the app.
 
-use crate::components::ui::corner_frame::CornerFrame;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys;
@@ -64,7 +60,7 @@ pub fn BaseModal(
             <div
                 class=move || {
                     format!(
-                        "modal-box p-0 overflow-hidden bg-transparent shadow-none {}",
+                        "modal-box p-0 overflow-hidden bg-base-100 border-2 border-primary {}",
                         container_class.get()
                     )
                 }
@@ -72,12 +68,8 @@ pub fn BaseModal(
                 aria-modal="true"
                 on:click=move |_| on_inner_click.run(())
             >
-                <div class="block p-2 bg-base-100 border-2 border-primary h-full flex flex-col">
-                    <CornerFrame style="square" class="w-full h-full">
-                        <div class="h-full rounded-none p-6 flex flex-col">
-                            {children_view}
-                        </div>
-                    </CornerFrame>
+                <div class="h-full p-6 flex flex-col">
+                    {children_view}
                 </div>
             </div>
             <form method="dialog" class="modal-backdrop">
