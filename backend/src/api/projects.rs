@@ -706,7 +706,7 @@ pub async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> Result<
         return error_response("Forbidden", 403);
     }
 
-    let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
+    let Some(key) = latest_ifc_key(&ctx, &id).await? else {
         return error_response("No IFC model uploaded for this project", 404);
     };
 
@@ -871,6 +871,14 @@ async fn fetch_project_versions(
         .all()
         .await?;
     result.results::<ProjectVersion>()
+}
+
+/// Returns the R2 key of the most recent IFC version for a project regardless
+/// of state. Used by editors to convert a newly uploaded (undefined) version.
+async fn latest_ifc_key(ctx: &RouteContext<()>, project_id: &str) -> Result<Option<String>> {
+    let versions = fetch_project_versions(ctx, project_id, true).await?;
+    let key = versions.into_iter().next().map(|version| version.ifc_key);
+    Ok(key)
 }
 
 /// Returns the R2 key of the best visible IFC version for a project.
