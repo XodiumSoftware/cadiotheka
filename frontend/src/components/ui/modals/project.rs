@@ -290,10 +290,12 @@ fn VersionStateSelector(
                                 class=move || {
                                     if variant == VersionState::Undefined {
                                         if is_current.get() {
-                                            "btn btn-ghost rounded-none border border-white text-white".to_string()
+                                            "btn btn-ghost rounded-none border border-base-content/30 text-base-content/50".to_string()
                                         } else {
                                             "btn btn-outline rounded-none border-white text-white".to_string()
                                         }
+                                    } else if is_current.get() {
+                                        "btn btn-outline rounded-none border-base-content/30 text-base-content/50".to_string()
                                     } else {
                                         format!(
                                             "btn btn-outline rounded-none {} {}",
@@ -311,7 +313,13 @@ fn VersionStateSelector(
                             >
                                 <span class=move || {
                                     if variant == VersionState::Undefined {
-                                        "text-xs text-white".to_string()
+                                        if is_current.get() {
+                                            "text-xs text-base-content/50".to_string()
+                                        } else {
+                                            "text-xs text-white".to_string()
+                                        }
+                                    } else if is_current.get() {
+                                        "text-xs text-base-content/50".to_string()
                                     } else {
                                         format!("text-xs {color_class}")
                                     }
