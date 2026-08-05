@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS project_versions (
     ifc_key TEXT NOT NULL,
     state TEXT NOT NULL DEFAULT 'undefined',
     created_at TEXT NOT NULL,
+    file_size INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 

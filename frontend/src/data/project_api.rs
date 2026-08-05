@@ -279,6 +279,7 @@ pub async fn upload_project_ifc(
     struct UploadResponse {
         ifc_key: String,
         version_id: String,
+        file_size: i64,
     }
 
     let url = api_url(&format!("/projects/{id}/ifc"));
@@ -316,6 +317,7 @@ pub async fn upload_project_ifc(
                 created_at: crate::data::project_types::now_utc()
                     .format(&time::format_description::well_known::Rfc3339)
                     .unwrap_or_default(),
+                file_size: upload.file_size,
             })
         }
         Ok(response) => {

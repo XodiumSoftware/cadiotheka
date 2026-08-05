@@ -55,6 +55,9 @@ pub struct ProjectVersion {
     pub state: VersionState,
     /// RFC 3339 timestamp when the version was uploaded.
     pub created_at: String,
+    /// Size of the IFC file in bytes.
+    #[serde(default)]
+    pub file_size: i64,
 }
 
 /// Data displayed on a project card.
@@ -200,6 +203,7 @@ mod tests {
                 ifc_key: "ifcs/v1/a.ifc".to_owned(),
                 state: VersionState::Undefined,
                 created_at: "2026-01-01T00:00:00Z".to_owned(),
+                file_size: 1_024,
             },
             ProjectVersion {
                 id: "v2".to_owned(),
@@ -208,6 +212,7 @@ mod tests {
                 ifc_key: "ifcs/v2/b.ifc".to_owned(),
                 state: VersionState::Stable,
                 created_at: "2026-01-02T00:00:00Z".to_owned(),
+                file_size: 2_097_152,
             },
         ];
         assert_eq!(
@@ -225,6 +230,7 @@ mod tests {
             ifc_key: "ifcs/v1/a.ifc".to_owned(),
             state: VersionState::Undefined,
             created_at: "2026-01-01T00:00:00Z".to_owned(),
+            file_size: 0,
         }];
         assert_eq!(latest_visible_ifc_url(&versions), None);
     }

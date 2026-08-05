@@ -20,7 +20,7 @@ use crate::data::{
 use crate::metadata::VersionState;
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
-use crate::utils::{api_url, placeholder_color, placeholder_letter};
+use crate::utils::{api_url, format_file_size, placeholder_color, placeholder_letter};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -289,6 +289,7 @@ fn VersionCard(
     });
     let filename = version.filename.clone();
     let created_at = version.created_at.clone();
+    let file_size = version.file_size;
 
     view! {
         <div class="relative group rounded-none border border-base-content/10 bg-base-200/30 p-4 flex items-center gap-3 hover:border-primary transition-colors">
@@ -310,7 +311,11 @@ fn VersionCard(
             }}
             <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-base-content truncate">{filename.clone()}</p>
-                <p class="text-xs text-base-content/50">{created_at.clone()}</p>
+                <p class="text-xs text-base-content/50">
+                    {created_at.clone()}
+                    " · "
+                    {format_file_size(file_size)}
+                </p>
             </div>
             {move || {
                 if can_edit.get() {

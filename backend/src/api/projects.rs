@@ -63,6 +63,7 @@ pub struct ProjectVersion {
     pub ifc_key: String,
     pub state: VersionState,
     pub created_at: String,
+    pub file_size: i64,
 }
 
 /// Payload used to update a version's state.
@@ -410,7 +411,10 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
     };
 
     let bytes = file.bytes().await?;
-    if bytes.len() > MAX_IFC_SIZE_BYTES {
+    #[allow(clippy::cast_possible_wrap)]
+    let file_size = bytes.len() as i64;
+    #[allow(clippy::cast_possible_wrap)]
+    if file_size > MAX_IFC_SIZE_BYTES as i64 {
         return error_response("IFC model must be 25 MiB or smaller", 413);
     }
 
@@ -438,7 +442,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 
     db(&ctx)?
         .prepare(
-            "INSERT INTO project_versions (id, project_id, filename, ifc_key, state, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO project_versions (id, project_id, filename, ifc_key, state, created_at, file_size) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         )
         .bind(&[
             version_id.clone().into(),
@@ -447,6 +451,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
             key.clone().into(),
             VersionState::Undefined.as_str().into(),
             created_at.into(),
+            file_size.into(),
         ])?
         .run()
         .await?;
@@ -456,7 +461,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
     let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
 
     Response::from_json(
-        &serde_json::json!({ "ifc_key": key, "version_id": version_id, "content_type": "application/ifc" }),
+        &serde_json::json!({ "ifc_key": key, "version_id": version_id, "content_type": "application/ifc", "file_size": file_size }),
     )
 }
 
@@ -854,9 +859,9 @@ async fn fetch_project_versions(
     include_undefined: bool,
 ) -> Result<Vec<ProjectVersion>> {
     let sql = if include_undefined {
-        "SELECT id, project_id, filename, ifc_key, state, created_at FROM project_versions WHERE project_id = ?1 ORDER BY created_at DESC"
+        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size FROM project_versions WHERE project_id = ?1 ORDER BY created_at DESC"
     } else {
-        "SELECT id, project_id, filename, ifc_key, state, created_at FROM project_versions WHERE project_id = ?1 AND state != 'undefined' ORDER BY created_at DESC"
+        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size FROM project_versions WHERE project_id = ?1 AND state != 'undefined' ORDER BY created_at DESC"
     };
     let result = db(ctx)?
         .prepare(sql)

@@ -62,6 +62,24 @@ fn format_duration_ago(duration: time::Duration) -> String {
     timeago::Formatter::new().too_low("0").convert(std_duration)
 }
 
+const FILE_SIZE_UNITS: &[&str] = &["B", "KiB", "MiB", "GiB", "TiB"];
+
+/// Formats a byte count as a human-readable string using binary units.
+pub fn format_file_size(bytes: i64) -> String {
+    let bytes = bytes.max(0).cast_unsigned();
+    if bytes < 1024 || FILE_SIZE_UNITS.is_empty() {
+        return format!("{bytes} B");
+    }
+    #[allow(clippy::cast_precision_loss)]
+    let mut size = bytes as f64;
+    let mut unit_index = 0_usize;
+    while size >= 1024.0 && unit_index < FILE_SIZE_UNITS.len() - 1 {
+        size /= 1024.0;
+        unit_index += 1;
+    }
+    format!("{:.1} {}", size, FILE_SIZE_UNITS[unit_index])
+}
+
 /// Returns the current UTC time using the JavaScript `Date` API.
 fn now_utc() -> time::OffsetDateTime {
     let millis = js_sys::Date::now();
