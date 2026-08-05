@@ -1227,7 +1227,6 @@ fn ProjectModalContent(
                     Ok(updated) => {
                         trigger_download(&url);
 
-                        set_versions.set(updated.versions.clone());
                         set_projects.update(|projects| {
                             if let Some(project) =
                                 projects.iter_mut().find(|project| project.id == updated.id)
@@ -1235,6 +1234,17 @@ fn ProjectModalContent(
                                 *project = updated.clone();
                             }
                         });
+
+                        match fetch_project_versions(&project_id).await {
+                            Ok(fetched) => set_versions.set(fetched),
+                            Err(err) => leptos::web_sys::console::error_1(
+                                &format!(
+                                    "Failed to refresh versions after download: {}",
+                                    err.message()
+                                )
+                                .into(),
+                            ),
+                        }
                     }
                     Err(err) => {
                         leptos::web_sys::console::error_1(
