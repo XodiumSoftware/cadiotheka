@@ -412,9 +412,11 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 
     let bytes = file.bytes().await?;
     #[allow(clippy::cast_possible_wrap)]
-    let file_size = bytes.len() as i64;
+    let file_size_i64 = bytes.len() as i64;
+    #[allow(clippy::cast_precision_loss)]
+    let file_size_value = bytes.len() as f64;
     #[allow(clippy::cast_possible_wrap)]
-    if file_size > MAX_IFC_SIZE_BYTES as i64 {
+    if file_size_i64 > MAX_IFC_SIZE_BYTES as i64 {
         return error_response("IFC model must be 25 MiB or smaller", 413);
     }
 
@@ -451,7 +453,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
             key.clone().into(),
             VersionState::Undefined.as_str().into(),
             created_at.into(),
-            file_size.into(),
+            file_size_value.into(),
         ])?
         .run()
         .await?;
@@ -461,7 +463,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
     let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
 
     Response::from_json(
-        &serde_json::json!({ "ifc_key": key, "version_id": version_id, "content_type": "application/ifc", "file_size": file_size }),
+        &serde_json::json!({ "ifc_key": key, "version_id": version_id, "content_type": "application/ifc", "file_size": file_size_i64 }),
     )
 }
 
