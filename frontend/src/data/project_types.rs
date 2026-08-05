@@ -62,7 +62,7 @@ pub struct ProjectVersion {
     #[serde(default)]
     pub version: String,
     /// Platform wire ids associated with this version.
-    #[serde(default)]
+    #[serde(default, with = "string_array_json")]
     pub platforms: Vec<String>,
     /// Number of times this version has been downloaded.
     #[serde(default)]
