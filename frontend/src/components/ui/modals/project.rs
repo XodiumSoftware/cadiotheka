@@ -296,6 +296,49 @@ fn VersionStateBadge(#[prop(into)] state: Signal<VersionState>) -> impl IntoView
     }
 }
 
+/// Add-new-version row placed at the top of the versions table in edit mode.
+#[component]
+fn AddVersionRow(
+    #[prop(into)] is_uploading: Signal<bool>,
+    #[prop(into)] on_click: Callback<()>,
+) -> impl IntoView {
+    view! {
+        <tr class="border-b border-base-content/10 last:border-b-0">
+            <td colspan="6" class="p-0">
+                <button
+                    type="button"
+                    class=move || {
+                        if is_uploading.get() {
+                            "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 cursor-not-allowed tooltip tooltip-bottom"
+                        } else {
+                            "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors cursor-pointer tooltip tooltip-bottom"
+                        }
+                    }
+                    disabled=move || is_uploading.get()
+                    on:click=move |_| on_click.run(())
+                    aria-label="Add version"
+                    data-tip="Add version"
+                >
+                    {move || if is_uploading.get() {
+                        view! {
+                            <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+                        }
+                            .into_any()
+                    } else {
+                        view! {
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                        }
+                            .into_any()
+                    }}
+                </button>
+            </td>
+        </tr>
+    }
+}
+
 /// Returns a tag's wire id.
 fn tag_id(tag: &Tag) -> String {
     tag.id.clone()
@@ -1408,44 +1451,6 @@ fn ProjectModalContent(
                             }
                             ProjectDetailsTab::Versions => view! {
                                     <div class="min-h-0 h-full flex flex-col space-y-4 overflow-y-auto pr-1">
-                                        {move || {
-                                            if is_editable.get() && edit_mode.get() {
-                                                view! {
-                                                    <button
-                                                        type="button"
-                                                        class=move || {
-                                                            if is_uploading_ifc.get() {
-                                                                "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 cursor-not-allowed tooltip tooltip-bottom"
-                                                            } else {
-                                                                "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors cursor-pointer tooltip tooltip-bottom"
-                                                            }
-                                                        }
-                                                        disabled=move || is_uploading_ifc.get()
-                                                        on:click=move |_| trigger_upload_modal()
-                                                        aria-label="Add version"
-                                                        data-tip="Add version"
-                                                    >
-                                                        {move || if is_uploading_ifc.get() {
-                                                            view! {
-                                                                <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
-                                                            }
-                                                                .into_any()
-                                                        } else {
-                                                            view! {
-                                                                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                                    <line x1="12" y1="5" x2="12" y2="19" />
-                                                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                                                </svg>
-                                                            }
-                                                                .into_any()
-                                                        }}
-                                                    </button>
-                                                }
-                                                    .into_any()
-                                            } else {
-                                                ().into_any()
-                                            }
-                                        }}
                                         {move || match glb_status.get() {
                                             GlbConversionStatus::Idle => ().into_any(),
                                             GlbConversionStatus::Converting => view! {
@@ -1466,23 +1471,51 @@ fn ProjectModalContent(
                                         }}
                                         {move || {
                                             let versions = versions.get();
-                                            if versions.is_empty() {
-                                                view! {
-                                                    <div class="rounded-none border border-base-content/10 bg-base-200/30 p-8 text-center space-y-2">
-                                                        <p class="text-base-content/50 text-sm">"No IFC model uploaded yet."</p>
-                                                        {move || {
-                                                            if is_editable.get() && edit_mode.get() {
-                                                                ().into_any()
-                                                            } else {
-                                                                view! {
-                                                                    <p class="text-base-content/40 text-xs">"Enter edit mode to add a version."</p>
-                                                                }
-                                                                    .into_any()
-                                                            }
-                                                        }}
-                                                    </div>
+                                            let editing = is_editable.get() && edit_mode.get();
+                                            let add_row = move || {
+                                                if editing {
+                                                    view! {
+                                                        <AddVersionRow
+                                                            is_uploading=Signal::derive(move || is_uploading_ifc.get())
+                                                            on_click=Callback::new(move |()| trigger_upload_modal())
+                                                        />
+                                                    }
+                                                        .into_any()
+                                                } else {
+                                                    ().into_any()
                                                 }
-                                                    .into_any()
+                                            };
+                                            if versions.is_empty() {
+                                                if editing {
+                                                    view! {
+                                                        <div class="overflow-x-auto rounded-none border border-base-content/10">
+                                                            <table class="w-full text-left text-sm">
+                                                                <thead class="bg-base-200/50 text-xs uppercase text-base-content/70">
+                                                                    <tr>
+                                                                        <th class="p-2 w-10"></th>
+                                                                        <th class="p-2">"Version"</th>
+                                                                        <th class="p-2">"Platform"</th>
+                                                                        <th class="p-2">"Published"</th>
+                                                                        <th class="p-2">"Downloads"</th>
+                                                                        <th class="p-2 w-10"></th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {add_row()}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    }
+                                                        .into_any()
+                                                } else {
+                                                    view! {
+                                                        <div class="rounded-none border border-base-content/10 bg-base-200/30 p-8 text-center space-y-2">
+                                                            <p class="text-base-content/50 text-sm">"No IFC model uploaded yet."</p>
+                                                            <p class="text-base-content/40 text-xs">"Enter edit mode to add a version."</p>
+                                                        </div>
+                                                    }
+                                                        .into_any()
+                                                }
                                             } else {
                                                 let page = clamped_versions_page.get();
                                                 let start = page * VERSIONS_PER_PAGE;
@@ -1507,6 +1540,7 @@ fn ProjectModalContent(
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
+                                                                    {add_row()}
                                                                     {paginated.into_iter().map(|version| {
                                                                         let version_id = version.id.clone();
                                                                         let version_id_for_state = version.id.clone();
