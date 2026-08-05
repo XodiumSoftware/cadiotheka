@@ -203,10 +203,10 @@ fn edit_pencil_icon(class: &'static str) -> impl IntoView {
     }
 }
 
-/// File icon used for IFC version cards.
-fn ifc_file_icon(class: &'static str) -> impl IntoView {
+/// File icon used for IFC version cards, colored by the version's maturity state.
+fn ifc_file_icon(class: &'static str, color_class: &'static str) -> impl IntoView {
     view! {
-        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg class=format!("{class} {color_class}") viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
             <line x1="12" y1="18" x2="12" y2="12" />
@@ -226,10 +226,10 @@ fn VersionStateDropdown(
             <div
                 tabindex="0"
                 role="button"
-                class=move || format!("w-10 h-10 rounded-none flex items-center justify-center cursor-pointer {}", state.get().badge_class())
+                class="w-10 h-10 rounded-none flex items-center justify-center cursor-pointer bg-base-200/50 border border-base-content/10 hover:border-primary transition-colors"
                 aria-label=move || format!("Current state: {}. Open state selector.", state.get().label())
             >
-                {ifc_file_icon("w-5 h-5")}
+                {move || ifc_file_icon("w-5 h-5", state.get().color_class())}
             </div>
             <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-none z-50 w-40 p-2 shadow border border-base-content/10">
                 {VersionState::VARIANTS.iter().map(|variant| {
@@ -265,10 +265,10 @@ fn VersionStateDropdown(
 fn VersionStateBadge(#[prop(into)] state: Signal<VersionState>) -> impl IntoView {
     view! {
         <div
-            class=move || format!("w-10 h-10 rounded-none flex items-center justify-center {}", state.get().badge_class())
+            class="w-10 h-10 rounded-none flex items-center justify-center bg-base-200/50 border border-base-content/10"
             aria-label=move || format!("State: {}", state.get().label())
         >
-            {ifc_file_icon("w-5 h-5")}
+            {move || ifc_file_icon("w-5 h-5", state.get().color_class())}
         </div>
     }
 }
@@ -311,11 +311,6 @@ fn VersionCard(
             <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-base-content truncate">{filename.clone()}</p>
                 <p class="text-xs text-base-content/50">{created_at.clone()}</p>
-                <p class="text-xs">
-                    <span class=move || format!("badge badge-xs {}", state.get().badge_class())>
-                        {move || state.get().label()}
-                    </span>
-                </p>
             </div>
             {move || {
                 if can_edit.get() {

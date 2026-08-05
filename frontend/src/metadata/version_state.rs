@@ -20,6 +20,16 @@ impl VersionState {
     /// All states in the order they appear in the dropdown.
     pub const VARIANTS: &[Self] = &[Self::Undefined, Self::Alpha, Self::Beta, Self::Stable];
 
+    /// Returns a text color utility class representing the state's severity.
+    pub const fn color_class(self) -> &'static str {
+        match self {
+            Self::Undefined => "text-neutral",
+            Self::Alpha => "text-error",
+            Self::Beta => "text-warning",
+            Self::Stable => "text-success",
+        }
+    }
+
     /// Returns the `DaisyUI` badge class used to color the version icon.
     pub const fn badge_class(self) -> &'static str {
         match self {
