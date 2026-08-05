@@ -110,7 +110,7 @@ pub fn MarkdownEditor(
     };
 
     view! {
-        <div class="rounded-none border border-base-content/20 bg-base-200/30 overflow-hidden">
+        <div class="rounded-none border border-base-content/20 bg-base-200/30">
             <div class="flex items-center justify-between border-b border-base-content/10 px-3 pt-2 gap-3 flex-wrap">
                 <div class="tabs tabs-border">
                     <button
