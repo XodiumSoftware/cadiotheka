@@ -1582,7 +1582,7 @@ fn ProjectModalContent(
                                                                                             {version.version.clone()}
                                                                                         </td>
                                                                                         <td class="p-2">
-                                                                                            <span class="badge badge-sm badge-outline rounded-none border-base-content/10 whitespace-nowrap">
+                                                                                            <span class="badge badge-sm badge-outline rounded-none border-primary text-primary whitespace-nowrap">
                                                                                                 "IFC"
                                                                                             </span>
                                                                                         </td>
