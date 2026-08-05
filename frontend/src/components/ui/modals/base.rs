@@ -60,7 +60,7 @@ pub fn BaseModal(
             <div
                 class=move || {
                     format!(
-                        "modal-box p-0 overflow-hidden bg-base-100 border-2 border-primary {}",
+                        "modal-box rounded-none p-0 overflow-hidden bg-base-100 border-2 border-primary {}",
                         container_class.get()
                     )
                 }
