@@ -20,8 +20,8 @@ use three_d_asset::PixelPoint;
 /// pressed button and the double-click timer between events.
 #[derive(Default)]
 pub struct OrbitControls {
-    last_button: Option<MouseButton>,
-    last_press_time: f64,
+    pub last_button: Option<MouseButton>,
+    pub last_press_time: f64,
 }
 
 impl OrbitControls {
@@ -114,6 +114,22 @@ impl OrbitControls {
             handled: false,
         });
         true
+    }
+
+    /// Clears the tracked pressed button when the pointer leaves the canvas.
+    pub fn on_mouse_leave(&mut self, renderer: &Rc<RefCell<Option<Renderer>>>) {
+        let Some(pending_events) = renderer_events(renderer) else {
+            return;
+        };
+        if let Some(button) = self.last_button.take() {
+            let dummy_position = PixelPoint { x: 0.0, y: 0.0 };
+            pending_events.borrow_mut().push(Event::MouseRelease {
+                button,
+                position: dummy_position,
+                modifiers: three_d::renderer::control::Modifiers::default(),
+                handled: false,
+            });
+        }
     }
 
     /// Handles `wheel`, zooming the camera.

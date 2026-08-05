@@ -10,7 +10,6 @@ use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use std::cell::RefCell;
-use std::fmt::Write;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::Closure;
@@ -365,9 +364,8 @@ pub fn IfcViewer(
         let controls = Rc::clone(&controls);
         move |_: leptos::web_sys::MouseEvent| {
             let mut state = controls.borrow_mut();
-            if state.on_mouse_leave(&renderer) {
-                request_render.borrow_mut()();
-            }
+            state.on_mouse_leave(&renderer);
+            request_render.borrow_mut()();
         }
     };
 
@@ -469,8 +467,7 @@ pub fn IfcViewer(
                         "Failed to load IFC model."
                     </div>
                 }.into_any(),
-                IfcViewerState::Rendering => view! {
-                }.into_any(),
+                IfcViewerState::Rendering => ().into_any(),
             }}
         </div>
     }
