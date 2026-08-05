@@ -1527,12 +1527,12 @@ fn ProjectModalContent(
                                                                     </div>
                                                                     <div class="flex items-center justify-between text-sm">
                                                                         <span class="text-base-content/50">
-                                                                            "Page 1 of 1"
+                                                                            {move || format!("Page {} of {}", clamped_versions_page.get() + 1, versions_total_pages.get().max(1))}
                                                                         </span>
                                                                         <Pagination
                                                                             page=versions_page
                                                                             set_page=set_versions_page
-                                                                            total_pages=Signal::derive(|| 1usize)
+                                                                            total_pages=versions_total_pages
                                                                         />
                                                                     </div>
                                                                 </div>

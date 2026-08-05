@@ -4,6 +4,7 @@ use leptos::prelude::*;
 const DEFAULT_SIBLING_COUNT: usize = 1;
 
 /// A single page number or an ellipsis gap in a pagination bar.
+#[derive(Clone, Copy, PartialEq)]
 enum PageItem {
     Page(usize),
     Ellipsis,
@@ -84,32 +85,6 @@ fn chevron_right(class: &'static str) -> impl IntoView {
     }
 }
 
-/// Single numbered page button used inside the pagination bar.
-#[component]
-fn PageButton(
-    n: usize,
-    #[prop(into)] active: Signal<bool>,
-    set_page: WriteSignal<usize>,
-) -> impl IntoView {
-    view! {
-        <button
-            type="button"
-            class=move || {
-                if active.get() {
-                    "join-item btn btn-active".to_string()
-                } else {
-                    "join-item btn".to_string()
-                }
-            }
-            aria-label=format!("Page {}", n + 1)
-            aria-current=move || if active.get() { "page" } else { "" }
-            on:click=move |_| set_page.set(n)
-        >
-            {n + 1}
-        </button>
-    }
-}
-
 /// DaisyUI-styled pagination bar with previous/next arrows and ellipsis gaps.
 #[component]
 pub fn Pagination(
@@ -118,10 +93,13 @@ pub fn Pagination(
     #[prop(into)] total_pages: Signal<usize>,
     #[prop(default = DEFAULT_SIBLING_COUNT)] sibling_count: usize,
 ) -> impl IntoView {
-    let display_page = Signal::derive(move || {
+    let display_page = Memo::new(move |_| {
         let total = total_pages.get();
         page.get().min(total.saturating_sub(1))
     });
+
+    let items =
+        Memo::new(move |_| pagination_pages(display_page.get(), total_pages.get(), sibling_count));
 
     view! {
         <div class="join" role="group" aria-label="Pagination">
@@ -130,46 +108,54 @@ pub fn Pagination(
                 class="join-item btn"
                 disabled=move || display_page.get() == 0
                 aria-label="Previous page"
-                on:click=move |_| set_page.update(|p| *p = p.saturating_sub(1))
+                on:click=move |_| set_page.set(display_page.get().saturating_sub(1))
             >
                 {chevron_left("w-4 h-4")}
             </button>
-            {move || {
-                let current = display_page.get();
-                let total = total_pages.get();
-                pagination_pages(current, total, sibling_count)
-                    .into_iter()
-                    .map(|item| match item {
-                        PageItem::Page(n) => {
-                            let active = Signal::derive(move || display_page.get() == n);
-                            view! {
-                                <PageButton n=n active=active set_page=set_page />
-                            }
-                                .into_any()
-                        }
-                        PageItem::Ellipsis => view! {
+            <For
+                each=move || items.get()
+                key=|item| match item {
+                    PageItem::Page(n) => format!("p-{n}"),
+                    PageItem::Ellipsis => "ellipsis".to_string(),
+                }
+                children=move |item| match item {
+                    PageItem::Page(n) => {
+                        let active = Memo::new(move |_| display_page.get() == n);
+                        view! {
                             <button
                                 type="button"
-                                class="join-item btn btn-disabled"
-                                aria-hidden="true"
+                                class=move || if active.get() {
+                                    "join-item btn btn-active"
+                                } else {
+                                    "join-item btn"
+                                }
+                                aria-label=format!("Page {}", n + 1)
+                                aria-current=move || if active.get() { "page" } else { "" }
+                                on:click=move |_| set_page.set(n)
                             >
-                                "..."
+                                {n + 1}
                             </button>
                         }
-                            .into_any(),
-                    })
-                    .collect_view()
-                    .into_any()
-            }}
+                        .into_any()
+                    }
+                    PageItem::Ellipsis => view! {
+                        <button
+                            type="button"
+                            class="join-item btn btn-disabled"
+                            aria-hidden="true"
+                        >
+                            "..."
+                        </button>
+                    }
+                    .into_any(),
+                }
+            />
             <button
                 type="button"
                 class="join-item btn"
                 disabled=move || display_page.get() + 1 >= total_pages.get()
                 aria-label="Next page"
-                on:click=move |_| set_page.update(|p| {
-                    let max = total_pages.get().saturating_sub(1);
-                    *p = (*p + 1).min(max)
-                })
+                on:click=move |_| set_page.set((display_page.get() + 1).min(total_pages.get().saturating_sub(1)))
             >
                 {chevron_right("w-4 h-4")}
             </button>
