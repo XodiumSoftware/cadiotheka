@@ -1606,9 +1606,9 @@ fn ProjectModalContent(
                                                                                                     type="button"
                                                                                                     class=move || {
                                                                                                         if is_deleting.get() {
-                                                                                                            "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 opacity-50 cursor-not-allowed"
+                                                                                                            "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 opacity-50 cursor-not-allowed tooltip tooltip-left"
                                                                                                         } else {
-                                                                                                            "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0"
+                                                                                                            "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 tooltip tooltip-left"
                                                                                                         }
                                                                                                     }
                                                                                                     disabled=move || is_deleting.get()
@@ -1617,6 +1617,7 @@ fn ProjectModalContent(
                                                                                                         move |_| delete_version.run(version_id.clone())
                                                                                                     }
                                                                                                     aria-label="Delete version"
+                                                                                                    data-tip="Delete"
                                                                                                 >
                                                                                                     {trash_icon("w-3.5 h-3.5")}
                                                                                                 </button>
