@@ -1507,22 +1507,41 @@ fn ProjectModalContent(
                                             if versions.is_empty() {
                                                 if editing {
                                                     view! {
-                                                        <div class="overflow-x-auto rounded-none border border-base-content/10">
-                                                            <table class="w-full text-left text-sm">
-                                                                <thead class="bg-base-200/50 text-xs uppercase text-base-content/70">
-                                                                    <tr>
-                                                                        <th class="p-2 w-10"></th>
-                                                                        <th class="p-2">"Version"</th>
-                                                                        <th class="p-2">"Platform"</th>
-                                                                        <th class="p-2">"Published"</th>
-                                                                        <th class="p-2">"Downloads"</th>
-                                                                        <th class="p-2 w-10"></th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {add_row()}
-                                                                </tbody>
-                                                            </table>
+                                                        <div class="space-y-2">
+                                                            <div class="overflow-x-auto rounded-none border border-base-content/10">
+                                                                <table class="w-full text-left text-sm">
+                                                                    <thead class="bg-base-200/50 text-xs uppercase text-base-content/70">
+                                                                        <tr>
+                                                                            <th class="p-2 w-10"></th>
+                                                                            <th class="p-2">"Version"</th>
+                                                                            <th class="p-2">"Platform"</th>
+                                                                            <th class="p-2">"Published"</th>
+                                                                            <th class="p-2">"Downloads"</th>
+                                                                            <th class="p-2 w-10"></th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {add_row()}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                            <div class="flex items-center justify-between text-sm">
+                                                                <span class="text-base-content/50">
+                                                                    "Page 1 of 1"
+                                                                </span>
+                                                                <div class="flex gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        class="btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
+                                                                        disabled=true
+                                                                    >"Previous"</button>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
+                                                                        disabled=true
+                                                                    >"Next"</button>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     }
                                                         .into_any()
