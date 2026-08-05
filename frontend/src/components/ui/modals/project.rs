@@ -20,7 +20,9 @@ use crate::data::{
 use crate::metadata::VersionState;
 use crate::metadata::platforms::Platform;
 use crate::metadata::tags::Tag;
-use crate::utils::{api_url, format_file_size, placeholder_color, placeholder_letter};
+use crate::utils::{
+    api_url, format_file_size, format_version_timestamp, placeholder_color, placeholder_letter,
+};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -311,8 +313,8 @@ fn VersionCard(
             }}
             <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-base-content truncate">{filename.clone()}</p>
-                <p class="text-xs text-base-content/50">
-                    {created_at.clone()}
+                <p class="text-xs text-base-content/50" title=created_at.clone()>
+                    {format_version_timestamp(&created_at)}
                     " · "
                     {format_file_size(file_size)}
                 </p>

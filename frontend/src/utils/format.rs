@@ -80,6 +80,21 @@ pub fn format_file_size(bytes: i64) -> String {
     format!("{:.1} {}", size, FILE_SIZE_UNITS[unit_index])
 }
 
+/// Formats an RFC 3339 timestamp into a concise display for version cards.
+pub fn format_version_timestamp(timestamp: &str) -> String {
+    time::OffsetDateTime::parse(timestamp, &time::format_description::well_known::Rfc3339)
+        .ok()
+        .map_or_else(
+            || timestamp.to_owned(),
+            |dt| {
+                let format = time::macros::format_description!(
+                    "[day] [month repr:short] [year], [hour]:[minute]"
+                );
+                dt.format(&format).unwrap_or_default()
+            },
+        )
+}
+
 /// Returns the current UTC time using the JavaScript `Date` API.
 fn now_utc() -> time::OffsetDateTime {
     let millis = js_sys::Date::now();
