@@ -358,7 +358,7 @@ fn VersionCard(
                 }
             }}
             {move || {
-                if can_edit.get() {
+                if can_edit.get() || state.get() == VersionState::Undefined {
                     ().into_any()
                 } else {
                     let filename_for_label = filename.clone();
