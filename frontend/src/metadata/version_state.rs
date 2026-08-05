@@ -40,6 +40,26 @@ impl VersionState {
         }
     }
 
+    /// Returns the `DaisyUI` button class used for a filled state button.
+    pub const fn button_class(self) -> &'static str {
+        match self {
+            Self::Undefined => "btn-ghost",
+            Self::Alpha => "btn-error",
+            Self::Beta => "btn-warning",
+            Self::Stable => "btn-success",
+        }
+    }
+
+    /// Returns a Tailwind border color utility for outlined state buttons.
+    pub const fn border_class(self) -> &'static str {
+        match self {
+            Self::Undefined => "border-base-content/20",
+            Self::Alpha => "border-error",
+            Self::Beta => "border-warning",
+            Self::Stable => "border-success",
+        }
+    }
+
     /// Returns the human-readable label for the state.
     pub const fn label(self) -> &'static str {
         match self {

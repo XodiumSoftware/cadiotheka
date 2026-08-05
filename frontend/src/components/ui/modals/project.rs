@@ -236,19 +236,22 @@ fn ifc_file_icon(class: &'static str, color_class: &'static str) -> impl IntoVie
     }
 }
 
-/// Dropdown menu that lets editors change a version's maturity state.
+/// Modal that lets editors change a version's maturity state.
 #[component]
-fn VersionStateDropdown(
+fn VersionStateSelector(
     #[prop(into)] state: Signal<VersionState>,
     #[prop(into)] on_change: Callback<VersionState>,
 ) -> impl IntoView {
+    let open = RwSignal::new(false);
+    let on_close = Callback::new(move |()| open.set(false));
+
     view! {
-        <div class="dropdown dropdown-bottom">
-            <div
-                tabindex="0"
-                role="button"
+        <>
+            <button
+                type="button"
                 class="group relative w-10 h-10 rounded-none flex items-center justify-center cursor-pointer bg-base-200/50 border border-base-content/10 hover:border-primary transition-colors"
                 aria-label=move || format!("Current state: {}. Open state selector.", state.get().label())
+                on:click=move |_| open.set(true)
             >
                 {move || {
                     let s = state.get();
@@ -264,33 +267,50 @@ fn VersionStateDropdown(
                 <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                     {edit_pencil_icon("w-4 h-4 text-primary")}
                 </div>
-            </div>
-            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-none z-50 w-40 p-2 shadow border border-base-content/10">
-                {VersionState::VARIANTS.iter().map(|variant| {
-                    let variant = *variant;
-                    let label = variant.label();
-                    let is_current = move || state.get() == variant;
-                    view! {
-                        <li>
-                            <button
-                                type="button"
-                                class=move || {
-                                    if is_current() {
-                                        "flex items-center gap-2 text-base-content font-medium".to_string()
-                                    } else {
-                                        "flex items-center gap-2 text-base-content/70".to_string()
+            </button>
+            <SearchModal
+                open=open
+                on_close=on_close
+                container_class=Signal::derive(|| "w-full max-w-sm".to_string())
+            >
+                <div class="space-y-4">
+                    <h3 class="text-sm font-semibold text-base-content">"Change version state"</h3>
+                    <div class="grid grid-cols-4 gap-2" role="group" aria-label="Version states">
+                        {VersionState::VARIANTS.iter().map(|variant| {
+                            let variant = *variant;
+                            let is_current = Signal::derive(move || state.get() == variant);
+                            let label = variant.label();
+                            let letter = variant.letter();
+                            let color_class = variant.color_class();
+                            view! {
+                                <button
+                                    type="button"
+                                    class=move || {
+                                        if is_current.get() {
+                                            format!("btn {} rounded-none flex flex-col items-center justify-center gap-1 py-3", variant.button_class())
+                                        } else {
+                                            format!(
+                                                "btn btn-outline rounded-none flex flex-col items-center justify-center gap-1 py-3 {} {}",
+                                                variant.border_class(),
+                                                color_class
+                                            )
+                                        }
                                     }
-                                }
-                                on:click=move |_| on_change.run(variant)
-                            >
-                                <span class=format!("badge badge-xs {}", variant.badge_class())></span>
-                                <span>{label}</span>
-                            </button>
-                        </li>
-                    }
-                }).collect_view()}
-            </ul>
-        </div>
+                                    aria-pressed=move || is_current.get().to_string()
+                                    on:click=move |_| {
+                                        on_change.run(variant);
+                                        open.set(false);
+                                    }
+                                >
+                                    <span class=format!("text-lg font-bold {}", color_class)>{letter}</span>
+                                    <span class="text-xs">{label}</span>
+                                </button>
+                            }
+                        }).collect_view()}
+                    </div>
+                </div>
+            </SearchModal>
+        </>
     }
 }
 
@@ -1564,7 +1584,7 @@ fn ProjectModalContent(
                                                                                             {move || {
                                                                                                 if is_editable.get() && edit_mode.get() {
                                                                                                     view! {
-                                                                                                        <VersionStateDropdown
+                                                                                                        <VersionStateSelector
                                                                                                             state=state
                                                                                                             on_change=Callback::new({
                                                                                                                 let version_id = version_id_for_state.clone();
