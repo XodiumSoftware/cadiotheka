@@ -42,6 +42,7 @@ pub fn IfcViewer(
     #[prop(optional)] show_grid_signal: Option<RwSignal<bool>>,
     #[prop(optional)] show_axes_signal: Option<RwSignal<bool>>,
     #[prop(optional)] shadows_signal: Option<RwSignal<bool>>,
+    #[prop(into, optional)] disabled: Option<Signal<bool>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -49,6 +50,7 @@ pub fn IfcViewer(
     let show_grid = show_grid_signal.unwrap_or_else(|| RwSignal::new(true));
     let show_axes = show_axes_signal.unwrap_or_else(|| RwSignal::new(true));
     let shadows = shadows_signal.unwrap_or_else(|| RwSignal::new(true));
+    let disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
 
     let renderer: Rc<RefCell<Option<Renderer>>> = Rc::new(RefCell::new(None));
     let controls: Rc<RefCell<OrbitControls>> = Rc::new(RefCell::new(OrbitControls::default()));
@@ -138,6 +140,9 @@ pub fn IfcViewer(
         let animation_handle = Rc::clone(&animation_handle);
         Rc::new(RefCell::new(move || {
             *dirty.borrow_mut() = true;
+            if disabled.get() {
+                return;
+            }
             if *pending_frame.borrow() {
                 return;
             }
@@ -149,10 +154,11 @@ pub fn IfcViewer(
                 let pending_frame = Rc::clone(&pending_frame);
                 let animation_handle = Rc::clone(&animation_handle);
                 let schedule_save = schedule_save.clone();
+                let disabled = disabled;
                 Closure::<dyn FnMut()>::new(move || {
                     *pending_frame.borrow_mut() = false;
                     *animation_handle.borrow_mut() = None;
-                    if *dirty.borrow() {
+                    if *dirty.borrow() && !disabled.get() {
                         if let Some(renderer) = renderer.borrow_mut().as_mut() {
                             renderer.render();
                         }
@@ -297,6 +303,15 @@ pub fn IfcViewer(
     });
 
     Effect::new({
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            if !disabled.get() {
+                request_render.borrow_mut()();
+            }
+        }
+    });
+
+    Effect::new({
         move |_| {
             let Some(key) = storage_key
                 .as_ref()
@@ -435,7 +450,13 @@ pub fn IfcViewer(
         <div class="relative w-full h-full overflow-hidden border border-base-content/10">
             <canvas
                 node_ref=canvas_ref
-                class="w-full h-full block cursor-grab active:cursor-grabbing"
+                class=move || {
+                    if disabled.get() {
+                        "w-full h-full block cursor-grab active:cursor-grabbing hidden".to_string()
+                    } else {
+                        "w-full h-full block cursor-grab active:cursor-grabbing".to_string()
+                    }
+                }
                 aria-label="IFC 3D viewer"
                 on:mousedown=on_mouse_down
                 on:mousemove=on_mouse_move
@@ -444,30 +465,39 @@ pub fn IfcViewer(
                 on:wheel=on_wheel
                 on:contextmenu=on_context_menu
             />
-            {move || match state.get() {
-                IfcViewerState::NoModel => view! {
-                    <div class="absolute inset-0 flex items-center justify-center text-base-content/50 text-sm pointer-events-none">
-                        "No IFC model uploaded yet."
-                    </div>
-                }.into_any(),
-                IfcViewerState::Loading => view! {
-                    <div class="absolute inset-0 flex items-center justify-center text-base-content/50 text-sm pointer-events-none gap-2">
+            {move || if disabled.get() {
+                view! {
+                    <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-base-content/50 text-sm pointer-events-none bg-base-100/80 z-10">
                         <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                        <span>"Loading model..."</span>
+                        <span>"3D viewer is off while editing."</span>
                     </div>
-                }.into_any(),
-                IfcViewerState::Processing => view! {
-                    <div class="absolute inset-0 flex items-center justify-center text-base-content/50 text-sm pointer-events-none gap-2">
-                        <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                        <span>"Processing geometry..."</span>
-                    </div>
-                }.into_any(),
-                IfcViewerState::Error => view! {
-                    <div class="absolute inset-0 flex items-center justify-center text-error text-sm pointer-events-none">
-                        "Failed to load IFC model."
-                    </div>
-                }.into_any(),
-                IfcViewerState::Rendering => ().into_any(),
+                }.into_any()
+            } else {
+                match state.get() {
+                    IfcViewerState::NoModel => view! {
+                        <div class="absolute inset-0 flex items-center justify-center text-base-content/50 text-sm pointer-events-none">
+                            "No IFC model uploaded yet."
+                        </div>
+                    }.into_any(),
+                    IfcViewerState::Loading => view! {
+                        <div class="absolute inset-0 flex items-center justify-center text-base-content/50 text-sm pointer-events-none gap-2">
+                            <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                            <span>"Loading model..."</span>
+                        </div>
+                    }.into_any(),
+                    IfcViewerState::Processing => view! {
+                        <div class="absolute inset-0 flex items-center justify-center text-base-content/50 text-sm pointer-events-none gap-2">
+                            <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                            <span>"Processing geometry..."</span>
+                        </div>
+                    }.into_any(),
+                    IfcViewerState::Error => view! {
+                        <div class="absolute inset-0 flex items-center justify-center text-error text-sm pointer-events-none">
+                            "Failed to load IFC model."
+                        </div>
+                    }.into_any(),
+                    IfcViewerState::Rendering => ().into_any(),
+                }
             }}
         </div>
     }

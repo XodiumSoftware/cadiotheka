@@ -1493,6 +1493,11 @@ fn ProjectModalContent(
                                                 show_grid_signal=show_grid
                                                 show_axes_signal=show_axes
                                                 shadows_signal=shadows
+                                                disabled=Signal::derive({
+                                                    let is_editable = is_editable;
+                                                    let edit_mode = edit_mode;
+                                                    move || is_editable.get() && edit_mode.get()
+                                                })
                                             />
                                         </div>
                                     </div>
