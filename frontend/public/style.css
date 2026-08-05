@@ -80,11 +80,6 @@ html {
     box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.8);
 }
 
-/* Logo click animation keyframes and phase classes.
-   Kept empty while the header logo is static; re-add rules here if the
-   interactive click sequence is restored.
-*/
-
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
