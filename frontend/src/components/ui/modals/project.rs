@@ -1227,6 +1227,7 @@ fn ProjectModalContent(
                     Ok(updated) => {
                         trigger_download(&url);
 
+                        set_versions.set(updated.versions.clone());
                         set_projects.update(|projects| {
                             if let Some(project) =
                                 projects.iter_mut().find(|project| project.id == updated.id)
