@@ -113,6 +113,13 @@ pub fn AddProjectModal() -> impl IntoView {
         set_errors.update(|errs| errs.platforms = None);
     };
 
+    let can_submit = move || {
+        !title.get().trim().is_empty()
+            && !description.get().trim().is_empty()
+            && !selected_tags.get().is_empty()
+            && !selected_platforms.get().is_empty()
+    };
+
     let on_submit = move |ev: leptos::web_sys::SubmitEvent| {
         ev.prevent_default();
         set_submit_error.set(None);
@@ -402,7 +409,7 @@ pub fn AddProjectModal() -> impl IntoView {
                             <div class="flex justify-end gap-2 flex-shrink-0 pt-2 border-t border-base-content/10">
                                 <button
                                     type="button"
-                                    class="btn btn-ghost btn-sm rounded-none"
+                                    class="btn btn-ghost btn-xs"
                                     on:click=move |_| modal.close()
                                     disabled=move || is_submitting.get()
                                 >
@@ -410,8 +417,14 @@ pub fn AddProjectModal() -> impl IntoView {
                                 </button>
                                 <button
                                     type="submit"
-                                    class="btn btn-primary btn-sm rounded-none"
-                                    disabled=move || is_submitting.get()
+                                    class=move || {
+                                        if is_submitting.get() || !can_submit() {
+                                            "btn btn-primary btn-xs opacity-50 cursor-not-allowed"
+                                        } else {
+                                            "btn btn-primary btn-xs"
+                                        }
+                                    }
+                                    disabled=move || is_submitting.get() || !can_submit()
                                 >
                                     {move || {
                                         let label = if is_submitting.get() {
