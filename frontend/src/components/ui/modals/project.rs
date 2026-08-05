@@ -590,6 +590,7 @@ fn ProjectModalContent(
     let (is_uploading_ifc, set_is_uploading_ifc) = signal(false);
     let (is_downloading, set_is_downloading) = signal(false);
     let (glb_status, set_glb_status) = signal(GlbConversionStatus::Idle);
+    let (sidebar_collapsed, set_sidebar_collapsed) = signal(false);
 
     let project_id = card.id.clone();
     let viewer_ref = NodeRef::<leptos::html::Div>::new();
@@ -1369,6 +1370,8 @@ fn ProjectModalContent(
                     <div class=move || {
                         if viewer_fullscreen.get() {
                             "grid grid-cols-1 gap-0 items-start h-full".to_string()
+                        } else if sidebar_collapsed.get() {
+                            "grid grid-cols-1 gap-6 items-start h-full".to_string()
                         } else {
                             "grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_1px_18rem] gap-6 items-start h-full".to_string()
                         }
@@ -1712,9 +1715,28 @@ fn ProjectModalContent(
                             </div>
                         </div>
 
-                        <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "hidden xl:block self-stretch w-px bg-base-content/10".to_string() } aria-hidden="true"></div>
+                        <button
+                            type="button"
+                            class=move || {
+                                if viewer_fullscreen.get() {
+                                    "hidden".to_string()
+                                } else {
+                                    "hidden xl:flex self-stretch w-4 -mx-2 cursor-pointer group items-center justify-center".to_string()
+                                }
+                            }
+                            aria-label=move || if sidebar_collapsed.get() { "Expand sidebar" } else { "Collapse sidebar" }
+                            on:click=move |_| set_sidebar_collapsed.update(|v| *v = !*v)
+                        >
+                            <div class="w-px h-full bg-base-content/10 group-hover:bg-primary transition-colors"></div>
+                        </button>
 
-                        <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "space-y-4".to_string() }>
+                        <div class=move || {
+                            if viewer_fullscreen.get() || sidebar_collapsed.get() {
+                                "hidden".to_string()
+                            } else {
+                                "space-y-4".to_string()
+                            }
+                        }>
                             {move || {
                                 if editing_title.get() {
                                     view! {
