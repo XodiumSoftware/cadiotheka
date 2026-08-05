@@ -248,7 +248,13 @@ fn VersionStateSelector(
         <>
             <button
                 type="button"
-                class="group relative w-10 h-10 rounded-none flex items-center justify-center cursor-pointer bg-base-200/50 border border-base-content/10 hover:border-primary transition-colors"
+                class=move || {
+                    let s = state.get();
+                    format!(
+                        "group relative w-10 h-10 rounded-none flex items-center justify-center cursor-pointer bg-base-200/50 border {} hover:border-primary transition-colors",
+                        s.border_class()
+                    )
+                }
                 aria-label=move || format!("Current state: {}. Open state selector.", state.get().label())
                 on:click=move |_| open.set(true)
             >
@@ -325,7 +331,13 @@ fn VersionStateSelector(
 fn VersionStateBadge(#[prop(into)] state: Signal<VersionState>) -> impl IntoView {
     view! {
         <div
-            class="w-10 h-10 rounded-none flex items-center justify-center bg-base-200/50 border border-base-content/10"
+            class=move || {
+                let s = state.get();
+                format!(
+                    "w-10 h-10 rounded-none flex items-center justify-center bg-base-200/50 border {}",
+                    s.border_class()
+                )
+            }
             aria-label=move || format!("State: {}", state.get().label())
         >
             {move || {
