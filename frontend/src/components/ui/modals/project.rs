@@ -329,15 +329,14 @@ fn AddVersionRow(
                     type="button"
                     class=move || {
                         if is_uploading.get() {
-                            "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 cursor-not-allowed tooltip tooltip-bottom"
+                            "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 cursor-not-allowed"
                         } else {
-                            "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors cursor-pointer tooltip tooltip-bottom"
+                            "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-4 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors cursor-pointer"
                         }
                     }
                     disabled=move || is_uploading.get()
                     on:click=move |_| on_click.run(())
                     aria-label="Add version"
-                    data-tip="Add version"
                 >
                     {move || if is_uploading.get() {
                         view! {
