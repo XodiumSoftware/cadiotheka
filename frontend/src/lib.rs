@@ -25,10 +25,10 @@ pub mod components {
         pub mod three_d_viewer;
         pub mod modals {
             pub mod add_project;
+            pub mod base;
             pub mod login;
             pub mod profile;
             pub mod project;
-            pub mod search;
         }
         pub mod overflow_row;
         pub mod pagination;
@@ -49,10 +49,10 @@ pub mod components {
     pub use ui::markdown::MarkdownView;
     pub use ui::markdown_editor::MarkdownEditor;
     pub use ui::modals::add_project::AddProjectModal;
+    pub use ui::modals::base::BaseModal;
     pub use ui::modals::login::LoginModal;
     pub use ui::modals::profile::ProfileModal;
     pub use ui::modals::project::{ProjectDetailsTab, ProjectModal};
-    pub use ui::modals::search::SearchModal;
     pub use ui::overflow_row::OverflowRow;
     pub use ui::pagination::Pagination;
     pub use ui::three_d_viewer::{IfcViewer, IfcViewerState};

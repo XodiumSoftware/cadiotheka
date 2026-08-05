@@ -1,6 +1,6 @@
 use crate::components::ui::buy_me_a_coffee::BuyMeACoffeeLogo;
 use crate::components::ui::logo::Logo;
-use crate::components::ui::modals::search::SearchModal;
+use crate::components::ui::modals::base::BaseModal;
 use crate::contexts::{
     AddProjectModalContext, CurrentUserContext, LayoutContext, LoginModalContext, MetadataContext,
     ProfileModalContext, ProjectsContext, SearchContext,
@@ -742,9 +742,10 @@ pub fn Header() -> impl IntoView {
                 </div>
             </nav>
 
-            <SearchModal
+            <BaseModal
                 open=Signal::from(search_open)
                 on_close=move |()| set_search_open.set(false)
+                container_class=Signal::derive(|| "w-full max-w-2xl max-h-[80vh] flex flex-col".to_string())
             >
                 <div class="space-y-0 flex flex-col min-h-0">
                     <div class="relative">
@@ -902,7 +903,7 @@ pub fn Header() -> impl IntoView {
                         </div>
                     </div>
                 </div>
-            </SearchModal>
+            </BaseModal>
         </header>
     }
 }

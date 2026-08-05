@@ -1,5 +1,5 @@
 use crate::components::ui::corner_frame::CornerFrame;
-use crate::components::ui::modals::search::SearchModal;
+use crate::components::ui::modals::base::BaseModal;
 use crate::components::ui::toast::Toast;
 use crate::contexts::{CurrentUserContext, ProfileModalContext};
 use crate::utils::{
@@ -18,7 +18,7 @@ pub fn ProfileModal() -> impl IntoView {
     let on_close = move |()| modal.close();
 
     view! {
-        <SearchModal
+        <BaseModal
             open=modal.open
             on_close=on_close
         >
@@ -29,7 +29,7 @@ pub fn ProfileModal() -> impl IntoView {
                     }
                 })
             }}
-        </SearchModal>
+        </BaseModal>
     }
 }
 

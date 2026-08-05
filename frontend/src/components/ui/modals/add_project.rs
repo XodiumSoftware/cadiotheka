@@ -1,5 +1,5 @@
 use crate::components::ui::markdown_editor::MarkdownEditor;
-use crate::components::ui::modals::search::SearchModal;
+use crate::components::ui::modals::base::BaseModal;
 use crate::components::ui::turnstile::{TurnstileWidget, reset_turnstile, turnstile_response};
 use crate::contexts::{
     AddProjectModalContext, CurrentUserContext, LoginModalContext, MetadataContext, ProjectsContext,
@@ -156,7 +156,7 @@ pub fn AddProjectModal() -> impl IntoView {
     };
 
     view! {
-        <SearchModal
+        <BaseModal
             open=modal.open
             on_close=on_close
         >
@@ -389,7 +389,7 @@ pub fn AddProjectModal() -> impl IntoView {
                     }.into_any()
                 }}
             </div>
-        </SearchModal>
+        </BaseModal>
     }
 }
 

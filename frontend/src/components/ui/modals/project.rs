@@ -3,7 +3,7 @@ use crate::components::Pagination;
 use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProperties};
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
-use crate::components::ui::modals::search::SearchModal;
+use crate::components::ui::modals::base::BaseModal;
 use crate::components::ui::toast::Toast;
 use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
 
@@ -96,7 +96,7 @@ pub fn ProjectModal() -> impl IntoView {
     });
 
     view! {
-        <SearchModal
+        <BaseModal
             open=modal.open
             on_close=on_close
             container_class=Signal::derive({
@@ -129,7 +129,7 @@ pub fn ProjectModal() -> impl IntoView {
                         .into_any(),
                 }
             }}
-        </SearchModal>
+        </BaseModal>
     }
 }
 
@@ -273,10 +273,10 @@ fn VersionStateSelector(
                     {edit_pencil_icon("w-4 h-4 text-primary")}
                 </div>
             </button>
-            <SearchModal
+            <BaseModal
                 open=open
                 on_close=on_close
-                container_class=Signal::derive(|| "w-full max-w-sm".to_string())
+                container_class=Signal::derive(|| "w-full max-w-sm flex flex-col".to_string())
             >
                 <div class="grid grid-cols-4 gap-2" role="group" aria-label="Version states">
                     {VersionState::VARIANTS.iter().map(|variant| {
@@ -328,7 +328,7 @@ fn VersionStateSelector(
                         }
                     }).collect_view()}
                 </div>
-            </SearchModal>
+            </BaseModal>
         </>
     }
 }
@@ -1288,7 +1288,7 @@ fn ProjectModalContent(
                 visible=Signal::derive(move || toast_visible.get())
                 on_dismiss=dismiss_toast
             />
-            <SearchModal
+            <BaseModal
                 open=Signal::derive(move || show_upload_modal.get())
                 on_close=Callback::new(move |()| close_upload_modal())
                 container_class=Signal::derive(|| "w-full max-w-lg flex flex-col".to_string())
@@ -1374,7 +1374,7 @@ fn ProjectModalContent(
                         </button>
                     </div>
                 </div>
-            </SearchModal>
+            </BaseModal>
 
             <div class=move || if viewer_fullscreen.get() { "flex flex-col min-h-0 overflow-hidden flex-1".to_string() } else { "flex flex-col min-h-0 overflow-hidden flex-1 py-2".to_string() }>
                 <div class=move || if viewer_fullscreen.get() { "flex-1 min-h-0".to_string() } else { "overflow-y-auto flex-1 min-h-0 p-2 pr-3".to_string() }>
@@ -2182,9 +2182,10 @@ fn ProjectModalContent(
                                                     on:click=move |_| commit_edit_collaborators.run(draft_collaborator_ids.get())
                                                 >"Save"</button>
                                             </div>
-                                            <SearchModal
+                                            <BaseModal
                                                 open=add_open_signal
                                                 on_close=Callback::new(move |()| set_add_open.set(false))
+                                                container_class=Signal::derive(|| "w-full max-w-sm flex flex-col".to_string())
                                             >
                                                 <div class="space-y-3">
                                                     <h3 class="text-sm font-semibold text-base-content">"Add collaborator"</h3>
@@ -2229,7 +2230,7 @@ fn ProjectModalContent(
                                                         }}
                                                     </div>
                                                 </div>
-                                            </SearchModal>
+                                            </BaseModal>
                                         </div>
                                     }.into_any()
                                 } else {

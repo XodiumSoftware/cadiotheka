@@ -4,7 +4,7 @@ use gloo_net::http::Request;
 use leptos::prelude::*;
 use leptos::web_sys;
 
-use super::search::SearchModal;
+use super::base::BaseModal;
 
 #[derive(Debug, serde::Deserialize)]
 struct AuthUrlResponse {
@@ -46,7 +46,7 @@ pub fn LoginModal() -> impl IntoView {
     });
 
     view! {
-        <SearchModal
+        <BaseModal
             open=modal.open
             on_close=on_close
         >
@@ -102,6 +102,6 @@ pub fn LoginModal() -> impl IntoView {
                     "We only request public profile and email information."
                 </p>
             </div>
-        </SearchModal>
+        </BaseModal>
     }
 }
