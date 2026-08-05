@@ -1266,7 +1266,10 @@ fn ProjectModalContent(
                         on:change=on_upload_file_selected
                     />
                     <div class="space-y-2">
-                        <label class="text-xs text-base-content/70 block">"IFC file"</label>
+                        <label class="text-xs text-base-content/70 block">
+                            "IFC file"
+                            <span class="text-error ml-0.5" aria-hidden="true">"*"</span>
+                        </label>
                         <button
                             type="button"
                             class=move || {
@@ -1286,7 +1289,10 @@ fn ProjectModalContent(
                         </button>
                     </div>
                     <div class="space-y-2">
-                        <label class="text-xs text-base-content/70 block" for="upload-version-input">"Version"</label>
+                        <label class="text-xs text-base-content/70 block" for="upload-version-input">
+                            "Version"
+                            <span class="text-error ml-0.5" aria-hidden="true">"*"</span>
+                        </label>
                         <input
                             id="upload-version-input"
                             type="text"
@@ -1297,7 +1303,10 @@ fn ProjectModalContent(
                         />
                     </div>
                     <div class="space-y-2">
-                        <label class="text-xs text-base-content/70 block" for="upload-platform-select">"Platform"</label>
+                        <label class="text-xs text-base-content/70 block" for="upload-platform-select">
+                            "Platform"
+                            <span class="text-error ml-0.5" aria-hidden="true">"*"</span>
+                        </label>
                         <select
                             id="upload-platform-select"
                             class="select select-sm select-bordered w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
@@ -1323,13 +1332,21 @@ fn ProjectModalContent(
                         <button
                             type="button"
                             class=move || {
-                                if is_uploading_ifc.get() || upload_file.get().is_none() {
+                                let can_upload = upload_file.get().is_some()
+                                    && !upload_version.get().trim().is_empty()
+                                    && !upload_platform.get().is_empty();
+                                if is_uploading_ifc.get() || !can_upload {
                                     "btn btn-primary btn-xs opacity-50 cursor-not-allowed"
                                 } else {
                                     "btn btn-primary btn-xs"
                                 }
                             }
-                            disabled=move || is_uploading_ifc.get() || upload_file.get().is_none()
+                            disabled=move || {
+                                let can_upload = upload_file.get().is_some()
+                                    && !upload_version.get().trim().is_empty()
+                                    && !upload_platform.get().is_empty();
+                                is_uploading_ifc.get() || !can_upload
+                            }
                             on:click=move |_| upload_ifc.run(())
                         >
                             {move || if is_uploading_ifc.get() {
