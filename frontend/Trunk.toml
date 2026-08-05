@@ -1,5 +1,5 @@
 [tools]
-tailwindcss = "2.8.3"
+tailwindcss = "2.10.10"
 
 [serve]
 # Proxy API requests to the local backend dev server.
