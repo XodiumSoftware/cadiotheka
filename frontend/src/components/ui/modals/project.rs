@@ -1,4 +1,5 @@
 use crate::components::IfcViewer;
+use crate::components::Pagination;
 use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProperties};
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
@@ -1561,18 +1562,11 @@ fn ProjectModalContent(
                                                                 <span class="text-base-content/50">
                                                                     "Page 1 of 1"
                                                                 </span>
-                                                                <div class="flex gap-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        class="btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
-                                                                        disabled=true
-                                                                    >"Previous"</button>
-                                                                    <button
-                                                                        type="button"
-                                                                        class="btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
-                                                                        disabled=true
-                                                                    >"Next"</button>
-                                                                </div>
+                                                                <Pagination
+                                                                    page=versions_page
+                                                                    set_page=set_versions_page
+                                                                    total_pages=Signal::derive(|| 1usize)
+                                                                />
                                                             </div>
                                                         </div>
                                                     }
@@ -1594,7 +1588,6 @@ fn ProjectModalContent(
                                                     .skip(start)
                                                     .take(VERSIONS_PER_PAGE)
                                                     .collect();
-                                                let total_pages = versions_total_pages.get();
                                                 view! {
                                                     <div class="space-y-2">
                                                         <div class="overflow-x-auto rounded-none border border-base-content/10">
@@ -1740,36 +1733,15 @@ fn ProjectModalContent(
                                                                 <div class="flex items-center justify-between text-sm">
                                                                     <span class="text-base-content/50">
                                                                         "Page "
-                                                                        {page + 1}
+                                                                        {clamped_versions_page.get() + 1}
                                                                         " of "
-                                                                        {total_pages}
+                                                                        {versions_total_pages.get()}
                                                                     </span>
-                                                                    <div class="flex gap-2">
-                                                                        <button
-                                                                            type="button"
-                                                                            class=move || {
-                                                                                if page == 0 {
-                                                                                    "btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
-                                                                                } else {
-                                                                                    "btn btn-xs btn-outline rounded-none"
-                                                                                }
-                                                                            }
-                                                                            disabled=move || page == 0
-                                                                            on:click=move |_| set_versions_page.update(|p| *p = p.saturating_sub(1))
-                                                                        >"Previous"</button>
-                                                                        <button
-                                                                            type="button"
-                                                                            class=move || {
-                                                                                if page + 1 >= total_pages {
-                                                                                    "btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
-                                                                                } else {
-                                                                                    "btn btn-xs btn-outline rounded-none"
-                                                                                }
-                                                                            }
-                                                                            disabled=move || page + 1 >= total_pages
-                                                                            on:click=move |_| set_versions_page.update(|p| *p = (*p + 1).min(total_pages.saturating_sub(1)))
-                                                                        >"Next"</button>
-                                                                    </div>
+                                                                    <Pagination
+                                                                        page=versions_page
+                                                                        set_page=set_versions_page
+                                                                        total_pages=versions_total_pages
+                                                                    />
                                                                 </div>
                                                             }
                                                                 .into_any()

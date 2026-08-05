@@ -31,6 +31,7 @@ pub mod components {
             pub mod search;
         }
         pub mod overflow_row;
+        pub mod pagination;
         pub mod toast;
         pub mod toggle;
         pub mod toolbar_button;
@@ -53,6 +54,7 @@ pub mod components {
     pub use ui::modals::project::{ProjectDetailsTab, ProjectModal};
     pub use ui::modals::search::SearchModal;
     pub use ui::overflow_row::OverflowRow;
+    pub use ui::pagination::Pagination;
     pub use ui::three_d_viewer::{IfcViewer, IfcViewerState};
     pub use ui::toast::Toast;
     pub use ui::toggle::{ToggleSlider, ToggleSliderWithSlashLabel};
