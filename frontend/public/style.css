@@ -59,6 +59,16 @@ html {
         box-shadow 0.1s ease;
 }
 
+/* Removes DaisyUI modal-box rounded corners so the CornerFrame decoration
+   can sit on top without visual conflict. Can be removed if DaisyUI adds a
+   built-in square modal variant. */
+.modal-box-square {
+    --modal-tl: 0;
+    --modal-tr: 0;
+    --modal-bl: 0;
+    --modal-br: 0;
+}
+
 .btn-lift:hover,
 .btn-lift-selected {
     transform: translate(-2px, -2px);
