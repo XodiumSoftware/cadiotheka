@@ -1382,10 +1382,16 @@ fn ProjectModalContent(
                         if viewer_fullscreen.get() {
                             "grid grid-cols-1 gap-0 items-start h-full".to_string()
                         } else {
-                            "grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto] gap-6 items-start h-full".to_string()
+                            "flex flex-col xl:flex-row gap-6 items-start h-full".to_string()
                         }
                     }>
-                        <div class=move || if viewer_fullscreen.get() { "min-w-0 h-full flex flex-col".to_string() } else { "min-w-0 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4".to_string() }>
+                        <div class=move || {
+                            if viewer_fullscreen.get() {
+                                "min-w-0 h-full flex flex-col".to_string()
+                            } else {
+                                "min-w-0 flex-1 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4".to_string()
+                            }
+                        }>
                             <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-center justify-between gap-3 pb-2 flex-shrink-0".to_string() }>
                                 <div class="tabs tabs-border">
                                     <button
@@ -1739,7 +1745,7 @@ fn ProjectModalContent(
                             <div class="flex flex-col items-center justify-center w-full h-full">
                                 <div class="w-px flex-1 bg-base-content/10 group-hover:bg-primary transition-colors"></div>
                                 <div class="py-2 text-base-content/50 group-hover:text-primary transition-colors">
-                                    {move || if sidebar_collapsed.get() { ">" } else { "<" }}
+                                    {move || if sidebar_collapsed.get() { "<" } else { ">" }}
                                 </div>
                                 <div class="w-px flex-1 bg-base-content/10 group-hover:bg-primary transition-colors"></div>
                             </div>
@@ -1749,7 +1755,7 @@ fn ProjectModalContent(
                             if viewer_fullscreen.get() || sidebar_collapsed.get() {
                                 "hidden".to_string()
                             } else {
-                                "space-y-4".to_string()
+                                "w-72 flex-shrink-0 space-y-4".to_string()
                             }
                         }>
                             {move || {
