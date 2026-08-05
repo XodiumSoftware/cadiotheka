@@ -457,6 +457,15 @@ pub fn IfcViewer(
             return;
         };
 
+        if renderer.borrow().is_none() {
+            if let Some(new_renderer) = Renderer::new(&canvas) {
+                *renderer.borrow_mut() = Some(new_renderer);
+            } else {
+                state.set(IfcViewerState::Error);
+                return;
+            }
+        }
+
         state.set(IfcViewerState::Loading);
         let renderer = Rc::clone(&renderer);
         let state = state;
@@ -468,10 +477,12 @@ pub fn IfcViewer(
                 Some(glb_bytes) => {
                     state.set(IfcViewerState::Processing);
 
-                    if let Some(mut new_renderer) = Renderer::new(&canvas, &glb_bytes) {
-                        new_renderer.set_show_grid(show_grid.get());
-                        new_renderer.set_show_axes(show_axes.get());
-                        *renderer.borrow_mut() = Some(new_renderer);
+                    let load_ok = renderer
+                        .borrow_mut()
+                        .as_mut()
+                        .is_some_and(|r| r.load_model(&glb_bytes));
+
+                    if load_ok {
                         state.set(IfcViewerState::Rendering);
 
                         let restored = storage_key

@@ -50,10 +50,12 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    /// Creates a renderer for the given canvas and GLB bytes.
+    /// Creates a renderer for the given canvas without loading a model.
     ///
-    /// Returns `None` if WebGL2 is unavailable or the model cannot be loaded.
-    pub fn new(canvas: &HtmlCanvasElement, glb_bytes: &[u8]) -> Option<Self> {
+    /// The WebGL2 context, lights, and environment are created once. Use
+    /// [`Self::load_model`] to load GLB data into the renderer afterwards.
+    /// Returns `None` if WebGL2 is unavailable.
+    pub fn new(canvas: &HtmlCanvasElement) -> Option<Self> {
         let gl_context = canvas
             .get_context("webgl2")
             .ok()??
@@ -63,77 +65,105 @@ impl Renderer {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let _ = gl_context;
-            let _ = glb_bytes;
             None
         }
 
         #[cfg(target_arch = "wasm32")]
         {
-            use crate::three_d_viewer::scene::{
-                scene_bounds_from_model, suppress_webgl_debug_renderer_info,
-            };
-            use crate::three_d_viewer::upload::upload_primitive;
+            use crate::three_d_viewer::scene::suppress_webgl_debug_renderer_info;
 
             suppress_webgl_debug_renderer_info(&gl_context);
             let glow_context = glow::Context::from_webgl2_context(gl_context);
             #[allow(clippy::arc_with_non_send_sync)]
             let context = ThreeDContext::from_gl_context(Arc::new(glow_context)).ok()?;
 
-            let mut raw_assets = three_d_asset::io::RawAssets::new();
-            raw_assets.insert("model.glb", glb_bytes.to_vec());
-            let scene: Scene = raw_assets.deserialize("model.glb").ok()?;
-            let model = Model::from(scene);
-
-            let scene_bounds = scene_bounds_from_model(&model);
-            let (camera, control) = build_framing_camera(scene_bounds.0, scene_bounds.1, canvas);
-
-            let mut models = Vec::new();
-            let mut total_vertices = 0;
-            let mut total_triangles = 0;
-
-            for primitive in &model.geometries {
-                upload_primitive(
-                    &context,
-                    primitive,
-                    &model.materials,
-                    &mut models,
-                    &mut total_vertices,
-                    &mut total_triangles,
-                );
-            }
-
             let light =
                 DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(0.3_f32, -0.8, -0.5));
             let ambient = build_ibl_ambient(&context);
             let skybox = Some(build_skybox(&context));
 
-            let ground_grid = Some(build_ground_grid(
-                &context,
-                scene_bounds.0,
-                scene_bounds.1,
-                ViewerTheme::default(),
-            ));
-            let axes = Some(build_axes(&context, scene_bounds.0, scene_bounds.1));
+            let (camera, control) = build_framing_camera([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], canvas);
 
             Some(Self {
                 context,
                 camera,
                 control,
                 canvas: canvas.clone(),
-                scene_bounds,
-                models,
-                ground_grid,
-                axes,
+                scene_bounds: ([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]),
+                models: Vec::new(),
+                ground_grid: None,
+                axes: None,
                 skybox,
                 show_grid: true,
                 show_axes: true,
-                total_vertices,
-                total_triangles,
+                total_vertices: 0,
+                total_triangles: 0,
                 light,
                 ambient,
                 pending_events: Rc::new(RefCell::new(Vec::new())),
                 theme: ViewerTheme::default(),
             })
+        }
+    }
+
+    /// Loads a GLB model into the existing renderer.
+    ///
+    /// Replaces any previously loaded model, rebuilds the camera, ground grid,
+    /// and axes to match the new scene bounds, and returns `true` on success.
+    #[cfg(target_arch = "wasm32")]
+    pub fn load_model(&mut self, glb_bytes: &[u8]) -> bool {
+        use crate::three_d_viewer::scene::scene_bounds_from_model;
+        use crate::three_d_viewer::upload::upload_primitive;
+
+        let mut raw_assets = three_d_asset::io::RawAssets::new();
+        raw_assets.insert("model.glb", glb_bytes.to_vec());
+        let scene: Scene = match raw_assets.deserialize("model.glb") {
+            Ok(scene) => scene,
+            Err(_) => return false,
+        };
+        let model = Model::from(scene);
+
+        self.scene_bounds = scene_bounds_from_model(&model);
+        let (camera, control) =
+            build_framing_camera(self.scene_bounds.0, self.scene_bounds.1, &self.canvas);
+        self.camera = camera;
+        self.control = control;
+
+        self.models.clear();
+        self.total_vertices = 0;
+        self.total_triangles = 0;
+        for primitive in &model.geometries {
+            upload_primitive(
+                &self.context,
+                primitive,
+                &model.materials,
+                &mut self.models,
+                &mut self.total_vertices,
+                &mut self.total_triangles,
+            );
+        }
+
+        self.rebuild_ground_grid();
+        self.rebuild_axes();
+        true
+    }
+
+    /// Non-WASM stub: loading models is not supported outside the browser.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn load_model(&mut self, _glb_bytes: &[u8]) -> bool {
+        false
+    }
+
+    /// Creates a renderer for the given canvas and GLB bytes.
+    ///
+    /// This convenience method combines [`Self::new`] and [`Self::load_model`].
+    /// Returns `None` if WebGL2 is unavailable or the model cannot be loaded.
+    pub fn new_with_model(canvas: &HtmlCanvasElement, glb_bytes: &[u8]) -> Option<Self> {
+        let mut renderer = Self::new(canvas)?;
+        if renderer.load_model(glb_bytes) {
+            Some(renderer)
+        } else {
+            None
         }
     }
 
