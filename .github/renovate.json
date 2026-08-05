@@ -4,6 +4,19 @@
     "baseBranchPatterns": [
         "main"
     ],
+    "customManagers": [
+        {
+            "customType": "regex",
+            "description": "Update Trunk tool versions in Trunk.toml",
+            "managerFilePatterns": [
+                "^frontend/Trunk\\.toml$"
+            ],
+            "matchStrings": [
+                "#\\s*renovate:\\s*datasource=(?<datasource>[^\\s]+)\\s+depName=(?<depName>[^\\s]+)(?:\\s+versioning=(?<versioning>[^\\s]+))?\\s*(?:\\r?\\n|\\r)(?:[a-zA-Z0-9_-]+)\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+            ],
+            "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
+        }
+    ],
     "dependencyDashboard": false,
     "extends": [
         "config:recommended"

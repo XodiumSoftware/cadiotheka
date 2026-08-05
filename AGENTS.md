@@ -48,6 +48,11 @@ cd frontend && trunk build --release
 cd backend && worker-build
 ```
 
+## Build Pipeline
+
+- `frontend/Trunk.toml` pins the version of each Trunk-managed tool.
+- Renovate updates these pinned versions via inline `# renovate: datasource=... depName=...` comments (e.g. `tailwindcss` is tracked against `dobicinaitis/tailwind-cli-extra`).
+
 ## Testing
 
 - Use `cargo test` to run the full workspace test suite.
