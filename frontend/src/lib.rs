@@ -96,7 +96,7 @@ pub mod data {
     pub use metadata::{fetch_platforms, fetch_tags};
     pub use project_api::*;
     pub use project_types::{
-        ProjectCreationResult, ProjectData, ProjectVersion, VersionState, ifc_src_from_key,
+        ProjectCreationResult, ProjectData, ProjectVersion, VersionState, ifc_download_url,
         latest_visible_ifc_url, new_project_payload,
     };
 }

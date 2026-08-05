@@ -12,7 +12,7 @@ use crate::contexts::{
 };
 use crate::data::{
     AccountData, AccountRole, ProjectVersion, convert_project_glb, delete_project,
-    delete_project_version, fetch_project_versions, fetch_projects, ifc_src_from_key,
+    delete_project_version, fetch_project_versions, fetch_projects, ifc_download_url,
     increment_project_downloads, latest_visible_ifc_url, update_project_collaborators,
     update_project_description, update_project_platforms, update_project_tags,
     update_project_title, update_project_version_state, upload_project_ifc,
@@ -1549,7 +1549,7 @@ fn ProjectModalContent(
                                                             on_download=Callback::new({
                                                                 let version = version_for_download.clone();
                                                                 move |()| {
-                                                                    let url = ifc_src_from_key(&version.ifc_key);
+                                                                    let url = ifc_download_url(&version);
                                                                     increment_downloads.run(url);
                                                                 }
                                                             })

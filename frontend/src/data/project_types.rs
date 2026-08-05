@@ -98,13 +98,17 @@ pub struct ProjectData {
     pub versions: Vec<ProjectVersion>,
 }
 
-/// Builds a frontend URL from an IFC R2 object key (`ifcs/{version_id}/{filename}`).
-pub fn ifc_src_from_key(key: &str) -> String {
-    let mut parts = key.split('/');
-    let _prefix = parts.next();
-    let version_id = parts.next().unwrap_or_default();
-    let filename = parts.next().unwrap_or_default();
-    api_url(&format!("/ifcs/{version_id}/{filename}"))
+/// Builds the frontend download URL for an IFC version using its own id and filename.
+///
+/// The URL is `/data/ifcs/{version_id}/{filename}`, which the backend resolves to the
+/// actual R2 object key stored on the version row. This avoids assuming the second
+/// segment of `ifc_key` is the version id, which is not true for legacy migrations.
+pub fn ifc_download_url(version: &ProjectVersion) -> String {
+    api_url(&format!(
+        "/ifcs/{version_id}/{filename}",
+        version_id = version.id,
+        filename = version.filename
+    ))
 }
 
 /// Returns the public download URL for the latest visible IFC version, if any.
@@ -112,7 +116,7 @@ pub fn latest_visible_ifc_url(versions: &[ProjectVersion]) -> Option<String> {
     versions
         .iter()
         .find(|version| version.state.is_public())
-        .map(|version| ifc_src_from_key(&version.ifc_key))
+        .map(ifc_download_url)
 }
 
 /// Returns the current UTC time using the JavaScript `Date` API.
@@ -280,11 +284,19 @@ mod tests {
     }
 
     /// Tags and platforms are stored as wire-id strings resolved against the
-    /// metadata fetched from `/data/tags` and `/data/platforms`.
     #[test]
-    fn ifc_src_from_key_uses_version_id_segment() {
+    fn ifc_download_url_uses_version_id_and_filename() {
+        let version = ProjectVersion {
+            id: "vid-123".to_owned(),
+            project_id: "p1".to_owned(),
+            filename: "model.ifc".to_owned(),
+            ifc_key: "ifcs/legacy-project-id/model.ifc".to_owned(),
+            state: VersionState::Stable,
+            created_at: "2026-01-01T00:00:00Z".to_owned(),
+            file_size: 0,
+        };
         assert_eq!(
-            ifc_src_from_key("ifcs/vid-123/model.ifc"),
+            ifc_download_url(&version),
             api_url("/ifcs/vid-123/model.ifc")
         );
     }
