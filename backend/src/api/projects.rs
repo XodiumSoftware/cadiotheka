@@ -477,7 +477,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
             file_size_value.into(),
             version.clone().into(),
             serde_json::to_string(&platforms).unwrap_or_else(|_| "[]".to_string()).into(),
-            0_i64.into(),
+            0_f64.into(),
         ])?
         .run()
         .await?;
