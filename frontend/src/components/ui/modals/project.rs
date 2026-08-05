@@ -590,7 +590,18 @@ fn ProjectModalContent(
     let (is_uploading_ifc, set_is_uploading_ifc) = signal(false);
     let (is_downloading, set_is_downloading) = signal(false);
     let (glb_status, set_glb_status) = signal(GlbConversionStatus::Idle);
-    let (sidebar_collapsed, set_sidebar_collapsed) = signal(false);
+    let (sidebar_collapsed, set_sidebar_collapsed) = signal(
+        crate::utils::local_storage_get("project_modal.sidebar_collapsed")
+            .is_some_and(|v| v == "true"),
+    );
+
+    Effect::new(move |_| {
+        let collapsed = sidebar_collapsed.get();
+        crate::utils::local_storage_set(
+            "project_modal.sidebar_collapsed",
+            if collapsed { "true" } else { "false" },
+        );
+    });
 
     let project_id = card.id.clone();
     let viewer_ref = NodeRef::<leptos::html::Div>::new();
@@ -1721,13 +1732,19 @@ fn ProjectModalContent(
                                 if viewer_fullscreen.get() {
                                     "hidden".to_string()
                                 } else {
-                                    "hidden xl:flex self-stretch w-4 -mx-2 cursor-pointer group items-center justify-center".to_string()
+                                    "hidden xl:flex self-stretch w-6 -mx-3 cursor-pointer group items-center justify-center".to_string()
                                 }
                             }
                             aria-label=move || if sidebar_collapsed.get() { "Expand sidebar" } else { "Collapse sidebar" }
                             on:click=move |_| set_sidebar_collapsed.update(|v| *v = !*v)
                         >
-                            <div class="w-px h-full bg-base-content/10 group-hover:bg-primary transition-colors"></div>
+                            <div class="flex flex-col items-center justify-center w-full h-full">
+                                <div class="w-px flex-1 bg-base-content/10 group-hover:bg-primary transition-colors"></div>
+                                <div class="py-2 text-base-content/50 group-hover:text-primary transition-colors">
+                                    {move || if sidebar_collapsed.get() { ">" } else { "<" }}
+                                </div>
+                                <div class="w-px flex-1 bg-base-content/10 group-hover:bg-primary transition-colors"></div>
+                            </div>
                         </button>
 
                         <div class=move || {

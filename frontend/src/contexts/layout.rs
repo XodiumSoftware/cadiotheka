@@ -1,19 +1,14 @@
+use crate::utils::{local_storage_get, local_storage_set};
 use leptos::prelude::*;
 
-const LAYOUT_WIDE_KEY: &str = "cadiotheka.layout_wide";
+const LAYOUT_WIDE_KEY: &str = "layout_wide";
 
 fn load_layout_wide() -> Option<bool> {
-    let storage = leptos::web_sys::window()?.local_storage().ok().flatten()?;
-    let value = storage.get_item(LAYOUT_WIDE_KEY).ok().flatten()?;
-    Some(value == "true")
+    local_storage_get(LAYOUT_WIDE_KEY).map(|value| value == "true")
 }
 
 fn save_layout_wide(wide: bool) {
-    if let Some(window) = leptos::web_sys::window()
-        && let Ok(Some(storage)) = window.local_storage()
-    {
-        let _ = storage.set_item(LAYOUT_WIDE_KEY, if wide { "true" } else { "false" });
-    }
+    local_storage_set(LAYOUT_WIDE_KEY, if wide { "true" } else { "false" });
 }
 
 /// Provides and reads the wide/narrow grid layout preference.

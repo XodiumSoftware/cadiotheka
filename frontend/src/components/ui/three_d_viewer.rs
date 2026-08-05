@@ -4,6 +4,7 @@
 //! and renders it with the `three-d` renderer in [`crate::three_d_viewer`].
 
 use crate::three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerSettings, ViewerTheme};
+use crate::utils::{local_storage_get, local_storage_remove, local_storage_set};
 use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
@@ -95,11 +96,7 @@ pub fn IfcViewer(
                 if *save_generation.borrow() != expected {
                     return;
                 }
-                if let Some(window) = leptos::web_sys::window()
-                    && let Ok(Some(storage)) = window.local_storage()
-                {
-                    let _ = storage.set_item(&key, &state_json);
-                }
+                local_storage_set(&key, &state_json);
             });
         }
     };
@@ -136,11 +133,7 @@ pub fn IfcViewer(
                 if *generation.borrow() != expected {
                     return;
                 }
-                if let Some(window) = leptos::web_sys::window()
-                    && let Ok(Some(storage)) = window.local_storage()
-                {
-                    let _ = storage.set_item(&settings_key, &settings_json);
-                }
+                local_storage_set(&settings_key, &settings_json);
             });
         }
     };
@@ -288,10 +281,8 @@ pub fn IfcViewer(
                 .as_ref()
                 .map(|s| s.get())
                 .filter(|k| !k.is_empty())
-                && let Some(window) = leptos::web_sys::window()
-                && let Ok(Some(storage)) = window.local_storage()
             {
-                let _ = storage.remove_item(&key);
+                local_storage_remove(&key);
             }
 
             let has_renderer = {
@@ -576,15 +567,11 @@ async fn load_model_bytes(url: &str) -> Option<Vec<u8>> {
 }
 
 fn load_view_state(key: &str) -> Option<ViewState> {
-    let window = leptos::web_sys::window()?;
-    let storage = window.local_storage().ok().flatten()?;
-    let json = storage.get_item(key).ok().flatten()?;
+    let json = local_storage_get(key)?;
     ViewState::from_json(&json)
 }
 
 fn load_viewer_settings(key: &str) -> Option<ViewerSettings> {
-    let window = leptos::web_sys::window()?;
-    let storage = window.local_storage().ok().flatten()?;
-    let json = storage.get_item(key).ok().flatten()?;
+    let json = local_storage_get(key)?;
     ViewerSettings::from_json(&json)
 }

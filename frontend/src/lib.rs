@@ -131,12 +131,14 @@ pub mod utils {
     pub mod dom;
     pub mod format;
     pub mod math;
+    pub mod storage;
     pub mod url;
 
     pub use color::*;
     pub use dom::*;
     pub use format::*;
     pub use math::*;
+    pub use storage::*;
     pub use url::*;
 }
 
