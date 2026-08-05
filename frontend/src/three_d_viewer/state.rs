@@ -25,7 +25,6 @@ impl ViewState {
 pub struct ViewerSettings {
     pub show_grid: bool,
     pub show_axes: bool,
-    pub show_debug: bool,
 }
 
 impl ViewerSettings {
@@ -43,7 +42,6 @@ impl Default for ViewerSettings {
         Self {
             show_grid: true,
             show_axes: true,
-            show_debug: false,
         }
     }
 }

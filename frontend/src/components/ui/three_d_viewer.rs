@@ -39,9 +39,6 @@ pub fn IfcViewer(
     #[prop(into)] url: Signal<Option<String>>,
     #[prop(into, optional)] storage_key: Option<Signal<String>>,
     #[prop(optional)] state_signal: Option<RwSignal<IfcViewerState>>,
-    #[prop(optional)] fps_signal: Option<RwSignal<f64>>,
-    #[prop(optional)] show_debug_signal: Option<RwSignal<bool>>,
-    #[prop(optional)] debug_text_signal: Option<RwSignal<String>>,
     #[prop(optional)] reset_view_signal: Option<RwSignal<bool>>,
     #[prop(optional)] show_grid_signal: Option<RwSignal<bool>>,
     #[prop(optional)] show_axes_signal: Option<RwSignal<bool>>,
@@ -49,9 +46,6 @@ pub fn IfcViewer(
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
-    let fps = fps_signal.unwrap_or_else(|| RwSignal::new(0.0_f64));
-    let show_debug = show_debug_signal.unwrap_or_else(|| RwSignal::new(false));
-    let debug_text = debug_text_signal.unwrap_or_else(|| RwSignal::new(String::new()));
     let reset_view = reset_view_signal.unwrap_or_else(|| RwSignal::new(false));
     let show_grid = show_grid_signal.unwrap_or_else(|| RwSignal::new(true));
     let show_axes = show_axes_signal.unwrap_or_else(|| RwSignal::new(true));
@@ -116,7 +110,6 @@ pub fn IfcViewer(
             let settings = ViewerSettings {
                 show_grid: show_grid.get(),
                 show_axes: show_axes.get(),
-                show_debug: show_debug.get(),
             };
             let settings_json = settings.to_json();
             let settings_key = format!("{key}.settings");
@@ -184,76 +177,6 @@ pub fn IfcViewer(
         }))
     };
 
-    let update_debug = {
-        let renderer = Rc::clone(&renderer);
-        let last_time = RefCell::new(0.0_f64);
-        let frame_count = RefCell::new(0_u32);
-        let last_fps_update = RefCell::new(0.0_f64);
-        move || {
-            let renderer_ref = renderer.borrow();
-            let Some(renderer) = renderer_ref.as_ref() else {
-                return;
-            };
-            let camera = renderer.camera();
-            let (min, max) = renderer.scene_bounds();
-            let eye = camera.position();
-            let target = camera.target();
-            let dx = eye.x - target.x;
-            let dy = eye.y - target.y;
-            let dz = eye.z - target.z;
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
-            let mut text = String::new();
-            let _ = writeln!(text, "eye: [{:.2}, {:.2}, {:.2}]", eye.x, eye.y, eye.z);
-            let _ = writeln!(
-                text,
-                "target: [{:.2}, {:.2}, {:.2}]",
-                target.x, target.y, target.z
-            );
-            let _ = writeln!(text, "distance: {distance:.2}");
-            let _ = writeln!(
-                text,
-                "near: {:.3}, far: {:.1}",
-                camera.z_near(),
-                camera.z_far()
-            );
-            let _ = writeln!(
-                text,
-                "bounds min: [{:.2}, {:.2}, {:.2}]",
-                min[0], min[1], min[2]
-            );
-            let _ = writeln!(
-                text,
-                "bounds max: [{:.2}, {:.2}, {:.2}]",
-                max[0], max[1], max[2]
-            );
-            let _ = writeln!(
-                text,
-                "size: [{:.2}, {:.2}, {:.2}]",
-                max[0] - min[0],
-                max[1] - min[1],
-                max[2] - min[2]
-            );
-            let _ = writeln!(text, "primitives: {}", renderer.primitive_count());
-            let _ = writeln!(text, "vertices: {}", renderer.total_vertices());
-            let _ = writeln!(text, "triangles: {}", renderer.total_triangles());
-            debug_text.set(text);
-
-            let window = leptos::web_sys::window().and_then(|w| w.performance());
-            if let Some(performance) = window {
-                let now: f64 = performance.now();
-                *frame_count.borrow_mut() += 1;
-                if now - *last_fps_update.borrow() >= 500.0 {
-                    let fps_value = f64::from(*frame_count.borrow()) * 1000.0
-                        / (now - *last_fps_update.borrow());
-                    fps.set(fps_value);
-                    *last_fps_update.borrow_mut() = now;
-                    *frame_count.borrow_mut() = 0;
-                }
-                *last_time.borrow_mut() = now;
-            }
-        }
-    };
-
     on_cleanup({
         let animation_handle = SendWrapper::new(Rc::clone(&animation_handle));
         let renderer = SendWrapper::new(Rc::clone(&renderer));
@@ -270,7 +193,6 @@ pub fn IfcViewer(
     Effect::new({
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
-        let update_debug = update_debug.clone();
         move |_| {
             if !reset_view.get() {
                 return;
@@ -296,7 +218,6 @@ pub fn IfcViewer(
             };
             if has_renderer {
                 request_render.borrow_mut()();
-                update_debug();
             }
         }
     });
@@ -357,7 +278,6 @@ pub fn IfcViewer(
     Effect::new({
         let schedule_save_settings = schedule_save_settings.clone();
         move |_| {
-            show_debug.get();
             schedule_save_settings();
         }
     });
@@ -391,7 +311,6 @@ pub fn IfcViewer(
             };
             show_grid.set(settings.show_grid);
             show_axes.set(settings.show_axes);
-            show_debug.set(settings.show_debug);
         }
     });
 
@@ -437,7 +356,20 @@ pub fn IfcViewer(
             }
         }
     };
-    let on_context_menu = |ev: leptos::web_sys::MouseEvent| ev.prevent_default();
+    let on_context_menu = |ev: leptos::web_sys::MouseEvent| {
+        ev.prevent_default();
+    };
+    let on_mouse_leave = {
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        let controls = Rc::clone(&controls);
+        move |_: leptos::web_sys::MouseEvent| {
+            let mut state = controls.borrow_mut();
+            if state.on_mouse_leave(&renderer) {
+                request_render.borrow_mut()();
+            }
+        }
+    };
 
     Effect::new(move |_| {
         let Some(canvas) = canvas_ref.get() else {
@@ -461,7 +393,6 @@ pub fn IfcViewer(
         let renderer = Rc::clone(&renderer);
         let state = state;
         let request_render = Rc::clone(&request_render);
-        let update_debug = update_debug.clone();
 
         leptos::task::spawn_local(async move {
             match load_model_bytes(&url).await {
@@ -491,7 +422,6 @@ pub fn IfcViewer(
                         }
 
                         request_render.borrow_mut()();
-                        update_debug();
                     } else {
                         state.set(IfcViewerState::Error);
                     }
@@ -512,6 +442,7 @@ pub fn IfcViewer(
                 on:mousedown=on_mouse_down
                 on:mousemove=on_mouse_move
                 on:mouseup=on_mouse_up
+                on:mouseleave=on_mouse_leave
                 on:wheel=on_wheel
                 on:contextmenu=on_context_menu
             />
@@ -539,11 +470,6 @@ pub fn IfcViewer(
                     </div>
                 }.into_any(),
                 IfcViewerState::Rendering => view! {
-                    {move || show_debug.get().then(|| view! {
-                        <div class="absolute top-2 left-2 z-10 max-w-[20rem] bg-base-100/90 backdrop-blur text-xs font-mono p-3 rounded border border-base-content/10 text-base-content/80 whitespace-pre-wrap">
-                            {move || debug_text.get()}
-                        </div>
-                    })}
                 }.into_any(),
             }}
         </div>

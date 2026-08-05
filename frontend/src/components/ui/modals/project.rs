@@ -1421,30 +1421,15 @@ fn ProjectModalContent(
                                 {move || match active_tab.get() {
                                     ProjectDetailsTab::Viewer3d => {
                                         let viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
-                                        let fps = RwSignal::new(0.0_f64);
-                                        let show_debug = RwSignal::new(false);
                                         let show_grid = RwSignal::new(true);
                                         let show_axes = RwSignal::new(true);
                                         let shadows = RwSignal::new(true);
-                                        let debug_text = RwSignal::new(String::new());
                                         let reset_view = RwSignal::new(false);
 
                                         view! {
                                     <div node_ref=viewer_ref class="h-full flex flex-col">
-                                        <div class="flex items-center justify-between gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
-                                            <div class="text-xs font-mono text-base-content/70 px-2">
-                                                {move || format!("{fps:.1} FPS", fps = fps.get())}
-                                            </div>
+                                        <div class="flex items-center justify-end gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
                                             <div class="flex gap-1">
-                                                <ToolbarButton
-                                                    label="Toggle debug overlay"
-                                                    tooltip_position=TooltipPosition::Bottom
-                                                    on_click=Callback::new(move |()| {
-                                                        show_debug.update(|v| *v = !*v);
-                                                    })
-                                                >
-                                                    {move || if show_debug.get() { "🐞" } else { "🐛" }}
-                                                </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Toggle ground grid"
                                                     tooltip_position=TooltipPosition::Bottom
@@ -1504,9 +1489,6 @@ fn ProjectModalContent(
                                                     move || format!("cadiotheka.three_d_viewer.{project_id}")
                                                 })
                                                 state_signal=viewer_state
-                                                fps_signal=fps
-                                                show_debug_signal=show_debug
-                                                debug_text_signal=debug_text
                                                 reset_view_signal=reset_view
                                                 show_grid_signal=show_grid
                                                 show_axes_signal=show_axes
