@@ -294,8 +294,6 @@ fn VersionStateSelector(
                                         } else {
                                             "btn btn-outline rounded-none border-white text-white".to_string()
                                         }
-                                    } else if is_current.get() {
-                                        format!("btn {} rounded-none", variant.button_class())
                                     } else {
                                         format!(
                                             "btn btn-outline rounded-none {} {}",
@@ -304,6 +302,7 @@ fn VersionStateSelector(
                                         )
                                     }
                                 }
+                                disabled=move || is_current.get()
                                 aria-pressed=move || is_current.get().to_string()
                                 on:click=move |_| {
                                     on_change.run(variant);
