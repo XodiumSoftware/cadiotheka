@@ -224,18 +224,6 @@ fn edit_pencil_icon(class: &'static str) -> impl IntoView {
     }
 }
 
-/// File icon used for IFC version cards, colored by the version's maturity state.
-fn ifc_file_icon(class: &'static str, color_class: &'static str) -> impl IntoView {
-    view! {
-        <svg class=format!("{class} {color_class}") viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="12" y1="18" x2="12" y2="12" />
-            <line x1="9" y1="15" x2="15" y2="15" />
-        </svg>
-    }
-}
-
 /// Modal that lets editors change a version's maturity state.
 #[component]
 fn VersionStateSelector(
@@ -249,21 +237,11 @@ fn VersionStateSelector(
         <>
             <button
                 type="button"
-                class="group relative w-10 h-10 rounded-none flex items-center justify-center cursor-pointer bg-base-200/50 border border-base-content/10 hover:border-primary transition-colors"
+                class="group relative min-w-10 h-10 px-2 rounded-none flex items-center justify-center cursor-pointer bg-base-200/50 border border-base-content/10 hover:border-primary transition-colors"
                 aria-label=move || format!("Current state: {}. Open state selector.", state.get().label())
                 on:click=move |_| open.set(true)
             >
-                {move || {
-                    let s = state.get();
-                    if s == VersionState::Undefined {
-                        ifc_file_icon("w-5 h-5", s.color_class()).into_any()
-                    } else {
-                        view! {
-                            <span class=format!("text-sm font-semibold {}", s.color_class())>{s.letter()}</span>
-                        }
-                            .into_any()
-                    }
-                }}
+                <span class=move || format!("text-xs {}", state.get().color_class())>{state.get().label()}</span>
                 <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                     {edit_pencil_icon("w-4 h-4 text-primary")}
                 </div>
@@ -273,41 +251,48 @@ fn VersionStateSelector(
                 on_close=on_close
                 container_class=Signal::derive(|| "w-full max-w-sm".to_string())
             >
-                <div class="space-y-4">
-                    <h3 class="text-sm font-semibold text-base-content">"Change version state"</h3>
-                    <div class="grid grid-cols-4 gap-2" role="group" aria-label="Version states">
-                        {VersionState::VARIANTS.iter().map(|variant| {
-                            let variant = *variant;
-                            let is_current = Signal::derive(move || state.get() == variant);
-                            let label = variant.label();
-                            let letter = variant.letter();
-                            let color_class = variant.color_class();
-                            view! {
-                                <button
-                                    type="button"
-                                    class=move || {
+                <div class="grid grid-cols-4 gap-2" role="group" aria-label="Version states">
+                    {VersionState::VARIANTS.iter().map(|variant| {
+                        let variant = *variant;
+                        let is_current = Signal::derive(move || state.get() == variant);
+                        let label = variant.label();
+                        let color_class = variant.color_class();
+                        view! {
+                            <button
+                                type="button"
+                                class=move || {
+                                    if variant == VersionState::Undefined {
                                         if is_current.get() {
-                                            format!("btn {} rounded-none flex flex-col items-center justify-center gap-1 py-3", variant.button_class())
+                                            "btn btn-ghost rounded-none border border-white text-white".to_string()
                                         } else {
-                                            format!(
-                                                "btn btn-outline rounded-none flex flex-col items-center justify-center gap-1 py-3 {} {}",
-                                                variant.border_class(),
-                                                color_class
-                                            )
+                                            "btn btn-outline rounded-none border-white text-white".to_string()
                                         }
+                                    } else if is_current.get() {
+                                        format!("btn {} rounded-none", variant.button_class())
+                                    } else {
+                                        format!(
+                                            "btn btn-outline rounded-none {} {}",
+                                            variant.border_class(),
+                                            color_class
+                                        )
                                     }
-                                    aria-pressed=move || is_current.get().to_string()
-                                    on:click=move |_| {
-                                        on_change.run(variant);
-                                        open.set(false);
+                                }
+                                aria-pressed=move || is_current.get().to_string()
+                                on:click=move |_| {
+                                    on_change.run(variant);
+                                    open.set(false);
+                                }
+                            >
+                                <span class=move || {
+                                    if variant == VersionState::Undefined {
+                                        "text-xs text-white".to_string()
+                                    } else {
+                                        format!("text-xs {color_class}")
                                     }
-                                >
-                                    <span class=format!("text-lg font-bold {}", color_class)>{letter}</span>
-                                    <span class="text-xs">{label}</span>
-                                </button>
-                            }
-                        }).collect_view()}
-                    </div>
+                                }>{label}</span>
+                            </button>
+                        }
+                    }).collect_view()}
                 </div>
             </SearchModal>
         </>
@@ -319,20 +304,10 @@ fn VersionStateSelector(
 fn VersionStateBadge(#[prop(into)] state: Signal<VersionState>) -> impl IntoView {
     view! {
         <div
-            class="w-10 h-10 rounded-none flex items-center justify-center bg-base-200/50 border border-base-content/10"
+            class="min-w-10 h-10 px-2 rounded-none flex items-center justify-center bg-base-200/50 border border-base-content/10"
             aria-label=move || format!("State: {}", state.get().label())
         >
-            {move || {
-                let s = state.get();
-                if s == VersionState::Undefined {
-                    ifc_file_icon("w-5 h-5", s.color_class()).into_any()
-                } else {
-                    view! {
-                        <span class=format!("text-sm font-semibold {}", s.color_class())>{s.letter()}</span>
-                    }
-                        .into_any()
-                }
-            }}
+            <span class=move || format!("text-xs {}", state.get().color_class())>{state.get().label()}</span>
         </div>
     }
 }
