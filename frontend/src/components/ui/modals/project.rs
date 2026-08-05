@@ -1655,47 +1655,43 @@ fn ProjectModalContent(
                                                             </table>
                                                         </div>
                                                         {move || {
-                                                            if total_pages > 1 {
-                                                                view! {
-                                                                    <div class="flex items-center justify-between text-sm">
-                                                                        <span class="text-base-content/50">
-                                                                            "Page "
-                                                                            {page + 1}
-                                                                            " of "
-                                                                            {total_pages}
-                                                                        </span>
-                                                                        <div class="flex gap-2">
-                                                                            <button
-                                                                                type="button"
-                                                                                class=move || {
-                                                                                    if page == 0 {
-                                                                                        "btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
-                                                                                    } else {
-                                                                                        "btn btn-xs btn-outline rounded-none"
-                                                                                    }
+                                                            view! {
+                                                                <div class="flex items-center justify-between text-sm">
+                                                                    <span class="text-base-content/50">
+                                                                        "Page "
+                                                                        {page + 1}
+                                                                        " of "
+                                                                        {total_pages}
+                                                                    </span>
+                                                                    <div class="flex gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            class=move || {
+                                                                                if page == 0 {
+                                                                                    "btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
+                                                                                } else {
+                                                                                    "btn btn-xs btn-outline rounded-none"
                                                                                 }
-                                                                                disabled=move || page == 0
-                                                                                on:click=move |_| set_versions_page.update(|p| *p = p.saturating_sub(1))
-                                                                            >"Previous"</button>
-                                                                            <button
-                                                                                type="button"
-                                                                                class=move || {
-                                                                                    if page + 1 >= total_pages {
-                                                                                        "btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
-                                                                                    } else {
-                                                                                        "btn btn-xs btn-outline rounded-none"
-                                                                                    }
+                                                                            }
+                                                                            disabled=move || page == 0
+                                                                            on:click=move |_| set_versions_page.update(|p| *p = p.saturating_sub(1))
+                                                                        >"Previous"</button>
+                                                                        <button
+                                                                            type="button"
+                                                                            class=move || {
+                                                                                if page + 1 >= total_pages {
+                                                                                    "btn btn-xs btn-outline rounded-none cursor-not-allowed opacity-50"
+                                                                                } else {
+                                                                                    "btn btn-xs btn-outline rounded-none"
                                                                                 }
-                                                                                disabled=move || page + 1 >= total_pages
-                                                                                on:click=move |_| set_versions_page.update(|p| *p = (*p + 1).min(total_pages.saturating_sub(1)))
-                                                                            >"Next"</button>
-                                                                        </div>
+                                                                            }
+                                                                            disabled=move || page + 1 >= total_pages
+                                                                            on:click=move |_| set_versions_page.update(|p| *p = (*p + 1).min(total_pages.saturating_sub(1)))
+                                                                        >"Next"</button>
                                                                     </div>
-                                                                }
-                                                                    .into_any()
-                                                            } else {
-                                                                ().into_any()
+                                                                </div>
                                                             }
+                                                                .into_any()
                                                         }}
                                                     </div>
                                                 }
