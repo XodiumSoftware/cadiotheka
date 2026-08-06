@@ -128,23 +128,19 @@ mod tests {
     }
 
     #[test]
-    fn account_serializes_and_deserializes() {
+    fn account_serializes_and_deserializes() -> Result<(), serde_json::Error> {
         let account = sample_account();
-        let json = serde_json::to_string(&account).expect("account serializes");
-        let decoded: AccountData = serde_json::from_str(&json).expect("account deserializes");
+        let json = serde_json::to_string(&account)?;
+        let decoded: AccountData = serde_json::from_str(&json)?;
         assert_eq!(decoded, account);
+        Ok(())
     }
 
     #[test]
-    fn account_role_serializes_to_snake_case() {
-        assert_eq!(
-            serde_json::to_string(&AccountRole::Creator).unwrap(),
-            "\"creator\""
-        );
-        assert_eq!(
-            serde_json::to_string(&AccountRole::Admin).unwrap(),
-            "\"admin\""
-        );
+    fn account_role_serializes_to_snake_case() -> Result<(), serde_json::Error> {
+        assert_eq!(serde_json::to_string(&AccountRole::Creator)?, "\"creator\"");
+        assert_eq!(serde_json::to_string(&AccountRole::Admin)?, "\"admin\"");
+        Ok(())
     }
 
     #[test]
@@ -154,9 +150,10 @@ mod tests {
     }
 
     #[test]
-    fn account_deserializes_missing_optional_fields_with_defaults() {
+    fn account_deserializes_missing_optional_fields_with_defaults() -> Result<(), serde_json::Error>
+    {
         let json = r#"{"id":"acc-1","username":"user","display_name":"User","email":"u@example.com","role":"creator","created_at":"2025-01-01T00:00:00Z"}"#;
-        let account: AccountData = serde_json::from_str(json).unwrap();
+        let account: AccountData = serde_json::from_str(json)?;
         assert_eq!(account.id, "acc-1");
         assert!(account.bio.is_empty());
         assert!(account.project_ids.is_empty());
@@ -164,15 +161,17 @@ mod tests {
         assert!(account.provider.is_empty());
         assert!(account.provider_id.is_empty());
         assert!(account.avatar_url.is_none());
+        Ok(())
     }
 
     #[test]
-    fn account_verified_integer_roundtrips() {
+    fn account_verified_integer_roundtrips() -> Result<(), serde_json::Error> {
         let account = sample_account();
-        let json = serde_json::to_string(&account).unwrap();
+        let json = serde_json::to_string(&account)?;
         assert!(json.contains("\"verified\":1"));
-        let decoded: AccountData = serde_json::from_str(&json).unwrap();
+        let decoded: AccountData = serde_json::from_str(&json)?;
         assert_eq!(decoded.verified, 1);
+        Ok(())
     }
 
     #[test]

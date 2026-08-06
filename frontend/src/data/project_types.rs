@@ -256,43 +256,56 @@ mod tests {
     }
 
     #[test]
-    fn project_deserializes_backend_json_string_columns() {
+    fn project_deserializes_backend_json_string_columns() -> Result<(), serde_json::Error> {
         let json = r#"[{"id":"71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2","title":"Mountain Bike","author":"TrailBlazer","author_id":"8af81bd9-b70a-4d64-89e9-83bbc4e0297d","author_username":"trailblazer","collaborator_ids":"[]","description":"Extended.","tags":"[\"3d_model\",\"vehicle\",\"fabrication\",\"engineering\",\"diy\"]","downloads":1200,"favorites":"[\"11111111-1111-1111-1111-111111111111\",\"22222222-2222-2222-2222-222222222222\"]","timestamp":"2026-07-07T14:30:00Z"}]"#;
-        let projects: Vec<ProjectData> = serde_json::from_str(json).expect("backend JSON parses");
+        let projects: Vec<ProjectData> = serde_json::from_str(json)?;
         assert_eq!(projects.len(), 1);
         assert_eq!(projects[0].title, "Mountain Bike");
         assert_eq!(projects[0].tags.len(), 5);
         assert_eq!(projects[0].favorites.len(), 2);
+        Ok(())
     }
 
     #[test]
-    fn project_serializes_and_deserializes() {
+    fn project_serializes_and_deserializes() -> Result<(), serde_json::Error> {
         let project = sample_project();
-        let json = serde_json::to_string(&project).expect("project serializes");
-        let decoded: ProjectData = serde_json::from_str(&json).expect("project deserializes");
+        let json = serde_json::to_string(&project)?;
+        let decoded: ProjectData = serde_json::from_str(&json)?;
         assert_eq!(decoded, project);
+        Ok(())
     }
 
     #[test]
-    fn project_serializes_json_string_columns_for_backend() {
+    fn project_serializes_json_string_columns_for_backend() -> Result<(), serde_json::Error> {
         let project = sample_project();
-        let value = serde_json::to_value(&project).unwrap();
-        let tags = value.get("tags").unwrap().as_str().unwrap();
-        let favorites = value.get("favorites").unwrap().as_str().unwrap();
-        let collaborators = value.get("collaborator_ids").unwrap().as_str().unwrap();
+        let value = serde_json::to_value(&project)?;
+        let tags = value
+            .get("tags")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let favorites = value
+            .get("favorites")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let collaborators = value
+            .get("collaborator_ids")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
         assert!(tags.starts_with('[') && tags.ends_with(']'));
         assert!(favorites.starts_with('[') && favorites.ends_with(']'));
         assert!(collaborators.starts_with('[') && collaborators.ends_with(']'));
+        Ok(())
     }
 
     #[test]
-    fn project_deserializes_empty_json_string_columns() {
+    fn project_deserializes_empty_json_string_columns() -> Result<(), serde_json::Error> {
         let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","description":"E","tags":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z"}]"#;
-        let projects: Vec<ProjectData> = serde_json::from_str(json).unwrap();
+        let projects: Vec<ProjectData> = serde_json::from_str(json)?;
         assert_eq!(projects.len(), 1);
         assert!(projects[0].tags.is_empty());
         assert!(projects[0].favorites.is_empty());
         assert!(projects[0].collaborator_ids.is_empty());
+        Ok(())
     }
 
     /// Tags are stored as wire-id strings resolved against the hardcoded enum

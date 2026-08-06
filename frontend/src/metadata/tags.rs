@@ -165,11 +165,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn tag_roundtrips_json() {
-        let json = serde_json::to_string(&Tag::ThreeDModel).unwrap();
+    fn tag_roundtrips_json() -> Result<(), serde_json::Error> {
+        let json = serde_json::to_string(&Tag::ThreeDModel)?;
         assert_eq!(json, "\"3d_model\"");
-        let decoded: Tag = serde_json::from_str(&json).unwrap();
+        let decoded: Tag = serde_json::from_str(&json)?;
         assert_eq!(decoded, Tag::ThreeDModel);
+        Ok(())
     }
 
     #[test]

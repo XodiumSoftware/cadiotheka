@@ -96,23 +96,15 @@ mod tests {
     }
 
     #[test]
-    fn version_state_serializes_to_snake_case() {
+    fn version_state_serializes_to_snake_case() -> Result<(), serde_json::Error> {
         assert_eq!(
-            serde_json::to_string(&VersionState::Undefined).unwrap(),
+            serde_json::to_string(&VersionState::Undefined)?,
             "\"undefined\""
         );
-        assert_eq!(
-            serde_json::to_string(&VersionState::Alpha).unwrap(),
-            "\"alpha\""
-        );
-        assert_eq!(
-            serde_json::to_string(&VersionState::Beta).unwrap(),
-            "\"beta\""
-        );
-        assert_eq!(
-            serde_json::to_string(&VersionState::Stable).unwrap(),
-            "\"stable\""
-        );
+        assert_eq!(serde_json::to_string(&VersionState::Alpha)?, "\"alpha\"");
+        assert_eq!(serde_json::to_string(&VersionState::Beta)?, "\"beta\"");
+        assert_eq!(serde_json::to_string(&VersionState::Stable)?, "\"stable\"");
+        Ok(())
     }
 
     #[test]

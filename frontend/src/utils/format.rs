@@ -223,14 +223,16 @@ mod tests {
     }
 
     #[test]
-    fn format_time_full_known_timestamp() {
-        let timestamp = time::OffsetDateTime::from_unix_timestamp(0).unwrap();
+    fn format_time_full_known_timestamp() -> Result<(), time::error::ComponentRange> {
+        let timestamp = time::OffsetDateTime::from_unix_timestamp(0)?;
         assert_eq!(format_time_full(timestamp), "01/01/1970 at 00:00");
+        Ok(())
     }
 
     #[test]
-    fn format_time_full_rounds_down_minutes() {
-        let timestamp = time::OffsetDateTime::from_unix_timestamp(90).unwrap();
+    fn format_time_full_rounds_down_minutes() -> Result<(), time::error::ComponentRange> {
+        let timestamp = time::OffsetDateTime::from_unix_timestamp(90)?;
         assert_eq!(format_time_full(timestamp), "01/01/1970 at 00:01");
+        Ok(())
     }
 }
