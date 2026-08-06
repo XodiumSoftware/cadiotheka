@@ -603,6 +603,29 @@ fn ProjectModalContent(
         );
     });
 
+    let (is_mobile, set_is_mobile) = signal(
+        leptos::web_sys::window()
+            .and_then(|w| w.inner_width().ok())
+            .and_then(|w| w.as_f64())
+            .is_some_and(|width| width < 768.0),
+    );
+
+    Effect::new(move |_| {
+        crate::utils::window_event_listener::<leptos::web_sys::Event, _>("resize", move |_| {
+            let mobile = leptos::web_sys::window()
+                .and_then(|w| w.inner_width().ok())
+                .and_then(|w| w.as_f64())
+                .is_some_and(|width| width < 768.0);
+            set_is_mobile.set(mobile);
+        });
+    });
+
+    Effect::new(move |_| {
+        if is_mobile.get() && active_tab.get() == ProjectDetailsTab::Viewer3d {
+            set_active_tab.set(ProjectDetailsTab::Versions);
+        }
+    });
+
     let project_id = card.id.clone();
     let viewer_ref = NodeRef::<leptos::html::Div>::new();
 
@@ -654,10 +677,11 @@ fn ProjectModalContent(
     });
 
     Effect::new(move |_| {
-        crate::utils::window_event_listener::<web_sys::KeyboardEvent, _>("keydown", {
+        crate::utils::window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", {
             let toggle_fullscreen = toggle_fullscreen;
             move |ev| {
                 if active_tab.get() == ProjectDetailsTab::Viewer3d
+                    && !is_mobile.get()
                     && ev.key().eq_ignore_ascii_case("f")
                     && !ev.ctrl_key()
                     && !ev.alt_key()
@@ -1407,8 +1431,21 @@ fn ProjectModalContent(
                                 <div class="tabs tabs-border">
                                     <button
                                         type="button"
-                                        class=move || if active_tab.get() == ProjectDetailsTab::Viewer3d { "tab tab-active" } else { "tab" }
-                                        on:click=move |_| set_active_tab.set(ProjectDetailsTab::Viewer3d)
+                                        class=move || {
+                                            if is_mobile.get() {
+                                                "tab tab-disabled opacity-50 cursor-not-allowed".to_string()
+                                            } else if active_tab.get() == ProjectDetailsTab::Viewer3d {
+                                                "tab tab-active".to_string()
+                                            } else {
+                                                "tab".to_string()
+                                            }
+                                        }
+                                        disabled=move || is_mobile.get()
+                                        on:click=move |_| {
+                                            if !is_mobile.get() {
+                                                set_active_tab.set(ProjectDetailsTab::Viewer3d);
+                                            }
+                                        }
                                     >"3D viewer"</button>
                                     <button
                                         type="button"
