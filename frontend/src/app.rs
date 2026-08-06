@@ -1,9 +1,10 @@
 use crate::components::{
-    AddProjectModal, Footer, Header, LoginModal, ProfileModal, ProjectModal, ProjectsSection,
+    AddProjectModal, Footer, Header, LoginModal, ProfileModal, ProjectModal, ProjectsSection, Toast,
 };
 use crate::contexts::{
     AccountsContext, AddProjectModalContext, CurrentUserContext, LayoutContext, LoginModalContext,
     MetadataContext, ProfileModalContext, ProjectModalContext, ProjectsContext, SearchContext,
+    ToastContext,
 };
 use crate::utils::window_event_listener;
 use leptos::prelude::*;
@@ -25,6 +26,7 @@ pub fn App() -> impl IntoView {
     LoginModalContext::provide_with_default();
     AddProjectModalContext::provide_with_default();
     CurrentUserContext::provide();
+    ToastContext::provide();
 
     let layout = LayoutContext::use_context();
     let add_project_modal = AddProjectModalContext::use_context();
@@ -70,6 +72,7 @@ pub fn App() -> impl IntoView {
             <ProfileModal />
             <LoginModal />
             <AddProjectModal />
+            <Toast />
 
             <main id="main-content" tabindex="-1" class="flex-1 flex flex-col">
                 <ProjectsSection class="flex-1" />

@@ -4,12 +4,11 @@ use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProp
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::base::BaseModal;
-use crate::components::ui::toast::Toast;
 use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
 
 use crate::contexts::{
     AccountsContext, CurrentUserContext, MetadataContext, ProfileModalContext, ProjectModalContext,
-    ProjectsContext, SearchContext,
+    ProjectsContext, SearchContext, ToastContext,
 };
 use crate::data::{
     AccountData, AccountRole, ProjectVersion, convert_project_glb, delete_project,
@@ -705,17 +704,8 @@ fn ProjectModalContent(
         });
     });
 
-    let (toast_visible, set_toast_visible) = signal(false);
-    let (toast_message, set_toast_message) = signal(String::new());
-    let show_toast = move |message: String| {
-        set_toast_message.set(message);
-        set_toast_visible.set(true);
-        leptos::task::spawn_local(async move {
-            gloo_timers::future::TimeoutFuture::new(2500).await;
-            set_toast_visible.set(false);
-        });
-    };
-    let dismiss_toast = Callback::new(move |()| set_toast_visible.set(false));
+    let toast = ToastContext::use_context();
+    let show_toast = move |message: String| toast.show(message);
 
     let (show_upload_modal, set_show_upload_modal) = signal(false);
     let (upload_file, set_upload_file) = signal(None::<web_sys::File>);
@@ -1318,11 +1308,6 @@ fn ProjectModalContent(
 
     view! {
         <div class="flex flex-col h-full min-h-0 overflow-hidden gap-4">
-            <Toast
-                message=Signal::derive(move || toast_message.get())
-                visible=Signal::derive(move || toast_visible.get())
-                on_dismiss=dismiss_toast
-            />
             <BaseModal
                 open=Signal::derive(move || show_upload_modal.get())
                 on_close=Callback::new(move |()| close_upload_modal())

@@ -1,12 +1,10 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::modals::base::BaseModal;
-use crate::components::ui::toast::Toast;
-use crate::contexts::{CurrentUserContext, ProfileModalContext};
+use crate::contexts::{CurrentUserContext, ProfileModalContext, ToastContext};
 use crate::utils::{
     encode_redirect_url, format_time_full, login_url, placeholder_color, placeholder_letter,
 };
 use gloo_net::http::Request;
-use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use web_sys::window;
 const MAX_BIO_LENGTH: usize = 160;
@@ -94,29 +92,20 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
     let avatar_alt = format!("{display_name}'s avatar");
     let role_label = move || account.role.to_string();
 
-    let (toast_visible, set_toast_visible) = signal(false);
-    let show_toast = move || {
-        set_toast_visible.set(true);
-        leptos::task::spawn_local(async move {
-            TimeoutFuture::new(1500).await;
-            set_toast_visible.set(false);
-        });
-    };
-
     let copy_username = {
         let username = username.clone();
+        let toast = ToastContext::use_context();
         move |_| {
             let username = username.clone();
+            let toast = toast;
             leptos::task::spawn_local(async move {
                 if let Some(clipboard) = window().map(|w| w.navigator().clipboard()) {
                     let _ = clipboard.write_text(&username).await;
                 }
-                show_toast();
+                toast.show("Copied username to clipboard");
             });
         }
     };
-
-    let dismiss_toast = Callback::new(move |()| set_toast_visible.set(false));
 
     let (linked_providers, set_linked_providers) = signal::<Vec<String>>(Vec::new());
 
@@ -182,11 +171,6 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
     let is_google_connected = Memo::new(move |_| is_connected("google"));
 
     view! {
-        <Toast
-            message=Signal::derive(move || "Copied username to clipboard".to_string())
-            visible=Signal::derive(move || toast_visible.get())
-            on_dismiss=dismiss_toast
-        />
         <div class="space-y-4 flex flex-col min-h-0">
             <div class="flex items-start gap-4">
                 {match account.avatar_url.clone() {

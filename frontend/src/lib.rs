@@ -71,6 +71,7 @@ pub mod contexts {
     pub mod project_ctx;
     pub mod projects;
     pub mod search;
+    pub mod toast;
 
     pub use accounts::AccountsContext;
     pub use add_project::AddProjectModalContext;
@@ -82,6 +83,7 @@ pub mod contexts {
     pub use project_ctx::ProjectModalContext;
     pub use projects::ProjectsContext;
     pub use search::SearchContext;
+    pub use toast::ToastContext;
 }
 
 pub mod data {
