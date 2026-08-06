@@ -23,6 +23,8 @@ namespace_id = "843579668967"
 binding = "PROJECT_ASSETS"
 bucket_name = "cadiotheka-assets"
 
+upload_source_maps = true
+
 [observability.logs]
 enabled = true
 invocation_logs = true
