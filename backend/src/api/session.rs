@@ -306,33 +306,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn session_signature_roundtrips() {
+    fn session_signature_roundtrips() -> Result<(), worker::Error> {
         let secret = "test-secret";
         let id = "session-id";
-        let sig = sign(secret, id).unwrap();
-        assert!(verify_signature(secret, id, &sig).unwrap());
+        let sig = sign(secret, id)?;
+        assert!(verify_signature(secret, id, &sig)?);
+        Ok(())
     }
 
     #[test]
-    fn session_signature_rejects_wrong_secret() {
+    fn session_signature_rejects_wrong_secret() -> Result<(), worker::Error> {
         let id = "session-id";
-        let sig = sign("correct-secret", id).unwrap();
-        assert!(!verify_signature("wrong-secret", id, &sig).unwrap());
+        let sig = sign("correct-secret", id)?;
+        assert!(!verify_signature("wrong-secret", id, &sig)?);
+        Ok(())
     }
 
     #[test]
-    fn session_cookie_is_base64_encoded_json() {
+    fn session_cookie_is_base64_encoded_json() -> Result<(), Box<dyn std::error::Error>> {
         let id = "session-id".to_string();
         let sig = "session-sig".to_string();
         let cookie = SessionCookie { id, sig };
-        let json = serde_json::to_string(&cookie).unwrap();
+        let json = serde_json::to_string(&cookie)?;
         let encoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&json);
-        let decoded = base64::engine::general_purpose::URL_SAFE_NO_PAD
-            .decode(&encoded)
-            .unwrap();
-        let parsed: SessionCookie = serde_json::from_slice(&decoded).unwrap();
+        let decoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(&encoded)?;
+        let parsed: SessionCookie = serde_json::from_slice(&decoded)?;
         assert_eq!(parsed.id, cookie.id);
         assert_eq!(parsed.sig, cookie.sig);
+        Ok(())
     }
 
     #[test]

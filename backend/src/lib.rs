@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
-
 /// Backend route paths.
 pub(crate) mod routes {
     pub(crate) const AUTH_PREFIX: &str = "/auth/";
@@ -189,7 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn account_json_matches_frontend_contract() {
+    fn account_json_matches_frontend_contract() -> Result<(), serde_json::Error> {
         let account = Account {
             id: "acc-1".to_string(),
             username: "creator".to_string(),
@@ -202,9 +200,8 @@ mod tests {
             verified: 1,
         };
 
-        let json = serde_json::to_string(&account).expect("account serializes");
-        let parsed: FrontendAccountData =
-            serde_json::from_str(&json).expect("account matches frontend contract");
+        let json = serde_json::to_string(&account)?;
+        let parsed: FrontendAccountData = serde_json::from_str(&json)?;
 
         assert_eq!(parsed.id, account.id);
         assert_eq!(parsed.username, account.username);
@@ -218,10 +215,11 @@ mod tests {
         assert_eq!(parsed.verified, account.verified);
         assert!(parsed.provider.is_empty());
         assert!(parsed.provider_id.is_empty());
+        Ok(())
     }
 
     #[test]
-    fn project_json_matches_frontend_contract() {
+    fn project_json_matches_frontend_contract() -> Result<(), serde_json::Error> {
         let project = Project {
             id: "proj-1".to_string(),
             title: "Mountain Bike".to_string(),
@@ -236,9 +234,8 @@ mod tests {
             timestamp: "2026-07-07T14:30:00Z".to_string(),
         };
 
-        let json = serde_json::to_string(&project).expect("project serializes");
-        let parsed: FrontendProjectData =
-            serde_json::from_str(&json).expect("project matches frontend contract");
+        let json = serde_json::to_string(&project)?;
+        let parsed: FrontendProjectData = serde_json::from_str(&json)?;
 
         assert_eq!(parsed.id, project.id);
         assert_eq!(parsed.title, project.title);
@@ -251,5 +248,6 @@ mod tests {
         assert_eq!(parsed.downloads, project.downloads);
         assert_eq!(parsed.favorites, "[\"fav-1\"]");
         assert_eq!(parsed.timestamp, project.timestamp);
+        Ok(())
     }
 }

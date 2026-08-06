@@ -240,83 +240,86 @@ mod tests {
     use super::*;
 
     #[test]
-    fn safe_redirect_target_accepts_relative_paths() {
-        let url = url::Url::parse("https://api.cadiotheka.com/auth/logout?redirect_to=/projects")
-            .unwrap();
+    fn safe_redirect_target_accepts_relative_paths() -> Result<(), url::ParseError> {
+        let url = url::Url::parse("https://api.cadiotheka.com/auth/logout?redirect_to=/projects")?;
         assert_eq!(
             safe_redirect_target(true, &url, "redirect_to"),
             Some("/projects".to_string())
         );
+        Ok(())
     }
 
     #[test]
-    fn safe_redirect_target_accepts_allowed_origin() {
+    fn safe_redirect_target_accepts_allowed_origin() -> Result<(), url::ParseError> {
         let url = url::Url::parse(
             "https://api.cadiotheka.com/auth/logout?redirect_to=https://cadiotheka.com/",
-        )
-        .unwrap();
+        )?;
         assert_eq!(
             safe_redirect_target(true, &url, "redirect_to"),
             Some("https://cadiotheka.com/".to_string())
         );
+        Ok(())
     }
 
     #[test]
-    fn safe_redirect_target_accepts_localhost_for_http_dev() {
+    fn safe_redirect_target_accepts_localhost_for_http_dev() -> Result<(), url::ParseError> {
         let url = url::Url::parse(
             "http://localhost:8787/auth/logout?redirect_to=http://localhost:8080/index.html%23dev",
-        )
-        .unwrap();
+        )?;
         assert_eq!(
             safe_redirect_target(false, &url, "redirect_to"),
             Some("http://localhost:8080/index.html#dev".to_string())
         );
+        Ok(())
     }
 
     #[test]
-    fn safe_redirect_target_rejects_protocol_relative_url() {
-        let url = url::Url::parse("https://api.cadiotheka.com/auth/logout?redirect_to=//evil.com")
-            .unwrap();
+    fn safe_redirect_target_rejects_protocol_relative_url() -> Result<(), url::ParseError> {
+        let url = url::Url::parse("https://api.cadiotheka.com/auth/logout?redirect_to=//evil.com")?;
         assert_eq!(safe_redirect_target(true, &url, "redirect_to"), None);
+        Ok(())
     }
 
     #[test]
-    fn safe_redirect_target_rejects_unknown_origin() {
-        let url =
-            url::Url::parse("https://api.cadiotheka.com/auth/logout?redirect_to=https://evil.com/")
-                .unwrap();
+    fn safe_redirect_target_rejects_unknown_origin() -> Result<(), url::ParseError> {
+        let url = url::Url::parse(
+            "https://api.cadiotheka.com/auth/logout?redirect_to=https://evil.com/",
+        )?;
         assert_eq!(safe_redirect_target(true, &url, "redirect_to"), None);
+        Ok(())
     }
 
     #[test]
-    fn safe_redirect_target_rejects_localhost_over_https() {
+    fn safe_redirect_target_rejects_localhost_over_https() -> Result<(), url::ParseError> {
         let url = url::Url::parse(
             "https://api.cadiotheka.com/auth/logout?redirect_to=http://localhost:8080/",
-        )
-        .unwrap();
+        )?;
         assert_eq!(safe_redirect_target(true, &url, "redirect_to"), None);
+        Ok(())
     }
 
     #[test]
-    fn safe_redirect_target_rejects_url_with_port() {
-        let url =
-            url::Url::parse("http://localhost:8787/auth/logout?redirect_to=http://localhost:9999/")
-                .unwrap();
+    fn safe_redirect_target_rejects_url_with_port() -> Result<(), url::ParseError> {
+        let url = url::Url::parse(
+            "http://localhost:8787/auth/logout?redirect_to=http://localhost:9999/",
+        )?;
         assert_eq!(safe_redirect_target(false, &url, "redirect_to"), None);
+        Ok(())
     }
 
     #[test]
-    fn safe_redirect_target_rejects_url_with_credentials() {
+    fn safe_redirect_target_rejects_url_with_credentials() -> Result<(), url::ParseError> {
         let url = url::Url::parse(
             "http://localhost:8787/auth/logout?redirect_to=http://user:pass@localhost:8080/",
-        )
-        .unwrap();
+        )?;
         assert_eq!(safe_redirect_target(false, &url, "redirect_to"), None);
+        Ok(())
     }
 
     #[test]
-    fn safe_redirect_target_returns_none_for_missing_param() {
-        let url = url::Url::parse("https://api.cadiotheka.com/auth/logout").unwrap();
+    fn safe_redirect_target_returns_none_for_missing_param() -> Result<(), url::ParseError> {
+        let url = url::Url::parse("https://api.cadiotheka.com/auth/logout")?;
         assert_eq!(safe_redirect_target(true, &url, "redirect_to"), None);
+        Ok(())
     }
 }
