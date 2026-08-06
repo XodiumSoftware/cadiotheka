@@ -1,16 +1,5 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
-/// Origins allowed to call the API from a browser.
-///
-/// `http://localhost:8080` is included so developers can hit the local backend
-/// directly (not only through Trunk's proxy) during local development. It is
-/// never sent by a production deployment.
-const ALLOWED_ORIGINS: &[&str] = &[
-    "https://cadiotheka.com",
-    "https://www.cadiotheka.com",
-    "http://localhost:8080",
-];
-
 /// Backend route paths.
 pub(crate) mod routes {
     pub(crate) const AUTH_PREFIX: &str = "/auth/";
@@ -37,6 +26,8 @@ pub(crate) mod routes {
 
 mod utils;
 
+mod cors;
+
 mod api {
     pub mod accounts;
     pub mod auth;
@@ -45,83 +36,14 @@ mod api {
     pub mod turnstile;
 }
 
-use worker::{
-    Context, Env, Headers, Method, Request, Response, ResponseBody, ResponseBuilder, Result,
-    Router, event,
-};
+use worker::{Context, Env, Method, Request, Response, Result, Router, event};
 
-/// Adds CORS headers to a response so the frontend (served from a different
-/// origin) can read the JSON body.
-///
-/// Returns the original response unchanged if its headers are immutable
-/// (e.g. redirects created with `Response::redirect`). Propagates any other
-/// header error so CORS misconfigurations are not silently ignored.
-fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Response> {
-    let headers = resp.headers_mut();
-    if let Err(err) = headers.set("Access-Control-Allow-Origin", origin) {
-        if is_immutable_headers_error(&err) {
-            return Ok(resp);
-        }
-        return Err(err);
-    }
-    headers.set(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    )?;
-    headers.set("Access-Control-Allow-Headers", "Content-Type")?;
-    headers.set("Access-Control-Allow-Credentials", "true")?;
-    Ok(resp)
-}
-
-/// Heuristic to detect the immutable-headers error returned by `web_sys` when
-/// trying to mutate a response with a guard such as a redirect.
-fn is_immutable_headers_error(err: &worker::Error) -> bool {
-    let message = err.to_string().to_lowercase();
-    message.contains("immutable")
-        || message.contains("guard")
-        || message.contains("headers are immutable")
-}
-
-/// Responds to CORS preflight requests.
-fn cors_preflight(origin: &str) -> Result<Response> {
-    let mut resp = Response::empty()?;
-    let headers = resp.headers_mut();
-    headers.set("Access-Control-Allow-Origin", origin)?;
-    headers.set(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    )?;
-    headers.set("Access-Control-Allow-Headers", "Content-Type")?;
-    headers.set("Access-Control-Allow-Credentials", "true")?;
-    Ok(resp)
-}
-
-/// Returns the request origin if it is in the allowed list, otherwise the
-/// first allowed origin as a safe fallback.
-fn allowed_origin(req: &Request) -> String {
-    select_allowed_origin(req.headers().get("Origin").ok().flatten().as_deref())
-}
-
-/// Selects an allowed origin from an optional request origin header value.
-///
-/// If the origin is in [`ALLOWED_ORIGINS`] it is returned verbatim; otherwise
-/// the first allowed origin is returned as a safe default.
-fn select_allowed_origin(origin: Option<&str>) -> String {
-    origin
-        .and_then(|value| {
-            ALLOWED_ORIGINS
-                .iter()
-                .find(|&&allowed| allowed == value)
-                .map(|_| value)
-        })
-        .unwrap_or_else(|| ALLOWED_ORIGINS[0])
-        .to_string()
-}
+use crate::cors::{add_cors_headers, allowed_origin, cors_preflight, error_response_with_cors};
 
 /// Builds the request router with all API routes registered.
 ///
 /// Extracted so route wiring can be exercised in tests and so the entry point
-/// stays focused on CORS and environment handling.
+/// stays focused on request dispatch.
 pub fn build_router() -> Router<'static, ()> {
     Router::new()
         .get_async(routes::ACCOUNTS, api::accounts::list_accounts)
@@ -201,21 +123,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 Ok(resp)
             }
         }
-        Err(err) => {
-            let headers = Headers::new();
-            headers.set("Content-Type", "text/plain")?;
-            let _ = headers.set("Access-Control-Allow-Origin", &origin);
-            let _ = headers.set("Access-Control-Allow-Credentials", "true");
-            let _ = headers.set(
-                "Access-Control-Allow-Methods",
-                "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-            );
-            let _ = headers.set("Access-Control-Allow-Headers", "Content-Type");
-            Ok(ResponseBuilder::new()
-                .with_status(500)
-                .with_headers(headers)
-                .body(ResponseBody::Body(err.to_string().into())))
-        }
+        Err(err) => error_response_with_cors(&err, &origin),
     }
 }
 
@@ -276,35 +184,6 @@ mod tests {
     #[test]
     fn router_builds_without_conflicting_routes() {
         let _ = build_router();
-    }
-
-    #[test]
-    fn allowed_origin_selects_production_origin() {
-        assert_eq!(
-            select_allowed_origin(Some("https://cadiotheka.com")),
-            "https://cadiotheka.com"
-        );
-        assert_eq!(
-            select_allowed_origin(Some("https://www.cadiotheka.com")),
-            "https://www.cadiotheka.com"
-        );
-    }
-
-    #[test]
-    fn allowed_origin_selects_localhost() {
-        assert_eq!(
-            select_allowed_origin(Some("http://localhost:8080")),
-            "http://localhost:8080"
-        );
-    }
-
-    #[test]
-    fn allowed_origin_falls_back_for_missing_or_unknown_origin() {
-        assert_eq!(select_allowed_origin(None), "https://cadiotheka.com");
-        assert_eq!(
-            select_allowed_origin(Some("https://evil.com")),
-            "https://cadiotheka.com"
-        );
     }
 
     #[test]
