@@ -40,6 +40,26 @@ pub fn error_response(message: &str, status: u16) -> Result<Response> {
     Ok(Response::from_json(&serde_json::json!({ "error": message }))?.with_status(status))
 }
 
+/// Builds a 400 Bad Request error response.
+pub fn bad_request(message: &str) -> Result<Response> {
+    error_response(message, 400)
+}
+
+/// Builds a 401 Unauthorized error response.
+pub fn unauthorized(message: &str) -> Result<Response> {
+    error_response(message, 401)
+}
+
+/// Builds a 403 Forbidden error response.
+pub fn forbidden(message: &str) -> Result<Response> {
+    error_response(message, 403)
+}
+
+/// Builds a 404 Not Found error response.
+pub fn not_found(message: &str) -> Result<Response> {
+    error_response(message, 404)
+}
+
 /// Returns the best-effort client IP from Cloudflare/forwarded headers.
 fn client_ip(req: &Request) -> String {
     req.headers()

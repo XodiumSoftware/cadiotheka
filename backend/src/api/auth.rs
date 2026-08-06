@@ -16,7 +16,7 @@ use crate::api::accounts::{
 };
 use crate::api::session::{create_session, read_session};
 use crate::utils::{
-    check_rate_limit, error_response, is_https_request, kv, public_origin, rust_err,
+    bad_request, check_rate_limit, is_https_request, kv, public_origin, rust_err,
     safe_redirect_target,
 };
 
@@ -197,7 +197,7 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
     let state: OAuthState = serde_json::from_str(&value).map_err(rust_err)?;
 
     if state.provider != provider {
-        return error_response("invalid provider", 400);
+        return bad_request("invalid provider");
     }
 
     kv(&ctx)?.delete(&key).await?;

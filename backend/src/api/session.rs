@@ -7,7 +7,8 @@ use worker::{Headers, Request, Response, ResponseBuilder, Result, RouteContext, 
 
 use crate::api::accounts::{Account, fetch_account};
 use crate::utils::{
-    db, error_response, is_https_request, kv, public_origin, rust_err, safe_redirect_target,
+    bad_request, db, is_https_request, kv, public_origin, rust_err, safe_redirect_target,
+    unauthorized,
 };
 
 const SESSION_COOKIE_NAME_PREFIX: &str = "__Host-session";
@@ -228,7 +229,7 @@ pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Respon
     let payload: UpdatePayload = req.json().await?;
 
     if payload.bio.len() > MAX_BIO_LENGTH {
-        return error_response("Bio must be 160 characters or fewer", 400);
+        return bad_request("Bio must be 160 characters or fewer");
     }
 
     let db = db(&ctx)?;
@@ -245,10 +246,11 @@ pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Respon
 pub async fn me(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     match read_session(&req, &ctx).await? {
         Some(account) => Response::from_json(&serde_json::json!({ "account": account })),
-        None => error_response("Unauthorized", 401),
+        None => unauthorized("Unauthorized"),
     }
 }
 
+/// Builds an HTTP redirect response that clears the session cookie.
 /// Clears the session cookie and removes the session from KV, then redirects
 /// the browser to a safe frontend location.
 ///

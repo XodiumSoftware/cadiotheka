@@ -3,7 +3,7 @@ use worker::{
     Env, Fetch, Headers, Method, Request, RequestInit, Response, Result, console_log, wasm_bindgen,
 };
 
-use crate::utils::{error_response, rust_err};
+use crate::utils::{forbidden, rust_err};
 
 /// Endpoint for Cloudflare Turnstile server-side verification.
 const TURNSTILE_VERIFY_URL: &str = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -35,22 +35,22 @@ pub async fn verify_turnstile_token(
     let token = extract_token(req).await;
 
     let Some(token) = token else {
-        return Ok(Some(error_response("Turnstile token required", 403)?));
+        return Ok(Some(forbidden("Turnstile token required")?));
     };
 
     if token.trim().is_empty() {
-        return Ok(Some(error_response("Turnstile token required", 403)?));
+        return Ok(Some(forbidden("Turnstile token required")?));
     }
 
     match verify_with_cloudflare(&ctx.env, &token, &client_ip(req)).await {
         Ok((true, _)) => Ok(None),
         Ok((false, error_codes)) => {
             console_log!("Turnstile verification failed: {error_codes:?}");
-            Ok(Some(error_response("Turnstile verification failed", 403)?))
+            Ok(Some(forbidden("Turnstile verification failed")?))
         }
         Err(err) => {
             console_log!("Turnstile siteverify error: {err}");
-            Ok(Some(error_response("Turnstile verification failed", 403)?))
+            Ok(Some(forbidden("Turnstile verification failed")?))
         }
     }
 }

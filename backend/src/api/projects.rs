@@ -8,7 +8,9 @@ use crate::api::session::require_account;
 use crate::guards::{
     GuardOutcome, require_auth_with_rate_limit, require_auth_with_turnstile_and_rate_limit,
 };
-use crate::utils::{assets_bucket, check_rate_limit, db, error_response, now_utc};
+use crate::utils::{
+    assets_bucket, bad_request, check_rate_limit, db, error_response, forbidden, not_found, now_utc,
+};
 use ifc_lite_export::{GltfOptions, export_glb};
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, downloads, favorites, timestamp FROM projects";
@@ -162,7 +164,7 @@ pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Respon
     let id = ctx.param("id").cloned().unwrap_or_default();
     match fetch_project(&ctx, &id).await? {
         Some(project) => Response::from_json(&project),
-        None => error_response("Not found", 404),
+        None => not_found("Not found"),
     }
 }
 
@@ -241,13 +243,13 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return error_response("Forbidden", 403);
+        return forbidden("Forbidden");
     }
 
     let patch: ProjectPatch = req.json().await?;
     if let Some(title) = patch.title {
         if title.len() > MAX_TITLE_LENGTH {
-            return error_response("Title must be 100 characters or fewer", 400);
+            return bad_request("Title must be 100 characters or fewer");
         }
         db(&ctx)?
             .prepare("UPDATE projects SET title = ?1 WHERE id = ?2")
@@ -277,7 +279,7 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
 
     if let Some(description) = patch.description {
         if description.len() > MAX_DESCRIPTION_LENGTH {
-            return error_response("Description must be 5000 characters or fewer", 400);
+            return bad_request("Description must be 5000 characters or fewer");
         }
         db(&ctx)?
             .prepare("UPDATE projects SET description = ?1 WHERE id = ?2")
@@ -297,7 +299,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return error_response("Forbidden", 403);
+        return forbidden("Forbidden");
     }
 
     let mut payload: ProjectPayload = req.json().await?;
@@ -351,7 +353,7 @@ pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Respo
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return error_response("Forbidden", 403);
+        return forbidden("Forbidden");
     }
 
     db(&ctx)?
@@ -375,12 +377,12 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return error_response("Forbidden", 403);
+        return forbidden("Forbidden");
     }
 
     let form_data = req.form_data().await?;
     let Some(FormEntry::File(file)) = form_data.get("ifc") else {
-        return error_response("missing IFC file", 400);
+        return bad_request("missing IFC file");
     };
     let version = match form_data.get("version") {
         Some(FormEntry::Field(value)) if !value.is_empty() => value,
@@ -399,7 +401,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 
     let filename = file.name();
     if !filename.to_lowercase().ends_with(".ifc") {
-        return error_response("IFC file must have a .ifc extension", 400);
+        return bad_request("IFC file must have a .ifc extension");
     }
 
     let version_id = uuid::Uuid::new_v4().to_string();
@@ -463,7 +465,7 @@ pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<R
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return error_response("Forbidden", 403);
+        return forbidden("Forbidden");
     }
 
     let versions = fetch_project_versions(&ctx, &project_id, true).await?;
@@ -509,7 +511,7 @@ pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> 
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return error_response("Forbidden", 403);
+        return forbidden("Forbidden");
     }
 
     let patch: VersionPatch = req.json().await?;
@@ -542,7 +544,7 @@ pub async fn delete_project_version(req: Request, ctx: RouteContext<()>) -> Resu
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return error_response("Forbidden", 403);
+        return forbidden("Forbidden");
     }
 
     let result = db(&ctx)?
@@ -573,7 +575,7 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
     let version_id = ctx.param("version_id").cloned().unwrap_or_default();
     let filename = ctx.param("filename").cloned().unwrap_or_default();
     if version_id.is_empty() || filename.is_empty() {
-        return error_response("Invalid IFC key", 400);
+        return bad_request("Invalid IFC key");
     }
 
     let result = db(&ctx)?
@@ -583,13 +585,13 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
         .await?;
     let keys: Vec<VersionKey> = result.results::<VersionKey>()?;
     let Some(key) = keys.into_iter().next() else {
-        return error_response("Not found", 404);
+        return not_found("Not found");
     };
 
     let object = assets_bucket(&ctx)?.get(&key.ifc_key).execute().await?;
 
     let Some(object) = object else {
-        return error_response("Not found", 404);
+        return not_found("Not found");
     };
 
     let http_metadata = object.http_metadata();
@@ -626,11 +628,11 @@ fn glb_key_for_project(id: &str) -> String {
 pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let id = ctx.param("id").cloned().unwrap_or_default();
     if id.is_empty() {
-        return error_response("Invalid project id", 400);
+        return bad_request("Invalid project id");
     }
 
     let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
-        return error_response("No IFC model uploaded for this project", 404);
+        return not_found("No IFC model uploaded for this project");
     };
 
     let glb_cache_key = glb_key_for_project(&id);
@@ -696,11 +698,11 @@ pub async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> Result<
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
     if !can_edit_project(&account, &project) {
-        return error_response("Forbidden", 403);
+        return forbidden("Forbidden");
     }
 
     let Some(key) = latest_ifc_key(&ctx, &id).await? else {
-        return error_response("No IFC model uploaded for this project", 404);
+        return not_found("No IFC model uploaded for this project");
     };
 
     match ensure_glb_cached(&ctx, &id, &key).await? {
