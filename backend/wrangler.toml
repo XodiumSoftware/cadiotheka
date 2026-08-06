@@ -1,6 +1,7 @@
 name = "cadiotheka"
 main = "build/worker/shim.mjs"
 compatibility_date = "2026-07-15"
+upload_source_maps = true
 
 [[d1_databases]]
 binding = "DB"
@@ -23,7 +24,15 @@ namespace_id = "843579668967"
 binding = "PROJECT_ASSETS"
 bucket_name = "cadiotheka-assets"
 
-upload_source_maps = true
+[secrets]
+required = [
+    "SESSION_SECRET",
+    "TURNSTILE_SECRET",
+    "GITHUB_CLIENT_ID",
+    "GITHUB_CLIENT_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+]
 
 [observability.logs]
 enabled = true
