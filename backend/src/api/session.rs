@@ -3,16 +3,13 @@ use cookie::{Cookie, SameSite};
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
-use worker::{
-    Headers, KvStore, Request, Response, ResponseBuilder, Result, RouteContext, console_log,
-};
+use worker::{Headers, Request, Response, ResponseBuilder, Result, RouteContext, console_log};
 
 use crate::api::accounts::{Account, fetch_account};
 use crate::utils::{
-    error_response, is_https_request, public_origin, rust_err, safe_redirect_target,
+    db, error_response, is_https_request, kv, public_origin, rust_err, safe_redirect_target,
 };
 
-const AUTH_KV_BINDING: &str = "AUTH";
 const SESSION_COOKIE_NAME_PREFIX: &str = "__Host-session";
 const SESSION_COOKIE_NAME_PLAIN: &str = "session";
 const SESSION_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
@@ -28,10 +25,6 @@ struct SessionData {
 struct SessionCookie {
     id: String,
     sig: String,
-}
-
-fn kv(ctx: &RouteContext<()>) -> Result<KvStore> {
-    ctx.env.kv(AUTH_KV_BINDING)
 }
 
 fn session_secret(ctx: &RouteContext<()>) -> Result<String> {
@@ -238,7 +231,7 @@ pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Respon
         return error_response("Bio must be 160 characters or fewer", 400);
     }
 
-    let db = ctx.env.d1(crate::DB_BINDING)?;
+    let db = db(&ctx)?;
     db.prepare("UPDATE accounts SET bio = ?1 WHERE id = ?2")
         .bind(&[payload.bio.into(), account.id.into()])?
         .run()

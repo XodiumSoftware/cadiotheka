@@ -6,8 +6,8 @@ use oauth2::{
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use worker::{
-    Fetch, Headers, KvStore, Method, Request, RequestInit, Response, ResponseBody, ResponseBuilder,
-    Result, RouteContext, wasm_bindgen,
+    Fetch, Headers, Method, Request, RequestInit, Response, ResponseBody, ResponseBuilder, Result,
+    RouteContext, wasm_bindgen,
 };
 
 use crate::api::accounts::{
@@ -16,11 +16,10 @@ use crate::api::accounts::{
 };
 use crate::api::session::{create_session, read_session};
 use crate::utils::{
-    check_rate_limit, error_response, is_https_request, public_origin, rust_err,
+    check_rate_limit, error_response, is_https_request, kv, public_origin, rust_err,
     safe_redirect_target,
 };
 
-const AUTH_KV_BINDING: &str = "AUTH";
 const OAUTH_STATE_TTL_SECONDS: u64 = 10 * 60;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -433,8 +432,4 @@ struct GoogleUser {
     name: Option<String>,
     email: Option<String>,
     picture: Option<String>,
-}
-
-fn kv(ctx: &RouteContext<()>) -> Result<KvStore> {
-    ctx.env.kv(AUTH_KV_BINDING)
 }

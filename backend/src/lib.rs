@@ -1,11 +1,5 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
-/// Name of the D1 binding configured in `wrangler.toml`.
-pub(crate) const DB_BINDING: &str = "DB";
-/// Name of the R2 binding configured in `wrangler.toml` for project assets
-/// (icons, IFC models, and future project files).
-pub(crate) const PROJECT_ASSETS_R2_BINDING: &str = "PROJECT_ASSETS";
-
 /// Origins allowed to call the API from a browser.
 ///
 /// `http://localhost:8080` is included so developers can hit the local backend

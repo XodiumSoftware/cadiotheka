@@ -1,15 +1,12 @@
 use serde::{Deserialize, Serialize};
 use worker::{
-    Bucket, D1Database, FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext,
-    console_log,
+    FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext, console_log,
 };
 
-use crate::DB_BINDING;
-use crate::PROJECT_ASSETS_R2_BINDING;
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::api::turnstile::verify_turnstile_token;
-use crate::utils::{check_rate_limit, error_response, now_utc};
+use crate::utils::{assets_bucket, check_rate_limit, db, error_response, now_utc};
 use ifc_lite_export::{GltfOptions, export_glb};
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, downloads, favorites, timestamp FROM projects";
@@ -149,11 +146,6 @@ mod json_string {
         let s = String::deserialize(deserializer)?;
         serde_json::from_str(&s).map_err(serde::de::Error::custom)
     }
-}
-
-/// Returns the D1 database binding configured for this worker.
-fn db(ctx: &RouteContext<()>) -> Result<D1Database> {
-    ctx.env.d1(DB_BINDING)
 }
 
 /// Responds with a JSON array of all projects.
@@ -371,11 +363,6 @@ pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Respo
     Response::empty()
 }
 
-/// Returns the R2 bucket used for project IFC models.
-fn ifcs_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
-    ctx.env.bucket(PROJECT_ASSETS_R2_BINDING)
-}
-
 /// Handles a multipart upload of a project IFC model, stores it in R2,
 /// and creates a new `project_versions` row with state `undefined`.
 pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
@@ -422,7 +409,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
         ..Default::default()
     };
 
-    ifcs_bucket(&ctx)?
+    assets_bucket(&ctx)?
         .put(&key, bytes)
         .http_metadata(http_metadata)
         .execute()
@@ -452,7 +439,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 
     // Clear any cached GLB for this project so the new version can be reconverted.
     let glb_cache_key = glb_key_for_project(&project_id);
-    let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
+    let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
 
     Response::from_json(&serde_json::json!({
         "ifc_key": key,
@@ -481,11 +468,11 @@ pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<R
 
     let versions = fetch_project_versions(&ctx, &project_id, true).await?;
     for version in versions {
-        let _ = ifcs_bucket(&ctx)?.delete(&version.ifc_key).await;
+        let _ = assets_bucket(&ctx)?.delete(&version.ifc_key).await;
     }
 
     let glb_cache_key = glb_key_for_project(&project_id);
-    let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
+    let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
 
     db(&ctx)?
         .prepare("DELETE FROM project_versions WHERE project_id = ?1")
@@ -540,7 +527,7 @@ pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> 
             .await?;
 
         let glb_cache_key = glb_key_for_project(&project.id);
-        let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
+        let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
     }
 
     Response::empty()
@@ -572,11 +559,11 @@ pub async fn delete_project_version(req: Request, ctx: RouteContext<()>) -> Resu
         .await?;
 
     for key in keys {
-        let _ = ifcs_bucket(&ctx)?.delete(&key.ifc_key).await;
+        let _ = assets_bucket(&ctx)?.delete(&key.ifc_key).await;
     }
 
     let glb_cache_key = glb_key_for_project(&project_id);
-    let _ = ifcs_bucket(&ctx)?.delete(&glb_cache_key).await;
+    let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
 
     Response::empty()
 }
@@ -599,7 +586,7 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
         return error_response("Not found", 404);
     };
 
-    let object = ifcs_bucket(&ctx)?.get(&key.ifc_key).execute().await?;
+    let object = assets_bucket(&ctx)?.get(&key.ifc_key).execute().await?;
 
     let Some(object) = object else {
         return error_response("Not found", 404);
@@ -647,7 +634,7 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
     };
 
     let glb_cache_key = glb_key_for_project(&id);
-    if let Some(cached) = ifcs_bucket(&ctx)?.get(&glb_cache_key).execute().await? {
+    if let Some(cached) = assets_bucket(&ctx)?.get(&glb_cache_key).execute().await? {
         let body = cached
             .body()
             .ok_or_else(|| worker::Error::RustError("GLB cache object has no body".into()))?;
@@ -673,7 +660,7 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
         }
         // The cache was populated between the check above and this call; serve it.
         None => {
-            let cached = ifcs_bucket(&ctx)?
+            let cached = assets_bucket(&ctx)?
                 .get(glb_key_for_project(&id))
                 .execute()
                 .await?
@@ -743,7 +730,7 @@ async fn ensure_glb_cached(
     ifc_key: &str,
 ) -> Result<Option<GlbConversion>> {
     let glb_cache_key = glb_key_for_project(id);
-    if ifcs_bucket(ctx)?
+    if assets_bucket(ctx)?
         .get(&glb_cache_key)
         .execute()
         .await?
@@ -752,7 +739,7 @@ async fn ensure_glb_cached(
         return Ok(None);
     }
 
-    let object = ifcs_bucket(ctx)?
+    let object = assets_bucket(ctx)?
         .get(ifc_key)
         .execute()
         .await?
@@ -777,7 +764,7 @@ async fn ensure_glb_cached(
         content_type: Some("model/gltf-binary".to_string()),
         ..Default::default()
     };
-    ifcs_bucket(ctx)?
+    assets_bucket(ctx)?
         .put(&glb_cache_key, glb_bytes.clone())
         .http_metadata(cache_metadata)
         .execute()

@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
-use worker::{D1Database, Request, Response, Result, RouteContext};
+use worker::{Request, Response, Result, RouteContext};
 
-use crate::DB_BINDING;
 use crate::api::session::require_account;
-use crate::utils::{error_response, js_option, now_utc};
+use crate::utils::{db, error_response, js_option, now_utc};
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified FROM accounts a";
 
@@ -34,11 +33,6 @@ pub struct AccountPayload {
     pub avatar_url: Option<String>,
     pub created_at: String,
     pub verified: i32,
-}
-
-/// Returns the D1 database binding configured for this worker.
-fn db(ctx: &RouteContext<()>) -> Result<D1Database> {
-    ctx.env.d1(DB_BINDING)
 }
 
 /// Fetches a single account by id, returning `None` when no row matches.

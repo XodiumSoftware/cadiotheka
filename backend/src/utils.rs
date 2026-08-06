@@ -1,7 +1,35 @@
-use worker::{Request, Response, Result, RouteContext, wasm_bindgen};
+use worker::{
+    Bucket, D1Database, KvStore, RateLimiter, Request, Response, Result, RouteContext, wasm_bindgen,
+};
 
+/// D1 database binding configured in `wrangler.toml`.
+const DB_BINDING: &str = "DB";
+/// KV namespace binding used for session state.
+const AUTH_KV_BINDING: &str = "AUTH";
+/// R2 bucket binding used for project assets (IFC models, icons, etc.).
+const PROJECT_ASSETS_R2_BINDING: &str = "PROJECT_ASSETS";
 /// Rate Limiting binding used to throttle requests per client and namespace.
 const RATE_LIMIT_BINDING: &str = "RATE_LIMITER";
+
+/// Returns the D1 database binding configured for this worker.
+pub fn db(ctx: &RouteContext<()>) -> Result<D1Database> {
+    ctx.env.d1(DB_BINDING)
+}
+
+/// Returns the KV namespace binding used for session state.
+pub fn kv(ctx: &RouteContext<()>) -> Result<KvStore> {
+    ctx.env.kv(AUTH_KV_BINDING)
+}
+
+/// Returns the R2 bucket used for project assets.
+pub fn assets_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
+    ctx.env.bucket(PROJECT_ASSETS_R2_BINDING)
+}
+
+/// Returns the rate limiter binding used to throttle requests.
+pub fn rate_limiter(ctx: &RouteContext<()>) -> Result<RateLimiter> {
+    ctx.env.rate_limiter(RATE_LIMIT_BINDING)
+}
 
 /// Builds a JSON error response with the given message and HTTP status.
 ///
@@ -38,7 +66,7 @@ pub async fn check_rate_limit(
     namespace: &str,
 ) -> Result<Option<Response>> {
     let key = format!("{namespace}:{}", client_ip(req));
-    let outcome = ctx.env.rate_limiter(RATE_LIMIT_BINDING)?.limit(key).await?;
+    let outcome = rate_limiter(ctx)?.limit(key).await?;
     if !outcome.success {
         return Ok(Some(error_response(
             "Rate limit exceeded. Please try again later.",
