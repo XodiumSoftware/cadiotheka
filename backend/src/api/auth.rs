@@ -1,6 +1,7 @@
 use oauth2::{
-    AuthUrl, ClientId, ClientSecret, CsrfToken, EmptyExtraTokenFields, PkceCodeChallenge,
-    RedirectUrl, Scope, StandardTokenResponse, TokenResponse,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EmptyExtraTokenFields,
+    HttpRequest, HttpResponse, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope,
+    StandardTokenResponse, TokenResponse,
     basic::{BasicClient, BasicTokenType},
 };
 use serde::{Deserialize, Serialize};
@@ -249,61 +250,29 @@ async fn exchange_code(
     verifier: String,
     req: &Request,
 ) -> Result<String> {
-    let client_id = ctx.env.secret(provider.credentials().0)?.to_string();
-    let client_secret = ctx.env.secret(provider.credentials().1)?.to_string();
+    let client = oauth_client(ctx, provider)?
+        .set_auth_uri(AuthUrl::new(provider.auth_url().to_string()).map_err(rust_err)?)
+        .set_token_uri(oauth2::TokenUrl::new(provider.token_url().to_string()).map_err(rust_err)?);
 
-    let redirect_uri = format!(
+    let redirect_uri = RedirectUrl::new(format!(
         "{}{}",
         public_origin(req),
         match provider {
             Provider::GitHub => crate::routes::AUTH_GITHUB_CALLBACK,
             Provider::Google => crate::routes::AUTH_GOOGLE_CALLBACK,
         }
-    );
-
-    let body = serde_urlencoded::to_string([
-        ("grant_type", "authorization_code"),
-        ("code", &code),
-        ("redirect_uri", &redirect_uri),
-        ("client_id", &client_id),
-        ("client_secret", &client_secret),
-        ("code_verifier", &verifier),
-    ])
+    ))
     .map_err(rust_err)?;
 
-    let headers = Headers::new();
-    headers.set("Content-Type", "application/x-www-form-urlencoded")?;
-    headers.set("Accept", "application/json")?;
-
-    let mut init = RequestInit::new();
-    init.with_method(Method::Post)
-        .with_headers(headers)
-        .with_body(Some(wasm_bindgen::JsValue::from_str(&body)));
-
-    let request = Request::new_with_init(provider.token_url(), &init)?;
-
-    let mut response = Fetch::Request(request).send().await?;
-
-    let text = response.text().await?;
-
-    if response.status_code() != 200 {
-        return Err(rust_err(format!(
-            "token exchange failed (HTTP {}): {text}",
-            response.status_code()
-        )));
-    }
-
-    if text.trim().is_empty() {
-        return Err(rust_err("token exchange returned an empty response"));
-    }
+    let token_result = client
+        .exchange_code(AuthorizationCode::new(code))
+        .set_pkce_verifier(PkceCodeVerifier::new(verifier))
+        .set_redirect_uri(Cow::Owned(redirect_uri))
+        .request_async(&oauth2_http_client)
+        .await;
 
     let token: StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType> =
-        serde_json::from_str(&text).map_err(|e| {
-            rust_err(format!(
-                "token exchange returned invalid JSON ({}): {e}",
-                text.chars().take(200).collect::<String>()
-            ))
-        })?;
+        token_result.map_err(|e| rust_err(format!("token exchange failed: {e}")))?;
 
     Ok(token.access_token().secret().clone())
 }
@@ -408,6 +377,58 @@ async fn fetch_json<T: serde::de::DeserializeOwned>(req: Request) -> Result<T> {
     }
     serde_json::from_str(&text).map_err(rust_err)
 }
+
+/// HTTP client adapter used by `oauth2` for asynchronous token exchange.
+///
+/// The `oauth2` crate's default `reqwest` backend is unavailable in the
+/// Workers WASM runtime, so we bridge to the `worker::Fetch` API.
+async fn oauth2_http_client(request: HttpRequest) -> Result<HttpResponse, Oauth2HttpClientError> {
+    let headers = Headers::new();
+    for (name, value) in request.headers() {
+        let value = value.to_str().map_err(rust_err)?;
+        headers.set(name.as_str(), value).map_err(rust_err)?;
+    }
+
+    let mut init = RequestInit::new();
+    init.with_method(Method::from(request.method().to_string()))
+        .with_headers(headers);
+    if !request.body().is_empty() {
+        init.with_body(Some(wasm_bindgen::JsValue::from_str(
+            &String::from_utf8_lossy(request.body()),
+        )));
+    }
+
+    let url = request.uri().to_string();
+    let worker_req = Request::new_with_init(&url, &init).map_err(rust_err)?;
+    let mut response = Fetch::Request(worker_req)
+        .send()
+        .await
+        .map_err(|e| Oauth2HttpClientError::from(rust_err(e)))?;
+
+    let status = response.status_code();
+    let body = response.bytes().await.map_err(rust_err)?;
+    let headers = response
+        .headers()
+        .entries()
+        .filter_map(|(name, value)| {
+            let name: oauth2::http::HeaderName = name.parse().unwrap_or_else(|_| {
+                oauth2::http::HeaderName::from_bytes(name.as_bytes())
+                    .unwrap_or(oauth2::http::HeaderName::from_static("x-unknown-header"))
+            });
+            let value: oauth2::http::HeaderValue = value.parse().ok()?;
+            Some((name, value))
+        })
+        .collect();
+
+    let mut http_response = HttpResponse::new(body);
+    *http_response.status_mut() = oauth2::http::StatusCode::from_u16(status).map_err(rust_err)?;
+    *http_response.headers_mut() = headers;
+
+    Ok(http_response)
+}
+
+/// Error type returned by the custom `oauth2` HTTP client adapter.
+type Oauth2HttpClientError = worker::Error;
 
 #[derive(Debug, Deserialize)]
 struct GitHubUser {

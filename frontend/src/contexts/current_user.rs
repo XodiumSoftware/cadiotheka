@@ -1,5 +1,3 @@
-#![allow(clippy::missing_errors_doc)]
-
 use crate::data::AccountData;
 use crate::data::error::RequestError;
 use crate::utils::auth_url;
@@ -46,8 +44,12 @@ impl CurrentUserContext {
 
 /// Fetch the currently authenticated account from the backend.
 ///
-/// Returns `Ok(None)` when the user is not logged in. Any other failure is
-/// returned as a [`RequestError`] so the caller can decide how to report it.
+/// Returns `Ok(None)` when the user is not logged in.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the network fails, the backend returns an
+/// unexpected error, or the response cannot be parsed.
 pub async fn fetch_current_user() -> Result<Option<AccountData>, RequestError> {
     let url = auth_url("/me");
     match Request::get(&url)
@@ -88,8 +90,12 @@ struct MeResponse {
 /// Fetch the OAuth provider names linked to the currently authenticated
 /// account.
 ///
-/// Returns a list of provider names on success or a [`RequestError`] on
-/// failure.
+/// On success it returns a list of provider names.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the network fails, the backend returns an
+/// unexpected error, or the response cannot be parsed.
 pub async fn fetch_linked_providers() -> Result<Vec<String>, RequestError> {
     let url = auth_url("/linked-providers");
     match Request::get(&url)
@@ -125,6 +131,11 @@ pub async fn fetch_linked_providers() -> Result<Vec<String>, RequestError> {
 /// Unlinks an OAuth provider from the currently authenticated account.
 ///
 /// Returns `Ok(())` if the provider was successfully unlinked.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the network fails or the backend rejects the
+/// request.
 pub async fn unlink_provider(provider: &str) -> Result<(), RequestError> {
     let url = auth_url(&format!("/linked-providers/{provider}"));
     match Request::delete(&url)
@@ -157,8 +168,12 @@ const MAX_BIO_LENGTH: usize = 160;
 
 /// Updates the current user's bio on the backend.
 ///
-/// Returns the new bio on success or a [`RequestError`] describing what went
-/// wrong.
+/// On success it returns the new bio.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the bio is too long, the request cannot be
+/// built, the network fails, or the backend rejects the request.
 pub async fn update_bio(new_bio: String) -> Result<String, RequestError> {
     if new_bio.len() > MAX_BIO_LENGTH {
         return Err(RequestError::Serialize(format!(

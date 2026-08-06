@@ -1,5 +1,3 @@
-#![allow(clippy::missing_errors_doc)]
-
 use crate::data::error::RequestError;
 use crate::utils::api_url;
 use serde::{Deserialize, Serialize};
@@ -74,8 +72,12 @@ impl AccountData {
 
 /// Fetch accounts from the backend API.
 ///
-/// Returns a list of accounts on success or a [`RequestError`] describing what
-/// went wrong.
+/// On success it returns a list of accounts.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the network fails, the backend rejects the
+/// request, or the response cannot be parsed.
 pub async fn fetch_accounts() -> Result<Vec<AccountData>, RequestError> {
     let url = api_url("/accounts");
     match gloo_net::http::Request::get(&url).send().await {

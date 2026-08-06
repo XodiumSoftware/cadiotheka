@@ -1,5 +1,3 @@
-#![allow(clippy::missing_errors_doc)]
-
 use crate::metadata::tags::Tag;
 use leptos::prelude::*;
 use std::collections::HashMap;

@@ -1,5 +1,3 @@
-#![allow(clippy::missing_errors_doc)]
-
 use crate::data::{ProjectData, RequestError, fetch_projects, toggle_project_favorite};
 use leptos::prelude::*;
 
@@ -15,6 +13,10 @@ pub struct ProjectsContext {
 impl ProjectsContext {
     /// Toggle the current user's favorite status for a project and return the
     /// updated project on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`RequestError`] when the backend request fails.
     pub async fn toggle_favorite(id: &str) -> Result<ProjectData, RequestError> {
         toggle_project_favorite(id).await
     }

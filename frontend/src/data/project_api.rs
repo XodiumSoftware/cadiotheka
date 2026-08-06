@@ -1,5 +1,3 @@
-#![allow(clippy::missing_errors_doc)]
-
 use crate::data::error::RequestError;
 use crate::data::project_types::{
     ProjectCreationResult, ProjectData, ProjectVersion, ValidationErrorResponse,
@@ -89,7 +87,12 @@ pub async fn create_project(
 
 /// Updates the title of an existing project via `PATCH /data/projects/:id`.
 ///
-/// On success it returns the new title; on failure it returns a [`RequestError`].
+/// On success it returns the new title.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when serialization fails or the backend rejects
+/// the request.
 pub async fn update_project_title(id: &str, title: String) -> Result<String, RequestError> {
     let url = api_url(&format!("/projects/{id}"));
     let body = serde_json::to_string(&serde_json::json!({ "title": title })).map_err(|err| {
@@ -102,7 +105,12 @@ pub async fn update_project_title(id: &str, title: String) -> Result<String, Req
 
 /// Updates the tags of an existing project via `PATCH /data/projects/:id`.
 ///
-/// On success it returns the new tag list; on failure it returns a [`RequestError`].
+/// On success it returns the new tag list.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when serialization fails or the backend rejects
+/// the request.
 pub async fn update_project_tags(id: &str, tags: Vec<String>) -> Result<Vec<String>, RequestError> {
     let url = api_url(&format!("/projects/{id}"));
     let body = serde_json::to_string(&serde_json::json!({ "tags": tags })).map_err(|err| {
@@ -115,7 +123,12 @@ pub async fn update_project_tags(id: &str, tags: Vec<String>) -> Result<Vec<Stri
 
 /// Updates the description of an existing project via `PATCH /data/projects/:id`.
 ///
-/// On success it returns the new description; on failure it returns a [`RequestError`].
+/// On success it returns the new description.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when serialization fails or the backend rejects
+/// the request.
 pub async fn update_project_description(
     id: &str,
     description: String,
@@ -131,8 +144,12 @@ pub async fn update_project_description(
 
 /// Updates the collaborators of an existing project via `PATCH /data/projects/:id`.
 ///
-/// On success it returns the new collaborator id list; on failure it returns a
-/// [`RequestError`].
+/// On success it returns the new collaborator id list.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when serialization fails or the backend rejects
+/// the request.
 pub async fn update_project_collaborators(
     id: &str,
     collaborator_ids: Vec<String>,
@@ -149,8 +166,12 @@ pub async fn update_project_collaborators(
 
 /// Toggles the favorite status of a project for the current user.
 ///
-/// On success it returns the updated project; on failure it returns a
-/// [`RequestError`].
+/// On success it returns the updated project.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the request cannot be built, the network
+/// fails, or the backend rejects the request.
 pub async fn toggle_project_favorite(id: &str) -> Result<ProjectData, RequestError> {
     let url = api_url(&format!("/projects/{id}/favorites"));
     let request = Request::post(&url)
@@ -186,8 +207,12 @@ pub async fn toggle_project_favorite(id: &str) -> Result<ProjectData, RequestErr
 
 /// Increments the download counter for a project and returns the updated project.
 ///
-/// On success it returns the updated project data; on failure it returns a
-/// [`RequestError`].
+/// On success it returns the updated project data.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the request cannot be built, the network
+/// fails, or the backend rejects the request.
 pub async fn increment_project_downloads(id: &str) -> Result<ProjectData, RequestError> {
     let url = api_url(&format!("/projects/{id}/downloads"));
     let request = Request::post(&url)
@@ -224,6 +249,11 @@ pub async fn increment_project_downloads(id: &str) -> Result<ProjectData, Reques
 /// Deletes a project's IFC model from the backend.
 ///
 /// Returns `Ok(())` when the request succeeds.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the request cannot be built, the network
+/// fails, or the backend rejects the request.
 pub async fn delete_project_ifc(id: &str) -> Result<(), RequestError> {
     let url = api_url(&format!("/projects/{id}/ifc"));
     let request = Request::delete(&url)
@@ -254,6 +284,11 @@ pub async fn delete_project_ifc(id: &str) -> Result<(), RequestError> {
 ///
 /// The backend stores the file in R2 and returns the object key, which is
 /// converted into a frontend download URL.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the form data cannot be built, the request
+/// cannot be built, the network fails, or the backend rejects the request.
 pub async fn upload_project_ifc(
     id: &str,
     file: web_sys::File,
@@ -328,6 +363,11 @@ pub async fn upload_project_ifc(
 /// Fetches the IFC versions for the given project.
 ///
 /// Undefined versions are only included when the caller can edit the project.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the network fails, the backend rejects the
+/// request, or the response cannot be parsed.
 pub async fn fetch_project_versions(id: &str) -> Result<Vec<ProjectVersion>, RequestError> {
     let url = api_url(&format!("/projects/{id}/versions"));
     match Request::get(&url)
@@ -359,6 +399,11 @@ pub async fn fetch_project_versions(id: &str) -> Result<Vec<ProjectVersion>, Req
 }
 
 /// Updates the state of a single project version.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when serialization fails, the request cannot be
+/// built, the network fails, or the backend rejects the request.
 pub async fn update_project_version_state(
     project_id: &str,
     version_id: &str,
@@ -399,6 +444,11 @@ pub async fn update_project_version_state(
 }
 
 /// Deletes a single project version.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the request cannot be built, the network
+/// fails, or the backend rejects the request.
 pub async fn delete_project_version(
     project_id: &str,
     version_id: &str,
@@ -432,6 +482,11 @@ pub async fn delete_project_version(
 ///
 /// Returns `Ok(true)` when the GLB is ready to view, or `Ok(false)` when the IFC
 /// model contained no renderable geometry.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the request cannot be built, the network
+/// fails, or the backend rejects the request with an unexpected status.
 pub async fn convert_project_glb(id: &str) -> Result<bool, RequestError> {
     let url = api_url(&format!("/projects/{id}/glb"));
     let request = Request::post(&url)
@@ -465,6 +520,11 @@ pub async fn convert_project_glb(id: &str) -> Result<bool, RequestError> {
 /// Deletes a project via `DELETE /data/projects/:id`.
 ///
 /// Returns `Ok(())` if the deletion succeeded.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the network fails or the backend rejects the
+/// request.
 pub async fn delete_project(id: &str) -> Result<(), RequestError> {
     let url = api_url(&format!("/projects/{id}"));
     match Request::delete(&url)
@@ -489,8 +549,12 @@ pub async fn delete_project(id: &str) -> Result<(), RequestError> {
 
 /// Fetch projects from the backend API.
 ///
-/// Returns a list of projects on success or a [`RequestError`] describing what
-/// went wrong.
+/// On success it returns a list of projects.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the network fails, the backend rejects the
+/// request, or the response cannot be parsed.
 pub async fn fetch_projects() -> Result<Vec<ProjectData>, RequestError> {
     match Request::get(&api_url("/projects")).send().await {
         Ok(response) if response.ok() => {
