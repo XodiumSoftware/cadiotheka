@@ -28,6 +28,8 @@ mod utils;
 
 mod cors;
 
+mod guards;
+
 mod api {
     pub mod accounts;
     pub mod auth;

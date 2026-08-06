@@ -5,7 +5,9 @@ use worker::{
 
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
-use crate::api::turnstile::verify_turnstile_token;
+use crate::guards::{
+    GuardOutcome, require_auth_with_rate_limit, require_auth_with_turnstile_and_rate_limit,
+};
 use crate::utils::{assets_bucket, check_rate_limit, db, error_response, now_utc};
 use ifc_lite_export::{GltfOptions, export_glb};
 
@@ -167,13 +169,11 @@ pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Respon
 /// Creates a new project from the request body, attributing it to the
 /// authenticated user.
 pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    if let Some(response) = check_rate_limit(&req, &ctx, "project_create").await? {
-        return Ok(response);
-    }
-    if let Some(response) = verify_turnstile_token(&mut req, &ctx).await? {
-        return Ok(response);
-    }
-    let account = require_account(&req, &ctx).await?;
+    let account =
+        match require_auth_with_turnstile_and_rate_limit(&mut req, &ctx, "project_create").await? {
+            GuardOutcome::Account(account) => account,
+            GuardOutcome::Response(resp) => return Ok(resp),
+        };
     let mut payload: ProjectPayload = req.json().await?;
     let validation_errors = validate_project_payload(&payload);
     if !validation_errors.is_empty() {
@@ -366,10 +366,10 @@ pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Respo
 /// Handles a multipart upload of a project IFC model, stores it in R2,
 /// and creates a new `project_versions` row with state `undefined`.
 pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    if let Some(response) = check_rate_limit(&req, &ctx, "ifc_upload").await? {
-        return Ok(response);
-    }
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth_with_rate_limit(&req, &ctx, "ifc_upload").await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let project_id = ctx.param("id").cloned().unwrap_or_default();
     let project = fetch_project(&ctx, &project_id)
         .await?
@@ -454,10 +454,10 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 /// Deletes all IFC versions for a project from R2 and the `project_versions`
 /// table. Restricted to project editors.
 pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    if let Some(response) = check_rate_limit(&req, &ctx, "ifc_delete").await? {
-        return Ok(response);
-    }
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth_with_rate_limit(&req, &ctx, "ifc_delete").await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let project_id = ctx.param("id").cloned().unwrap_or_default();
     let project = fetch_project(&ctx, &project_id)
         .await?
@@ -687,10 +687,10 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
 /// The caller must be able to edit the project. Returns a JSON body describing
 /// whether the conversion succeeded, failed, or found no renderable geometry.
 pub async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    if let Some(response) = check_rate_limit(&req, &ctx, "glb_convert").await? {
-        return Ok(response);
-    }
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth_with_rate_limit(&req, &ctx, "glb_convert").await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let id = ctx.param("id").cloned().unwrap_or_default();
     let project = fetch_project(&ctx, &id)
         .await?
