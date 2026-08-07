@@ -525,7 +525,7 @@ pub fn IfcViewer(
                         </div>
                     }.into_any(),
                     IfcViewerState::Rendering => view! {
-                        <div class="absolute bottom-3 right-3 z-20">
+                        <div class="absolute top-3 right-3 z-20">
                             {move || if show_gizmo.get() {
                                 view! {
                                     <ViewGizmo
