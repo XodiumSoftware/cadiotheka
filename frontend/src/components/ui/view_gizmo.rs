@@ -116,13 +116,15 @@ pub fn ViewGizmo(
                     let mid = mid_angle(start, end);
                     let (tx, ty) = label_position(center, u32::midpoint(RADIUS, INNER_RADIUS), mid);
                     view! {
-                        <g class="group cursor-pointer">
+                        <g
+                            class="group cursor-pointer"
+                            on:click=move |_| on_direction.run(dir)
+                        >
                             <path
                                 d=path
                                 fill="currentColor"
-                                class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black"
+                                class="fill-base-content text-[11px] font-bold group-hover:fill-black"
                                 aria-label=aria
-                                on:click=move |_| on_direction.run(dir)
                             />
                             <text
                                 x=tx
