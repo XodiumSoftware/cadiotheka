@@ -1446,7 +1446,6 @@ fn ProjectModalContent(
                                         let viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
                                         let show_grid = RwSignal::new(true);
                                         let show_axes = RwSignal::new(true);
-                                        let shadows = RwSignal::new(true);
                                         let reset_view = RwSignal::new(false);
                                         let show_gizmo = RwSignal::new(true);
 
@@ -1471,15 +1470,6 @@ fn ProjectModalContent(
                                                     })
                                                 >
                                                     <Icon::Axes />
-                                                </ToolbarButton>
-                                                <ToolbarButton
-                                                    label="Toggle shadows"
-                                                    tooltip_position=TooltipPosition::Bottom
-                                                    on_click=Callback::new(move |()| {
-                                                        shadows.update(|v| *v = !*v);
-                                                    })
-                                                >
-                                                    <Icon::Shadows />
                                                 </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Reset view"
@@ -1533,7 +1523,6 @@ fn ProjectModalContent(
                                                 reset_view_signal=reset_view
                                                 show_grid_signal=show_grid
                                                 show_axes_signal=show_axes
-                                                shadows_signal=shadows
                                                 show_gizmo_signal=show_gizmo
                                                 disabled=Signal::derive({
                                                     let is_editable = is_editable;

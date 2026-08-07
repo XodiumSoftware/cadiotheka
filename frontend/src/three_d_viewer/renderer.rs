@@ -177,7 +177,6 @@ impl Renderer {
             target: [target.x, target.y, target.z],
             up: [up.x, up.y, up.z],
             theme: self.theme,
-            shadows: self.light.shadow_map().is_some(),
         }
     }
 
@@ -200,7 +199,6 @@ impl Renderer {
             self.camera.z_far(),
         );
         self.set_theme(state.theme);
-        self.set_shadows(state.shadows);
     }
 
     /// Resets the camera and orbit target to frame the loaded model.
@@ -336,12 +334,6 @@ impl Renderer {
         };
         self.light.intensity = light_intensity;
 
-        if self.light.shadow_map().is_some() {
-            let _ = self
-                .light
-                .generate_shadow_map(2048, self.models.iter().map(AsRef::as_ref));
-        }
-
         let target = RenderTarget::screen(&self.context, width, height);
         target.clear(ClearState::color_and_depth(
             background.0,
@@ -351,22 +343,6 @@ impl Renderer {
             background.4,
         ));
         target.render(&self.camera, objects, &[&self.light, &self.ambient]);
-    }
-
-    /// Sets whether the directional light casts soft shadows.
-    pub fn set_shadows(&mut self, enabled: bool) {
-        if enabled {
-            let _ = self
-                .light
-                .generate_shadow_map(2048, self.models.iter().map(AsRef::as_ref));
-        } else {
-            self.light.clear_shadow_map();
-        }
-    }
-
-    /// Returns whether soft shadows are currently enabled.
-    pub fn shadows(&self) -> bool {
-        self.light.shadow_map().is_some()
     }
 
     /// Sets whether the ground grid is rendered.

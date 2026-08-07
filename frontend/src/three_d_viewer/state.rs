@@ -7,7 +7,6 @@ pub struct ViewState {
     pub target: [f32; 3],
     pub up: [f32; 3],
     pub theme: ViewerTheme,
-    pub shadows: bool,
 }
 
 impl ViewState {

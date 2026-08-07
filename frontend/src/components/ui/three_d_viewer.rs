@@ -42,7 +42,6 @@ pub fn IfcViewer(
     #[prop(optional)] reset_view_signal: Option<RwSignal<bool>>,
     #[prop(optional)] show_grid_signal: Option<RwSignal<bool>>,
     #[prop(optional)] show_axes_signal: Option<RwSignal<bool>>,
-    #[prop(optional)] shadows_signal: Option<RwSignal<bool>>,
     #[prop(into, optional)] disabled: Option<Signal<bool>>,
     #[prop(optional)] show_gizmo_signal: Option<RwSignal<bool>>,
 ) -> impl IntoView {
@@ -51,7 +50,6 @@ pub fn IfcViewer(
     let reset_view = reset_view_signal.unwrap_or_else(|| RwSignal::new(false));
     let show_grid = show_grid_signal.unwrap_or_else(|| RwSignal::new(true));
     let show_axes = show_axes_signal.unwrap_or_else(|| RwSignal::new(true));
-    let shadows = shadows_signal.unwrap_or_else(|| RwSignal::new(true));
     let disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
     let show_gizmo = show_gizmo_signal.unwrap_or_else(|| RwSignal::new(true));
 
@@ -305,28 +303,6 @@ pub fn IfcViewer(
             }
             request_render.borrow_mut()();
             schedule_save_settings();
-        }
-    });
-
-    Effect::new({
-        let schedule_save_settings = schedule_save_settings.clone();
-        move |_| {
-            schedule_save_settings();
-        }
-    });
-
-    Effect::new({
-        let renderer = Rc::clone(&renderer);
-        let request_render = Rc::clone(&request_render);
-        move |_| {
-            let enabled = shadows.get();
-            {
-                let mut renderer_ref = renderer.borrow_mut();
-                if let Some(renderer) = renderer_ref.as_mut() {
-                    renderer.set_shadows(enabled);
-                }
-            }
-            request_render.borrow_mut()();
         }
     });
 
