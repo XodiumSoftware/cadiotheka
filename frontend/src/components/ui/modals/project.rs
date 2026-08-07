@@ -55,6 +55,10 @@ fn load_gizmo_position_from_preferences(account: Option<&AccountData>) -> GizmoP
             "top_right" => Some(GizmoPosition::TopRight),
             "bottom_left" => Some(GizmoPosition::BottomLeft),
             "bottom_right" => Some(GizmoPosition::BottomRight),
+            "top_center" => Some(GizmoPosition::TopCenter),
+            "right_center" => Some(GizmoPosition::RightCenter),
+            "bottom_center" => Some(GizmoPosition::BottomCenter),
+            "left_center" => Some(GizmoPosition::LeftCenter),
             _ => None,
         })
         .unwrap_or(GizmoPosition::TopRight)
@@ -67,6 +71,10 @@ fn gizmo_position_wire_id(position: GizmoPosition) -> &'static str {
         GizmoPosition::TopRight => "top_right",
         GizmoPosition::BottomLeft => "bottom_left",
         GizmoPosition::BottomRight => "bottom_right",
+        GizmoPosition::TopCenter => "top_center",
+        GizmoPosition::RightCenter => "right_center",
+        GizmoPosition::BottomCenter => "bottom_center",
+        GizmoPosition::LeftCenter => "left_center",
     }
 }
 

@@ -586,6 +586,14 @@ fn GizmoPositionSelector(
                 <Icon::ArrowUpLeft class="w-4 h-4"/>
             </GizmoPositionButton>
             <GizmoPositionButton
+                pos=GizmoPosition::TopCenter
+                class="top-3 left-1/2 -translate-x-1/2"
+                current=current
+                on_select=on_select
+            >
+                <Icon::ArrowUp class="w-4 h-4"/>
+            </GizmoPositionButton>
+            <GizmoPositionButton
                 pos=GizmoPosition::TopRight
                 class="top-3 right-3"
                 current=current
@@ -594,12 +602,36 @@ fn GizmoPositionSelector(
                 <Icon::ArrowUpRight class="w-4 h-4"/>
             </GizmoPositionButton>
             <GizmoPositionButton
+                pos=GizmoPosition::LeftCenter
+                class="left-3 top-1/2 -translate-y-1/2"
+                current=current
+                on_select=on_select
+            >
+                <Icon::ArrowLeft class="w-4 h-4"/>
+            </GizmoPositionButton>
+            <GizmoPositionButton
+                pos=GizmoPosition::RightCenter
+                class="right-3 top-1/2 -translate-y-1/2"
+                current=current
+                on_select=on_select
+            >
+                <Icon::ArrowRight class="w-4 h-4"/>
+            </GizmoPositionButton>
+            <GizmoPositionButton
                 pos=GizmoPosition::BottomLeft
                 class="bottom-3 left-3"
                 current=current
                 on_select=on_select
             >
                 <Icon::ArrowDownLeft class="w-4 h-4"/>
+            </GizmoPositionButton>
+            <GizmoPositionButton
+                pos=GizmoPosition::BottomCenter
+                class="bottom-3 left-1/2 -translate-x-1/2"
+                current=current
+                on_select=on_select
+            >
+                <Icon::ArrowDown class="w-4 h-4"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::BottomRight
@@ -639,8 +671,12 @@ impl GizmoPosition {
     fn label(self) -> &'static str {
         match self {
             Self::TopLeft => "top left",
+            Self::TopCenter => "top center",
             Self::TopRight => "top right",
+            Self::LeftCenter => "left center",
+            Self::RightCenter => "right center",
             Self::BottomLeft => "bottom left",
+            Self::BottomCenter => "bottom center",
             Self::BottomRight => "bottom right",
         }
     }

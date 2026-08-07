@@ -86,6 +86,14 @@ pub enum GizmoPosition {
     BottomRight,
     /// Bottom-left corner.
     BottomLeft,
+    /// Top edge, centered horizontally.
+    TopCenter,
+    /// Right edge, centered vertically.
+    RightCenter,
+    /// Bottom edge, centered horizontally.
+    BottomCenter,
+    /// Left edge, centered vertically.
+    LeftCenter,
 }
 
 impl GizmoPosition {
@@ -96,6 +104,10 @@ impl GizmoPosition {
             Self::TopLeft => "absolute top-3 left-3 z-20",
             Self::BottomRight => "absolute bottom-3 right-3 z-20",
             Self::BottomLeft => "absolute bottom-3 left-3 z-20",
+            Self::TopCenter => "absolute top-3 left-1/2 -translate-x-1/2 z-20",
+            Self::RightCenter => "absolute right-3 top-1/2 -translate-y-1/2 z-20",
+            Self::BottomCenter => "absolute bottom-3 left-1/2 -translate-x-1/2 z-20",
+            Self::LeftCenter => "absolute left-3 top-1/2 -translate-y-1/2 z-20",
         }
     }
 }
