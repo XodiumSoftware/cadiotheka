@@ -1504,7 +1504,15 @@ fn ProjectModalContent(
                                                     tooltip_position=TooltipPosition::Bottom
                                                     on_click=toggle_fullscreen
                                                 >
-                                                    <Icon::Fullscreen />
+                                                    {move || {
+                                                        if viewer_fullscreen.get() {
+                                                            view! { <Icon::FullscreenExit /> }
+                                                                .into_any()
+                                                        } else {
+                                                            view! { <Icon::FullscreenEnter /> }
+                                                                .into_any()
+                                                        }
+                                                    }}
                                                 </ToolbarButton>
                                             </div>
                                         </div>

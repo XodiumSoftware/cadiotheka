@@ -1,7 +1,7 @@
 //! Inline SVG icon constants and shorthand icon components.
 //!
 //! Each icon is exposed as a component inside the [`Icon`] module, so callers can
-//! write `<Icon::Fullscreen />`. The SVG paths are from the Phosphor icon set
+//! write `<Icon::FullscreenEnter />`. The SVG paths are from the Phosphor icon set
 //! The SVG paths are from the Phosphor icon set
 //! (regular weight, 256×256 view box) and render at the size requested by the
 //! caller via the `class` prop.
@@ -30,7 +30,7 @@ macro_rules! icon {
 
 /// Shorthand components for every inline SVG icon.
 ///
-/// Use these like `<Icon::Fullscreen />` or `<Icon::Grid class="w-6 h-6" />`.
+/// Use these like `<Icon::FullscreenEnter />` or `<Icon::Grid class="w-6 h-6" />`.
 #[allow(non_snake_case)]
 pub mod Icon {
     use leptos::prelude::{ClassAttribute, InnerHtmlAttribute, IntoView, component, view};
@@ -76,10 +76,18 @@ pub mod Icon {
     );
 
     icon!(
-        Fullscreen,
-        ICON_FULLSCREEN,
+        FullscreenEnter,
+        ICON_FULLSCREEN_ENTER,
         r#"
         <path d="M216,48V96a8,8,0,0,1-16,0V67.31l-42.34,42.35a8,8,0,0,1-11.32-11.32L188.69,56H160a8,8,0,0,1,0-16h48A8,8,0,0,1,216,48ZM98.34,146.34,56,188.69V160a8,8,0,0,0-16,0v48a8,8,0,0,0,8,8H96a8,8,0,0,0,0-16H67.31l42.35-42.34a8,8,0,0,0-11.32-11.32ZM208,152a8,8,0,0,0-8,8v28.69l-42.34-42.35a8,8,0,0,0-11.32,11.32L188.69,200H160a8,8,0,0,0,0,16h48a8,8,0,0,0,8-8V160A8,8,0,0,0,208,152ZM67.31,56H96a8,8,0,0,0,0-16H48a8,8,0,0,0-8,8V96a8,8,0,0,0,16,0V67.31l42.34,42.35a8,8,0,0,0,11.32-11.32Z"/>
+    "#
+    );
+
+    icon!(
+        FullscreenExit,
+        ICON_FULLSCREEN_EXIT,
+        r#"
+        <path d="M205.66,154.34a8,8,0,0,1-11.32,11.32L160,131.31l-34.34,34.35a8,8,0,0,1-11.32-11.32L148.69,120l-34.35-34.34a8,8,0,0,1,11.32-11.32L160,108.69l34.34-34.35a8,8,0,0,1,11.32,11.32L171.31,120ZM64,88h48a8,8,0,0,0,0-16H72V40a8,8,0,0,0-16,0V80A8,8,0,0,0,64,88Zm128,80h-8v32a8,8,0,0,0,16,0V176A8,8,0,0,0,192,168Z"/>
     "#
     );
 
