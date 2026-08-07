@@ -436,7 +436,7 @@ pub fn IfcViewer(
                         </div>
                     }.into_any(),
                     IfcViewerState::Rendering => view! {
-                        <div class=move || if gizmo_edit_mode.get() { "absolute inset-0 z-20 pointer-events-none".to_string() } else { "absolute inset-0 z-20".to_string() }>
+                        <div class="absolute inset-0 z-20 pointer-events-none">
                             {move || if show_gizmo.get() {
                                 view! {
                                     <ViewGizmo
@@ -468,7 +468,7 @@ pub fn IfcViewer(
                             }}
                             {move || if gizmo_edit_mode.get() {
                                 view! {
-                                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div class="absolute inset-0 flex items-center justify-center">
                                         <span class="text-xs text-error bg-base-100/80 px-2 py-1 border border-error/30 shadow backdrop-blur-sm">
                                             "R+click the view gizmo button again to close edit mode."
                                         </span>
