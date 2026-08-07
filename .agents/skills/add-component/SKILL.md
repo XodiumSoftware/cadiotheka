@@ -39,3 +39,4 @@ Use this skill when the user wants to create a new UI component.
 - Avoid hard-coded English strings; externalize via `locales/en.json`.
 - Use `CornerFrame`, `OverflowRow`, and other existing UI primitives when appropriate.
 - Keep components focused and small.
+- SVG icons added to `src/components/icons.rs` must be copied verbatim from the Phosphor icon set (regular weight, 256×256 view box). Do not construct or modify paths by hand.
