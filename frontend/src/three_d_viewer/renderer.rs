@@ -3,7 +3,7 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
 #[cfg(target_arch = "wasm32")]
-use crate::three_d_viewer::environment::{build_ambient, light_direction};
+use crate::three_d_viewer::environment::{build_ibl_ambient, build_skybox};
 use crate::three_d_viewer::scene::{build_axes, build_framing_camera, canvas_size};
 use crate::three_d_viewer::state::{ViewDirection, ViewState, ViewerTheme};
 use leptos::web_sys::HtmlCanvasElement;
@@ -19,6 +19,7 @@ use three_d::renderer::AmbientLight;
 use three_d::renderer::Camera as ThreeDCamera;
 use three_d::renderer::DirectionalLight;
 use three_d::renderer::Object;
+use three_d::renderer::Skybox;
 use three_d::renderer::control::{Event, OrbitControl};
 use three_d_asset::vec3;
 #[cfg(target_arch = "wasm32")]
@@ -34,6 +35,7 @@ pub struct Renderer {
     pub(crate) scene_bounds: ([f32; 3], [f32; 3]),
     pub(crate) models: Vec<Box<dyn Object>>,
     pub(crate) axes: Option<Box<dyn Object>>,
+    pub(crate) skybox: Option<Skybox>,
     pub(crate) show_axes: bool,
     pub(crate) total_vertices: usize,
     pub(crate) total_triangles: usize,
@@ -71,17 +73,10 @@ impl Renderer {
             #[allow(clippy::arc_with_non_send_sync)]
             let context = ThreeDContext::from_gl_context(Arc::new(glow_context)).ok()?;
 
-            let light = DirectionalLight::new(
-                &context,
-                1.0,
-                Srgba::WHITE,
-                vec3(
-                    light_direction()[0],
-                    light_direction()[1],
-                    light_direction()[2],
-                ),
-            );
-            let ambient = build_ambient(&context);
+            let light =
+                DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(0.3_f32, -0.8, -0.5));
+            let ambient = build_ibl_ambient(&context);
+            let skybox = Some(build_skybox(&context));
 
             let (camera, control) = build_framing_camera([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], canvas);
 
@@ -93,6 +88,7 @@ impl Renderer {
                 scene_bounds: ([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]),
                 models: Vec::new(),
                 axes: None,
+                skybox,
                 show_axes: true,
                 total_vertices: 0,
                 total_triangles: 0,
@@ -310,6 +306,7 @@ impl Renderer {
                     .filter(|_| self.show_axes)
                     .map(AsRef::as_ref),
             )
+            .chain(self.skybox.iter().flatten())
             .collect();
         let (background, light_intensity) = match self.theme {
             ViewerTheme::Dark => ((0.05, 0.05, 0.05, 1.0, 1.0), 1.0),
