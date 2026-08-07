@@ -583,7 +583,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowUpLeft class="w-4 h-4"/>
+                <Icon::ArrowUpLeft class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::TopCenter
@@ -591,7 +591,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowUp class="w-4 h-4"/>
+                <Icon::ArrowUp class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::TopRight
@@ -599,7 +599,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowUpRight class="w-4 h-4"/>
+                <Icon::ArrowUpRight class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::LeftCenter
@@ -607,7 +607,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowLeft class="w-4 h-4"/>
+                <Icon::ArrowLeft class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::RightCenter
@@ -615,7 +615,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowRight class="w-4 h-4"/>
+                <Icon::ArrowRight class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::BottomLeft
@@ -623,7 +623,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowDownLeft class="w-4 h-4"/>
+                <Icon::ArrowDownLeft class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::BottomCenter
@@ -631,7 +631,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowDown class="w-4 h-4"/>
+                <Icon::ArrowDown class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::BottomRight
@@ -639,7 +639,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowDownRight class="w-4 h-4"/>
+                <Icon::ArrowDownRight class="w-6 h-6"/>
             </GizmoPositionButton>
         </div>
     }
@@ -658,7 +658,7 @@ fn GizmoPositionButton(
     view! {
         <button
             type="button"
-            class=move || format!("absolute {class} pointer-events-auto btn btn-ghost btn-xs p-1 h-auto min-h-0 border border-transparent {}", if is_current() { "text-error border-error bg-base-100/90" } else { "text-error/70 hover:text-error hover:border-error" })
+            class=move || format!("absolute {class} pointer-events-auto btn btn-ghost btn-xs p-1.5 h-auto min-h-0 border-2 border-transparent {}", if is_current() { "text-error border-error bg-base-100/90" } else { "text-error/70 hover:text-error hover:border-error" })
             aria-label=move || format!("Move view gizmo to the {}", pos.label())
             on:click=move |_| on_select.run(pos)
         >
