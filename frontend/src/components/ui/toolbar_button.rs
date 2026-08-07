@@ -51,7 +51,7 @@ pub fn ToolbarButton(
                 <span
                     class=move || {
                         if spinning.get() {
-                            "relative inline-flex items-center justify-center -animate-spin-once".to_string()
+                            "relative inline-flex items-center justify-center animate-spin-once".to_string()
                         } else {
                             "relative inline-flex items-center justify-center".to_string()
                         }
