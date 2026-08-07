@@ -73,8 +73,8 @@ impl ViewGizmoDirection {
     }
 }
 
-const RADIUS: u32 = 42;
-const INNER_RADIUS: u32 = 28;
+const RADIUS: u32 = 60;
+const INNER_RADIUS: u32 = 40;
 const CENTER: u32 = RADIUS;
 const DIAMETER: u32 = RADIUS * 2;
 
@@ -129,7 +129,7 @@ pub fn ViewGizmo(
                                 y=ty
                                 text-anchor="middle"
                                 dominant-baseline="central"
-                                class="fill-base-content text-[8px] font-bold pointer-events-none group-hover:fill-neutral-content"
+                                class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-neutral-content"
                             >
                                 {label}
                             </text>
@@ -149,7 +149,7 @@ pub fn ViewGizmo(
                         y=center - INNER_RADIUS / 2
                         text-anchor="middle"
                         dominant-baseline="central"
-                        class="fill-base-content text-[8px] font-bold pointer-events-none group-hover:fill-neutral-content"
+                        class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-neutral-content"
                     >
                         "T"
                     </text>
@@ -166,7 +166,7 @@ pub fn ViewGizmo(
                         y=center + INNER_RADIUS / 2
                         text-anchor="middle"
                         dominant-baseline="central"
-                        class="fill-base-content text-[8px] font-bold pointer-events-none group-hover:fill-neutral-content"
+                        class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-neutral-content"
                     >
                         "B"
                     </text>
