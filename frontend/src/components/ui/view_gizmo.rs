@@ -120,7 +120,7 @@ pub fn ViewGizmo(
                             <path
                                 d=path
                                 fill="currentColor"
-                                class="text-base-content/10 hover:text-primary transition-colors"
+                                class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black"
                                 aria-label=aria
                                 on:click=move |_| on_direction.run(dir)
                             />
@@ -129,7 +129,7 @@ pub fn ViewGizmo(
                                 y=ty
                                 text-anchor="middle"
                                 dominant-baseline="central"
-                                class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-neutral-content"
+                                class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black"
                             >
                                 {label}
                             </text>
@@ -149,7 +149,7 @@ pub fn ViewGizmo(
                         y=center - INNER_RADIUS / 2
                         text-anchor="middle"
                         dominant-baseline="central"
-                        class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-neutral-content"
+                        class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black"
                     >
                         "T"
                     </text>
@@ -166,7 +166,7 @@ pub fn ViewGizmo(
                         y=center + INNER_RADIUS / 2
                         text-anchor="middle"
                         dominant-baseline="central"
-                        class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-neutral-content"
+                        class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black"
                     >
                         "B"
                     </text>
