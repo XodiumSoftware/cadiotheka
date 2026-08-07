@@ -111,6 +111,7 @@ pub fn IfcViewer(
             };
             let settings = ViewerSettings {
                 show_axes: show_axes.get(),
+                show_gizmo: show_gizmo.get(),
             };
             let settings_json = settings.to_json();
             let settings_key = format!("{key}.settings");
@@ -288,10 +289,11 @@ pub fn IfcViewer(
 
     Effect::new({
         let request_render = Rc::clone(&request_render);
+        let schedule_save_settings = schedule_save_settings.clone();
         move |_| {
-            if !disabled.get() {
-                request_render.borrow_mut()();
-            }
+            let _ = show_gizmo.get();
+            request_render.borrow_mut()();
+            schedule_save_settings();
         }
     });
 
@@ -308,6 +310,7 @@ pub fn IfcViewer(
                 return;
             };
             show_axes.set(settings.show_axes);
+            show_gizmo.set(settings.show_gizmo);
         }
     });
 
