@@ -414,10 +414,14 @@ pub fn IfcViewer(
 
                         if let Some(state) = restored {
                             if let Some(r) = renderer.borrow_mut().as_mut() {
-                                r.restore_view_state(&state);
+                                r.restore_view_state(&state, show_axes.get());
                             }
                         } else if let Some(r) = renderer.borrow_mut().as_mut() {
                             r.reset_view(show_axes.get());
+                        }
+
+                        if let Some(r) = renderer.borrow_mut().as_mut() {
+                            r.set_show_axes(show_axes.get());
                         }
 
                         request_render.borrow_mut()();

@@ -173,8 +173,8 @@ impl Renderer {
         }
     }
 
-    /// Restores the camera and theme from a saved state.
-    pub fn restore_view_state(&mut self, state: &ViewState) {
+    /// Restores the camera, theme, and axes visibility from a saved state.
+    pub fn restore_view_state(&mut self, state: &ViewState, show_axes: bool) {
         let viewport =
             three_d_asset::Viewport::new_at_origo(self.canvas.width(), self.canvas.height());
         self.camera = ThreeDCamera::new_perspective(
@@ -192,6 +192,7 @@ impl Renderer {
             self.camera.z_far(),
         );
         self.set_theme(state.theme);
+        self.set_show_axes(show_axes);
     }
 
     /// Resets the camera and orbit target to frame the loaded model.
