@@ -18,12 +18,14 @@ pub fn ToolbarButton(
     label: &'static str,
     #[prop(into)] on_click: Callback<()>,
     #[prop(default = TooltipPosition::Top)] tooltip_position: TooltipPosition,
+    #[prop(into, optional)] disabled_overlay: Option<Signal<bool>>,
     children: Children,
 ) -> impl IntoView {
     let tooltip_class = match tooltip_position {
         TooltipPosition::Top => "tooltip-top",
         TooltipPosition::Bottom => "tooltip-bottom",
     };
+    let show_stripe = disabled_overlay.unwrap_or_else(|| Signal::derive(|| false));
 
     view! {
         <div class="tooltip-wrapper relative inline-block z-50">
@@ -34,7 +36,31 @@ pub fn ToolbarButton(
                 aria-label=label
                 on:click=move |_| on_click.run(())
             >
-                {children()}
+                <span class="relative inline-flex items-center justify-center">
+                    {children()}
+                    {move || {
+                        if show_stripe.get() {
+                            view! {
+                                <svg
+                                    class="absolute inset-0 w-full h-full text-error pointer-events-none"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M2 14 L14 2"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                    />
+                                </svg>
+                            }
+                                .into_any()
+                        } else {
+                            ().into_any()
+                        }
+                    }}
+                </span>
             </button>
         </div>
     }

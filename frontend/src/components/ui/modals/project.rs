@@ -1458,6 +1458,7 @@ fn ProjectModalContent(
                                                     on_click=Callback::new(move |()| {
                                                         show_axes.update(|v| *v = !*v);
                                                     })
+                                                    disabled_overlay=Signal::derive(move || !show_axes.get())
                                                 >
                                                     <Icon::Axes />
                                                 </ToolbarButton>
@@ -1476,6 +1477,7 @@ fn ProjectModalContent(
                                                     on_click=Callback::new(move |()| {
                                                         show_gizmo.update(|v| *v = !*v);
                                                     })
+                                                    disabled_overlay=Signal::derive(move || !show_gizmo.get())
                                                 >
                                                     <Icon::Gizmo />
                                                 </ToolbarButton>
