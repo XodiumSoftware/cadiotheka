@@ -109,6 +109,27 @@ pub fn ViewGizmo(
                 aria-label="Camera direction gizmo"
                 class="block"
             >
+                {
+                    let dividers = [
+                        292.5_f32, 337.5, 22.5, 67.5, 112.5, 157.5, 202.5, 247.5,
+                    ];
+                    dividers.into_iter().map(|angle| {
+                        let (x1, y1) = polar_point(center, center, INNER_RADIUS, angle);
+                        let (x2, y2) = polar_point(center, center, RADIUS, angle);
+                        view! {
+                            <line
+                                x1=x1
+                                y1=y1
+                                x2=x2
+                                y2=y2
+                                stroke="currentColor"
+                                stroke-width="1"
+                                class="text-base-content/30 pointer-events-none"
+                            />
+                        }
+                    }).collect_view()
+                }
+
                 {slices.into_iter().map(|(dir, start, end)| {
                     let path = annular_slice_path(center, center, RADIUS, INNER_RADIUS, start, end);
                     let label = dir.label();
