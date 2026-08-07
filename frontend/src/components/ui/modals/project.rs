@@ -39,6 +39,30 @@ pub enum ProjectDetailsTab {
 }
 
 const GIZMO_POSITION_KEY: &str = "gizmo_position";
+const GIZMO_VISIBLE_KEY: &str = "gizmo_visible";
+
+/// Loads the saved gizmo visibility from account viewer preferences.
+fn load_gizmo_visible_from_preferences(account: Option<&AccountData>) -> bool {
+    let Some(account) = account else {
+        return true;
+    };
+    let prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs
+        .get(GIZMO_VISIBLE_KEY)
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(true)
+}
+
+/// Returns the account's existing viewer preferences with the gizmo visibility
+/// updated, preserving any other keys that may exist in the JSON blob.
+fn preferences_with_gizmo_visible(account: Option<&AccountData>, visible: bool) -> Option<String> {
+    let account = account?;
+    let mut prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs[GIZMO_VISIBLE_KEY] = serde_json::json!(visible);
+    serde_json::to_string(&prefs).ok()
+}
 
 /// Loads the saved gizmo position from account viewer preferences.
 fn load_gizmo_position_from_preferences(account: Option<&AccountData>) -> GizmoPosition {
@@ -1363,366 +1387,522 @@ fn ProjectModalContent(
     });
 
     view! {
-        <div class="flex flex-col h-full min-h-0 overflow-hidden gap-4">
-            <BaseModal
-                open=Signal::derive(move || show_upload_modal.get())
-                on_close=Callback::new(move |()| close_upload_modal())
-                container_class=Signal::derive(|| "w-full max-w-lg flex flex-col".to_string())
-            >
-                <div class="space-y-4">
-                    <h3 class="text-sm font-semibold text-base-content">"Upload new version"</h3>
-                    <input
-                        type="file"
-                        accept=".ifc"
-                        class="hidden"
-                        node_ref=upload_modal_file_input
-                        on:change=on_upload_file_selected
-                    />
-                    <div class="space-y-2">
-                        <label class="text-xs text-base-content/70 block">
-                            "IFC file"
-                            <span class="text-error ml-0.5" aria-hidden="true">"*"</span>
-                        </label>
-                        <button
-                            type="button"
-                            class=move || {
-                                if upload_file.get().is_some() {
-                                    "w-full rounded-none border border-base-content/10 bg-base-200/30 p-2 text-left text-sm text-base-content"
-                                } else {
-                                    "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-2 text-left text-sm text-base-content/50 hover:border-primary hover:text-primary transition-colors"
-                                }
-                            }
-                            on:click=move |_| {
-                                if let Some(input) = upload_modal_file_input.get() {
-                                    input.click();
-                                }
-                            }
-                        >
-                            {move || upload_file.get().map_or_else(|| "Choose .ifc file".to_string(), |file| file.name())}
-                        </button>
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-xs text-base-content/70 block" for="upload-version-input">
-                            "Version"
-                            <span class="text-error ml-0.5" aria-hidden="true">"*"</span>
-                        </label>
+            <div class="flex flex-col h-full min-h-0 overflow-hidden gap-4">
+                <BaseModal
+                    open=Signal::derive(move || show_upload_modal.get())
+                    on_close=Callback::new(move |()| close_upload_modal())
+                    container_class=Signal::derive(|| "w-full max-w-lg flex flex-col".to_string())
+                >
+                    <div class="space-y-4">
+                        <h3 class="text-sm font-semibold text-base-content">"Upload new version"</h3>
                         <input
-                            id="upload-version-input"
-                            type="text"
-                            class="input input-sm input-bordered w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
-                            placeholder="1.0.0"
-                            prop:value=move || upload_version.get()
-                            on:input=move |ev| set_upload_version.set(event_target_value(&ev))
+                            type="file"
+                            accept=".ifc"
+                            class="hidden"
+                            node_ref=upload_modal_file_input
+                            on:change=on_upload_file_selected
                         />
-                    </div>
-                    <div class="flex justify-end gap-2">
-                        <button
-                            type="button"
-                            class="btn btn-ghost btn-xs"
-                            on:click=move |_| close_upload_modal()
-                        >"Cancel"</button>
-                        <button
-                            type="button"
-                            class=move || {
-                                let can_upload = upload_file.get().is_some()
-                                    && !upload_version.get().trim().is_empty();
-                                if is_uploading_ifc.get() || !can_upload {
-                                    "btn btn-primary btn-xs opacity-50 cursor-not-allowed"
+                        <div class="space-y-2">
+                            <label class="text-xs text-base-content/70 block">
+                                "IFC file"
+                                <span class="text-error ml-0.5" aria-hidden="true">"*"</span>
+                            </label>
+                            <button
+                                type="button"
+                                class=move || {
+                                    if upload_file.get().is_some() {
+                                        "w-full rounded-none border border-base-content/10 bg-base-200/30 p-2 text-left text-sm text-base-content"
+                                    } else {
+                                        "w-full rounded-none border border-dashed border-base-content/30 bg-base-200/30 p-2 text-left text-sm text-base-content/50 hover:border-primary hover:text-primary transition-colors"
+                                    }
+                                }
+                                on:click=move |_| {
+                                    if let Some(input) = upload_modal_file_input.get() {
+                                        input.click();
+                                    }
+                                }
+                            >
+                                {move || upload_file.get().map_or_else(|| "Choose .ifc file".to_string(), |file| file.name())}
+                            </button>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-xs text-base-content/70 block" for="upload-version-input">
+                                "Version"
+                                <span class="text-error ml-0.5" aria-hidden="true">"*"</span>
+                            </label>
+                            <input
+                                id="upload-version-input"
+                                type="text"
+                                class="input input-sm input-bordered w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                placeholder="1.0.0"
+                                prop:value=move || upload_version.get()
+                                on:input=move |ev| set_upload_version.set(event_target_value(&ev))
+                            />
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button
+                                type="button"
+                                class="btn btn-ghost btn-xs"
+                                on:click=move |_| close_upload_modal()
+                            >"Cancel"</button>
+                            <button
+                                type="button"
+                                class=move || {
+                                    let can_upload = upload_file.get().is_some()
+                                        && !upload_version.get().trim().is_empty();
+                                    if is_uploading_ifc.get() || !can_upload {
+                                        "btn btn-primary btn-xs opacity-50 cursor-not-allowed"
+                                    } else {
+                                        "btn btn-primary btn-xs"
+                                    }
+                                }
+                                disabled=move || {
+                                    let can_upload = upload_file.get().is_some()
+                                        && !upload_version.get().trim().is_empty();
+                                    is_uploading_ifc.get() || !can_upload
+                                }
+                                on:click=move |_| upload_ifc.run(())
+                            >
+                                {move || if is_uploading_ifc.get() {
+                                    view! {
+                                        <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                    }
+                                        .into_any()
                                 } else {
-                                    "btn btn-primary btn-xs"
-                                }
-                            }
-                            disabled=move || {
-                                let can_upload = upload_file.get().is_some()
-                                    && !upload_version.get().trim().is_empty();
-                                is_uploading_ifc.get() || !can_upload
-                            }
-                            on:click=move |_| upload_ifc.run(())
-                        >
-                            {move || if is_uploading_ifc.get() {
-                                view! {
-                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                }
-                                    .into_any()
-                            } else {
-                                view! { "Upload" }.into_any()
-                            }}
-                        </button>
+                                    view! { "Upload" }.into_any()
+                                }}
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </BaseModal>
+                </BaseModal>
 
-            <div class=move || if viewer_fullscreen.get() { "flex flex-col min-h-0 overflow-hidden flex-1".to_string() } else { "flex flex-col min-h-0 overflow-hidden flex-1 py-2".to_string() }>
-                <div class=move || if viewer_fullscreen.get() { "flex-1 min-h-0".to_string() } else { "overflow-y-auto flex-1 min-h-0 p-2 pr-3".to_string() }>
-                    <div class=move || {
-                        if viewer_fullscreen.get() {
-                            "grid grid-cols-1 gap-0 items-start h-full".to_string()
-                        } else {
-                            "flex flex-col xl:flex-row gap-6 items-start h-full".to_string()
-                        }
-                    }>
+                <div class=move || if viewer_fullscreen.get() { "flex flex-col min-h-0 overflow-hidden flex-1".to_string() } else { "flex flex-col min-h-0 overflow-hidden flex-1 py-2".to_string() }>
+                    <div class=move || if viewer_fullscreen.get() { "flex-1 min-h-0".to_string() } else { "overflow-y-auto flex-1 min-h-0 p-2 pr-3".to_string() }>
                         <div class=move || {
                             if viewer_fullscreen.get() {
-                                "min-w-0 h-full flex flex-col".to_string()
+                                "grid grid-cols-1 gap-0 items-start h-full".to_string()
                             } else {
-                                "min-w-0 w-full flex-1 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4".to_string()
+                                "flex flex-col xl:flex-row gap-6 items-start h-full".to_string()
                             }
                         }>
-                            <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-center justify-between gap-3 pb-2 flex-shrink-0".to_string() }>
-                                <div class="tabs tabs-border">
-                                    <button
-                                        type="button"
-                                        class=move || {
-                                            if is_mobile.get() {
-                                                "tab tab-disabled opacity-50 cursor-not-allowed".to_string()
-                                            } else if active_tab.get() == ProjectDetailsTab::Viewer3d {
-                                                "tab tab-active".to_string()
-                                            } else {
-                                                "tab".to_string()
+                            <div class=move || {
+                                if viewer_fullscreen.get() {
+                                    "min-w-0 h-full flex flex-col".to_string()
+                                } else {
+                                    "min-w-0 w-full flex-1 h-full flex flex-col rounded-none border border-base-content/10 bg-base-200/20 p-4".to_string()
+                                }
+                            }>
+                                <div class=move || if viewer_fullscreen.get() { "hidden".to_string() } else { "flex items-center justify-between gap-3 pb-2 flex-shrink-0".to_string() }>
+                                    <div class="tabs tabs-border">
+                                        <button
+                                            type="button"
+                                            class=move || {
+                                                if is_mobile.get() {
+                                                    "tab tab-disabled opacity-50 cursor-not-allowed".to_string()
+                                                } else if active_tab.get() == ProjectDetailsTab::Viewer3d {
+                                                    "tab tab-active".to_string()
+                                                } else {
+                                                    "tab".to_string()
+                                                }
                                             }
-                                        }
-                                        disabled=move || is_mobile.get()
-                                        on:click=move |_| {
-                                            if !is_mobile.get() {
-                                                set_active_tab.set(ProjectDetailsTab::Viewer3d);
+                                            disabled=move || is_mobile.get()
+                                            on:click=move |_| {
+                                                if !is_mobile.get() {
+                                                    set_active_tab.set(ProjectDetailsTab::Viewer3d);
+                                                }
                                             }
-                                        }
-                                    >"3D viewer"</button>
-                                    <button
-                                        type="button"
-                                        class=move || if active_tab.get() == ProjectDetailsTab::Versions { "tab tab-active" } else { "tab" }
-                                        on:click=move |_| set_active_tab.set(ProjectDetailsTab::Versions)
-                                    >"Versions"</button>
+                                        >"3D viewer"</button>
+                                        <button
+                                            type="button"
+                                            class=move || if active_tab.get() == ProjectDetailsTab::Versions { "tab tab-active" } else { "tab" }
+                                            on:click=move |_| set_active_tab.set(ProjectDetailsTab::Versions)
+                                        >"Versions"</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="flex-1 min-h-0">
-                                {move || match active_tab.get() {
-                                    ProjectDetailsTab::Viewer3d => {
-                                        let viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
-                                        let show_axes = RwSignal::new(true);
-                                        let reset_view = RwSignal::new(false);
-                                        let show_gizmo = RwSignal::new(true);
-                                        let gizmo_edit_mode = RwSignal::new(false);
-                                        let gizmo_position = RwSignal::new(load_gizmo_position_from_preferences(
-                                            current_user.account.get_untracked().as_ref(),
-                                        ));
+                                <div class="flex-1 min-h-0">
+                                    {move || match active_tab.get() {
+                                        ProjectDetailsTab::Viewer3d => {
+                                            let viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
+                                            let show_axes = RwSignal::new(true);
+                                            let reset_view = RwSignal::new(false);
+                                            let show_gizmo = RwSignal::new(load_gizmo_visible_from_preferences(
+                                                current_user.account.get_untracked().as_ref(),
+                                            ));
 
-                                        Effect::new({
-                                            let current_user = current_user;
-                                            let set_gizmo_position = gizmo_position;
-                                            move |_| {
-                                                let Some(account) = current_user.account.get() else {
-                                                    return;
-                                                };
-                                                let new_pos =
-                                                    load_gizmo_position_from_preferences(Some(&account,
-                                                    ));
-                                                if set_gizmo_position.get_untracked() != new_pos {
-                                                    set_gizmo_position.set(new_pos);
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let set_show_gizmo = show_gizmo;
+                                                move |_| {
+                                                    let Some(account) = current_user.account.get() else {
+                                                        return;
+                                                    };
+                                                    let new_visible =
+                                                        load_gizmo_visible_from_preferences(Some(&account,
+                                                        ));
+                                                    if set_show_gizmo.get_untracked() != new_visible {
+                                                        set_show_gizmo.set(new_visible);
+                                                    }
                                                 }
-                                            }
-                                        });
+                                            });
 
-                                        let initial_gizmo_position = gizmo_position.get_untracked();
-                                        let save_generation = Rc::new(std::cell::Cell::new(0u64));
+                                            let initial_show_gizmo = show_gizmo.get_untracked();
+                                            let visible_save_generation = Rc::new(std::cell::Cell::new(0u64));
 
-                                        Effect::new({
-                                            let current_user = current_user;
-                                            let profile_modal = profile_modal;
-                                            let save_generation = Rc::clone(&save_generation);
-                                            move |_| {
-                                                let position = gizmo_position.get();
-                                                if position == initial_gizmo_position {
-                                                    return;
-                                                }
-                                                let Some(account) =
-                                                    current_user.account.get_untracked()
-                                                else {
-                                                    return;
-                                                };
-                                                let Some(new_preferences) =
-                                                    preferences_with_gizmo_position(
-                                                        Some(&account),
-                                                        position,
-                                                    )
-                                                else {
-                                                    return;
-                                                };
-                                                if new_preferences == account.viewer_preferences {
-                                                    return;
-                                                }
-
-                                                let expected = save_generation.get().wrapping_add(1);
-                                                save_generation.set(expected);
-
-                                                let set_current_user = current_user.set_account;
-                                                let set_profile_account = profile_modal.set_account;
-                                                let save_generation = Rc::clone(&save_generation);
-                                                leptos::task::spawn_local(async move {
-                                                    gloo_timers::future::TimeoutFuture::new(300)
-                                                        .await;
-                                                    if save_generation.get() != expected {
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let profile_modal = profile_modal;
+                                                let visible_save_generation = Rc::clone(
+    &visible_save_generation);
+                                                move |_| {
+                                                    let visible = show_gizmo.get();
+                                                    if visible == initial_show_gizmo {
+                                                        return;
+                                                    }
+                                                    let Some(account) =
+                                                        current_user.account.get_untracked()
+                                                    else {
+                                                        return;
+                                                    };
+                                                    let Some(new_preferences) =
+                                                        preferences_with_gizmo_visible(
+                                                            Some(&account),
+                                                            visible,
+                                                        )
+                                                    else {
+                                                        return;
+                                                    };
+                                                    if new_preferences == account.viewer_preferences {
                                                         return;
                                                     }
 
-                                                    match crate::contexts::current_user::update_viewer_preferences(
-                                                        new_preferences,
-                                                    )
-                                                    .await
-                                                    {
-                                                        Ok(saved) => {
-                                                            set_current_user.update(|opt| {
-                                                                if let Some(acc) = opt.as_mut() {
-                                                                    acc.viewer_preferences
-                                                                        .clone_from(
-                                                                            &saved,
-                                                                        );
-                                                                }
-                                                            });
-                                                            set_profile_account.update(|opt| {
-                                                                if let Some(acc) = opt.as_mut() {
-                                                                    acc.viewer_preferences
-                                                                        .clone_from(
-                                                                            &saved,
-                                                                        );
-                                                                }
-                                                            });
-                                                        }
-                                                        Err(err) => {
-                                                            leptos::web_sys::console::error_1(
-                                                                &format!(
-                                                                    "Failed to save viewer preferences: {}",
-                                                                    err.message()
-                                                                )
-                                                                .into(),
-                                                            );
-                                                        }
-                                                    }
-                                                });
-                                            }
-                                        });
+                                                    let expected = visible_save_generation
+                                                        .get()
+                                                        .wrapping_add(1);
+                                                    visible_save_generation.set(expected);
 
-                                        view! {
-                                    <div node_ref=viewer_ref class="h-full flex flex-col">
-                                        <div class="flex items-center justify-end gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
-                                            <div class="flex gap-1">
-                                                <ToolbarButton
-                                                    label="Toggle axes gizmo"
-                                                    tooltip_position=TooltipPosition::Left
-                                                    on_click=Callback::new(move |()| {
-                                                        show_axes.update(|v| *v = !*v);
-                                                    })
-                                                    disabled_overlay=Signal::derive(move || !show_axes.get())
-                                                >
-                                                    <Icon::Axes />
-                                                </ToolbarButton>
-                                                <ToolbarButton
-                                                    label="Reset view"
-                                                    tooltip_position=TooltipPosition::Left
-                                                    on_click=Callback::new(move |()| {
-                                                        reset_view.set(true);
-                                                    })
-                                                    spin_on_click=true
-                                                >
-                                                    <Icon::Reset />
-                                                </ToolbarButton>
-                                                <ToolbarButton
-                                                    label="L+click to toggle view gizmo\nR+click to unlock view gizmos position"
-                                                    tooltip_position=TooltipPosition::Left
-                                                    on_click=Callback::new(move |()| {
-                                                        show_gizmo.update(|v| *v = !*v);
-                                                    })
-                                                    on_context_menu=Callback::new(move |()| {
-                                                        gizmo_edit_mode.update(|v| *v = !*v);
-                                                    })
-                                                    disabled_overlay=Signal::derive(move || !show_gizmo.get())
-                                                >
-                                                    <Icon::Gizmo />
-                                                </ToolbarButton>
-                                                <ToolbarButton
-                                                    label="Toggle fullscreen"
-                                                    tooltip_position=TooltipPosition::Left
-                                                    on_click=toggle_fullscreen
-                                                >
-                                                    {move || {
-                                                        if viewer_fullscreen.get() {
-                                                            view! { <Icon::FullscreenExit /> }
-                                                                .into_any()
-                                                        } else {
-                                                            view! { <Icon::FullscreenEnter /> }
-                                                                .into_any()
+                                                    let set_current_user = current_user.set_account;
+                                                    let set_profile_account = profile_modal.set_account;
+                                                    let visible_save_generation = Rc::clone(
+                                                        &visible_save_generation);
+                                                    leptos::task::spawn_local(async move {
+                                                        gloo_timers::future::TimeoutFuture::new(300)
+                                                            .await;
+                                                        if visible_save_generation.get() != expected {
+                                                            return;
                                                         }
-                                                    }}
-                                                </ToolbarButton>
+
+                                                        match crate::contexts::current_user::update_viewer_preferences(
+                                                            new_preferences,
+                                                        )
+                                                        .await
+                                                        {
+                                                            Ok(saved) => {
+                                                                set_current_user.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                                set_profile_account.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                            }
+                                                            Err(err) => {
+                                                                leptos::web_sys::console::error_1(
+                                                                    &format!(
+                                                                        "Failed to save viewer preferences: {}",
+                                                                        err.message()
+                                                                    )
+                                                                    .into(),
+                                                                );
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                            let gizmo_edit_mode = RwSignal::new(false);
+                                            let gizmo_position = RwSignal::new(load_gizmo_position_from_preferences(
+                                                current_user.account.get_untracked().as_ref(),
+                                            ));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let set_gizmo_position = gizmo_position;
+                                                move |_| {
+                                                    let Some(account) = current_user.account.get() else {
+                                                        return;
+                                                    };
+                                                    let new_pos =
+                                                        load_gizmo_position_from_preferences(Some(&account,
+                                                        ));
+                                                    if set_gizmo_position.get_untracked() != new_pos {
+                                                        set_gizmo_position.set(new_pos);
+                                                    }
+                                                }
+                                            });
+
+                                            let initial_gizmo_position = gizmo_position.get_untracked();
+                                            let save_generation = Rc::new(std::cell::Cell::new(0u64));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let profile_modal = profile_modal;
+                                                let save_generation = Rc::clone(&save_generation);
+                                                move |_| {
+                                                    let position = gizmo_position.get();
+                                                    if position == initial_gizmo_position {
+                                                        return;
+                                                    }
+                                                    let Some(account) =
+                                                        current_user.account.get_untracked()
+                                                    else {
+                                                        return;
+                                                    };
+                                                    let Some(new_preferences) =
+                                                        preferences_with_gizmo_position(
+                                                            Some(&account),
+                                                            position,
+                                                        )
+                                                    else {
+                                                        return;
+                                                    };
+                                                    if new_preferences == account.viewer_preferences {
+                                                        return;
+                                                    }
+
+                                                    let expected = save_generation.get().wrapping_add(1);
+                                                    save_generation.set(expected);
+
+                                                    let set_current_user = current_user.set_account;
+                                                    let set_profile_account = profile_modal.set_account;
+                                                    let save_generation = Rc::clone(&save_generation);
+                                                    leptos::task::spawn_local(async move {
+                                                        gloo_timers::future::TimeoutFuture::new(300)
+                                                            .await;
+                                                        if save_generation.get() != expected {
+                                                            return;
+                                                        }
+
+                                                        match crate::contexts::current_user::update_viewer_preferences(
+                                                            new_preferences,
+                                                        )
+                                                        .await
+                                                        {
+                                                            Ok(saved) => {
+                                                                set_current_user.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                                set_profile_account.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                            }
+                                                            Err(err) => {
+                                                                leptos::web_sys::console::error_1(
+                                                                    &format!(
+                                                                        "Failed to save viewer preferences: {}",
+                                                                        err.message()
+                                                                    )
+                                                                    .into(),
+                                                                );
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            });
+
+                                            view! {
+                                        <div node_ref=viewer_ref class="h-full flex flex-col">
+                                            <div class="flex items-center justify-end gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
+                                                <div class="flex gap-1">
+                                                    <ToolbarButton
+                                                        label="Toggle axes gizmo"
+                                                        tooltip_position=TooltipPosition::Left
+                                                        on_click=Callback::new(move |()| {
+                                                            show_axes.update(|v| *v = !*v);
+                                                        })
+                                                        disabled_overlay=Signal::derive(move || !show_axes.get())
+                                                    >
+                                                        <Icon::Axes />
+                                                    </ToolbarButton>
+                                                    <ToolbarButton
+                                                        label="Reset view"
+                                                        tooltip_position=TooltipPosition::Left
+                                                        on_click=Callback::new(move |()| {
+                                                            reset_view.set(true);
+                                                        })
+                                                        spin_on_click=true
+                                                    >
+                                                        <Icon::Reset />
+                                                    </ToolbarButton>
+                                                    <ToolbarButton
+                                                        label="L+click to toggle view gizmo\nR+click to unlock view gizmos position"
+                                                        tooltip_position=TooltipPosition::Left
+                                                        on_click=Callback::new(move |()| {
+                                                            show_gizmo.update(|v| *v = !*v);
+                                                        })
+                                                        on_context_menu=Callback::new(move |()| {
+                                                            gizmo_edit_mode.update(|v| *v = !*v);
+                                                        })
+                                                        disabled_overlay=Signal::derive(move || !show_gizmo.get())
+                                                    >
+                                                        <Icon::Gizmo />
+                                                    </ToolbarButton>
+                                                    <ToolbarButton
+                                                        label="Toggle fullscreen"
+                                                        tooltip_position=TooltipPosition::Left
+                                                        on_click=toggle_fullscreen
+                                                    >
+                                                        {move || {
+                                                            if viewer_fullscreen.get() {
+                                                                view! { <Icon::FullscreenExit /> }
+                                                                    .into_any()
+                                                            } else {
+                                                                view! { <Icon::FullscreenEnter /> }
+                                                                    .into_any()
+                                                            }
+                                                        }}
+                                                    </ToolbarButton>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-h-0 relative">
+                                                <IfcViewer
+                                                    url=Signal::derive({
+                                                        let project_id = project_id.clone();
+                                                        move || {
+                                                            latest_visible_ifc_url(&versions.get()
+                                                            ).map(|_| api_url(&format!("/projects/{project_id}/glb")))
+                                                        }
+                                                    })
+                                                    storage_key=Signal::derive({
+                                                        let project_id = project_id.clone();
+                                                        move || format!("cadiotheka.three_d_viewer.{project_id}")
+                                                    })
+                                                    state_signal=viewer_state
+                                                    reset_view_signal=reset_view
+                                                    show_axes_signal=show_axes
+                                                    show_gizmo_signal=show_gizmo
+                                                    gizmo_position_signal=gizmo_position
+                                                    gizmo_edit_mode_signal=gizmo_edit_mode
+                                                    disabled=Signal::derive({
+                                                        let is_editable = is_editable;
+                                                        let edit_mode = edit_mode;
+                                                        move || is_editable.get() && edit_mode.get()
+                                                    })
+                                                />
                                             </div>
                                         </div>
-                                        <div class="flex-1 min-h-0 relative">
-                                            <IfcViewer
-                                                url=Signal::derive({
-                                                    let project_id = project_id.clone();
-                                                    move || {
-                                                        latest_visible_ifc_url(&versions.get()
-                                                        ).map(|_| api_url(&format!("/projects/{project_id}/glb")))
-                                                    }
-                                                })
-                                                storage_key=Signal::derive({
-                                                    let project_id = project_id.clone();
-                                                    move || format!("cadiotheka.three_d_viewer.{project_id}")
-                                                })
-                                                state_signal=viewer_state
-                                                reset_view_signal=reset_view
-                                                show_axes_signal=show_axes
-                                                show_gizmo_signal=show_gizmo
-                                                gizmo_position_signal=gizmo_position
-                                                gizmo_edit_mode_signal=gizmo_edit_mode
-                                                disabled=Signal::derive({
-                                                    let is_editable = is_editable;
-                                                    let edit_mode = edit_mode;
-                                                    move || is_editable.get() && edit_mode.get()
-                                                })
-                                            />
-                                        </div>
-                                    </div>
-                                }.into_any()
-                                    }
-                                    ProjectDetailsTab::Versions => view! {
-                                            <div class="min-h-0 h-full flex flex-col space-y-4 overflow-y-auto pr-1">
-                                                {move || match glb_status.get() {
-                                                    GlbConversionStatus::Idle => ().into_any(),
-                                                    GlbConversionStatus::Converting => view! {
-                                                        <p class="text-xs text-primary flex items-center gap-1.5">
-                                                            <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                                            <span>"Converting latest IFC to 3D model..."</span>
-                                                        </p>
-                                                    }.into_any(),
-                                                    GlbConversionStatus::Ready => view! {
-                                                        <p class="text-xs text-success flex items-center gap-1.5">"Latest IFC is ready to view in 3D"</p>
-                                                    }.into_any(),
-                                                    GlbConversionStatus::NoGeometry => view! {
-                                                        <p class="text-xs text-warning">"Latest IFC has no renderable geometry"</p>
-                                                    }.into_any(),
-                                                    GlbConversionStatus::Failed => view! {
-                                                        <p class="text-xs text-error">"Failed to convert latest IFC to 3D"</p>
-                                                    }.into_any(),
-                                                }}
-                                                {move || {
-                                                    let versions = versions.get();
-                                                    let editing = is_editable.get() && edit_mode.get();
-                                                    let add_row = move || {
-                                                        if editing {
-                                                            view! {
-                                                                <AddVersionRow
-                                                                    is_uploading=Signal::derive(move || is_uploading_ifc.get())
-                                                                    on_click=Callback::new(move |()| trigger_upload_modal())
-                                                                />
+                                    }.into_any()
+                                        }
+                                        ProjectDetailsTab::Versions => view! {
+                                                <div class="min-h-0 h-full flex flex-col space-y-4 overflow-y-auto pr-1">
+                                                    {move || match glb_status.get() {
+                                                        GlbConversionStatus::Idle => ().into_any(),
+                                                        GlbConversionStatus::Converting => view! {
+                                                            <p class="text-xs text-primary flex items-center gap-1.5">
+                                                                <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                <span>"Converting latest IFC to 3D model..."</span>
+                                                            </p>
+                                                        }.into_any(),
+                                                        GlbConversionStatus::Ready => view! {
+                                                            <p class="text-xs text-success flex items-center gap-1.5">"Latest IFC is ready to view in 3D"</p>
+                                                        }.into_any(),
+                                                        GlbConversionStatus::NoGeometry => view! {
+                                                            <p class="text-xs text-warning">"Latest IFC has no renderable geometry"</p>
+                                                        }.into_any(),
+                                                        GlbConversionStatus::Failed => view! {
+                                                            <p class="text-xs text-error">"Failed to convert latest IFC to 3D"</p>
+                                                        }.into_any(),
+                                                    }}
+                                                    {move || {
+                                                        let versions = versions.get();
+                                                        let editing = is_editable.get() && edit_mode.get();
+                                                        let add_row = move || {
+                                                            if editing {
+                                                                view! {
+                                                                    <AddVersionRow
+                                                                        is_uploading=Signal::derive(move || is_uploading_ifc.get())
+                                                                        on_click=Callback::new(move |()| trigger_upload_modal())
+                                                                    />
+                                                                }
+                                                                    .into_any()
+                                                            } else {
+                                                                ().into_any()
                                                             }
-                                                                .into_any()
+                                                        };
+                                                        if versions.is_empty() {
+                                                            if editing {
+                                                                view! {
+                                                                    <div class="space-y-2">
+                                                                        <div class="overflow-x-auto rounded-none border border-base-content/10">
+                                                                            <table class="w-full text-left text-sm">
+                                                                                <thead class="bg-base-200/50 text-xs uppercase text-base-content/70">
+                                                                                    <tr>
+                                                                                        <th class="p-2 w-10"></th>
+                                                                                        <th class="p-2">"Version"</th>
+                                                                                        <th class="p-2">"Type"</th>
+                                                                                        <th class="p-2">"Published"</th>
+                                                                                        <th class="p-2">"Downloads"</th>
+                                                                                        <th class="p-2 w-10"></th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    {add_row()}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                        {move || {
+                                                                            if versions_total_pages.get() <= 1 {
+                                                                                ().into_any()
+                                                                            } else {
+                                                                                view! {
+                                                                                    <div class="flex items-center justify-end text-sm">
+                                                                                        <Pagination
+                                                                                            page=versions_page
+                                                                                            set_page=set_versions_page
+                                                                                            total_pages=versions_total_pages
+                                                                                        />
+                                                                                    </div>
+                                                                                }
+                                                                                    .into_any()
+                                                                            }
+                                                                        }}
+                                                                    </div>
+                                                                }
+                                                                    .into_any()
+                                                            } else {
+                                                                view! {
+                                                                    <div class="rounded-none border border-base-content/10 bg-base-200/30 p-8 text-center space-y-2">
+                                                                        <p class="text-base-content/50 text-sm">"No IFC model uploaded yet."</p>
+                                                                        <p class="text-base-content/40 text-xs">"Enter edit mode to add a version."</p>
+                                                                    </div>
+                                                                }
+                                                                    .into_any()
+                                                            }
                                                         } else {
-                                                            ().into_any()
-                                                        }
-                                                    };
-                                                    if versions.is_empty() {
-                                                        if editing {
+                                                            let page = clamped_versions_page.get();
+                                                            let start = page * VERSIONS_PER_PAGE;
+                                                            let paginated: Vec<_> = versions
+                                                                .into_iter()
+                                                                .skip(start)
+                                                                .take(VERSIONS_PER_PAGE)
+                                                                .collect();
                                                             view! {
                                                                 <div class="space-y-2">
                                                                     <div class="overflow-x-auto rounded-none border border-base-content/10">
@@ -1739,6 +1919,103 @@ fn ProjectModalContent(
                                                                             </thead>
                                                                             <tbody>
                                                                                 {add_row()}
+                                                                                {paginated.into_iter().map(|version| {
+                                                                                    let version_id = version.id.clone();
+                                                                                    let version_id_for_state = version.id.clone();
+                                                                                    let version_id_for_delete = version.id.clone();
+                                                                                    let version_for_download = version.clone();
+                                                                                    let is_deleting = Signal::derive({
+                                                                                        let version_id = version_id.clone();
+                                                                                        move || deleting_version_id.get().as_ref() == Some(&version_id)
+                                                                                    });
+                                                                                    let state = Signal::derive({
+                                                                                        let version = version.clone();
+                                                                                        move || version.state
+                                                                                    });
+                                                                                    view! {
+                                                                                        <tr class="even:bg-base-200/30 border-b border-base-content/10 last:border-b-0">
+                                                                                            <td class="p-2">
+                                                                                                {move || {
+                                                                                                    if is_editable.get() && edit_mode.get() {
+                                                                                                        view! {
+                                                                                                            <VersionStateSelector
+                                                                                                                state=state
+                                                                                                                on_change=Callback::new({
+                                                                                                                    let version_id = version_id_for_state.clone();
+                                                                                                                    move |new_state: VersionState| update_version_state.run((version_id.clone(), new_state))
+                                                                                                                })
+                                                                                                            />
+                                                                                                        }
+                                                                                                            .into_any()
+                                                                                                    } else {
+                                                                                                        view! { <VersionStateBadge state=state /> }.into_any()
+                                                                                                    }
+                                                                                                }}
+                                                                                            </td>
+                                                                                            <td class="p-2 font-medium text-base-content" title=version.filename.clone()>
+                                                                                                {version.version.clone()}
+                                                                                            </td>
+                                                                                            <td class="p-2">
+                                                                                                <span class="badge badge-sm badge-outline rounded-none border-primary text-primary whitespace-nowrap">
+                                                                                                    "IFC"
+                                                                                                </span>
+                                                                                            </td>
+                                                                                            <td class="p-2 text-base-content/70">{format_version_timestamp(&version.created_at)}</td>
+                                                                                            <td class="p-2 text-base-content/70">{format_number(version.downloads.max(0).cast_unsigned())}</td>
+                                                                                            <td class="p-2 text-right">
+                                                                                                {move || {
+                                                                                                    if is_editable.get() && edit_mode.get() {
+                                                                                                        view! {
+                                                                                                            <button
+                                                                                                                type="button"
+                                                                                                                class=move || {
+                                                                                                                    if is_deleting.get() {
+                                                                                                                        "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 opacity-50 cursor-not-allowed tooltip tooltip-left"
+                                                                                                                    } else {
+                                                                                                                        "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 tooltip tooltip-left"
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                disabled=move || is_deleting.get()
+                                                                                                                on:click={
+                                                                                                                    let version_id = version_id_for_delete.clone();
+                                                                                                                    move |_| delete_version.run(version_id.clone())
+                                                                                                                }
+                                                                                                                aria-label="Delete version"
+                                                                                                                data-tip="Delete"
+                                                                                                            >
+                                                                                                                {trash_icon("w-3.5 h-3.5")}
+                                                                                                            </button>
+                                                                                                        }
+                                                                                                            .into_any()
+                                                                                                    } else if version_for_download.state == VersionState::Undefined {
+                                                                                                        ().into_any()
+                                                                                                    } else {
+                                                                                                        let version = version_for_download.clone();
+                                                                                                        view! {
+                                                                                                            <button
+                                                                                                                type="button"
+                                                                                                                class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-left"
+                                                                                                                aria-label="Download"
+                                                                                                                data-tip="Download"
+                                                                                                                on:click=move |_| {
+                                                                                                                    let url = ifc_download_url(&version);
+                                                                                                                    increment_downloads.run(url);
+                                                                                                                }
+                                                                                                            >
+                                                                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                                                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                                                                                    <polyline points="7 10 12 15 17 10" />
+                                                                                                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                                                                                                </svg>
+                                                                                                            </button>
+                                                                                                        }
+                                                                                                            .into_any()
+                                                                                                    }
+                                                                                                }}
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    }
+                                                                                }).collect_view().into_any()}
                                                                             </tbody>
                                                                         </table>
                                                                     </div>
@@ -1761,830 +2038,678 @@ fn ProjectModalContent(
                                                                 </div>
                                                             }
                                                                 .into_any()
-                                                        } else {
-                                                            view! {
-                                                                <div class="rounded-none border border-base-content/10 bg-base-200/30 p-8 text-center space-y-2">
-                                                                    <p class="text-base-content/50 text-sm">"No IFC model uploaded yet."</p>
-                                                                    <p class="text-base-content/40 text-xs">"Enter edit mode to add a version."</p>
-                                                                </div>
-                                                            }
-                                                                .into_any()
                                                         }
-                                                    } else {
-                                                        let page = clamped_versions_page.get();
-                                                        let start = page * VERSIONS_PER_PAGE;
-                                                        let paginated: Vec<_> = versions
-                                                            .into_iter()
-                                                            .skip(start)
-                                                            .take(VERSIONS_PER_PAGE)
-                                                            .collect();
-                                                        view! {
-                                                            <div class="space-y-2">
-                                                                <div class="overflow-x-auto rounded-none border border-base-content/10">
-                                                                    <table class="w-full text-left text-sm">
-                                                                        <thead class="bg-base-200/50 text-xs uppercase text-base-content/70">
-                                                                            <tr>
-                                                                                <th class="p-2 w-10"></th>
-                                                                                <th class="p-2">"Version"</th>
-                                                                                <th class="p-2">"Type"</th>
-                                                                                <th class="p-2">"Published"</th>
-                                                                                <th class="p-2">"Downloads"</th>
-                                                                                <th class="p-2 w-10"></th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            {add_row()}
-                                                                            {paginated.into_iter().map(|version| {
-                                                                                let version_id = version.id.clone();
-                                                                                let version_id_for_state = version.id.clone();
-                                                                                let version_id_for_delete = version.id.clone();
-                                                                                let version_for_download = version.clone();
-                                                                                let is_deleting = Signal::derive({
-                                                                                    let version_id = version_id.clone();
-                                                                                    move || deleting_version_id.get().as_ref() == Some(&version_id)
-                                                                                });
-                                                                                let state = Signal::derive({
-                                                                                    let version = version.clone();
-                                                                                    move || version.state
-                                                                                });
-                                                                                view! {
-                                                                                    <tr class="even:bg-base-200/30 border-b border-base-content/10 last:border-b-0">
-                                                                                        <td class="p-2">
-                                                                                            {move || {
-                                                                                                if is_editable.get() && edit_mode.get() {
-                                                                                                    view! {
-                                                                                                        <VersionStateSelector
-                                                                                                            state=state
-                                                                                                            on_change=Callback::new({
-                                                                                                                let version_id = version_id_for_state.clone();
-                                                                                                                move |new_state: VersionState| update_version_state.run((version_id.clone(), new_state))
-                                                                                                            })
-                                                                                                        />
-                                                                                                    }
-                                                                                                        .into_any()
-                                                                                                } else {
-                                                                                                    view! { <VersionStateBadge state=state /> }.into_any()
-                                                                                                }
-                                                                                            }}
-                                                                                        </td>
-                                                                                        <td class="p-2 font-medium text-base-content" title=version.filename.clone()>
-                                                                                            {version.version.clone()}
-                                                                                        </td>
-                                                                                        <td class="p-2">
-                                                                                            <span class="badge badge-sm badge-outline rounded-none border-primary text-primary whitespace-nowrap">
-                                                                                                "IFC"
-                                                                                            </span>
-                                                                                        </td>
-                                                                                        <td class="p-2 text-base-content/70">{format_version_timestamp(&version.created_at)}</td>
-                                                                                        <td class="p-2 text-base-content/70">{format_number(version.downloads.max(0).cast_unsigned())}</td>
-                                                                                        <td class="p-2 text-right">
-                                                                                            {move || {
-                                                                                                if is_editable.get() && edit_mode.get() {
-                                                                                                    view! {
-                                                                                                        <button
-                                                                                                            type="button"
-                                                                                                            class=move || {
-                                                                                                                if is_deleting.get() {
-                                                                                                                    "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 opacity-50 cursor-not-allowed tooltip tooltip-left"
-                                                                                                                } else {
-                                                                                                                    "btn btn-outline btn-error btn-xs p-1 h-auto min-h-0 tooltip tooltip-left"
-                                                                                                                }
-                                                                                                            }
-                                                                                                            disabled=move || is_deleting.get()
-                                                                                                            on:click={
-                                                                                                                let version_id = version_id_for_delete.clone();
-                                                                                                                move |_| delete_version.run(version_id.clone())
-                                                                                                            }
-                                                                                                            aria-label="Delete version"
-                                                                                                            data-tip="Delete"
-                                                                                                        >
-                                                                                                            {trash_icon("w-3.5 h-3.5")}
-                                                                                                        </button>
-                                                                                                    }
-                                                                                                        .into_any()
-                                                                                                } else if version_for_download.state == VersionState::Undefined {
-                                                                                                    ().into_any()
-                                                                                                } else {
-                                                                                                    let version = version_for_download.clone();
-                                                                                                    view! {
-                                                                                                        <button
-                                                                                                            type="button"
-                                                                                                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-left"
-                                                                                                            aria-label="Download"
-                                                                                                            data-tip="Download"
-                                                                                                            on:click=move |_| {
-                                                                                                                let url = ifc_download_url(&version);
-                                                                                                                increment_downloads.run(url);
-                                                                                                            }
-                                                                                                        >
-                                                                                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                                                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                                                                                <polyline points="7 10 12 15 17 10" />
-                                                                                                                <line x1="12" y1="15" x2="12" y2="3" />
-                                                                                                            </svg>
-                                                                                                        </button>
-                                                                                                    }
-                                                                                                        .into_any()
-                                                                                                }
-                                                                                            }}
-                                                                                        </td>
-                                                                                    </tr>
-                                                                                }
-                                                                            }).collect_view().into_any()}
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                                {move || {
-                                                                    if versions_total_pages.get() <= 1 {
-                                                                        ().into_any()
-                                                                    } else {
-                                                                        view! {
-                                                                            <div class="flex items-center justify-end text-sm">
-                                                                                <Pagination
-                                                                                    page=versions_page
-                                                                                    set_page=set_versions_page
-                                                                                    total_pages=versions_total_pages
-                                                                                />
-                                                                            </div>
-                                                                        }
-                                                                            .into_any()
-                                                                    }
-                                                                }}
-                                                            </div>
-                                                        }
-                                                            .into_any()
-                                                    }
-                                                }}
-                                            </div>
-                                        }
-                                            .into_any(),
-                                }}
+                                                    }}
+                                                </div>
+                                            }
+                                                .into_any(),
+                                    }}
+                                </div>
                             </div>
-                        </div>
 
-                        <button
-                            type="button"
-                            class=move || {
-                                if viewer_fullscreen.get() {
+                            <button
+                                type="button"
+                                class=move || {
+                                    if viewer_fullscreen.get() {
+                                        "hidden".to_string()
+                                    } else {
+                                        "hidden xl:flex self-stretch w-6 -mx-3 cursor-pointer group items-center justify-center".to_string()
+                                    }
+                                }
+                                aria-label=move || if sidebar_collapsed.get() { "Expand sidebar" } else { "Collapse sidebar" }
+                                on:click=move |_| set_sidebar_collapsed.update(|v| *v = !*v)
+                            >
+                                <div class="flex flex-col items-center justify-center w-full h-full">
+                                    <div class="w-px flex-1 bg-base-content/10 group-hover:bg-primary transition-colors"></div>
+                                    <div class="py-2 text-base-content/50 group-hover:text-primary transition-colors">
+                                        {move || if sidebar_collapsed.get() { "<" } else { ">" }}
+                                    </div>
+                                    <div class="w-px flex-1 bg-base-content/10 group-hover:bg-primary transition-colors"></div>
+                                </div>
+                            </button>
+
+                            <div class=move || {
+                                if viewer_fullscreen.get() || sidebar_collapsed.get() {
                                     "hidden".to_string()
                                 } else {
-                                    "hidden xl:flex self-stretch w-6 -mx-3 cursor-pointer group items-center justify-center".to_string()
+                                    "w-full xl:w-72 flex-shrink-0 space-y-4".to_string()
                                 }
-                            }
-                            aria-label=move || if sidebar_collapsed.get() { "Expand sidebar" } else { "Collapse sidebar" }
-                            on:click=move |_| set_sidebar_collapsed.update(|v| *v = !*v)
-                        >
-                            <div class="flex flex-col items-center justify-center w-full h-full">
-                                <div class="w-px flex-1 bg-base-content/10 group-hover:bg-primary transition-colors"></div>
-                                <div class="py-2 text-base-content/50 group-hover:text-primary transition-colors">
-                                    {move || if sidebar_collapsed.get() { "<" } else { ">" }}
-                                </div>
-                                <div class="w-px flex-1 bg-base-content/10 group-hover:bg-primary transition-colors"></div>
-                            </div>
-                        </button>
-
-                        <div class=move || {
-                            if viewer_fullscreen.get() || sidebar_collapsed.get() {
-                                "hidden".to_string()
-                            } else {
-                                "w-full xl:w-72 flex-shrink-0 space-y-4".to_string()
-                            }
-                        }>
-                            {move || {
-                                if editing_title.get() {
-                                    view! {
-                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-2">
-                                            <div class="flex items-center gap-2">
-                                                <input
-                                                    class=move || {
-                                                        let at_max = draft_title.get().len() >= MAX_TITLE_LENGTH;
-                                                        format!(
-                                                            "input input-sm input-bordered flex-1 text-base-content text-lg font-bold {}",
-                                                            if at_max { "hover:border-error" } else { "" }
-                                                        )
-                                                    }
-                                                    type="text"
-                                                    maxlength=MAX_TITLE_LENGTH.to_string()
-                                                    prop:value=draft_title.get()
-                                                    on:input=move |ev| set_draft_title.set(event_target_value(&ev))
-                                                    on:keyup=move |ev| {
-                                                        match ev.key().as_str() {
-                                                            "Enter" => commit_edit_title.run(draft_title.get()),
-                                                            "Escape" => cancel_edit_title(),
-                                                            _ => {}
-                                                        }
-                                                    }
-                                                    autofocus
-                                                />
-                                                <span class=move || {
-                                                    if draft_title.get().len() >= MAX_TITLE_LENGTH {
-                                                        "text-xs text-error flex-shrink-0"
-                                                    } else {
-                                                        "text-xs text-base-content/50 flex-shrink-0"
-                                                    }
-                                                }>
-                                                    {move || format!("{}/{}", draft_title.get().len(), MAX_TITLE_LENGTH)}
-                                                </span>
-                                            </div>
-                                            <div class="flex justify-end gap-2">
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-ghost btn-xs"
-                                                    on:click=move |_| cancel_edit_title()
-                                                >"Cancel"</button>
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-primary btn-xs"
-                                                    on:click=move |_| commit_edit_title.run(draft_title.get())
-                                                >"Save"</button>
-                                            </div>
-                                        </div>
-                                    }
-                                        .into_any()
-                                } else {
-                                    view! {
-                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                                            <div class="flex items-center gap-2">
-                                                <h2
-                                                    class="text-lg font-bold text-primary leading-tight truncate tooltip tooltip-top"
-                                                    data-tip={title.get()}
-                                                >
-                                                    {title.get()}
-                                                </h2>
-                                                {move || (is_editable.get() && edit_mode.get()).then(|| view! {
-                                                    <button
-                                                        type="button"
-                                                        class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary"
-                                                        aria-label="Edit title"
-                                                        on:click=move |_| start_edit_title()
-                                                    >
-                                                                                {edit_pencil_icon("w-4 h-4")}
-                                                                            </button>
-                                                }.into_any())}
-                                            </div>
-                                        </div>
-                                    }
-                                        .into_any()
-                                }
-                            }}
-
-                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                                <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-                                    <div class="flex items-center gap-2">
-                                        {
-                                            move || {
-                                                let has_ifc = latest_visible_ifc_url(&versions.get()).is_some();
-                                                let downloading = is_downloading.get();
-                                                let editing = is_editable.get() && edit_mode.get();
-                                                let label = if downloading {
-                                                    "Downloading IFC..."
-                                                } else if editing {
-                                                    "Editing project"
-                                                } else if has_ifc {
-                                                    "Download latest"
-                                                } else {
-                                                    "No IFC model available"
-                                                };
-                                                view! {
-                                                    <button
-                                                        type="button"
+                            }>
+                                {move || {
+                                    if editing_title.get() {
+                                        view! {
+                                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-2">
+                                                <div class="flex items-center gap-2">
+                                                    <input
                                                         class=move || {
-                                                            if !has_ifc || downloading || editing {
-                                                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
-                                                            } else {
-                                                                "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                                            let at_max = draft_title.get().len() >= MAX_TITLE_LENGTH;
+                                                            format!(
+                                                                "input input-sm input-bordered flex-1 text-base-content text-lg font-bold {}",
+                                                                if at_max { "hover:border-error" } else { "" }
+                                                            )
+                                                        }
+                                                        type="text"
+                                                        maxlength=MAX_TITLE_LENGTH.to_string()
+                                                        prop:value=draft_title.get()
+                                                        on:input=move |ev| set_draft_title.set(event_target_value(&ev))
+                                                        on:keyup=move |ev| {
+                                                            match ev.key().as_str() {
+                                                                "Enter" => commit_edit_title.run(draft_title.get()),
+                                                                "Escape" => cancel_edit_title(),
+                                                                _ => {}
                                                             }
                                                         }
-                                                        aria-label=label
-                                                        data-tip=label
-                                                        disabled=move || !has_ifc || downloading || editing
-                                                        on:click={
-                                                            let cb = increment_downloads;
-                                                            move |_| {
-                                                                if let Some(url) = latest_visible_ifc_url(&versions.get()) {
-                                                                    cb.run(url);
+                                                        autofocus
+                                                    />
+                                                    <span class=move || {
+                                                        if draft_title.get().len() >= MAX_TITLE_LENGTH {
+                                                            "text-xs text-error flex-shrink-0"
+                                                        } else {
+                                                            "text-xs text-base-content/50 flex-shrink-0"
+                                                        }
+                                                    }>
+                                                        {move || format!("{}/{}", draft_title.get().len(), MAX_TITLE_LENGTH)}
+                                                    </span>
+                                                </div>
+                                                <div class="flex justify-end gap-2">
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-ghost btn-xs"
+                                                        on:click=move |_| cancel_edit_title()
+                                                    >"Cancel"</button>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-primary btn-xs"
+                                                        on:click=move |_| commit_edit_title.run(draft_title.get())
+                                                    >"Save"</button>
+                                                </div>
+                                            </div>
+                                        }
+                                            .into_any()
+                                    } else {
+                                        view! {
+                                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                                <div class="flex items-center gap-2">
+                                                    <h2
+                                                        class="text-lg font-bold text-primary leading-tight truncate tooltip tooltip-top"
+                                                        data-tip={title.get()}
+                                                    >
+                                                        {title.get()}
+                                                    </h2>
+                                                    {move || (is_editable.get() && edit_mode.get()).then(|| view! {
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary"
+                                                            aria-label="Edit title"
+                                                            on:click=move |_| start_edit_title()
+                                                        >
+                                                                                    {edit_pencil_icon("w-4 h-4")}
+                                                                                </button>
+                                                    }.into_any())}
+                                                </div>
+                                            </div>
+                                        }
+                                            .into_any()
+                                    }
+                                }}
+
+                                <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                        <div class="flex items-center gap-2">
+                                            {
+                                                move || {
+                                                    let has_ifc = latest_visible_ifc_url(&versions.get()).is_some();
+                                                    let downloading = is_downloading.get();
+                                                    let editing = is_editable.get() && edit_mode.get();
+                                                    let label = if downloading {
+                                                        "Downloading IFC..."
+                                                    } else if editing {
+                                                        "Editing project"
+                                                    } else if has_ifc {
+                                                        "Download latest"
+                                                    } else {
+                                                        "No IFC model available"
+                                                    };
+                                                    view! {
+                                                        <button
+                                                            type="button"
+                                                            class=move || {
+                                                                if !has_ifc || downloading || editing {
+                                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/30 cursor-not-allowed tooltip tooltip-bottom"
+                                                                } else {
+                                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
                                                                 }
                                                             }
-                                                        }
-                                                    >
-                                                        <span class="flex items-center gap-1">
-                                                            {if downloading {
-                                                                view! {
-                                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                                                }.into_any()
-                                                            } else {
-                                                                view! { <DownloadIcon /> }.into_any()
-                                                            }}
-                                                        </span>
-                                                    </button>
+                                                            aria-label=label
+                                                            data-tip=label
+                                                            disabled=move || !has_ifc || downloading || editing
+                                                            on:click={
+                                                                let cb = increment_downloads;
+                                                                move |_| {
+                                                                    if let Some(url) = latest_visible_ifc_url(&versions.get()) {
+                                                                        cb.run(url);
+                                                                    }
+                                                                }
+                                                            }
+                                                        >
+                                                            <span class="flex items-center gap-1">
+                                                                {if downloading {
+                                                                    view! {
+                                                                        <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                    }.into_any()
+                                                                } else {
+                                                                    view! { <DownloadIcon /> }.into_any()
+                                                                }}
+                                                            </span>
+                                                        </button>
+                                                    }
                                                 }
                                             }
-                                        }
-                                        <button
-                                            type="button"
-                                            class=move || {
-                                                if is_favorited.get() {
-                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50 tooltip tooltip-bottom"
-                                                } else {
-                                                    "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error tooltip tooltip-bottom"
-                                                }
-                                            }
-                                            aria-label=move || {
-                                                if is_favorited.get() {
-                                                    format!("Remove {} from favorites", title.get())
-                                                } else {
-                                                    format!("Add {} to favorites", title.get())
-                                                }
-                                            }
-                                            data-tip=move || {
-                                                if is_favorited.get() {
-                                                    "Remove favorite".to_string()
-                                                } else {
-                                                    "Add favorite".to_string()
-                                                }
-                                            }
-                                            on:click={
-                                                let cb = toggle_favorite_click;
-                                                move |_| cb.run(())
-                                            }
-                                        >
-                                            <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
-                                            <span>{move || favorite_count.get().to_string()}</span>
-                                        </button>
-                                        {move || is_editable.get().then(|| view! {
                                             <button
                                                 type="button"
                                                 class=move || {
-                                                    if edit_mode.get() {
-                                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-primary tooltip tooltip-bottom"
+                                                    if is_favorited.get() {
+                                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-error hover:text-base-content/50 tooltip tooltip-bottom"
                                                     } else {
-                                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                                        "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-error tooltip tooltip-bottom"
                                                     }
                                                 }
-                                                aria-label=move || if edit_mode.get() { "Leave edit mode" } else { "Enter edit mode" }
-                                                data-tip=move || if edit_mode.get() { "Done editing" } else { "Edit project" }
-                                                on:click=move |_| toggle_edit_mode()
+                                                aria-label=move || {
+                                                    if is_favorited.get() {
+                                                        format!("Remove {} from favorites", title.get())
+                                                    } else {
+                                                        format!("Add {} to favorites", title.get())
+                                                    }
+                                                }
+                                                data-tip=move || {
+                                                    if is_favorited.get() {
+                                                        "Remove favorite".to_string()
+                                                    } else {
+                                                        "Add favorite".to_string()
+                                                    }
+                                                }
+                                                on:click={
+                                                    let cb = toggle_favorite_click;
+                                                    move |_| cb.run(())
+                                                }
                                             >
-                                                {edit_pencil_icon("w-4 h-4")}
+                                                <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
+                                                <span>{move || favorite_count.get().to_string()}</span>
                                             </button>
-                                        }.into_any())}
-                                    </div>
-                                    <div class="flex items-center gap-2 text-base-content/50">
-                                        <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
-                                        <span>"to close"</span>
+                                            {move || is_editable.get().then(|| view! {
+                                                <button
+                                                    type="button"
+                                                    class=move || {
+                                                        if edit_mode.get() {
+                                                            "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-primary tooltip tooltip-bottom"
+                                                        } else {
+                                                            "btn btn-ghost btn-xs p-1 h-auto min-h-0 text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                                                        }
+                                                    }
+                                                    aria-label=move || if edit_mode.get() { "Leave edit mode" } else { "Enter edit mode" }
+                                                    data-tip=move || if edit_mode.get() { "Done editing" } else { "Edit project" }
+                                                    on:click=move |_| toggle_edit_mode()
+                                                >
+                                                    {edit_pencil_icon("w-4 h-4")}
+                                                </button>
+                                            }.into_any())}
+                                        </div>
+                                        <div class="flex items-center gap-2 text-base-content/50">
+                                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">esc</kbd>
+                                            <span>"to close"</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {move || {
-                                if editing_description.get() {
-                                    view! {
-                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
-                                            <h3 class="text-sm font-semibold text-base-content">"About"</h3>
-                                            <MarkdownEditor
-                                                value=draft_description
-                                                on_input=Callback::new(move |value| set_draft_description.set(value))
-                                                on_cancel=Callback::new(move |()| cancel_edit_description())
-                                                on_save=Callback::new(move |()| commit_edit_description.run(draft_description.get()))
-                                                maxlength=MAX_DESCRIPTION_LENGTH
-                                                editor_class="min-h-[12rem] font-mono text-sm"
-                                            />
-                                        </div>
-                                    }
-                                        .into_any()
-                                } else {
-                                    view! {
-                                        {move || {
-                                            if is_editable.get() && edit_mode.get() {
-                                                view! {
-                                                    <button
-                                                        type="button"
-                                                        class="group relative text-left w-full rounded-none border border-base-content/10 bg-base-200/20 p-4 hover:border-primary transition-colors cursor-pointer"
-                                                        aria-label="Edit description"
-                                                        on:click=move |_| start_edit_description()
-                                                    >
-                                                        <span class="text-sm font-semibold text-base-content mb-2 block">"About"</span>
-                                                        <div class="text-sm text-base-content/80 overflow-auto max-h-[12rem]">
-                                                            <MarkdownView source=description.get() />
-                                                        </div>
-                                                        <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            {edit_pencil_icon("w-5 h-5 text-primary")}
-                                                        </div>
-                                                    </button>
-                                                }
-                                                    .into_any()
-                                            } else {
-                                                view! {
-                                                    <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-2">
-                                                        <h3 class="text-sm font-semibold text-base-content">"About"</h3>
-                                                        <div class="text-sm text-base-content/80 overflow-auto max-h-[12rem]">
-                                                            <MarkdownView source=description.get() />
-                                                        </div>
-                                                    </div>
-                                                }
-                                                    .into_any()
-                                            }
-                                        }}
-                                    }
-                                        .into_any()
-                                }
-                            }}
-
-                            {move || {
-                                if editing_tags.get() {
-                                    view! {
-                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                                            <EditableChipSection
-                                                title="Tags"
-                                                aria_label="Tags"
-                                                items=tags.get()
-                                                all_items={metadata.tags.get()}
-                                                editing=editing_tags.into()
-                                                on_cancel=Callback::new(move |()| cancel_edit_tags())
-                                                on_toggle=toggle_tag
-                                                on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
-                                                on_item_click=Callback::new(move |id: String| {
-                                                    let label = metadata
-                                                        .tag_by_id(&id)
-                                                        .map(|tag| tag.label().to_string())
-                                                        .unwrap_or_default();
-                                                    apply_filter.run(label);
-                                                })
-                                                id_fn=tag_id
-                                                label_fn=tag_label
-                                                color_fn=tag_color
-                                                selected_items=draft_tags.into()
-                                                badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                                            />
-                                        </div>
-                                    }
-                                        .into_any()
-                                } else if is_editable.get() && edit_mode.get() {
-                                    view! {
-                                        <button
-                                            type="button"
-                                            class="group relative text-left w-full rounded-none border border-base-content/10 bg-base-200/20 p-4 hover:border-primary transition-colors cursor-pointer"
-                                            aria-label="Edit tags"
-                                            on:click=move |_| start_edit_tags()
-                                        >
-                                            <span class="text-sm font-semibold text-base-content mb-3 block">"Tags"</span>
-                                            <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
-                                                {tags.get().iter().filter_map(|id| {
-                                                    let tag = metadata.tag_by_id(id)?;
-                                                    let style = tag.color().to_string();
-                                                    let label = tag.label().to_string();
-                                                    Some(view! {
-                                                        <span
-                                                            class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
-                                                            style=style
-                                                        >
-                                                            {label}
-                                                        </span>
-                                                    }.into_any())
-                                                }).collect_view()}
+                                {move || {
+                                    if editing_description.get() {
+                                        view! {
+                                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                                                <h3 class="text-sm font-semibold text-base-content">"About"</h3>
+                                                <MarkdownEditor
+                                                    value=draft_description
+                                                    on_input=Callback::new(move |value| set_draft_description.set(value))
+                                                    on_cancel=Callback::new(move |()| cancel_edit_description())
+                                                    on_save=Callback::new(move |()| commit_edit_description.run(draft_description.get()))
+                                                    maxlength=MAX_DESCRIPTION_LENGTH
+                                                    editor_class="min-h-[12rem] font-mono text-sm"
+                                                />
                                             </div>
-                                            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {edit_pencil_icon("w-5 h-5 text-primary")}
-                                            </div>
-                                        </button>
-                                    }
-                                        .into_any()
-                                } else {
-                                    view! {
-                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
-                                            <h3 class="text-sm font-semibold text-base-content mb-3">"Tags"</h3>
-                                            <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
-                                                {tags.get().iter().filter_map(|id| {
-                                                    let tag = metadata.tag_by_id(id)?;
-                                                    let style = tag.color().to_string();
-                                                    let label = tag.label().to_string();
-                                                    let label_click = label.clone();
-                                                    Some(view! {
+                                        }
+                                            .into_any()
+                                    } else {
+                                        view! {
+                                            {move || {
+                                                if is_editable.get() && edit_mode.get() {
+                                                    view! {
                                                         <button
                                                             type="button"
-                                                            class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
-                                                            style=style
-                                                            on:click=move |_| apply_filter.run(label_click.clone())
+                                                            class="group relative text-left w-full rounded-none border border-base-content/10 bg-base-200/20 p-4 hover:border-primary transition-colors cursor-pointer"
+                                                            aria-label="Edit description"
+                                                            on:click=move |_| start_edit_description()
                                                         >
-                                                            {label}
+                                                            <span class="text-sm font-semibold text-base-content mb-2 block">"About"</span>
+                                                            <div class="text-sm text-base-content/80 overflow-auto max-h-[12rem]">
+                                                                <MarkdownView source=description.get() />
+                                                            </div>
+                                                            <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                {edit_pencil_icon("w-5 h-5 text-primary")}
+                                                            </div>
                                                         </button>
-                                                    }.into_any())
-                                                }).collect_view()}
-                                            </div>
-                                        </div>
-                                    }
-                                        .into_any()
-                                }
-                            }}
-
-                            {move || {
-                                let all_accounts = accounts.accounts.get();
-                                let author_id = author_id.clone();
-
-                                if editing_collaborators.get() {
-                                    let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
-                                    let all_accounts_for_select = all_accounts.clone();
-                                    let (add_open, set_add_open) = signal(false);
-                                    let add_open_signal = Signal::derive(move || add_open.get());
-                                    let draft_query = RwSignal::new(String::new());
-                                    let selectable_accounts = Memo::new(move |_| {
-                                        let query = draft_query.get().to_lowercase();
-                                        let excluded_ids: std::collections::HashSet<String> = std::iter::once(author_id.clone())
-                                            .chain(draft_collaborator_ids.get().into_iter())
-                                            .collect();
-                                        all_accounts_for_select
-                                            .clone()
-                                            .into_iter()
-                                            .filter(|account| !excluded_ids.contains(&account.id))
-                                            .filter(|account| {
-                                                query.is_empty()
-                                                    || account.username.to_lowercase().contains(&query)
-                                                    || account.display_name.to_lowercase().contains(&query)
-                                            })
-                                            .collect::<Vec<_>>()
-                                    });
-
-                                    view! {
-                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
-                                            <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
-                                            <div class="flex flex-wrap gap-2 items-center">
-                                                {owner_account.as_ref().map(|account| {
-                                                    let account = account.clone();
-                                                    view! {
-                                                        {avatar_button(&account, None)}
                                                     }
-                                                })}
-                                                {draft_collaborator_ids.get().into_iter().filter_map(|id| {
-                                                    let all_accounts = all_accounts.clone();
-                                                    all_accounts.iter().find(|account| account.id == id).cloned()
-                                                }).map(|account| {
-                                                    let account_id = account.id.clone();
-                                                    let display_name = account.display_name.clone();
+                                                        .into_any()
+                                                } else {
                                                     view! {
-                                                        <div class="relative group">
-                                                            {avatar_button(&account, None)}
-                                                            <button
-                                                                type="button"
-                                                                class="absolute inset-0 flex items-center justify-center bg-error/80 opacity-0 group-hover:opacity-100 transition-opacity text-white tooltip tooltip-top"
-                                                                data-tip={format!("Remove {display_name}")}
-                                                                aria-label={format!("Remove {display_name}")}
-                                                                on:click=move |_| remove_collaborator.run(account_id.clone())
-                                                            >
-                                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                                                </svg>
-                                                            </button>
+                                                        <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-2">
+                                                            <h3 class="text-sm font-semibold text-base-content">"About"</h3>
+                                                            <div class="text-sm text-base-content/80 overflow-auto max-h-[12rem]">
+                                                                <MarkdownView source=description.get() />
+                                                            </div>
                                                         </div>
                                                     }
-                                                }).collect_view()}
-                                                <button
-                                                    type="button"
-                                                    class="w-12 h-12 border border-dashed border-base-content/30 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors tooltip tooltip-top cursor-pointer"
-                                                    aria-label="Add collaborator"
-                                                    data-tip="Add collaborator"
-                                                    on:click=move |_| set_add_open.set(true)
-                                                >
-                                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <line x1="12" y1="5" x2="12" y2="19" />
-                                                        <line x1="5" y1="12" x2="19" y2="12" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                            <div class="flex justify-end gap-2">
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-ghost btn-xs"
-                                                    on:click=move |_| cancel_edit_collaborators()
-                                                >"Cancel"</button>
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-primary btn-xs"
-                                                    on:click=move |_| commit_edit_collaborators.run(draft_collaborator_ids.get())
-                                                >"Save"</button>
-                                            </div>
-                                            <BaseModal
-                                                open=add_open_signal
-                                                on_close=Callback::new(move |()| set_add_open.set(false))
-                                                container_class=Signal::derive(|| "w-full max-w-sm flex flex-col".to_string())
-                                            >
-                                                <div class="space-y-3">
-                                                    <h3 class="text-sm font-semibold text-base-content">"Add collaborator"</h3>
-                                                    <input
-                                                        type="text"
-                                                        class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
-                                                        placeholder="Search users..."
-                                                        prop:value=draft_query.get()
-                                                        on:input=move |ev| draft_query.set(event_target_value(&ev))
-                                                    />
-                                                    <div class="max-h-60 overflow-y-auto space-y-1">
-                                                        {move || {
-                                                            let accounts = selectable_accounts.get();
-                                                            if accounts.is_empty() {
-                                                                view! {
-                                                                    <p class="text-sm text-error py-2">"No users found."</p>
-                                                                }.into_any()
-                                                            } else {
-                                                                view! {
-                                                                    <div class="flex flex-wrap gap-2">
-                                                                        {accounts.into_iter().map(|account| {
-                                                                            let account_id = account.id.clone();
-                                                                            let display_name = account.display_name.clone();
-                                                                            view! {
-                                                                                <button
-                                                                                    type="button"
-                                                                                    class="flex items-center gap-2 px-2 py-1 border border-base-content/10 hover:border-primary/40 transition-colors"
-                                                                                    on:click=move |_| {
-                                                                                        add_collaborator.run(account_id.clone());
-                                                                                        set_add_open.set(false);
-                                                                                    }
-                                                                                >
-                                                                                    {avatar_button(&account, Some("w-8 h-8".to_string()))}
-                                                                                    <span class="text-sm text-base-content">{display_name.clone()}</span>
-                                                                                    <span class="text-xs text-base-content/50">{format!("@{}", account.username)}</span>
-                                                                                </button>
-                                                                            }
-                                                                        }).collect_view()}
-                                                                    </div>
-                                                                }.into_any()
-                                                            }
-                                                        }}
-                                                    </div>
-                                                </div>
-                                            </BaseModal>
-                                        </div>
-                                    }.into_any()
-                                } else {
-                                    let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
-                                    let current_collaborators = all_accounts
-                                        .iter()
-                                        .filter(|account| collaborator_ids.get().contains(&account.id))
-                                        .cloned()
-                                        .collect::<Vec<_>>();
+                                                        .into_any()
+                                                }
+                                            }}
+                                        }
+                                            .into_any()
+                                    }
+                                }}
 
-                                    if is_editable.get() && edit_mode.get() {
-                                        let collaborators = current_collaborators.clone();
+                                {move || {
+                                    if editing_tags.get() {
+                                        view! {
+                                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                                <EditableChipSection
+                                                    title="Tags"
+                                                    aria_label="Tags"
+                                                    items=tags.get()
+                                                    all_items={metadata.tags.get()}
+                                                    editing=editing_tags.into()
+                                                    on_cancel=Callback::new(move |()| cancel_edit_tags())
+                                                    on_toggle=toggle_tag
+                                                    on_save=Callback::new(move |selected| commit_edit_tags.run(selected))
+                                                    on_item_click=Callback::new(move |id: String| {
+                                                        let label = metadata
+                                                            .tag_by_id(&id)
+                                                            .map(|tag| tag.label().to_string())
+                                                            .unwrap_or_default();
+                                                        apply_filter.run(label);
+                                                    })
+                                                    id_fn=tag_id
+                                                    label_fn=tag_label
+                                                    color_fn=tag_color
+                                                    selected_items=draft_tags.into()
+                                                    badge_class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                                />
+                                            </div>
+                                        }
+                                            .into_any()
+                                    } else if is_editable.get() && edit_mode.get() {
                                         view! {
                                             <button
                                                 type="button"
                                                 class="group relative text-left w-full rounded-none border border-base-content/10 bg-base-200/20 p-4 hover:border-primary transition-colors cursor-pointer"
-                                                aria-label="Edit authors"
-                                                on:click=move |_| start_edit_collaborators()
+                                                aria-label="Edit tags"
+                                                on:click=move |_| start_edit_tags()
                                             >
-                                                <span class="text-sm font-semibold text-base-content mb-3 block">"Authors"</span>
-                                                <div class="flex flex-wrap gap-2">
-                                                    {owner_account.as_ref().map(|account| {
-                                                        let account = account.clone();
-                                                        view! {
-                                                            {avatar_button(&account, Some("w-12 h-12 hover:border-primary".to_string()))}
-                                                        }
-                                                    })}
-                                                    {collaborators.into_iter().map(|account| {
-                                                        view! {
-                                                            {avatar_button(&account, Some("w-12 h-12 hover:border-primary".to_string()))}
-                                                        }
+                                                <span class="text-sm font-semibold text-base-content mb-3 block">"Tags"</span>
+                                                <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
+                                                    {tags.get().iter().filter_map(|id| {
+                                                        let tag = metadata.tag_by_id(id)?;
+                                                        let style = tag.color().to_string();
+                                                        let label = tag.label().to_string();
+                                                        Some(view! {
+                                                            <span
+                                                                class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap"
+                                                                style=style
+                                                            >
+                                                                {label}
+                                                            </span>
+                                                        }.into_any())
                                                     }).collect_view()}
                                                 </div>
                                                 <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     {edit_pencil_icon("w-5 h-5 text-primary")}
                                                 </div>
                                             </button>
-                                        }.into_any()
+                                        }
+                                            .into_any()
                                     } else {
-                                        let collaborators = current_collaborators.clone();
                                         view! {
-                                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
-                                                <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
-                                                <div class="flex flex-wrap gap-2">
-                                                    {owner_account.as_ref().map(|account| {
-                                                        let account_for_click = account.clone();
-                                                        view! {
+                                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4">
+                                                <h3 class="text-sm font-semibold text-base-content mb-3">"Tags"</h3>
+                                                <div class="flex flex-wrap gap-2" role="group" aria-label="Tags">
+                                                    {tags.get().iter().filter_map(|id| {
+                                                        let tag = metadata.tag_by_id(id)?;
+                                                        let style = tag.color().to_string();
+                                                        let label = tag.label().to_string();
+                                                        let label_click = label.clone();
+                                                        Some(view! {
                                                             <button
                                                                 type="button"
-                                                                class="cursor-pointer"
-                                                                on:click=move |_| {
-                                                                    profile_modal.open(account_for_click.clone());
-                                                                }
+                                                                class="badge badge-sm badge-outline rounded-none text-neutral-900 border-base-content/10 whitespace-nowrap hover:border-primary/40 cursor-pointer"
+                                                                style=style
+                                                                on:click=move |_| apply_filter.run(label_click.clone())
                                                             >
-                                                                {avatar_button(account, Some("w-12 h-12 hover:border-primary".to_string()))}
+                                                                {label}
                                                             </button>
-                                                        }
-                                                    })}
-                                                    {collaborators.into_iter().map(|account| {
-                                                        let account_for_click = account.clone();
-                                                        view! {
-                                                            <button
-                                                                type="button"
-                                                                class="cursor-pointer"
-                                                                on:click=move |_| {
-                                                                    profile_modal.open(account_for_click.clone());
-                                                                }
-                                                            >
-                                                                {avatar_button(&account, Some("w-12 h-12 hover:border-primary".to_string()))}
-                                                            </button>
-                                                        }
+                                                        }.into_any())
                                                     }).collect_view()}
                                                 </div>
                                             </div>
-                                        }.into_any()
+                                        }
+                                            .into_any()
                                     }
-                                }
-                            }}
+                                }}
 
-                            {move || {
-                                if is_editable.get() && edit_mode.get() {
-                                    view! {
-                                        <div class="border border-error/30 bg-error/10 p-4">
-                                            {move || {
-                                                if show_delete_confirm.get() {
-                                                    view! {
-                                                        <div class="space-y-3">
-                                                            <div class="flex items-start gap-3">
-                                                                {warning_icon("w-5 h-5 text-error flex-shrink-0 mt-0.5")}
-                                                                <div class="flex-1 min-w-0">
-                                                                    <p class="text-sm font-semibold text-error">{"Danger zone"}</p>
-                                                                    <p class="text-sm text-base-content/80">
-                                                                        {"Deleting this project cannot be undone. Type "}
-                                                                        <span class="font-semibold text-error">{title.get()}</span>
-                                                                        {" to confirm."}
-                                                                    </p>
+                                {move || {
+                                    let all_accounts = accounts.accounts.get();
+                                    let author_id = author_id.clone();
+
+                                    if editing_collaborators.get() {
+                                        let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
+                                        let all_accounts_for_select = all_accounts.clone();
+                                        let (add_open, set_add_open) = signal(false);
+                                        let add_open_signal = Signal::derive(move || add_open.get());
+                                        let draft_query = RwSignal::new(String::new());
+                                        let selectable_accounts = Memo::new(move |_| {
+                                            let query = draft_query.get().to_lowercase();
+                                            let excluded_ids: std::collections::HashSet<String> = std::iter::once(author_id.clone())
+                                                .chain(draft_collaborator_ids.get().into_iter())
+                                                .collect();
+                                            all_accounts_for_select
+                                                .clone()
+                                                .into_iter()
+                                                .filter(|account| !excluded_ids.contains(&account.id))
+                                                .filter(|account| {
+                                                    query.is_empty()
+                                                        || account.username.to_lowercase().contains(&query)
+                                                        || account.display_name.to_lowercase().contains(&query)
+                                                })
+                                                .collect::<Vec<_>>()
+                                        });
+
+                                        view! {
+                                            <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                                                <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
+                                                <div class="flex flex-wrap gap-2 items-center">
+                                                    {owner_account.as_ref().map(|account| {
+                                                        let account = account.clone();
+                                                        view! {
+                                                            {avatar_button(&account, None)}
+                                                        }
+                                                    })}
+                                                    {draft_collaborator_ids.get().into_iter().filter_map(|id| {
+                                                        let all_accounts = all_accounts.clone();
+                                                        all_accounts.iter().find(|account| account.id == id).cloned()
+                                                    }).map(|account| {
+                                                        let account_id = account.id.clone();
+                                                        let display_name = account.display_name.clone();
+                                                        view! {
+                                                            <div class="relative group">
+                                                                {avatar_button(&account, None)}
+                                                                <button
+                                                                    type="button"
+                                                                    class="absolute inset-0 flex items-center justify-center bg-error/80 opacity-0 group-hover:opacity-100 transition-opacity text-white tooltip tooltip-top"
+                                                                    data-tip={format!("Remove {display_name}")}
+                                                                    aria-label={format!("Remove {display_name}")}
+                                                                    on:click=move |_| remove_collaborator.run(account_id.clone())
+                                                                >
+                                                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        }
+                                                    }).collect_view()}
+                                                    <button
+                                                        type="button"
+                                                        class="w-12 h-12 border border-dashed border-base-content/30 flex items-center justify-center text-base-content/50 hover:border-primary hover:text-primary transition-colors tooltip tooltip-top cursor-pointer"
+                                                        aria-label="Add collaborator"
+                                                        data-tip="Add collaborator"
+                                                        on:click=move |_| set_add_open.set(true)
+                                                    >
+                                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <line x1="12" y1="5" x2="12" y2="19" />
+                                                            <line x1="5" y1="12" x2="19" y2="12" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <div class="flex justify-end gap-2">
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-ghost btn-xs"
+                                                        on:click=move |_| cancel_edit_collaborators()
+                                                    >"Cancel"</button>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-primary btn-xs"
+                                                        on:click=move |_| commit_edit_collaborators.run(draft_collaborator_ids.get())
+                                                    >"Save"</button>
+                                                </div>
+                                                <BaseModal
+                                                    open=add_open_signal
+                                                    on_close=Callback::new(move |()| set_add_open.set(false))
+                                                    container_class=Signal::derive(|| "w-full max-w-sm flex flex-col".to_string())
+                                                >
+                                                    <div class="space-y-3">
+                                                        <h3 class="text-sm font-semibold text-base-content">"Add collaborator"</h3>
+                                                        <input
+                                                            type="text"
+                                                            class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none"
+                                                            placeholder="Search users..."
+                                                            prop:value=draft_query.get()
+                                                            on:input=move |ev| draft_query.set(event_target_value(&ev))
+                                                        />
+                                                        <div class="max-h-60 overflow-y-auto space-y-1">
+                                                            {move || {
+                                                                let accounts = selectable_accounts.get();
+                                                                if accounts.is_empty() {
+                                                                    view! {
+                                                                        <p class="text-sm text-error py-2">"No users found."</p>
+                                                                    }.into_any()
+                                                                } else {
+                                                                    view! {
+                                                                        <div class="flex flex-wrap gap-2">
+                                                                            {accounts.into_iter().map(|account| {
+                                                                                let account_id = account.id.clone();
+                                                                                let display_name = account.display_name.clone();
+                                                                                view! {
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        class="flex items-center gap-2 px-2 py-1 border border-base-content/10 hover:border-primary/40 transition-colors"
+                                                                                        on:click=move |_| {
+                                                                                            add_collaborator.run(account_id.clone());
+                                                                                            set_add_open.set(false);
+                                                                                        }
+                                                                                    >
+                                                                                        {avatar_button(&account, Some("w-8 h-8".to_string()))}
+                                                                                        <span class="text-sm text-base-content">{display_name.clone()}</span>
+                                                                                        <span class="text-xs text-base-content/50">{format!("@{}", account.username)}</span>
+                                                                                    </button>
+                                                                                }
+                                                                            }).collect_view()}
+                                                                        </div>
+                                                                    }.into_any()
+                                                                }
+                                                            }}
+                                                        </div>
+                                                    </div>
+                                                </BaseModal>
+                                            </div>
+                                        }.into_any()
+                                    } else {
+                                        let owner_account = all_accounts.iter().find(|account| account.id == author_id).cloned();
+                                        let current_collaborators = all_accounts
+                                            .iter()
+                                            .filter(|account| collaborator_ids.get().contains(&account.id))
+                                            .cloned()
+                                            .collect::<Vec<_>>();
+
+                                        if is_editable.get() && edit_mode.get() {
+                                            let collaborators = current_collaborators.clone();
+                                            view! {
+                                                <button
+                                                    type="button"
+                                                    class="group relative text-left w-full rounded-none border border-base-content/10 bg-base-200/20 p-4 hover:border-primary transition-colors cursor-pointer"
+                                                    aria-label="Edit authors"
+                                                    on:click=move |_| start_edit_collaborators()
+                                                >
+                                                    <span class="text-sm font-semibold text-base-content mb-3 block">"Authors"</span>
+                                                    <div class="flex flex-wrap gap-2">
+                                                        {owner_account.as_ref().map(|account| {
+                                                            let account = account.clone();
+                                                            view! {
+                                                                {avatar_button(&account, Some("w-12 h-12 hover:border-primary".to_string()))}
+                                                            }
+                                                        })}
+                                                        {collaborators.into_iter().map(|account| {
+                                                            view! {
+                                                                {avatar_button(&account, Some("w-12 h-12 hover:border-primary".to_string()))}
+                                                            }
+                                                        }).collect_view()}
+                                                    </div>
+                                                    <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        {edit_pencil_icon("w-5 h-5 text-primary")}
+                                                    </div>
+                                                </button>
+                                            }.into_any()
+                                        } else {
+                                            let collaborators = current_collaborators.clone();
+                                            view! {
+                                                <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                                                    <h3 class="text-sm font-semibold text-base-content">"Authors"</h3>
+                                                    <div class="flex flex-wrap gap-2">
+                                                        {owner_account.as_ref().map(|account| {
+                                                            let account_for_click = account.clone();
+                                                            view! {
+                                                                <button
+                                                                    type="button"
+                                                                    class="cursor-pointer"
+                                                                    on:click=move |_| {
+                                                                        profile_modal.open(account_for_click.clone());
+                                                                    }
+                                                                >
+                                                                    {avatar_button(account, Some("w-12 h-12 hover:border-primary".to_string()))}
+                                                                </button>
+                                                            }
+                                                        })}
+                                                        {collaborators.into_iter().map(|account| {
+                                                            let account_for_click = account.clone();
+                                                            view! {
+                                                                <button
+                                                                    type="button"
+                                                                    class="cursor-pointer"
+                                                                    on:click=move |_| {
+                                                                        profile_modal.open(account_for_click.clone());
+                                                                    }
+                                                                >
+                                                                    {avatar_button(&account, Some("w-12 h-12 hover:border-primary".to_string()))}
+                                                                </button>
+                                                            }
+                                                        }).collect_view()}
+                                                    </div>
+                                                </div>
+                                            }.into_any()
+                                        }
+                                    }
+                                }}
+
+                                {move || {
+                                    if is_editable.get() && edit_mode.get() {
+                                        view! {
+                                            <div class="border border-error/30 bg-error/10 p-4">
+                                                {move || {
+                                                    if show_delete_confirm.get() {
+                                                        view! {
+                                                            <div class="space-y-3">
+                                                                <div class="flex items-start gap-3">
+                                                                    {warning_icon("w-5 h-5 text-error flex-shrink-0 mt-0.5")}
+                                                                    <div class="flex-1 min-w-0">
+                                                                        <p class="text-sm font-semibold text-error">{"Danger zone"}</p>
+                                                                        <p class="text-sm text-base-content/80">
+                                                                            {"Deleting this project cannot be undone. Type "}
+                                                                            <span class="font-semibold text-error">{title.get()}</span>
+                                                                            {" to confirm."}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                                <input
+                                                                    id="delete-confirm-input"
+                                                                    type="text"
+                                                                    class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-error focus:outline-none"
+                                                                    placeholder={title.get()}
+                                                                    prop:value=delete_confirm_input.get()
+                                                                    on:input=move |ev| set_delete_confirm_input.set(event_target_value(&ev))
+                                                                    disabled=move || is_deleting.get()
+                                                                />
+                                                                <div class="flex justify-end gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        class="btn btn-ghost btn-xs"
+                                                                        on:click=move |_| {
+                                                                            set_show_delete_confirm.set(false);
+                                                                            set_delete_confirm_input.set(String::new());
+                                                                        }
+                                                                        disabled=move || is_deleting.get()
+                                                                    >
+                                                                        {"Cancel"}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="btn btn-error btn-xs"
+                                                                        on:click=move |_| delete_project_click.run(())
+                                                                        disabled=move || !can_delete.get() || is_deleting.get()
+                                                                    >
+                                                                        {move || if is_deleting.get() {
+                                                                            view! {
+                                                                                <span class="flex items-center gap-2">
+                                                                                    <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+                                                                                    <span>{"Deleting..."}</span>
+                                                                                </span>
+                                                                            }
+                                                                                .into_any()
+                                                                        } else {
+                                                                            view! {
+                                                                                <span class="flex items-center gap-1">
+                                                                                    {trash_icon("w-3.5 h-3.5")}
+                                                                                    <span>{"Delete"}</span>
+                                                                                </span>
+                                                                            }
+                                                                                .into_any()
+                                                                        }}
+                                                                    </button>
                                                                 </div>
                                                             </div>
-                                                            <input
-                                                                id="delete-confirm-input"
-                                                                type="text"
-                                                                class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-error focus:outline-none"
-                                                                placeholder={title.get()}
-                                                                prop:value=delete_confirm_input.get()
-                                                                on:input=move |ev| set_delete_confirm_input.set(event_target_value(&ev))
-                                                                disabled=move || is_deleting.get()
-                                                            />
-                                                            <div class="flex justify-end gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    class="btn btn-ghost btn-xs"
-                                                                    on:click=move |_| {
-                                                                        set_show_delete_confirm.set(false);
-                                                                        set_delete_confirm_input.set(String::new());
-                                                                    }
-                                                                    disabled=move || is_deleting.get()
-                                                                >
-                                                                    {"Cancel"}
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    class="btn btn-error btn-xs"
-                                                                    on:click=move |_| delete_project_click.run(())
-                                                                    disabled=move || !can_delete.get() || is_deleting.get()
-                                                                >
-                                                                    {move || if is_deleting.get() {
-                                                                        view! {
-                                                                            <span class="flex items-center gap-2">
-                                                                                <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-                                                                                <span>{"Deleting..."}</span>
-                                                                            </span>
-                                                                        }
-                                                                            .into_any()
-                                                                    } else {
-                                                                        view! {
-                                                                            <span class="flex items-center gap-1">
-                                                                                {trash_icon("w-3.5 h-3.5")}
-                                                                                <span>{"Delete"}</span>
-                                                                            </span>
-                                                                        }
-                                                                            .into_any()
-                                                                    }}
-                                                                </button>
-                                                            </div>
-                                                        </div>
+                                                        }
+                                                            .into_any()
+                                                    } else {
+                                                        view! {
+                                                            <button
+                                                                type="button"
+                                                                class="btn btn-outline btn-error w-full flex items-center justify-center gap-2"
+                                                                on:click=move |_| set_show_delete_confirm.set(true)
+                                                            >
+                                                                {trash_icon("w-4 h-4")}
+                                                                <span>{"Delete project"}</span>
+                                                            </button>
+                                                        }
+                                                            .into_any()
                                                     }
-                                                        .into_any()
-                                                } else {
-                                                    view! {
-                                                        <button
-                                                            type="button"
-                                                            class="btn btn-outline btn-error w-full flex items-center justify-center gap-2"
-                                                            on:click=move |_| set_show_delete_confirm.set(true)
-                                                        >
-                                                            {trash_icon("w-4 h-4")}
-                                                            <span>{"Delete project"}</span>
-                                                        </button>
-                                                    }
-                                                        .into_any()
-                                                }
-                                            }}
-                                        </div>
+                                                }}
+                                            </div>
+                                        }
+                                            .into_any()
+                                    } else {
+                                        ().into_any()
                                     }
-                                        .into_any()
-                                } else {
-                                    ().into_any()
-                                }
-                            }}
+                                }}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    }
+        }
 }
 
 fn event_target_value(ev: &leptos::web_sys::Event) -> String {

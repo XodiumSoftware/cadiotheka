@@ -23,7 +23,6 @@ impl ViewState {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ViewerSettings {
     pub show_axes: bool,
-    pub show_gizmo: bool,
 }
 
 impl ViewerSettings {
@@ -38,10 +37,7 @@ impl ViewerSettings {
 
 impl Default for ViewerSettings {
     fn default() -> Self {
-        Self {
-            show_axes: true,
-            show_gizmo: true,
-        }
+        Self { show_axes: true }
     }
 }
 
