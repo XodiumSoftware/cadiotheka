@@ -16,6 +16,7 @@ Use this skill when the user wants to create a new UI component.
    - `src/components/effects/` for visual effects
 
 2. Create the file under the appropriate directory.
+   - Do **not** create a `mod.rs` file. Cadiotheka registers all modules directly in `src/lib.rs`.
 
 3. Write the component using the project's conventions:
    - Use `#[component]` from `leptos::prelude::*`.

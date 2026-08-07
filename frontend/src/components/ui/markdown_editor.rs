@@ -1,3 +1,4 @@
+use crate::components::Icon;
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::toolbar_button::ToolbarButton;
 use leptos::prelude::*;
@@ -143,28 +144,28 @@ pub fn MarkdownEditor(
 
                 <div class="flex items-center gap-1 flex-wrap text-base-content/70">
                     <ToolbarButton label="Bold" on_click=Callback::new(move |()| apply_wrap("**", "**"))>
-                        "B"
+                        <Icon::Bold />
                     </ToolbarButton>
                     <ToolbarButton label="Italic" on_click=Callback::new(move |()| apply_wrap("*", "*"))>
-                        "I"
+                        <Icon::Italic />
                     </ToolbarButton>
                     <ToolbarButton label="Heading" on_click=Callback::new(move |()| insert_snippet("## Heading"))>
-                        "H"
+                        <Icon::Heading />
                     </ToolbarButton>
                     <ToolbarButton label="Code" on_click=Callback::new(move |()| apply_wrap("`", "`"))>
-                        "<>"
+                        <Icon::Code />
                     </ToolbarButton>
                     <ToolbarButton label="Link" on_click=Callback::new(move |()| insert_snippet("[label](https://example.com)"))>
-                        "🔗"
+                        <Icon::Link />
                     </ToolbarButton>
                     <ToolbarButton label="Bullet list" on_click=Callback::new(move |()| apply_line_prefix("- "))>
-                        "•"
+                        <Icon::ListBullet />
                     </ToolbarButton>
                     <ToolbarButton label="Numbered list" on_click=Callback::new(move |()| insert_snippet("1. Item\n2. Item"))>
-                        "1."
+                        <Icon::ListNumbered />
                     </ToolbarButton>
                     <ToolbarButton label="Task list" on_click=Callback::new(move |()| insert_snippet("- [ ] Task"))>
-                        "☑"
+                        <Icon::Task />
                     </ToolbarButton>
                 </div>
             </div>

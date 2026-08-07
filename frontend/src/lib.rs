@@ -5,6 +5,8 @@ pub mod components {
         pub mod project;
     }
 
+    pub mod icons;
+
     pub mod sections {
         pub mod footer;
         pub mod header;
@@ -41,6 +43,12 @@ pub mod components {
     pub use sections::header::Header;
     pub use sections::projects::ProjectsSection;
 
+    pub use icons::Icon;
+    pub use icons::Icon::{
+        ICON_AXES, ICON_BOLD, ICON_CODE, ICON_FULLSCREEN, ICON_GIZMO, ICON_GRID, ICON_HEADING,
+        ICON_ITALIC, ICON_LINK, ICON_LIST_BULLET, ICON_LIST_NUMBERED, ICON_RESET, ICON_SHADOWS,
+        ICON_TASK,
+    };
     pub use ui::buy_me_a_coffee::BuyMeACoffeeLogo;
     pub use ui::corner_frame::CornerFrame;
     pub use ui::effects::section_fade::FadeOverlay;

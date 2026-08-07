@@ -1,3 +1,4 @@
+use crate::components::Icon;
 use crate::components::IfcViewer;
 use crate::components::Pagination;
 use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProperties};
@@ -1456,29 +1457,32 @@ fn ProjectModalContent(
                                                 <ToolbarButton
                                                     label="Toggle ground grid"
                                                     tooltip_position=TooltipPosition::Bottom
+                                                    active=show_grid
                                                     on_click=Callback::new(move |()| {
                                                         show_grid.update(|v| *v = !*v);
                                                     })
                                                 >
-                                                    {move || if show_grid.get() { "▦" } else { "▨" }}
+                                                    <Icon::Grid />
                                                 </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Toggle axes gizmo"
                                                     tooltip_position=TooltipPosition::Bottom
+                                                    active=show_axes
                                                     on_click=Callback::new(move |()| {
                                                         show_axes.update(|v| *v = !*v);
                                                     })
                                                 >
-                                                    {move || if show_axes.get() { "📍" } else { "⚪" }}
+                                                    <Icon::Axes />
                                                 </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Toggle shadows"
                                                     tooltip_position=TooltipPosition::Bottom
+                                                    active=shadows
                                                     on_click=Callback::new(move |()| {
                                                         shadows.update(|v| *v = !*v);
                                                     })
                                                 >
-                                                    {move || if shadows.get() { "🌑" } else { "☀" }}
+                                                    <Icon::Shadows />
                                                 </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Reset view"
@@ -1487,23 +1491,25 @@ fn ProjectModalContent(
                                                         reset_view.set(true);
                                                     })
                                                 >
-                                                    "⟲"
+                                                    <Icon::Reset />
                                                 </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Toggle view gizmo"
                                                     tooltip_position=TooltipPosition::Bottom
+                                                    active=show_gizmo
                                                     on_click=Callback::new(move |()| {
                                                         show_gizmo.update(|v| *v = !*v);
                                                     })
                                                 >
-                                                    {move || if show_gizmo.get() { "🧭" } else { "◻" }}
+                                                    <Icon::Gizmo />
                                                 </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Toggle fullscreen"
                                                     tooltip_position=TooltipPosition::Bottom
+                                                    active=viewer_fullscreen
                                                     on_click=toggle_fullscreen
                                                 >
-                                                    {move || if viewer_fullscreen.get() { "🗗" } else { "⛶" }}
+                                                    <Icon::Fullscreen />
                                                 </ToolbarButton>
                                             </div>
                                         </div>
