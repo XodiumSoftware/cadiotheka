@@ -19,6 +19,7 @@ pub fn ToolbarButton(
     #[prop(into)] on_click: Callback<()>,
     #[prop(default = TooltipPosition::Top)] tooltip_position: TooltipPosition,
     #[prop(into, optional)] disabled_overlay: Option<Signal<bool>>,
+    #[prop(default = false)] spin_on_click: bool,
     children: Children,
 ) -> impl IntoView {
     let tooltip_class = match tooltip_position {
@@ -26,6 +27,14 @@ pub fn ToolbarButton(
         TooltipPosition::Bottom => "tooltip-bottom",
     };
     let show_stripe = disabled_overlay.unwrap_or_else(|| Signal::derive(|| false));
+    let spinning = RwSignal::new(false);
+
+    let on_click_wrapper = move |_| {
+        if spin_on_click {
+            spinning.set(true);
+        }
+        on_click.run(());
+    };
 
     view! {
         <div class="tooltip-wrapper relative inline-block z-50">
@@ -34,9 +43,18 @@ pub fn ToolbarButton(
                 class=format!("btn btn-ghost btn-xs min-h-0 h-7 px-1.5 tooltip transition-colors border border-transparent hover:border-primary {tooltip_class}")
                 data-tip=label
                 aria-label=label
-                on:click=move |_| on_click.run(())
+                on:click=on_click_wrapper
             >
-                <span class="relative inline-flex items-center justify-center">
+                <span
+                    class=move || {
+                        if spinning.get() {
+                            "relative inline-flex items-center justify-center animate-spin".to_string()
+                        } else {
+                            "relative inline-flex items-center justify-center".to_string()
+                        }
+                    }
+                    on:animationend=move |_| spinning.set(false)
+                >
                     {children()}
                     {move || {
                         if show_stripe.get() {

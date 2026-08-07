@@ -1468,6 +1468,7 @@ fn ProjectModalContent(
                                                     on_click=Callback::new(move |()| {
                                                         reset_view.set(true);
                                                     })
+                                                    spin_on_click=true
                                                 >
                                                     <Icon::Reset />
                                                 </ToolbarButton>
