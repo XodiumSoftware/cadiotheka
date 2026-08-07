@@ -1457,7 +1457,6 @@ fn ProjectModalContent(
                                                 <ToolbarButton
                                                     label="Toggle ground grid"
                                                     tooltip_position=TooltipPosition::Bottom
-                                                    active=show_grid
                                                     on_click=Callback::new(move |()| {
                                                         show_grid.update(|v| *v = !*v);
                                                     })
@@ -1467,7 +1466,6 @@ fn ProjectModalContent(
                                                 <ToolbarButton
                                                     label="Toggle axes gizmo"
                                                     tooltip_position=TooltipPosition::Bottom
-                                                    active=show_axes
                                                     on_click=Callback::new(move |()| {
                                                         show_axes.update(|v| *v = !*v);
                                                     })
@@ -1477,7 +1475,6 @@ fn ProjectModalContent(
                                                 <ToolbarButton
                                                     label="Toggle shadows"
                                                     tooltip_position=TooltipPosition::Bottom
-                                                    active=shadows
                                                     on_click=Callback::new(move |()| {
                                                         shadows.update(|v| *v = !*v);
                                                     })
@@ -1496,7 +1493,6 @@ fn ProjectModalContent(
                                                 <ToolbarButton
                                                     label="Toggle view gizmo"
                                                     tooltip_position=TooltipPosition::Bottom
-                                                    active=show_gizmo
                                                     on_click=Callback::new(move |()| {
                                                         show_gizmo.update(|v| *v = !*v);
                                                     })
@@ -1506,7 +1502,6 @@ fn ProjectModalContent(
                                                 <ToolbarButton
                                                     label="Toggle fullscreen"
                                                     tooltip_position=TooltipPosition::Bottom
-                                                    active=viewer_fullscreen
                                                     on_click=toggle_fullscreen
                                                 >
                                                     <Icon::Fullscreen />
