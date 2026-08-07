@@ -63,6 +63,10 @@ pub enum ViewDirection {
     Right,
     Top,
     Bottom,
+    FrontRight,
+    BackRight,
+    BackLeft,
+    FrontLeft,
 }
 
 impl ViewDirection {
@@ -75,6 +79,10 @@ impl ViewDirection {
             Self::Right => "Right",
             Self::Top => "Top",
             Self::Bottom => "Bottom",
+            Self::FrontRight => "Front-Right",
+            Self::BackRight => "Back-Right",
+            Self::BackLeft => "Back-Left",
+            Self::FrontLeft => "Front-Left",
         }
     }
 
@@ -83,6 +91,7 @@ impl ViewDirection {
     /// `distance` is the distance from the scene center to the camera eye.
     pub fn eye_and_up(self, distance: f32) -> (three_d_asset::Vec3, three_d_asset::Vec3) {
         use three_d_asset::vec3;
+        let sqrt2_inv = 1.0 / 2.0_f32.sqrt();
         match self {
             Self::Front => (vec3(0.0, 0.0, distance), vec3(0.0, 1.0, 0.0)),
             Self::Back => (vec3(0.0, 0.0, -distance), vec3(0.0, 1.0, 0.0)),
@@ -90,6 +99,22 @@ impl ViewDirection {
             Self::Right => (vec3(distance, 0.0, 0.0), vec3(0.0, 1.0, 0.0)),
             Self::Top => (vec3(0.0, distance, 0.0), vec3(0.0, 0.0, -1.0)),
             Self::Bottom => (vec3(0.0, -distance, 0.0), vec3(0.0, 0.0, 1.0)),
+            Self::FrontRight => (
+                vec3(distance * sqrt2_inv, 0.0, distance * sqrt2_inv),
+                vec3(0.0, 1.0, 0.0),
+            ),
+            Self::BackRight => (
+                vec3(distance * sqrt2_inv, 0.0, -distance * sqrt2_inv),
+                vec3(0.0, 1.0, 0.0),
+            ),
+            Self::BackLeft => (
+                vec3(-distance * sqrt2_inv, 0.0, -distance * sqrt2_inv),
+                vec3(0.0, 1.0, 0.0),
+            ),
+            Self::FrontLeft => (
+                vec3(-distance * sqrt2_inv, 0.0, distance * sqrt2_inv),
+                vec3(0.0, 1.0, 0.0),
+            ),
         }
     }
 }

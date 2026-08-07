@@ -29,12 +29,14 @@ impl From<ViewGizmoDirection> for ViewDirection {
         match value {
             ViewGizmoDirection::Top => Self::Top,
             ViewGizmoDirection::Bottom => Self::Bottom,
-            ViewGizmoDirection::North
-            | ViewGizmoDirection::NorthEast
-            | ViewGizmoDirection::NorthWest => Self::Back,
-            ViewGizmoDirection::East | ViewGizmoDirection::SouthEast => Self::Right,
+            ViewGizmoDirection::North => Self::Back,
+            ViewGizmoDirection::NorthEast => Self::BackRight,
+            ViewGizmoDirection::East => Self::Right,
+            ViewGizmoDirection::SouthEast => Self::FrontRight,
             ViewGizmoDirection::South => Self::Front,
-            ViewGizmoDirection::SouthWest | ViewGizmoDirection::West => Self::Left,
+            ViewGizmoDirection::SouthWest => Self::FrontLeft,
+            ViewGizmoDirection::West => Self::Left,
+            ViewGizmoDirection::NorthWest => Self::BackLeft,
         }
     }
 }
