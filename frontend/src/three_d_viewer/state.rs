@@ -19,30 +19,9 @@ impl ViewState {
     }
 }
 
-/// Serializable per-project viewer display toggles.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct ViewerSettings {
-    pub show_axes: bool,
-}
-
-impl ViewerSettings {
-    pub fn to_json(&self) -> String {
-        serde_json::to_string(self).unwrap_or_default()
-    }
-
-    pub fn from_json(json: &str) -> Option<Self> {
-        serde_json::from_str(json).ok()
-    }
-}
-
-impl Default for ViewerSettings {
-    fn default() -> Self {
-        Self { show_axes: true }
-    }
-}
-
 /// Viewer background/lighting theme.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ViewerTheme {
     #[default]
     Dark,

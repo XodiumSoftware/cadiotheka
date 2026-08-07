@@ -5,7 +5,7 @@
 
 use crate::components::Icon;
 use crate::components::ui::view_gizmo::{GizmoPosition, ViewGizmo, ViewGizmoDirection};
-use crate::three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerSettings, ViewerTheme};
+use crate::three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerTheme};
 use crate::utils::{local_storage_get, local_storage_remove, local_storage_set};
 use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
@@ -99,41 +99,6 @@ pub fn IfcViewer(
                     return;
                 }
                 local_storage_set(&key, &state_json);
-            });
-        }
-    };
-
-    let settings_generation: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
-
-    let schedule_save_settings = {
-        let settings_generation = Rc::clone(&settings_generation);
-        move || {
-            let Some(key) = storage_key
-                .as_ref()
-                .map(|s| s.get())
-                .filter(|k| !k.is_empty())
-            else {
-                return;
-            };
-            let settings = ViewerSettings {
-                show_axes: show_axes.get(),
-            };
-            let settings_json = settings.to_json();
-            let settings_key = format!("{key}.settings");
-
-            let expected = {
-                let mut generation = settings_generation.borrow_mut();
-                *generation = generation.wrapping_add(1);
-                *generation
-            };
-
-            let generation = Rc::clone(&settings_generation);
-            leptos::task::spawn_local(async move {
-                TimeoutFuture::new(500).await;
-                if *generation.borrow() != expected {
-                    return;
-                }
-                local_storage_set(&settings_key, &settings_json);
             });
         }
     };
@@ -278,7 +243,6 @@ pub fn IfcViewer(
     Effect::new({
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
-        let schedule_save_settings = schedule_save_settings.clone();
         move |_| {
             let show = show_axes.get();
             {
@@ -288,7 +252,6 @@ pub fn IfcViewer(
                 }
             }
             request_render.borrow_mut()();
-            schedule_save_settings();
         }
     });
 
@@ -297,22 +260,6 @@ pub fn IfcViewer(
         move |_| {
             let _ = show_gizmo.get();
             request_render.borrow_mut()();
-        }
-    });
-
-    Effect::new({
-        move |_| {
-            let Some(key) = storage_key
-                .as_ref()
-                .map(|s| s.get())
-                .filter(|k| !k.is_empty())
-            else {
-                return;
-            };
-            let Some(settings) = load_viewer_settings(&format!("{key}.settings")) else {
-                return;
-            };
-            show_axes.set(settings.show_axes);
         }
     });
 
@@ -557,11 +504,6 @@ async fn load_model_bytes(url: &str) -> Option<Vec<u8>> {
 fn load_view_state(key: &str) -> Option<ViewState> {
     let json = local_storage_get(key)?;
     ViewState::from_json(&json)
-}
-
-fn load_viewer_settings(key: &str) -> Option<ViewerSettings> {
-    let json = local_storage_get(key)?;
-    ViewerSettings::from_json(&json)
 }
 
 /// Overlay that renders red arrow buttons on each edge and corner so the user

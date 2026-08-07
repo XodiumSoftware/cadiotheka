@@ -40,6 +40,7 @@ pub enum ProjectDetailsTab {
 
 const GIZMO_POSITION_KEY: &str = "gizmo_position";
 const GIZMO_VISIBLE_KEY: &str = "gizmo_visible";
+const AXES_VISIBLE_KEY: &str = "axes_visible";
 
 /// Loads the saved gizmo visibility from account viewer preferences.
 fn load_gizmo_visible_from_preferences(account: Option<&AccountData>) -> bool {
@@ -61,6 +62,29 @@ fn preferences_with_gizmo_visible(account: Option<&AccountData>, visible: bool) 
     let mut prefs: serde_json::Value =
         serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
     prefs[GIZMO_VISIBLE_KEY] = serde_json::json!(visible);
+    serde_json::to_string(&prefs).ok()
+}
+
+/// Loads the saved axes gizmo visibility from account viewer preferences.
+fn load_axes_visible_from_preferences(account: Option<&AccountData>) -> bool {
+    let Some(account) = account else {
+        return true;
+    };
+    let prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs
+        .get(AXES_VISIBLE_KEY)
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(true)
+}
+
+/// Returns the account's existing viewer preferences with the axes visibility
+/// updated, preserving any other keys that may exist in the JSON blob.
+fn preferences_with_axes_visible(account: Option<&AccountData>, visible: bool) -> Option<String> {
+    let account = account?;
+    let mut prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs[AXES_VISIBLE_KEY] = serde_json::json!(visible);
     serde_json::to_string(&prefs).ok()
 }
 
@@ -1523,7 +1547,108 @@ fn ProjectModalContent(
                                     {move || match active_tab.get() {
                                         ProjectDetailsTab::Viewer3d => {
                                             let viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
-                                            let show_axes = RwSignal::new(true);
+                                            let show_axes = RwSignal::new(load_axes_visible_from_preferences(
+                                                current_user.account.get_untracked().as_ref(),
+                                            ));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let set_show_axes = show_axes;
+                                                move |_| {
+                                                    let Some(account) = current_user.account.get() else {
+                                                        return;
+                                                    };
+                                                    let new_visible =
+                                                        load_axes_visible_from_preferences(Some(&account,
+                                                        ));
+                                                    if set_show_axes.get_untracked() != new_visible {
+                                                        set_show_axes.set(new_visible);
+                                                    }
+                                                }
+                                            });
+
+                                            let initial_show_axes = show_axes.get_untracked();
+                                            let axes_save_generation = Rc::new(std::cell::Cell::new(0u64));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let profile_modal = profile_modal;
+                                                let axes_save_generation = Rc::clone(
+                                                    &axes_save_generation);
+                                                move |_| {
+                                                    let visible = show_axes.get();
+                                                    if visible == initial_show_axes {
+                                                        return;
+                                                    }
+                                                    let Some(account) =
+                                                        current_user.account.get_untracked()
+                                                    else {
+                                                        return;
+                                                    };
+                                                    let Some(new_preferences) =
+                                                        preferences_with_axes_visible(
+                                                            Some(&account),
+                                                            visible,
+                                                        )
+                                                    else {
+                                                        return;
+                                                    };
+                                                    if new_preferences == account.viewer_preferences {
+                                                        return;
+                                                    }
+
+                                                    let expected = axes_save_generation
+                                                        .get()
+                                                        .wrapping_add(1);
+                                                    axes_save_generation.set(expected);
+
+                                                    let set_current_user = current_user.set_account;
+                                                    let set_profile_account = profile_modal.set_account;
+                                                    let axes_save_generation = Rc::clone(
+                                                        &axes_save_generation);
+                                                    leptos::task::spawn_local(async move {
+                                                        gloo_timers::future::TimeoutFuture::new(300)
+                                                            .await;
+                                                        if axes_save_generation.get() != expected {
+                                                            return;
+                                                        }
+
+                                                        match crate::contexts::current_user::update_viewer_preferences(
+                                                            new_preferences,
+                                                        )
+                                                        .await
+                                                        {
+                                                            Ok(saved) => {
+                                                                set_current_user.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                                set_profile_account.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                            }
+                                                            Err(err) => {
+                                                                leptos::web_sys::console::error_1(
+                                                                    &format!(
+                                                                        "Failed to save viewer preferences: {}",
+                                                                        err.message()
+                                                                    )
+                                                                    .into(),
+                                                                );
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            });
                                             let reset_view = RwSignal::new(false);
                                             let show_gizmo = RwSignal::new(load_gizmo_visible_from_preferences(
                                                 current_user.account.get_untracked().as_ref(),
