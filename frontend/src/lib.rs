@@ -45,7 +45,9 @@ pub mod components {
 
     pub use icons::Icon;
     pub use icons::Icon::{
-        ICON_AXES, ICON_BOLD, ICON_CODE, ICON_FULLSCREEN_ENTER, ICON_FULLSCREEN_EXIT, ICON_GIZMO,
+        ICON_ARROW_DOWN, ICON_ARROW_DOWN_LEFT, ICON_ARROW_DOWN_RIGHT, ICON_ARROW_LEFT,
+        ICON_ARROW_RIGHT, ICON_ARROW_UP, ICON_ARROW_UP_LEFT, ICON_ARROW_UP_RIGHT, ICON_AXES,
+        ICON_BOLD, ICON_CODE, ICON_FULLSCREEN_ENTER, ICON_FULLSCREEN_EXIT, ICON_GIZMO,
         ICON_HEADING, ICON_ITALIC, ICON_LINK, ICON_LIST_BULLET, ICON_LIST_NUMBERED, ICON_RESET,
         ICON_TASK,
     };
@@ -67,7 +69,7 @@ pub mod components {
     pub use ui::toggle::{ToggleSlider, ToggleSliderWithSlashLabel};
     pub use ui::toolbar_button::ToolbarButton;
     pub use ui::turnstile::{TurnstileWidget, reset_turnstile, turnstile_response};
-    pub use ui::view_gizmo::{ViewGizmo, ViewGizmoDirection};
+    pub use ui::view_gizmo::{GizmoPosition, ViewGizmo, ViewGizmoDirection};
 }
 
 pub mod contexts {

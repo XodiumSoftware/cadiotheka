@@ -73,6 +73,33 @@ impl ViewGizmoDirection {
     }
 }
 
+/// Position of the circular gizmo inside the viewer container.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GizmoPosition {
+    /// Top-right corner (default).
+    #[default]
+    TopRight,
+    /// Top-left corner.
+    TopLeft,
+    /// Bottom-right corner.
+    BottomRight,
+    /// Bottom-left corner.
+    BottomLeft,
+}
+
+impl GizmoPosition {
+    /// CSS class that absolutely positions the gizmo wrapper.
+    fn container_class(self) -> &'static str {
+        match self {
+            Self::TopRight => "absolute top-3 right-3 z-20",
+            Self::TopLeft => "absolute top-3 left-3 z-20",
+            Self::BottomRight => "absolute bottom-3 right-3 z-20",
+            Self::BottomLeft => "absolute bottom-3 left-3 z-20",
+        }
+    }
+}
+
 const RADIUS: u32 = 60;
 const INNER_RADIUS: u32 = 40;
 const CENTER: u32 = RADIUS;
@@ -83,8 +110,12 @@ const DIAMETER: u32 = RADIUS * 2;
 pub fn ViewGizmo(
     #[prop(into)] on_direction: Callback<ViewGizmoDirection>,
     #[prop(into, optional)] disabled: Option<Signal<bool>>,
+    #[prop(into, optional)] position: Option<Signal<GizmoPosition>>,
+    #[prop(into, optional)] editing: Option<Signal<bool>>,
 ) -> impl IntoView {
     let _disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
+    let position = position.unwrap_or_else(|| Signal::derive(|| GizmoPosition::TopRight));
+    let editing = editing.unwrap_or_else(|| Signal::derive(|| false));
     let diameter = DIAMETER;
     let inner_radius = INNER_RADIUS;
     let center = CENTER;
@@ -101,7 +132,7 @@ pub fn ViewGizmo(
     ];
 
     view! {
-        <div class="pointer-events-auto select-none rounded-full border border-base-content/10 bg-base-100/90 shadow backdrop-blur-sm p-1">
+        <div class=move || format!("pointer-events-auto select-none rounded-full border border-base-content/10 bg-base-100/90 shadow backdrop-blur-sm p-1 {}", position.get().container_class())>
             <svg
                 width=diameter
                 height=diameter
@@ -202,7 +233,7 @@ pub fn ViewGizmo(
                     fill="none"
                     stroke="currentColor"
                     stroke-width="1"
-                    class="text-base-content/30"
+                    class=move || if editing.get() { "text-error" } else { "text-base-content/30" }
                 />
                 <line
                     x1=inner_radius

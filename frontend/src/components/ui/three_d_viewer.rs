@@ -3,7 +3,8 @@
 //! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`)
 //! and renders it with the `three-d` renderer in [`crate::three_d_viewer`].
 
-use crate::components::ui::view_gizmo::{ViewGizmo, ViewGizmoDirection};
+use crate::components::Icon;
+use crate::components::ui::view_gizmo::{GizmoPosition, ViewGizmo, ViewGizmoDirection};
 use crate::three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerSettings, ViewerTheme};
 use crate::utils::{local_storage_get, local_storage_remove, local_storage_set};
 use gloo_net::http::Request;
@@ -43,6 +44,8 @@ pub fn IfcViewer(
     #[prop(optional)] show_axes_signal: Option<RwSignal<bool>>,
     #[prop(into, optional)] disabled: Option<Signal<bool>>,
     #[prop(optional)] show_gizmo_signal: Option<RwSignal<bool>>,
+    #[prop(into, optional)] gizmo_position_signal: Option<RwSignal<GizmoPosition>>,
+    #[prop(into, optional)] gizmo_edit_mode_signal: Option<RwSignal<bool>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -50,6 +53,9 @@ pub fn IfcViewer(
     let show_axes = show_axes_signal.unwrap_or_else(|| RwSignal::new(true));
     let disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
     let show_gizmo = show_gizmo_signal.unwrap_or_else(|| RwSignal::new(true));
+    let gizmo_position =
+        gizmo_position_signal.unwrap_or_else(|| RwSignal::new(GizmoPosition::TopRight));
+    let gizmo_edit_mode = gizmo_edit_mode_signal.unwrap_or_else(|| RwSignal::new(false));
 
     let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
@@ -487,7 +493,7 @@ pub fn IfcViewer(
                         </div>
                     }.into_any(),
                     IfcViewerState::Rendering => view! {
-                        <div class="absolute top-3 right-3 z-20">
+                        <div class=move || if gizmo_edit_mode.get() { "absolute inset-0 z-20 pointer-events-none".to_string() } else { "absolute inset-0 z-20".to_string() }>
                             {move || if show_gizmo.get() {
                                 view! {
                                     <ViewGizmo
@@ -495,10 +501,35 @@ pub fn IfcViewer(
                                             let disabled = disabled;
                                             move || disabled.get() || state.get() != IfcViewerState::Rendering
                                         })
+                                        position=Signal::derive(move || gizmo_position.get())
+                                        editing=Signal::derive(move || gizmo_edit_mode.get())
                                         on_direction=Callback::new(move |dir| {
                                             focus_direction.set(Some(dir));
                                         })
                                     />
+                                }.into_any()
+                            } else {
+                                ().into_any()
+                            }}
+                            {move || if gizmo_edit_mode.get() {
+                                view! {
+                                    <GizmoPositionSelector
+                                        current=Signal::derive(move || gizmo_position.get())
+                                        on_select=Callback::new(move |pos| {
+                                            gizmo_position.set(pos);
+                                        })
+                                    />
+                                }.into_any()
+                            } else {
+                                ().into_any()
+                            }}
+                            {move || if gizmo_edit_mode.get() {
+                                view! {
+                                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <span class="text-xs text-error bg-base-100/80 px-2 py-1 border border-error/30 shadow backdrop-blur-sm">
+                                            "R+click the view gizmo button again to close edit mode."
+                                        </span>
+                                    </div>
                                 }.into_any()
                             } else {
                                 ().into_any()
@@ -535,4 +566,82 @@ fn load_view_state(key: &str) -> Option<ViewState> {
 fn load_viewer_settings(key: &str) -> Option<ViewerSettings> {
     let json = local_storage_get(key)?;
     ViewerSettings::from_json(&json)
+}
+
+/// Overlay that renders red arrow buttons on each edge and corner so the user
+/// can pick a new gizmo position while in edit mode.
+#[component]
+fn GizmoPositionSelector(
+    #[prop(into)] current: Signal<GizmoPosition>,
+    #[prop(into)] on_select: Callback<GizmoPosition>,
+) -> impl IntoView {
+    view! {
+        <div class="absolute inset-0 pointer-events-none">
+            <GizmoPositionButton
+                pos=GizmoPosition::TopLeft
+                class="top-3 left-3"
+                current=current
+                on_select=on_select
+            >
+                <Icon::ArrowUpLeft class="w-4 h-4"/>
+            </GizmoPositionButton>
+            <GizmoPositionButton
+                pos=GizmoPosition::TopRight
+                class="top-3 right-3"
+                current=current
+                on_select=on_select
+            >
+                <Icon::ArrowUpRight class="w-4 h-4"/>
+            </GizmoPositionButton>
+            <GizmoPositionButton
+                pos=GizmoPosition::BottomLeft
+                class="bottom-3 left-3"
+                current=current
+                on_select=on_select
+            >
+                <Icon::ArrowDownLeft class="w-4 h-4"/>
+            </GizmoPositionButton>
+            <GizmoPositionButton
+                pos=GizmoPosition::BottomRight
+                class="bottom-3 right-3"
+                current=current
+                on_select=on_select
+            >
+                <Icon::ArrowDownRight class="w-4 h-4"/>
+            </GizmoPositionButton>
+        </div>
+    }
+}
+
+/// A single arrow button used by [`GizmoPositionSelector`].
+#[component]
+fn GizmoPositionButton(
+    #[prop(into)] pos: GizmoPosition,
+    class: &'static str,
+    #[prop(into)] current: Signal<GizmoPosition>,
+    #[prop(into)] on_select: Callback<GizmoPosition>,
+    children: Children,
+) -> impl IntoView {
+    let is_current = move || current.get() == pos;
+    view! {
+        <button
+            type="button"
+            class=move || format!("absolute {class} pointer-events-auto btn btn-ghost btn-xs p-1 h-auto min-h-0 border border-transparent {}", if is_current() { "text-error border-error bg-base-100/90" } else { "text-error/70 hover:text-error hover:border-error" })
+            aria-label=move || format!("Move view gizmo to the {}", pos.label())
+            on:click=move |_| on_select.run(pos)
+        >
+            {children()}
+        </button>
+    }
+}
+
+impl GizmoPosition {
+    fn label(self) -> &'static str {
+        match self {
+            Self::TopLeft => "top left",
+            Self::TopRight => "top right",
+            Self::BottomLeft => "bottom left",
+            Self::BottomRight => "bottom right",
+        }
+    }
 }

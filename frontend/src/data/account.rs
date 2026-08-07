@@ -48,6 +48,13 @@ pub struct AccountData {
     /// Provider-scoped unique identifier for this account.
     #[serde(default)]
     pub provider_id: String,
+    /// JSON blob of account-scoped viewer preferences.
+    #[serde(default = "default_viewer_preferences")]
+    pub viewer_preferences: String,
+}
+
+fn default_viewer_preferences() -> String {
+    "{}".to_string()
 }
 
 impl AccountData {
@@ -66,6 +73,7 @@ impl AccountData {
             verified: 0,
             provider: String::new(),
             provider_id: String::new(),
+            viewer_preferences: "{}".to_string(),
         }
     }
 }
@@ -124,6 +132,7 @@ mod tests {
             verified: 1,
             provider: "seed".to_owned(),
             provider_id: "seed_8af81bd9-b70a-4d64-89e9-83bbc4e0297d".to_owned(),
+            viewer_preferences: "{}".to_owned(),
         }
     }
 
@@ -161,6 +170,15 @@ mod tests {
         assert!(account.provider.is_empty());
         assert!(account.provider_id.is_empty());
         assert!(account.avatar_url.is_none());
+        assert_eq!(account.viewer_preferences, "{}");
+        Ok(())
+    }
+
+    #[test]
+    fn account_viewer_preferences_defaults_to_empty_object() -> Result<(), serde_json::Error> {
+        let json = r#"{"id":"acc-1","username":"user","display_name":"User","email":"u@example.com","role":"creator","created_at":"2025-01-01T00:00:00Z"}"#;
+        let account: AccountData = serde_json::from_str(json)?;
+        assert_eq!(account.viewer_preferences, "{}");
         Ok(())
     }
 

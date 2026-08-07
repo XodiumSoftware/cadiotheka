@@ -6,6 +6,7 @@ use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::base::BaseModal;
 use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
+use crate::components::ui::view_gizmo::GizmoPosition;
 
 use crate::contexts::{
     AccountsContext, CurrentUserContext, MetadataContext, ProfileModalContext, ProjectModalContext,
@@ -25,6 +26,7 @@ use crate::utils::{
 };
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
+use std::rc::Rc;
 
 const MAX_TITLE_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 100;
@@ -34,6 +36,51 @@ const VERSIONS_PER_PAGE: usize = 20;
 pub enum ProjectDetailsTab {
     Viewer3d,
     Versions,
+}
+
+const GIZMO_POSITION_KEY: &str = "gizmo_position";
+
+/// Loads the saved gizmo position from account viewer preferences.
+fn load_gizmo_position_from_preferences(account: Option<&AccountData>) -> GizmoPosition {
+    let Some(account) = account else {
+        return GizmoPosition::TopRight;
+    };
+    let prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs
+        .get(GIZMO_POSITION_KEY)
+        .and_then(|v| v.as_str())
+        .and_then(|s| match s {
+            "top_left" => Some(GizmoPosition::TopLeft),
+            "top_right" => Some(GizmoPosition::TopRight),
+            "bottom_left" => Some(GizmoPosition::BottomLeft),
+            "bottom_right" => Some(GizmoPosition::BottomRight),
+            _ => None,
+        })
+        .unwrap_or(GizmoPosition::TopRight)
+}
+
+/// Wire id used to persist a [`GizmoPosition`] in the viewer preferences JSON.
+fn gizmo_position_wire_id(position: GizmoPosition) -> &'static str {
+    match position {
+        GizmoPosition::TopLeft => "top_left",
+        GizmoPosition::TopRight => "top_right",
+        GizmoPosition::BottomLeft => "bottom_left",
+        GizmoPosition::BottomRight => "bottom_right",
+    }
+}
+
+/// Returns the account's existing viewer preferences with the gizmo position
+/// updated, preserving any other keys that may exist in the JSON blob.
+fn preferences_with_gizmo_position(
+    account: Option<&AccountData>,
+    position: GizmoPosition,
+) -> Option<String> {
+    let account = account?;
+    let mut prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs[GIZMO_POSITION_KEY] = serde_json::json!(gizmo_position_wire_id(position));
+    serde_json::to_string(&prefs).ok()
 }
 
 /// Pipeline status for converting a project's IFC model to a viewable GLB.
@@ -1447,6 +1494,105 @@ fn ProjectModalContent(
                                         let show_axes = RwSignal::new(true);
                                         let reset_view = RwSignal::new(false);
                                         let show_gizmo = RwSignal::new(true);
+                                        let gizmo_edit_mode = RwSignal::new(false);
+                                        let gizmo_position = RwSignal::new(load_gizmo_position_from_preferences(
+                                            current_user.account.get_untracked().as_ref(),
+                                        ));
+
+                                        Effect::new({
+                                            let current_user = current_user;
+                                            let set_gizmo_position = gizmo_position;
+                                            move |_| {
+                                                let Some(account) = current_user.account.get() else {
+                                                    return;
+                                                };
+                                                let new_pos =
+                                                    load_gizmo_position_from_preferences(Some(&account,
+                                                    ));
+                                                if set_gizmo_position.get_untracked() != new_pos {
+                                                    set_gizmo_position.set(new_pos);
+                                                }
+                                            }
+                                        });
+
+                                        let initial_gizmo_position = gizmo_position.get_untracked();
+                                        let save_generation = Rc::new(std::cell::Cell::new(0u64));
+
+                                        Effect::new({
+                                            let current_user = current_user;
+                                            let profile_modal = profile_modal;
+                                            let save_generation = Rc::clone(&save_generation);
+                                            move |_| {
+                                                let position = gizmo_position.get();
+                                                if position == initial_gizmo_position {
+                                                    return;
+                                                }
+                                                let Some(account) =
+                                                    current_user.account.get_untracked()
+                                                else {
+                                                    return;
+                                                };
+                                                let Some(new_preferences) =
+                                                    preferences_with_gizmo_position(
+                                                        Some(&account),
+                                                        position,
+                                                    )
+                                                else {
+                                                    return;
+                                                };
+                                                if new_preferences == account.viewer_preferences {
+                                                    return;
+                                                }
+
+                                                let expected = save_generation.get().wrapping_add(1);
+                                                save_generation.set(expected);
+
+                                                let set_current_user = current_user.set_account;
+                                                let set_profile_account = profile_modal.set_account;
+                                                let save_generation = Rc::clone(&save_generation);
+                                                leptos::task::spawn_local(async move {
+                                                    gloo_timers::future::TimeoutFuture::new(300)
+                                                        .await;
+                                                    if save_generation.get() != expected {
+                                                        return;
+                                                    }
+
+                                                    match crate::contexts::current_user::update_viewer_preferences(
+                                                        new_preferences,
+                                                    )
+                                                    .await
+                                                    {
+                                                        Ok(saved) => {
+                                                            set_current_user.update(|opt| {
+                                                                if let Some(acc) = opt.as_mut() {
+                                                                    acc.viewer_preferences
+                                                                        .clone_from(
+                                                                            &saved,
+                                                                        );
+                                                                }
+                                                            });
+                                                            set_profile_account.update(|opt| {
+                                                                if let Some(acc) = opt.as_mut() {
+                                                                    acc.viewer_preferences
+                                                                        .clone_from(
+                                                                            &saved,
+                                                                        );
+                                                                }
+                                                            });
+                                                        }
+                                                        Err(err) => {
+                                                            leptos::web_sys::console::error_1(
+                                                                &format!(
+                                                                    "Failed to save viewer preferences: {}",
+                                                                    err.message()
+                                                                )
+                                                                .into(),
+                                                            );
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        });
 
                                         view! {
                                     <div node_ref=viewer_ref class="h-full flex flex-col">
@@ -1473,10 +1619,13 @@ fn ProjectModalContent(
                                                     <Icon::Reset />
                                                 </ToolbarButton>
                                                 <ToolbarButton
-                                                    label="Toggle view gizmo"
+                                                    label="L+click to toggle view gizmo\nR+click to unlock view gizmos position"
                                                     tooltip_position=TooltipPosition::Left
                                                     on_click=Callback::new(move |()| {
                                                         show_gizmo.update(|v| *v = !*v);
+                                                    })
+                                                    on_context_menu=Callback::new(move |()| {
+                                                        gizmo_edit_mode.update(|v| *v = !*v);
                                                     })
                                                     disabled_overlay=Signal::derive(move || !show_gizmo.get())
                                                 >
@@ -1516,6 +1665,8 @@ fn ProjectModalContent(
                                                 reset_view_signal=reset_view
                                                 show_axes_signal=show_axes
                                                 show_gizmo_signal=show_gizmo
+                                                gizmo_position_signal=gizmo_position
+                                                gizmo_edit_mode_signal=gizmo_edit_mode
                                                 disabled=Signal::derive({
                                                     let is_editable = is_editable;
                                                     let edit_mode = edit_mode;

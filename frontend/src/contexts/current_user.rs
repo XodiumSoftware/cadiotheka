@@ -87,6 +87,88 @@ struct MeResponse {
     account: AccountData,
 }
 
+/// Fetch the account-scoped viewer preferences JSON blob from the backend.
+///
+/// Returns `"{}"` when the user is not logged in.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when the network fails or the backend returns an
+/// unexpected error.
+pub async fn fetch_viewer_preferences() -> Result<String, RequestError> {
+    let url = auth_url("/me/viewer-preferences");
+    match Request::get(&url)
+        .credentials(RequestCredentials::Include)
+        .send()
+        .await
+    {
+        Ok(response) if response.ok() => {
+            let body = response.text().await.unwrap_or_default();
+            let parsed =
+                serde_json::from_str::<ViewerPreferencesResponse>(&body).map_err(|err| {
+                    RequestError::Parse(format!(
+                        "Failed to parse viewer preferences from {url}: {err} (body={body:?})"
+                    ))
+                })?;
+            Ok(parsed.viewer_preferences)
+        }
+        Ok(response) if response.status() == 401 => Ok("{}".to_string()),
+        Ok(response) => {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to fetch viewer preferences from {url}: {body}"),
+            })
+        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to fetch viewer preferences from {url}: {err}"
+        ))),
+    }
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct ViewerPreferencesResponse {
+    viewer_preferences: String,
+}
+
+/// Saves account-scoped viewer preferences on the backend.
+///
+/// On success it returns the JSON string that was sent.
+///
+/// # Errors
+///
+/// Returns a [`RequestError`] when serialization fails or the backend rejects
+/// the request.
+pub async fn update_viewer_preferences(preferences: String) -> Result<String, RequestError> {
+    let url = auth_url("/me");
+    let body = serde_json::json!({ "viewer_preferences": preferences }).to_string();
+    let request = Request::put(&url)
+        .credentials(RequestCredentials::Include)
+        .header("Content-Type", "application/json")
+        .body(body)
+        .map_err(|err| {
+            RequestError::BuildRequest(format!(
+                "Failed to build viewer preferences update request: {err}"
+            ))
+        })?;
+
+    match request.send().await {
+        Ok(response) if response.ok() => Ok(preferences),
+        Ok(response) => {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(RequestError::Server {
+                status,
+                body: format!("Failed to update viewer preferences at {url}: {body}"),
+            })
+        }
+        Err(err) => Err(RequestError::Network(format!(
+            "Failed to update viewer preferences at {url}: {err}"
+        ))),
+    }
+}
+
 /// Fetch the OAuth provider names linked to the currently authenticated
 /// account.
 ///

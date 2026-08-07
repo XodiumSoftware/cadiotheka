@@ -19,6 +19,7 @@ pub(crate) mod routes {
     pub(crate) const AUTH_LINKED_PROVIDERS: &str = "/auth/linked-providers";
     pub(crate) const AUTH_LINKED_PROVIDER: &str = "/auth/linked-providers/:provider";
     pub(crate) const AUTH_ME: &str = "/auth/me";
+    pub(crate) const AUTH_ME_VIEWER_PREFERENCES: &str = "/auth/me/viewer-preferences";
     pub(crate) const AUTH_LOGOUT: &str = "/auth/logout";
 }
 
@@ -93,6 +94,10 @@ pub fn build_router() -> Router<'static, ()> {
         .delete_async(routes::AUTH_LINKED_PROVIDER, api::accounts::unlink_provider)
         .get_async(routes::AUTH_ME, api::session::me)
         .put_async(routes::AUTH_ME, api::session::update_me)
+        .get_async(
+            routes::AUTH_ME_VIEWER_PREFERENCES,
+            api::session::me_viewer_preferences,
+        )
         .get_async(routes::AUTH_LOGOUT, api::session::logout)
 }
 
@@ -154,6 +159,8 @@ mod tests {
         created_at: String,
         verified: i32,
         #[serde(default)]
+        viewer_preferences: String,
+        #[serde(default)]
         provider: String,
         #[serde(default)]
         provider_id: String,
@@ -198,6 +205,7 @@ mod tests {
             avatar_url: Some("https://example.com/avatar.png".to_string()),
             created_at: "2025-01-01T00:00:00Z".to_string(),
             verified: 1,
+            viewer_preferences: "{}".to_string(),
         };
 
         let json = serde_json::to_string(&account)?;
@@ -213,6 +221,7 @@ mod tests {
         assert!(parsed.project_ids.is_empty());
         assert_eq!(parsed.created_at, account.created_at);
         assert_eq!(parsed.verified, account.verified);
+        assert_eq!(parsed.viewer_preferences, account.viewer_preferences);
         assert!(parsed.provider.is_empty());
         assert!(parsed.provider_id.is_empty());
         Ok(())

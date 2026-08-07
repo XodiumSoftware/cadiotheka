@@ -93,6 +93,11 @@ html {
     }
 }
 
+.tooltip[data-tip*="\a"]::before,
+.tooltip[data-tip*="\n"]::before {
+    white-space: pre;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

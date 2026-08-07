@@ -22,6 +22,7 @@ pub fn ToolbarButton(
     #[prop(default = TooltipPosition::Top)] tooltip_position: TooltipPosition,
     #[prop(into, optional)] disabled_overlay: Option<Signal<bool>>,
     #[prop(default = false)] spin_on_click: bool,
+    #[prop(into, optional)] on_context_menu: Option<Callback<()>>,
     children: Children,
 ) -> impl IntoView {
     let tooltip_class = match tooltip_position {
@@ -39,14 +40,24 @@ pub fn ToolbarButton(
         on_click.run(());
     };
 
+    let on_context_menu_wrapper = move |ev: leptos::web_sys::MouseEvent| {
+        ev.prevent_default();
+        if let Some(handler) = &on_context_menu {
+            handler.run(());
+        }
+    };
+
+    let aria_label = label.replace('\n', "; ");
+
     view! {
         <div class="tooltip-wrapper relative inline-block z-50">
             <button
                 type="button"
                 class=format!("btn btn-ghost btn-xs min-h-0 h-7 px-1.5 tooltip transition-colors border border-transparent hover:border-primary {tooltip_class}")
                 data-tip=label
-                aria-label=label
+                aria-label=aria_label
                 on:click=on_click_wrapper
+                on:contextmenu=on_context_menu_wrapper
             >
                 <span
                     class=move || {

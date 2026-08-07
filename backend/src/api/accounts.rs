@@ -4,7 +4,7 @@ use worker::{Request, Response, Result, RouteContext};
 use crate::api::session::require_account;
 use crate::utils::{db, forbidden, js_option, not_found, now_utc};
 
-const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified FROM accounts a";
+const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences FROM accounts a";
 
 /// A Cadiotheka account stored in D1.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -19,6 +19,9 @@ pub struct Account {
     pub created_at: String,
     /// D1 stores booleans as integers, so this field is an `i32` instead of a `bool`.
     pub verified: i32,
+    /// JSON blob storing account-scoped viewer preferences.
+    #[serde(default)]
+    pub viewer_preferences: String,
 }
 
 /// Payload used to create or update an account.
@@ -33,6 +36,7 @@ pub struct AccountPayload {
     pub avatar_url: Option<String>,
     pub created_at: String,
     pub verified: i32,
+    pub viewer_preferences: String,
 }
 
 /// Fetches a single account by id, returning `None` when no row matches.
@@ -217,12 +221,13 @@ pub async fn create_oauth_account(
         avatar_url: profile.avatar_url,
         created_at: created_at.clone(),
         verified: 1,
+        viewer_preferences: "{}".to_string(),
     };
 
     db(ctx)?
         .prepare(
-            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified, viewer_preferences) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         )
         .bind(&[
             id.clone().into(),
@@ -234,6 +239,7 @@ pub async fn create_oauth_account(
             js_option(account.avatar_url.clone()),
             account.created_at.clone().into(),
             account.verified.into(),
+            account.viewer_preferences.clone().into(),
         ])?
         .run()
         .await?;
@@ -332,8 +338,8 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let payload: AccountPayload = req.json().await?;
     db(&ctx)?
         .prepare(
-            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified, viewer_preferences) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         )
         .bind(&[
             payload.id.into(),
@@ -345,6 +351,7 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
             js_option(payload.avatar_url),
             payload.created_at.into(),
             payload.verified.into(),
+            payload.viewer_preferences.into(),
         ])?
         .run()
         .await?;
@@ -364,20 +371,22 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
     db(&ctx)?
         .prepare(
             "UPDATE accounts \
-             SET username = ?1, display_name = ?2, email = ?3, role = ?4, bio = ?5, avatar_url = ?6, created_at = ?7, verified = ?8 \
-             WHERE id = ?9",
+             SET username = ?1, display_name = ?2, email = ?3, role = ?4, bio = ?5, avatar_url = ?6, created_at = ?7, verified = ?8, viewer_preferences = ?9 \
+             WHERE id = ?10",
         )
-        .bind(&[
-            payload.username.into(),
-            payload.display_name.into(),
-            payload.email.into(),
-            payload.role.into(),
-            payload.bio.into(),
-            js_option(payload.avatar_url),
-            payload.created_at.into(),
-            payload.verified.into(),
-            id.into(),
-        ])?
+        .bind(
+            &[
+                payload.username.into(),
+                payload.display_name.into(),
+                payload.email.into(),
+                payload.role.into(),
+                payload.bio.into(),
+                js_option(payload.avatar_url),
+                payload.created_at.into(),
+                payload.verified.into(),
+                payload.viewer_preferences.into(),
+                id.into(),
+            ])?
         .run()
         .await?;
     Response::empty()

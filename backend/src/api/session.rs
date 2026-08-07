@@ -206,6 +206,9 @@ pub async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Result<Optio
 /// Maximum length for a user-written bio, matching GitHub's profile bio limit.
 const MAX_BIO_LENGTH: usize = 160;
 
+/// Maximum size for the `viewer_preferences` JSON blob, in bytes.
+const MAX_VIEWER_PREFERENCES_LENGTH: usize = 4_096;
+
 /// Requires a valid session and returns the authenticated account. Returns 401
 /// if the request is not authenticated.
 pub async fn require_account(req: &Request, ctx: &RouteContext<()>) -> Result<Account> {
@@ -218,25 +221,51 @@ pub async fn require_account(req: &Request, ctx: &RouteContext<()>) -> Result<Ac
 /// Updates the currently authenticated account.
 ///
 /// Accepts a JSON body with the fields the user is allowed to edit themselves.
-/// Currently only `bio` is supported.
+/// Currently only `bio` and `viewer_preferences` are supported.
 pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     #[derive(Deserialize)]
     struct UpdatePayload {
-        bio: String,
+        bio: Option<String>,
+        viewer_preferences: Option<String>,
     }
 
     let account = require_account(&req, &ctx).await?;
     let payload: UpdatePayload = req.json().await?;
 
-    if payload.bio.len() > MAX_BIO_LENGTH {
+    if let Some(bio) = &payload.bio
+        && bio.len() > MAX_BIO_LENGTH
+    {
         return bad_request("Bio must be 160 characters or fewer");
     }
 
+    if let Some(prefs) = &payload.viewer_preferences
+        && prefs.len() > MAX_VIEWER_PREFERENCES_LENGTH
+    {
+        return bad_request("Viewer preferences must be 4096 characters or fewer");
+    }
+
     let db = db(&ctx)?;
-    db.prepare("UPDATE accounts SET bio = ?1 WHERE id = ?2")
-        .bind(&[payload.bio.into(), account.id.into()])?
-        .run()
-        .await?;
+    match (payload.bio, payload.viewer_preferences) {
+        (Some(bio), Some(prefs)) => {
+            db.prepare("UPDATE accounts SET bio = ?1, viewer_preferences = ?2 WHERE id = ?3")
+                .bind(&[bio.into(), prefs.into(), account.id.into()])?
+                .run()
+                .await?;
+        }
+        (Some(bio), None) => {
+            db.prepare("UPDATE accounts SET bio = ?1 WHERE id = ?2")
+                .bind(&[bio.into(), account.id.into()])?
+                .run()
+                .await?;
+        }
+        (None, Some(prefs)) => {
+            db.prepare("UPDATE accounts SET viewer_preferences = ?1 WHERE id = ?2")
+                .bind(&[prefs.into(), account.id.into()])?
+                .run()
+                .await?;
+        }
+        (None, None) => {}
+    }
 
     Response::empty()
 }
@@ -248,6 +277,30 @@ pub async fn me(req: Request, ctx: RouteContext<()>) -> Result<Response> {
         Some(account) => Response::from_json(&serde_json::json!({ "account": account })),
         None => unauthorized("Unauthorized"),
     }
+}
+
+/// Row shape used when reading the `viewer_preferences` column.
+#[derive(Deserialize)]
+struct PreferencesRow {
+    viewer_preferences: String,
+}
+
+/// Returns the viewer preferences for the currently authenticated account,
+/// or 401 if not authenticated.
+pub async fn me_viewer_preferences(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let account = require_account(&req, &ctx).await?;
+
+    let row = db(&ctx)?
+        .prepare("SELECT viewer_preferences FROM accounts WHERE id = ?1")
+        .bind(&[account.id.into()])?
+        .all()
+        .await?
+        .results::<PreferencesRow>()?
+        .into_iter()
+        .next();
+
+    let preferences = row.map_or_else(|| "{}".to_string(), |r| r.viewer_preferences);
+    Response::from_json(&serde_json::json!({ "viewer_preferences": preferences }))
 }
 
 /// Builds an HTTP redirect response that clears the session cookie.
