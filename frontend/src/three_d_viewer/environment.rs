@@ -1,48 +1,35 @@
 //! Procedural HDR environment (skybox) for image-based lighting.
 //!
-//! An equirectangular HDR map is generated in code and converted into an IBL
-//! environment used by [`AmbientLight`]. A matching [`Skybox`] object can be
-//! rendered as the background.
+//! A CPU-side cube map is generated in code and uploaded directly to the GPU.
+//! This avoids `TextureCubeMap::new_from_equirectangular`, whose internal
+//! render-to-cube-map path can trigger browser warnings about lazy texture
+//! initialization when `generateMipmap` is called.
+//!
+//! A matching [`Skybox`] object can be rendered as the background and an
+//! [`AmbientLight`] with the same environment provides image-based lighting.
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
+use std::sync::Arc;
 use three_d::InnerSpace;
-use three_d::core::{Context as ThreeDContext, TextureCubeMap};
+use three_d::core::{Context as ThreeDContext, CpuTexture, Mipmap, TextureCubeMap, Wrapping};
 use three_d::renderer::AmbientLight;
 use three_d::renderer::Skybox;
-use three_d_asset::{Srgba, Texture2D, TextureData, vec3};
+use three_d_asset::{Srgba, TextureData, Vec3, vec3};
 
-/// Width of the generated equirectangular sky map in pixels.
-const SKY_WIDTH: u32 = 512;
-/// Height of the generated equirectangular sky map in pixels.
-const SKY_HEIGHT: u32 = 256;
+/// Size of each face of the generated cube map in pixels.
+const CUBE_SIZE: u32 = 128;
 /// HDR intensity of the horizon/sun region, above white so PBR materials pick
 /// up strong specular highlights.
 const HORIZON_INTENSITY: f32 = 2.2;
 
-/// Generates an equirectangular HDR sky map with a soft zenith-to-horizon
-/// gradient and a subtle horizontal tint.
-///
-/// Returns a CPU-side [`Texture2D`] holding `RgbF32` data suitable for building
-/// a cube map via [`TextureCubeMap::new_from_equirectangular`].
-pub fn equirectangular_sky(width: u32, height: u32) -> Texture2D {
-    let mut data = Vec::with_capacity((width * height) as usize);
-    for y in 0..height {
-        let v = (y as f32 + 0.5) / height as f32;
-        let elevation = v * std::f32::consts::PI - std::f32::consts::FRAC_PI_2;
-        for x in 0..width {
-            let u = (x as f32 + 0.5) / width as f32;
-            let azimuth = u * std::f32::consts::TAU;
-            data.push(sky_color(elevation, azimuth));
-        }
-    }
-    Texture2D {
-        name: "procedural-sky.hdr".to_owned(),
-        data: TextureData::RgbF32(data),
-        width,
-        height,
-        ..Default::default()
-    }
+/// Computes an HDR RGB color for a sky direction given by a world-space unit
+/// direction vector.
+fn sky_color_for_direction(direction: Vec3) -> [f32; 3] {
+    let direction = direction.normalize();
+    let elevation = direction.y.asin();
+    let azimuth = direction.z.atan2(direction.x);
+    sky_color(elevation, azimuth)
 }
 
 /// Computes an HDR RGB color for a sky direction given by equirectangular
@@ -70,39 +57,76 @@ fn sky_color(elevation: f32, azimuth: f32) -> [f32; 3] {
     ]
 }
 
-/// Builds an ambient light driven by the generated HDR environment.
-pub fn build_ibl_ambient(context: &ThreeDContext) -> AmbientLight {
-    let map = equirectangular_sky(SKY_WIDTH, SKY_HEIGHT);
-    let cube_map = build_environment(context, &map);
-    AmbientLight::new_with_environment(context, 1.0, Srgba::WHITE, &cube_map)
+/// Generates one face of the procedural cube map.
+///
+/// `right` and `up` are orthonormal basis vectors for the face in world space,
+/// and `direction` points toward the center of the face.
+#[allow(clippy::many_single_char_names)]
+fn generate_face(size: u32, direction: Vec3, up: Vec3) -> Vec<[f32; 4]> {
+    let right = direction.cross(up);
+    let mut data = Vec::with_capacity((size * size) as usize);
+    for y in 0..size {
+        let v = (y as f32 + 0.5) / size as f32 * 2.0 - 1.0;
+        for x in 0..size {
+            let u = (x as f32 + 0.5) / size as f32 * 2.0 - 1.0;
+            let sample_dir = (direction + right * u + up * v).normalize();
+            let [r, g, b] = sky_color_for_direction(sample_dir);
+            data.push([r, g, b, 1.0]);
+        }
+    }
+    data
 }
 
-/// Converts an equirectangular HDR map into a cube map.
-fn build_environment(context: &ThreeDContext, cpu_texture: &Texture2D) -> TextureCubeMap {
-    TextureCubeMap::new_from_equirectangular::<f32>(context, cpu_texture)
+/// Creates a CPU-side cube-map face texture with the given RGBA float data.
+fn cpu_face(name: &str, size: u32, data: Vec<[f32; 4]>) -> CpuTexture {
+    CpuTexture {
+        name: name.to_owned(),
+        data: TextureData::RgbaF32(data),
+        width: size,
+        height: size,
+        wrap_s: Wrapping::ClampToEdge,
+        wrap_t: Wrapping::ClampToEdge,
+        mipmap: Some(Mipmap::default()),
+        ..Default::default()
+    }
+}
+
+/// Builds a GPU cube map from the procedurally generated sky.
+fn build_environment(context: &ThreeDContext) -> TextureCubeMap {
+    let size = CUBE_SIZE;
+    let right = generate_face(size, vec3(1.0, 0.0, 0.0), vec3(0.0, -1.0, 0.0));
+    let left = generate_face(size, vec3(-1.0, 0.0, 0.0), vec3(0.0, -1.0, 0.0));
+    let top = generate_face(size, vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
+    let bottom = generate_face(size, vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, -1.0));
+    let front = generate_face(size, vec3(0.0, 0.0, 1.0), vec3(0.0, -1.0, 0.0));
+    let back = generate_face(size, vec3(0.0, 0.0, -1.0), vec3(0.0, -1.0, 0.0));
+    TextureCubeMap::new(
+        context,
+        &cpu_face("sky-right", size, right),
+        &cpu_face("sky-left", size, left),
+        &cpu_face("sky-top", size, top),
+        &cpu_face("sky-bottom", size, bottom),
+        &cpu_face("sky-front", size, front),
+        &cpu_face("sky-back", size, back),
+    )
+}
+
+/// Builds an ambient light driven by the generated HDR environment.
+pub fn build_ibl_ambient(context: &ThreeDContext) -> AmbientLight {
+    let cube_map = build_environment(context);
+    AmbientLight::new_with_environment(context, 1.0, Srgba::WHITE, &cube_map)
 }
 
 /// Builds a background skybox object from the generated HDR sky.
 pub fn build_skybox(context: &ThreeDContext) -> Skybox {
-    let map = equirectangular_sky(SKY_WIDTH, SKY_HEIGHT);
-    Skybox::new_from_equirectangular(context, &map)
+    #[allow(clippy::arc_with_non_send_sync)]
+    let cube_map = Arc::new(build_environment(context));
+    Skybox::new_with_texture(context, cube_map)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn sky_map_has_expected_dimensions_and_data() {
-        let map = equirectangular_sky(64, 32);
-        assert_eq!(map.width, 64);
-        assert_eq!(map.height, 32);
-        if let TextureData::RgbF32(data) = &map.data {
-            assert_eq!(data.len(), 64 * 32);
-        } else {
-            panic!("expected RgbF32 sky data");
-        }
-    }
 
     #[test]
     fn sky_color_is_hdr_and_clamped() {
@@ -118,6 +142,16 @@ mod tests {
                 assert!((0.0..=4.0).contains(&b));
             }
         }
+    }
+
+    #[test]
+    fn cube_faces_are_full_alpha_rgba_f32() {
+        let face = generate_face(32, vec3(1.0, 0.0, 0.0), vec3(0.0, -1.0, 0.0));
+        assert_eq!(face.len(), 32 * 32);
+        assert!(face.iter().all(|pixel| (0.0..=4.0).contains(&pixel[0])
+            && (0.0..=4.0).contains(&pixel[1])
+            && (0.0..=4.0).contains(&pixel[2])
+            && (pixel[3] - 1.0).abs() < f32::EPSILON));
     }
 
     #[test]
