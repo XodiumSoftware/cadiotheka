@@ -71,7 +71,7 @@ impl ViewGizmoDirection {
     }
 }
 
-const RADIUS: u32 = 64;
+const RADIUS: u32 = 42;
 const INNER_RADIUS: u32 = 28;
 const CENTER: u32 = RADIUS;
 const DIAMETER: u32 = RADIUS * 2;
@@ -127,7 +127,7 @@ pub fn ViewGizmo(
                                 y=ty
                                 text-anchor="middle"
                                 dominant-baseline="central"
-                                class="fill-base-content text-[8px] font-semibold pointer-events-none"
+                                class="fill-base-content text-[8px] font-bold pointer-events-none group-hover:fill-neutral-content"
                             >
                                 {label}
                             </text>
@@ -135,7 +135,7 @@ pub fn ViewGizmo(
                     }
                 }).collect_view()}
 
-                <g class="cursor-pointer" on:click=move |_| on_direction.run(ViewGizmoDirection::Top)>
+                <g class="cursor-pointer group" on:click=move |_| on_direction.run(ViewGizmoDirection::Top)>
                     <path
                         d=upper_semicircle_path(center, center, INNER_RADIUS)
                         fill="currentColor"
@@ -147,12 +147,12 @@ pub fn ViewGizmo(
                         y=center - INNER_RADIUS / 2
                         text-anchor="middle"
                         dominant-baseline="central"
-                        class="fill-base-content text-[8px] font-semibold pointer-events-none"
+                        class="fill-base-content text-[8px] font-bold pointer-events-none group-hover:fill-neutral-content"
                     >
                         "T"
                     </text>
                 </g>
-                <g class="cursor-pointer" on:click=move |_| on_direction.run(ViewGizmoDirection::Bottom)>
+                <g class="cursor-pointer group" on:click=move |_| on_direction.run(ViewGizmoDirection::Bottom)>
                     <path
                         d=lower_semicircle_path(center, center, INNER_RADIUS)
                         fill="currentColor"
@@ -164,7 +164,7 @@ pub fn ViewGizmo(
                         y=center + INNER_RADIUS / 2
                         text-anchor="middle"
                         dominant-baseline="central"
-                        class="fill-base-content text-[8px] font-semibold pointer-events-none"
+                        class="fill-base-content text-[8px] font-bold pointer-events-none group-hover:fill-neutral-content"
                     >
                         "B"
                     </text>
@@ -180,9 +180,9 @@ pub fn ViewGizmo(
                     class="text-base-content/30"
                 />
                 <line
-                    x1=0
+                    x1=inner_radius
                     y1=center
-                    x2=diameter
+                    x2=diameter - inner_radius
                     y2=center
                     stroke="currentColor"
                     stroke-width="1"
