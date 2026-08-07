@@ -1447,6 +1447,7 @@ fn ProjectModalContent(
                                         let show_axes = RwSignal::new(true);
                                         let shadows = RwSignal::new(true);
                                         let reset_view = RwSignal::new(false);
+                                        let show_gizmo = RwSignal::new(true);
 
                                         view! {
                                     <div node_ref=viewer_ref class="h-full flex flex-col">
@@ -1489,6 +1490,15 @@ fn ProjectModalContent(
                                                     "⟲"
                                                 </ToolbarButton>
                                                 <ToolbarButton
+                                                    label="Toggle view gizmo"
+                                                    tooltip_position=TooltipPosition::Bottom
+                                                    on_click=Callback::new(move |()| {
+                                                        show_gizmo.update(|v| *v = !*v);
+                                                    })
+                                                >
+                                                    {move || if show_gizmo.get() { "🧭" } else { "◻" }}
+                                                </ToolbarButton>
+                                                <ToolbarButton
                                                     label="Toggle fullscreen"
                                                     tooltip_position=TooltipPosition::Bottom
                                                     on_click=toggle_fullscreen
@@ -1515,6 +1525,7 @@ fn ProjectModalContent(
                                                 show_grid_signal=show_grid
                                                 show_axes_signal=show_axes
                                                 shadows_signal=shadows
+                                                show_gizmo_signal=show_gizmo
                                                 disabled=Signal::derive({
                                                     let is_editable = is_editable;
                                                     let edit_mode = edit_mode;

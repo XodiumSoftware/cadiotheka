@@ -53,3 +53,43 @@ pub enum ViewerTheme {
     Dark,
     Light,
 }
+
+/// Direction from which the camera should look at the scene center.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ViewDirection {
+    Front,
+    Back,
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
+impl ViewDirection {
+    /// Human-readable label shown in the gizmo tooltip.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Front => "Front",
+            Self::Back => "Back",
+            Self::Left => "Left",
+            Self::Right => "Right",
+            Self::Top => "Top",
+            Self::Bottom => "Bottom",
+        }
+    }
+
+    /// Computes the world-space eye offset and up vector for this direction.
+    ///
+    /// `distance` is the distance from the scene center to the camera eye.
+    pub fn eye_and_up(self, distance: f32) -> (three_d_asset::Vec3, three_d_asset::Vec3) {
+        use three_d_asset::vec3;
+        match self {
+            Self::Front => (vec3(0.0, 0.0, distance), vec3(0.0, 1.0, 0.0)),
+            Self::Back => (vec3(0.0, 0.0, -distance), vec3(0.0, 1.0, 0.0)),
+            Self::Left => (vec3(-distance, 0.0, 0.0), vec3(0.0, 1.0, 0.0)),
+            Self::Right => (vec3(distance, 0.0, 0.0), vec3(0.0, 1.0, 0.0)),
+            Self::Top => (vec3(0.0, distance, 0.0), vec3(0.0, 0.0, -1.0)),
+            Self::Bottom => (vec3(0.0, -distance, 0.0), vec3(0.0, 0.0, 1.0)),
+        }
+    }
+}

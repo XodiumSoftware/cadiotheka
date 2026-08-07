@@ -21,6 +21,7 @@ pub mod components {
         pub mod markdown;
         pub mod markdown_editor;
         pub mod three_d_viewer;
+        pub mod view_gizmo;
         pub mod modals {
             pub mod add_project;
             pub mod base;
@@ -58,6 +59,7 @@ pub mod components {
     pub use ui::toggle::{ToggleSlider, ToggleSliderWithSlashLabel};
     pub use ui::toolbar_button::ToolbarButton;
     pub use ui::turnstile::{TurnstileWidget, reset_turnstile, turnstile_response};
+    pub use ui::view_gizmo::{ViewGizmo, ViewGizmoDirection};
 }
 
 pub mod contexts {
@@ -129,10 +131,12 @@ pub mod three_d_viewer {
 
     pub use controls::OrbitControls;
     pub use renderer::Renderer;
-    pub use state::{ViewState, ViewerSettings, ViewerTheme};
+    pub use state::{ViewDirection, ViewState, ViewerSettings, ViewerTheme};
 }
 
-pub use three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerSettings, ViewerTheme};
+pub use three_d_viewer::{
+    OrbitControls, Renderer, ViewDirection, ViewState, ViewerSettings, ViewerTheme,
+};
 
 pub mod utils {
     pub mod color;

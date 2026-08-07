@@ -3,6 +3,7 @@
 //! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`)
 //! and renders it with the `three-d` renderer in [`crate::three_d_viewer`].
 
+use crate::components::ui::view_gizmo::{ViewGizmo, ViewGizmoDirection};
 use crate::three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerSettings, ViewerTheme};
 use crate::utils::{local_storage_get, local_storage_remove, local_storage_set};
 use gloo_net::http::Request;
@@ -43,6 +44,7 @@ pub fn IfcViewer(
     #[prop(optional)] show_axes_signal: Option<RwSignal<bool>>,
     #[prop(optional)] shadows_signal: Option<RwSignal<bool>>,
     #[prop(into, optional)] disabled: Option<Signal<bool>>,
+    #[prop(optional)] show_gizmo_signal: Option<RwSignal<bool>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -51,6 +53,9 @@ pub fn IfcViewer(
     let show_axes = show_axes_signal.unwrap_or_else(|| RwSignal::new(true));
     let shadows = shadows_signal.unwrap_or_else(|| RwSignal::new(true));
     let disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
+    let show_gizmo = show_gizmo_signal.unwrap_or_else(|| RwSignal::new(true));
+
+    let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
     let renderer: Rc<RefCell<Option<Renderer>>> = Rc::new(RefCell::new(None));
     let controls: Rc<RefCell<OrbitControls>> = Rc::new(RefCell::new(OrbitControls::default()));
@@ -192,6 +197,29 @@ pub fn IfcViewer(
                 let _ = window.cancel_animation_frame(handle);
             }
             *(*renderer).borrow_mut() = None;
+        }
+    });
+
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            let Some(dir) = focus_direction.get() else {
+                return;
+            };
+            focus_direction.set(None);
+            let has_renderer = {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.set_focus(dir.into());
+                    true
+                } else {
+                    false
+                }
+            };
+            if has_renderer {
+                request_render.borrow_mut()();
+            }
         }
     });
 
@@ -496,7 +524,25 @@ pub fn IfcViewer(
                             "Failed to load IFC model."
                         </div>
                     }.into_any(),
-                    IfcViewerState::Rendering => ().into_any(),
+                    IfcViewerState::Rendering => view! {
+                        <div class="absolute bottom-3 right-3 z-20">
+                            {move || if show_gizmo.get() {
+                                view! {
+                                    <ViewGizmo
+                                        disabled=Signal::derive({
+                                            let disabled = disabled;
+                                            move || disabled.get() || state.get() != IfcViewerState::Rendering
+                                        })
+                                        on_direction=Callback::new(move |dir| {
+                                            focus_direction.set(Some(dir));
+                                        })
+                                    />
+                                }.into_any()
+                            } else {
+                                ().into_any()
+                            }}
+                        </div>
+                    }.into_any(),
                 }
             }}
         </div>

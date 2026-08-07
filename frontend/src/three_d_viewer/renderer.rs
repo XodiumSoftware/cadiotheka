@@ -7,7 +7,7 @@ use crate::three_d_viewer::environment::{build_ibl_ambient, build_skybox};
 use crate::three_d_viewer::scene::{
     build_axes, build_framing_camera, build_ground_grid, canvas_size,
 };
-use crate::three_d_viewer::state::{ViewState, ViewerTheme};
+use crate::three_d_viewer::state::{ViewDirection, ViewState, ViewerTheme};
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
 use std::cell::RefCell;
@@ -211,6 +211,59 @@ impl Renderer {
         self.control = control;
         self.rebuild_ground_grid();
         self.rebuild_axes();
+    }
+
+    /// Moves the camera so it looks at the model center from the given axis direction.
+    ///
+    /// The camera maintains its current distance from the target (or falls back to the
+    /// framing distance when the current camera is too close to the target), and the
+    /// up vector is chosen so the model stays upright along the world Y axis whenever
+    /// possible.
+    pub fn set_focus(&mut self, direction: ViewDirection) {
+        let (min, max) = self.scene_bounds;
+        let center = vec3(
+            (min[0] + max[0]) * 0.5,
+            (min[1] + max[1]) * 0.5,
+            (min[2] + max[2]) * 0.5,
+        );
+
+        let size = [
+            (max[0] - min[0]).abs(),
+            (max[1] - min[1]).abs(),
+            (max[2] - min[2]).abs(),
+        ];
+        let max_size = size[0].max(size[1]).max(size[2]).max(1.0);
+
+        let fov_y = Self::FOV_Y;
+        let (width, height) = canvas_size(&self.canvas);
+        let aspect = if height == 0 {
+            1.0
+        } else {
+            width as f32 / height as f32
+        };
+        let half_fov_y = fov_y * 0.5;
+        let fov_x = 2.0 * (aspect * half_fov_y.tan()).atan();
+        let limiting_fov = fov_y.min(fov_x);
+        let padding = 1.2;
+        let framing_distance = (max_size * 0.5 / (limiting_fov * 0.5).tan()) * padding;
+
+        let current_distance = self.camera.position().distance(center);
+        let distance = current_distance.max(framing_distance);
+
+        let (eye, up) = direction.eye_and_up(distance);
+        let eye = center + eye;
+
+        let viewport = three_d_asset::Viewport::new_at_origo(width, height);
+        self.camera = ThreeDCamera::new_perspective(
+            viewport,
+            eye,
+            center,
+            up,
+            three_d_asset::radians(fov_y),
+            self.camera.z_near(),
+            self.camera.z_far(),
+        );
+        self.control = OrbitControl::new(center, max_size * 0.001, max_size * 1_000.0);
     }
 
     fn rebuild_axes(&mut self) {
