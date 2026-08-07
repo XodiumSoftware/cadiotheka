@@ -34,6 +34,7 @@ impl OrbitControls {
         &mut self,
         ev: &MouseEvent,
         renderer: &Rc<RefCell<Option<Renderer>>>,
+        show_axes: bool,
     ) -> bool {
         ev.prevent_default();
         let Some(pending_events) = renderer_events(renderer) else {
@@ -53,7 +54,7 @@ impl OrbitControls {
             handled: false,
         });
         if is_double_click && let Some(renderer) = renderer.borrow_mut().as_mut() {
-            renderer.reset_view();
+            renderer.reset_view(show_axes);
         }
         true
     }

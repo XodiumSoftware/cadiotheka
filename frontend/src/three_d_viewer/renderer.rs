@@ -137,7 +137,7 @@ impl Renderer {
             );
         }
 
-        self.rebuild_axes();
+        self.rebuild_axes(self.show_axes);
         true
     }
 
@@ -195,12 +195,12 @@ impl Renderer {
     }
 
     /// Resets the camera and orbit target to frame the loaded model.
-    pub fn reset_view(&mut self) {
+    pub fn reset_view(&mut self, show_axes: bool) {
         let (camera, control) =
             build_framing_camera(self.scene_bounds.0, self.scene_bounds.1, &self.canvas);
         self.camera = camera;
         self.control = control;
-        self.rebuild_axes();
+        self.rebuild_axes(show_axes);
     }
 
     /// Moves the camera so it looks at the model center from the given axis direction.
@@ -256,12 +256,13 @@ impl Renderer {
         self.control = OrbitControl::new(center, max_size * 0.001, max_size * 1_000.0);
     }
 
-    fn rebuild_axes(&mut self) {
+    fn rebuild_axes(&mut self, show: bool) {
         self.axes = Some(build_axes(
             &self.context,
             self.scene_bounds.0,
             self.scene_bounds.1,
         ));
+        self.show_axes = show;
     }
 
     /// Vertical field of view in radians.

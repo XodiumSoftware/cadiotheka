@@ -238,7 +238,7 @@ pub fn IfcViewer(
             let has_renderer = {
                 let mut renderer_ref = renderer.borrow_mut();
                 if let Some(renderer) = renderer_ref.as_mut() {
-                    renderer.reset_view();
+                    renderer.reset_view(show_axes.get());
                     true
                 } else {
                     false
@@ -317,7 +317,7 @@ pub fn IfcViewer(
         let controls = Rc::clone(&controls);
         move |ev: leptos::web_sys::MouseEvent| {
             let mut state = controls.borrow_mut();
-            if state.on_mouse_down(&ev, &renderer) {
+            if state.on_mouse_down(&ev, &renderer, show_axes.get()) {
                 request_render.borrow_mut()();
             }
         }
@@ -413,8 +413,8 @@ pub fn IfcViewer(
                             if let Some(r) = renderer.borrow_mut().as_mut() {
                                 r.restore_view_state(&state);
                             }
-                        } else {
-                            renderer.borrow_mut().as_mut().map(Renderer::reset_view);
+                        } else if let Some(r) = renderer.borrow_mut().as_mut() {
+                            r.reset_view(show_axes.get());
                         }
 
                         request_render.borrow_mut()();
