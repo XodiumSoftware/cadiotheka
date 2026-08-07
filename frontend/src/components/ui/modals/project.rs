@@ -1444,7 +1444,6 @@ fn ProjectModalContent(
                                 {move || match active_tab.get() {
                                     ProjectDetailsTab::Viewer3d => {
                                         let viewer_state = RwSignal::new(crate::components::ui::three_d_viewer::IfcViewerState::NoModel);
-                                        let show_grid = RwSignal::new(true);
                                         let show_axes = RwSignal::new(true);
                                         let reset_view = RwSignal::new(false);
                                         let show_gizmo = RwSignal::new(true);
@@ -1453,15 +1452,6 @@ fn ProjectModalContent(
                                     <div node_ref=viewer_ref class="h-full flex flex-col">
                                         <div class="flex items-center justify-end gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
                                             <div class="flex gap-1">
-                                                <ToolbarButton
-                                                    label="Toggle ground grid"
-                                                    tooltip_position=TooltipPosition::Bottom
-                                                    on_click=Callback::new(move |()| {
-                                                        show_grid.update(|v| *v = !*v);
-                                                    })
-                                                >
-                                                    <Icon::Grid />
-                                                </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Toggle axes gizmo"
                                                     tooltip_position=TooltipPosition::Bottom
@@ -1521,7 +1511,6 @@ fn ProjectModalContent(
                                                 })
                                                 state_signal=viewer_state
                                                 reset_view_signal=reset_view
-                                                show_grid_signal=show_grid
                                                 show_axes_signal=show_axes
                                                 show_gizmo_signal=show_gizmo
                                                 disabled=Signal::derive({

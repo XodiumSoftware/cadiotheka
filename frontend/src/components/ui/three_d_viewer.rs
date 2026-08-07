@@ -40,7 +40,6 @@ pub fn IfcViewer(
     #[prop(into, optional)] storage_key: Option<Signal<String>>,
     #[prop(optional)] state_signal: Option<RwSignal<IfcViewerState>>,
     #[prop(optional)] reset_view_signal: Option<RwSignal<bool>>,
-    #[prop(optional)] show_grid_signal: Option<RwSignal<bool>>,
     #[prop(optional)] show_axes_signal: Option<RwSignal<bool>>,
     #[prop(into, optional)] disabled: Option<Signal<bool>>,
     #[prop(optional)] show_gizmo_signal: Option<RwSignal<bool>>,
@@ -48,7 +47,6 @@ pub fn IfcViewer(
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
     let reset_view = reset_view_signal.unwrap_or_else(|| RwSignal::new(false));
-    let show_grid = show_grid_signal.unwrap_or_else(|| RwSignal::new(true));
     let show_axes = show_axes_signal.unwrap_or_else(|| RwSignal::new(true));
     let disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
     let show_gizmo = show_gizmo_signal.unwrap_or_else(|| RwSignal::new(true));
@@ -112,7 +110,6 @@ pub fn IfcViewer(
                 return;
             };
             let settings = ViewerSettings {
-                show_grid: show_grid.get(),
                 show_axes: show_axes.get(),
             };
             let settings_json = settings.to_json();
@@ -277,23 +274,6 @@ pub fn IfcViewer(
         let request_render = Rc::clone(&request_render);
         let schedule_save_settings = schedule_save_settings.clone();
         move |_| {
-            let show = show_grid.get();
-            {
-                let mut renderer_ref = renderer.borrow_mut();
-                if let Some(renderer) = renderer_ref.as_mut() {
-                    renderer.set_show_grid(show);
-                }
-            }
-            request_render.borrow_mut()();
-            schedule_save_settings();
-        }
-    });
-
-    Effect::new({
-        let renderer = Rc::clone(&renderer);
-        let request_render = Rc::clone(&request_render);
-        let schedule_save_settings = schedule_save_settings.clone();
-        move |_| {
             let show = show_axes.get();
             {
                 let mut renderer_ref = renderer.borrow_mut();
@@ -327,7 +307,6 @@ pub fn IfcViewer(
             let Some(settings) = load_viewer_settings(&format!("{key}.settings")) else {
                 return;
             };
-            show_grid.set(settings.show_grid);
             show_axes.set(settings.show_axes);
         }
     });

@@ -22,7 +22,6 @@ impl ViewState {
 /// Serializable per-project viewer display toggles.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ViewerSettings {
-    pub show_grid: bool,
     pub show_axes: bool,
 }
 
@@ -38,10 +37,7 @@ impl ViewerSettings {
 
 impl Default for ViewerSettings {
     fn default() -> Self {
-        Self {
-            show_grid: true,
-            show_axes: true,
-        }
+        Self { show_axes: true }
     }
 }
 

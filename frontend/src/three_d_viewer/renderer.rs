@@ -4,9 +4,7 @@
 
 #[cfg(target_arch = "wasm32")]
 use crate::three_d_viewer::environment::{build_ibl_ambient, build_skybox};
-use crate::three_d_viewer::scene::{
-    build_axes, build_framing_camera, build_ground_grid, canvas_size,
-};
+use crate::three_d_viewer::scene::{build_axes, build_framing_camera, canvas_size};
 use crate::three_d_viewer::state::{ViewDirection, ViewState, ViewerTheme};
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
@@ -36,10 +34,8 @@ pub struct Renderer {
     pub(crate) canvas: HtmlCanvasElement,
     pub(crate) scene_bounds: ([f32; 3], [f32; 3]),
     pub(crate) models: Vec<Box<dyn Object>>,
-    pub(crate) ground_grid: Option<Box<dyn Object>>,
     pub(crate) axes: Option<Box<dyn Object>>,
     pub(crate) skybox: Option<Skybox>,
-    pub(crate) show_grid: bool,
     pub(crate) show_axes: bool,
     pub(crate) total_vertices: usize,
     pub(crate) total_triangles: usize,
@@ -91,10 +87,8 @@ impl Renderer {
                 canvas: canvas.clone(),
                 scene_bounds: ([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]),
                 models: Vec::new(),
-                ground_grid: None,
                 axes: None,
                 skybox,
-                show_grid: true,
                 show_axes: true,
                 total_vertices: 0,
                 total_triangles: 0,
@@ -108,8 +102,8 @@ impl Renderer {
 
     /// Loads a GLB model into the existing renderer.
     ///
-    /// Replaces any previously loaded model, rebuilds the camera, ground grid,
-    /// and axes to match the new scene bounds, and returns `true` on success.
+    /// Replaces any previously loaded model, rebuilds the camera and axes to
+    /// match the new scene bounds, and returns `true` on success.
     #[cfg(target_arch = "wasm32")]
     pub fn load_model(&mut self, glb_bytes: &[u8]) -> bool {
         use crate::three_d_viewer::scene::scene_bounds_from_model;
@@ -143,7 +137,6 @@ impl Renderer {
             );
         }
 
-        self.rebuild_ground_grid();
         self.rebuild_axes();
         true
     }
@@ -207,7 +200,6 @@ impl Renderer {
             build_framing_camera(self.scene_bounds.0, self.scene_bounds.1, &self.canvas);
         self.camera = camera;
         self.control = control;
-        self.rebuild_ground_grid();
         self.rebuild_axes();
     }
 
@@ -272,15 +264,7 @@ impl Renderer {
         ));
     }
 
-    fn rebuild_ground_grid(&mut self) {
-        self.ground_grid = Some(build_ground_grid(
-            &self.context,
-            self.scene_bounds.0,
-            self.scene_bounds.1,
-            self.theme,
-        ));
-    }
-
+    /// Vertical field of view in radians.
     /// Renders the scene once.
     pub fn render(&mut self) {
         let (width, height) = canvas_size(&self.canvas);
@@ -315,12 +299,6 @@ impl Renderer {
             .iter()
             .map(std::convert::AsRef::as_ref)
             .chain(
-                self.ground_grid
-                    .iter()
-                    .filter(|_| self.show_grid)
-                    .map(AsRef::as_ref),
-            )
-            .chain(
                 self.axes
                     .iter()
                     .filter(|_| self.show_axes)
@@ -345,11 +323,6 @@ impl Renderer {
         target.render(&self.camera, objects, &[&self.light, &self.ambient]);
     }
 
-    /// Sets whether the ground grid is rendered.
-    pub fn set_show_grid(&mut self, show: bool) {
-        self.show_grid = show;
-    }
-
     /// Sets whether the axes gizmo is rendered.
     pub fn set_show_axes(&mut self, show: bool) {
         self.show_axes = show;
@@ -368,7 +341,6 @@ impl Renderer {
     pub fn set_theme(&mut self, theme: ViewerTheme) {
         if self.theme != theme {
             self.theme = theme;
-            self.rebuild_ground_grid();
         }
     }
 

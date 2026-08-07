@@ -46,8 +46,8 @@ pub mod components {
     pub use icons::Icon;
     pub use icons::Icon::{
         ICON_AXES, ICON_BOLD, ICON_CODE, ICON_FULLSCREEN_ENTER, ICON_FULLSCREEN_EXIT, ICON_GIZMO,
-        ICON_GRID, ICON_HEADING, ICON_ITALIC, ICON_LINK, ICON_LIST_BULLET, ICON_LIST_NUMBERED,
-        ICON_RESET, ICON_TASK,
+        ICON_HEADING, ICON_ITALIC, ICON_LINK, ICON_LIST_BULLET, ICON_LIST_NUMBERED, ICON_RESET,
+        ICON_TASK,
     };
     pub use ui::buy_me_a_coffee::BuyMeACoffeeLogo;
     pub use ui::corner_frame::CornerFrame;
