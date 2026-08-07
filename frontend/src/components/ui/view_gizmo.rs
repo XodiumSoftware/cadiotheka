@@ -123,7 +123,7 @@ pub fn ViewGizmo(
                             <path
                                 d=path
                                 fill="currentColor"
-                                class="fill-base-content text-[11px] font-bold group-hover:fill-black"
+                                class="text-base-content/10 hover:text-primary transition-colors"
                                 aria-label=aria
                             />
                             <text
