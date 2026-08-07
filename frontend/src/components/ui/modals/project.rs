@@ -1454,7 +1454,7 @@ fn ProjectModalContent(
                                             <div class="flex gap-1">
                                                 <ToolbarButton
                                                     label="Toggle axes gizmo"
-                                                    tooltip_position=TooltipPosition::Bottom
+                                                    tooltip_position=TooltipPosition::Left
                                                     on_click=Callback::new(move |()| {
                                                         show_axes.update(|v| *v = !*v);
                                                     })
@@ -1464,7 +1464,7 @@ fn ProjectModalContent(
                                                 </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Reset view"
-                                                    tooltip_position=TooltipPosition::Bottom
+                                                    tooltip_position=TooltipPosition::Left
                                                     on_click=Callback::new(move |()| {
                                                         reset_view.set(true);
                                                     })
@@ -1474,7 +1474,7 @@ fn ProjectModalContent(
                                                 </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Toggle view gizmo"
-                                                    tooltip_position=TooltipPosition::Bottom
+                                                    tooltip_position=TooltipPosition::Left
                                                     on_click=Callback::new(move |()| {
                                                         show_gizmo.update(|v| *v = !*v);
                                                     })
@@ -1484,7 +1484,7 @@ fn ProjectModalContent(
                                                 </ToolbarButton>
                                                 <ToolbarButton
                                                     label="Toggle fullscreen"
-                                                    tooltip_position=TooltipPosition::Bottom
+                                                    tooltip_position=TooltipPosition::Left
                                                     on_click=toggle_fullscreen
                                                 >
                                                     {move || {

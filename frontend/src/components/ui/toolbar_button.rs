@@ -10,6 +10,8 @@ pub enum TooltipPosition {
     Top,
     /// Tooltip appears below the button.
     Bottom,
+    /// Tooltip appears to the left of the button.
+    Left,
 }
 
 /// A small icon-style button with a configurable tooltip and a primary border on hover.
@@ -25,6 +27,7 @@ pub fn ToolbarButton(
     let tooltip_class = match tooltip_position {
         TooltipPosition::Top => "tooltip-top",
         TooltipPosition::Bottom => "tooltip-bottom",
+        TooltipPosition::Left => "tooltip-left",
     };
     let show_stripe = disabled_overlay.unwrap_or_else(|| Signal::derive(|| false));
     let spinning = RwSignal::new(false);
