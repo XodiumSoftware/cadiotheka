@@ -1,3 +1,27 @@
+use three_d_asset::Srgba;
+
+/// Alpha value used for stored highlight colors (fully opaque).
+const HIGHLIGHT_ALPHA: u8 = 255;
+
+/// Converts an [`Srgba`] color to a 6-digit hex string (e.g. `#ffc800`).
+pub fn srgba_to_hex(color: Srgba) -> String {
+    format!("#{:02x}{:02x}{:02x}", color.r, color.g, color.b)
+}
+
+/// Parses a 6-digit hex color string into [`Srgba`].
+///
+/// Accepts strings with or without a leading `#`. Returns `None` for invalid input.
+pub fn hex_to_srgba(hex: &str) -> Option<Srgba> {
+    let hex = hex.strip_prefix('#').unwrap_or(hex);
+    if hex.len() != 6 {
+        return None;
+    }
+    let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+    Some(Srgba::new(r, g, b, HIGHLIGHT_ALPHA))
+}
+
 /// Returns a deterministic Tailwind background color class from a string.
 pub fn placeholder_color(title: &str) -> &'static str {
     use std::collections::hash_map::DefaultHasher;
@@ -43,6 +67,33 @@ pub fn language_color(language: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn srgba_to_hex_returns_six_digit_hex() {
+        assert_eq!(srgba_to_hex(Srgba::new(255, 200, 0, 255)), "#ffc800");
+        assert_eq!(srgba_to_hex(Srgba::new(0, 0, 0, 255)), "#000000");
+        assert_eq!(srgba_to_hex(Srgba::new(255, 255, 255, 255)), "#ffffff");
+    }
+
+    #[test]
+    fn hex_to_srgba_parses_with_and_without_hash() {
+        assert_eq!(hex_to_srgba("#ffc800"), Some(Srgba::new(255, 200, 0, 255)));
+        assert_eq!(hex_to_srgba("ffc800"), Some(Srgba::new(255, 200, 0, 255)));
+        assert_eq!(hex_to_srgba("#000000"), Some(Srgba::new(0, 0, 0, 255)));
+    }
+
+    #[test]
+    fn hex_to_srgba_rejects_invalid_input() {
+        assert_eq!(hex_to_srgba(""), None);
+        assert_eq!(hex_to_srgba("#gg0000"), None);
+        assert_eq!(hex_to_srgba("#fff"), None);
+    }
+
+    #[test]
+    fn srgba_to_hex_and_hex_to_srgba_round_trip() {
+        let original = Srgba::new(255, 200, 0, 255);
+        assert_eq!(hex_to_srgba(&srgba_to_hex(original)), Some(original));
+    }
 
     #[test]
     fn test_placeholder_color_is_deterministic() {

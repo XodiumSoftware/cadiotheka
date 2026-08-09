@@ -13,6 +13,7 @@ use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use std::cell::RefCell;
 use std::rc::Rc;
+use three_d_asset::Srgba;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::Closure;
 
@@ -52,6 +53,7 @@ pub fn IfcViewer(
     #[prop(optional)] show_gizmo_signal: Option<RwSignal<bool>>,
     #[prop(into, optional)] gizmo_position_signal: Option<RwSignal<GizmoPosition>>,
     #[prop(into, optional)] gizmo_edit_mode_signal: Option<RwSignal<bool>>,
+    #[prop(into, optional)] highlight_color_signal: Option<Signal<Srgba>>,
     #[prop(optional)] on_raycast_hit: Option<Callback<RaycastHit>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
@@ -64,6 +66,8 @@ pub fn IfcViewer(
         gizmo_position_signal.unwrap_or_else(|| RwSignal::new(GizmoPosition::TopRight));
     let gizmo_edit_mode = gizmo_edit_mode_signal.unwrap_or_else(|| RwSignal::new(false));
     let hovered_primitive: RwSignal<Option<usize>> = RwSignal::new(None);
+    let highlight_color =
+        highlight_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::new(255, 200, 0, 255)));
 
     let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
@@ -257,6 +261,21 @@ pub fn IfcViewer(
                 let mut renderer_ref = renderer.borrow_mut();
                 if let Some(renderer) = renderer_ref.as_mut() {
                     renderer.set_show_axes(show);
+                }
+            }
+            request_render.borrow_mut()();
+        }
+    });
+
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            let color = highlight_color.get();
+            {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.set_highlight_color(color);
                 }
             }
             request_render.borrow_mut()();
@@ -458,6 +477,7 @@ pub fn IfcViewer(
 
                         if let Some(r) = renderer.borrow_mut().as_mut() {
                             r.set_show_axes(show_axes.get());
+                            r.set_highlight_color(highlight_color.get_untracked());
                         }
 
                         request_render.borrow_mut()();

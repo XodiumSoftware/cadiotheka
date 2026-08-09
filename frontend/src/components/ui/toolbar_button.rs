@@ -23,6 +23,7 @@ pub fn ToolbarButton(
     #[prop(into, optional)] disabled_overlay: Option<Signal<bool>>,
     #[prop(default = false)] spin_on_click: bool,
     #[prop(into, optional)] on_context_menu: Option<Callback<()>>,
+    #[prop(into, optional)] active: Option<Signal<bool>>,
     children: Children,
 ) -> impl IntoView {
     let tooltip_class = match tooltip_position {
@@ -31,6 +32,7 @@ pub fn ToolbarButton(
         TooltipPosition::Left => "tooltip-left",
     };
     let show_stripe = disabled_overlay.unwrap_or_else(|| Signal::derive(|| false));
+    let active = active.unwrap_or_else(|| Signal::derive(|| false));
     let spinning = RwSignal::new(false);
 
     let on_click_wrapper = move |_| {
@@ -53,7 +55,13 @@ pub fn ToolbarButton(
         <div class="tooltip-wrapper relative inline-block z-50">
             <button
                 type="button"
-                class=format!("btn btn-ghost btn-xs min-h-0 h-7 px-1.5 tooltip transition-colors border border-transparent hover:border-primary {tooltip_class}")
+                class=move || {
+                    if active.get() {
+                        format!("btn btn-xs min-h-0 h-7 px-1.5 tooltip transition-colors border bg-primary border-primary hover:bg-primary {tooltip_class}")
+                    } else {
+                        format!("btn btn-ghost btn-xs min-h-0 h-7 px-1.5 tooltip transition-colors border border-transparent hover:border-primary {tooltip_class}")
+                    }
+                }
                 data-tip=label
                 aria-label=aria_label
                 on:click=on_click_wrapper
@@ -61,11 +69,10 @@ pub fn ToolbarButton(
             >
                 <span
                     class=move || {
-                        if spinning.get() {
-                            "relative inline-flex items-center justify-center animate-spin-once".to_string()
-                        } else {
-                            "relative inline-flex items-center justify-center".to_string()
-                        }
+                        let base = "relative inline-flex items-center justify-center";
+                        let spin = if spinning.get() { " animate-spin-once" } else { "" };
+                        let color = if active.get() { " text-black" } else { "" };
+                        format!("{base}{spin}{color}")
                     }
                     on:animationend=move |_| spinning.set(false)
                 >

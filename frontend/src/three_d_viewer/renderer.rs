@@ -40,6 +40,8 @@ pub struct Renderer {
     pub(crate) models: Vec<Box<dyn Object>>,
     pub(crate) axes: Option<Box<dyn Object>>,
     pub(crate) outline: Option<Gm<BoundingBox, ColorMaterial>>,
+    pub(crate) hovered_primitive: Option<usize>,
+    pub(crate) highlight_color: Srgba,
     pub(crate) skybox: Option<Skybox>,
     pub(crate) show_axes: bool,
     pub(crate) total_vertices: usize,
@@ -94,6 +96,8 @@ impl Renderer {
                 models: Vec::new(),
                 axes: None,
                 outline: None,
+                hovered_primitive: None,
+                highlight_color: Srgba::new(255, 200, 0, 255),
                 skybox,
                 show_axes: true,
                 total_vertices: 0,
@@ -434,7 +438,14 @@ impl Renderer {
     ///
     /// Pass `None` to remove the outline.
     pub fn set_hovered_primitive(&mut self, index: Option<usize>) {
+        self.hovered_primitive = index;
         self.outline = index.and_then(|i| self.build_outline(i));
+    }
+
+    /// Sets the outline highlight color and rebuilds the current outline if one exists.
+    pub fn set_highlight_color(&mut self, color: Srgba) {
+        self.highlight_color = color;
+        self.outline = self.hovered_primitive.and_then(|i| self.build_outline(i));
     }
 
     /// Builds a bounding-box outline object around the given primitive.
@@ -451,10 +462,7 @@ impl Renderer {
         let thickness = aabb.size().magnitude() * 0.005_f32;
         let geometry =
             BoundingBox::new_with_thickness(&self.context, outline_aabb, thickness.max(0.001));
-        let color = match self.theme {
-            ViewerTheme::Dark => Srgba::new(255, 200, 0, 255),
-            ViewerTheme::Light => Srgba::new(255, 100, 0, 255),
-        };
+        let color = self.highlight_color;
         let cpu_material = three_d_asset::PbrMaterial {
             albedo: color,
             ..Default::default()

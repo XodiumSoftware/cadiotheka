@@ -23,11 +23,13 @@ use crate::data::{
 use crate::metadata::VersionState;
 use crate::metadata::tags::Tag;
 use crate::utils::{
-    api_url, format_number, format_version_timestamp, placeholder_color, placeholder_letter,
+    api_url, format_number, format_version_timestamp, hex_to_srgba, placeholder_color,
+    placeholder_letter, srgba_to_hex,
 };
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use std::rc::Rc;
+use three_d_asset::Srgba;
 
 const MAX_TITLE_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 100;
@@ -42,6 +44,10 @@ pub enum ProjectDetailsTab {
 const GIZMO_POSITION_KEY: &str = "gizmo_position";
 const GIZMO_VISIBLE_KEY: &str = "gizmo_visible";
 const AXES_VISIBLE_KEY: &str = "axes_visible";
+const OBJECT_HIGHLIGHT_COLOR_KEY: &str = "object_highlight_color";
+
+/// Default outline color used when no viewer preferences are saved.
+const DEFAULT_OBJECT_HIGHLIGHT_COLOR: Srgba = Srgba::new(255, 200, 0, 255);
 
 /// Loads the saved gizmo visibility from account viewer preferences.
 fn load_gizmo_visible_from_preferences(account: Option<&AccountData>) -> bool {
@@ -137,6 +143,33 @@ fn preferences_with_gizmo_position(
     let mut prefs: serde_json::Value =
         serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
     prefs[GIZMO_POSITION_KEY] = serde_json::json!(gizmo_position_wire_id(position));
+    serde_json::to_string(&prefs).ok()
+}
+
+/// Loads the saved object highlight color from account viewer preferences.
+fn load_object_highlight_color_from_preferences(account: Option<&AccountData>) -> Srgba {
+    let Some(account) = account else {
+        return DEFAULT_OBJECT_HIGHLIGHT_COLOR;
+    };
+    let prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs
+        .get(OBJECT_HIGHLIGHT_COLOR_KEY)
+        .and_then(serde_json::Value::as_str)
+        .and_then(hex_to_srgba)
+        .unwrap_or(DEFAULT_OBJECT_HIGHLIGHT_COLOR)
+}
+
+/// Returns the account's existing viewer preferences with the object highlight color
+/// updated, preserving any other keys that may exist in the JSON blob.
+fn preferences_with_object_highlight_color(
+    account: Option<&AccountData>,
+    color: Srgba,
+) -> Option<String> {
+    let account = account?;
+    let mut prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs[OBJECT_HIGHLIGHT_COLOR_KEY] = serde_json::json!(srgba_to_hex(color));
     serde_json::to_string(&prefs).ok()
 }
 
@@ -1854,6 +1887,113 @@ fn ProjectModalContent(
                                                 }
                                             });
 
+                                            let highlight_color = RwSignal::new(
+                                                load_object_highlight_color_from_preferences(
+                                                    current_user.account.get_untracked().as_ref(),
+                                                ),
+                                            );
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let set_highlight_color = highlight_color;
+                                                move |_| {
+                                                    let Some(account) = current_user.account.get() else {
+                                                        return;
+                                                    };
+                                                    let new_color =
+                                                        load_object_highlight_color_from_preferences(
+                                                            Some(&account),
+                                                        );
+                                                    if set_highlight_color.get_untracked() != new_color {
+                                                        set_highlight_color.set(new_color);
+                                                    }
+                                                }
+                                            });
+
+                                            let initial_highlight_color = highlight_color.get_untracked();
+                                            let highlight_save_generation =
+                                                Rc::new(std::cell::Cell::new(0u64));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let profile_modal = profile_modal;
+                                                let highlight_save_generation = Rc::clone(
+                                                    &highlight_save_generation);
+                                                move |_| {
+                                                    let color = highlight_color.get();
+                                                    if color == initial_highlight_color {
+                                                        return;
+                                                    }
+                                                    let Some(account) =
+                                                        current_user.account.get_untracked()
+                                                    else {
+                                                        return;
+                                                    };
+                                                    let Some(new_preferences) =
+                                                        preferences_with_object_highlight_color(
+                                                            Some(&account),
+                                                            color,
+                                                        )
+                                                    else {
+                                                        return;
+                                                    };
+                                                    if new_preferences == account.viewer_preferences {
+                                                        return;
+                                                    }
+
+                                                    let expected = highlight_save_generation
+                                                        .get()
+                                                        .wrapping_add(1);
+                                                    highlight_save_generation.set(expected);
+
+                                                    let set_current_user = current_user.set_account;
+                                                    let set_profile_account = profile_modal.set_account;
+                                                    let highlight_save_generation = Rc::clone(
+                                                        &highlight_save_generation);
+                                                    leptos::task::spawn_local(async move {
+                                                        gloo_timers::future::TimeoutFuture::new(300)
+                                                            .await;
+                                                        if highlight_save_generation.get() != expected {
+                                                            return;
+                                                        }
+
+                                                        match crate::contexts::current_user::update_viewer_preferences(
+                                                            new_preferences,
+                                                        )
+                                                        .await
+                                                        {
+                                                            Ok(saved) => {
+                                                                set_current_user.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                                set_profile_account.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                            }
+                                                            Err(err) => {
+                                                                leptos::web_sys::console::error_1(
+                                                                    &format!(
+                                                                        "Failed to save viewer preferences: {}",
+                                                                        err.message()
+                                                                    )
+                                                                    .into(),
+                                                                );
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            });
+
                                             view! {
                                         <div node_ref=viewer_ref class="h-full flex flex-col">
                                             <div class="flex items-center justify-end gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
@@ -1881,6 +2021,7 @@ fn ProjectModalContent(
                                                     <ToolbarButton
                                                         label="L+click to toggle view gizmo\nR+click to edit view gizmos position"
                                                         tooltip_position=TooltipPosition::Left
+                                                        active=Signal::derive(move || gizmo_edit_mode.get())
                                                         on_click=Callback::new(move |()| {
                                                             show_gizmo.update(|v| *v = !*v);
                                                         })
@@ -1936,6 +2077,7 @@ fn ProjectModalContent(
                                                     show_gizmo_signal=show_gizmo
                                                     gizmo_position_signal=gizmo_position
                                                     gizmo_edit_mode_signal=gizmo_edit_mode
+                                                    highlight_color_signal=Signal::derive(move || highlight_color.get())
                                                     disabled=Signal::derive({
                                                         let is_editable = is_editable;
                                                         let edit_mode = edit_mode;
@@ -1947,6 +2089,7 @@ fn ProjectModalContent(
                                     <ViewerSettingsModal
                                         open=Signal::derive(move || viewer_settings_open.get())
                                         on_close=Callback::new(move |()| viewer_settings_open.set(false))
+                                        highlight_color=highlight_color
                                     />
                                 }.into_any()
                                         }
