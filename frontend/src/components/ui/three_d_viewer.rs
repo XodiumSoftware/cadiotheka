@@ -686,7 +686,7 @@ fn GizmoPositionButton(
     view! {
         <button
             type="button"
-            class=move || format!("absolute {class} pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border-2 border-error bg-base-100/90 text-error shadow hover:bg-error hover:text-base-100 transition-colors {}", if is_current() { "hidden" } else { "" })
+            class=move || format!("absolute {class} pointer-events-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-2 border-error bg-base-100/90 text-error shadow hover:bg-error hover:text-base-100 transition-colors {}", if is_current() { "hidden" } else { "" })
             aria-label=move || format!("Move view gizmo to the {}", pos.label())
             on:click=move |_| on_select.run(pos)
         >
