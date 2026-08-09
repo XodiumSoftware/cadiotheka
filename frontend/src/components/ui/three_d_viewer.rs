@@ -479,6 +479,8 @@ pub fn IfcViewer(
                 class=move || {
                     if disabled.get() {
                         "w-full h-full block cursor-grab active:cursor-grabbing hidden".to_string()
+                    } else if gizmo_edit_mode.get() {
+                        "w-full h-full block cursor-default".to_string()
                     } else {
                         "w-full h-full block cursor-grab active:cursor-grabbing".to_string()
                     }
