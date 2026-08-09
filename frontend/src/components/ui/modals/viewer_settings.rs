@@ -5,7 +5,7 @@
 //! `viewer_preferences` JSON blob.
 
 use crate::components::ui::modals::base::BaseModal;
-use crate::utils::{hex_to_srgba, srgba_to_hex};
+use crate::utils::{contrast_color, hex_to_srgba, srgba_to_hex};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use three_d_asset::Srgba;
@@ -41,21 +41,27 @@ pub fn ViewerSettingsModal(
                     </div>
                 </div>
 
-                <div class="space-y-3">
-                    <label class="text-sm font-medium text-base-content" for="highlight-color">
-                        "Object highlight color"
-                    </label>
-                    <div class="flex items-center gap-3">
-                        <input
-                            id="highlight-color"
-                            type="color"
-                            value=move || srgba_to_hex(highlight_color.get())
-                            on:input=on_color_input
-                            class="h-10 w-10 cursor-pointer border-0 bg-transparent p-0"
-                        />
-                        <span class="text-sm text-base-content/70">
-                            {move || srgba_to_hex(highlight_color.get())}
-                        </span>
+                <div class="rounded-none border border-base-content/10 bg-base-200/30 p-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <label class="text-sm font-medium text-base-content" for="highlight-color">
+                            "Object highlight color"
+                        </label>
+                        <div class="relative">
+                            <input
+                                id="highlight-color"
+                                type="color"
+                                value=move || srgba_to_hex(highlight_color.get())
+                                on:input=on_color_input
+                                class="peer h-8 w-24 cursor-pointer appearance-none border-0 bg-transparent p-0 opacity-0 absolute inset-0"
+                            />
+                            <button
+                                type="button"
+                                class="h-8 w-24 rounded-none border border-base-content/20 bg-base-100 px-2 py-1 text-xs font-mono text-base-content peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-primary"
+                                style=move || format!("background-color: {}; color: {};", srgba_to_hex(highlight_color.get()), contrast_color(highlight_color.get()))
+                            >
+                                {move || srgba_to_hex(highlight_color.get())}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -22,6 +22,21 @@ pub fn hex_to_srgba(hex: &str) -> Option<Srgba> {
     Some(Srgba::new(r, g, b, HIGHLIGHT_ALPHA))
 }
 
+/// Computes a simple black-or-white foreground color that contrasts with the
+/// given background color.
+///
+/// Uses the relative luminance formula for sRGB.
+pub fn contrast_color(background: Srgba) -> String {
+    let luminance = 0.299 * f64::from(background.r)
+        + 0.587 * f64::from(background.g)
+        + 0.114 * f64::from(background.b);
+    if luminance > 128.0 {
+        "#000000".to_string()
+    } else {
+        "#ffffff".to_string()
+    }
+}
+
 /// Returns a deterministic Tailwind background color class from a string.
 pub fn placeholder_color(title: &str) -> &'static str {
     use std::collections::hash_map::DefaultHasher;
@@ -93,6 +108,14 @@ mod tests {
     fn srgba_to_hex_and_hex_to_srgba_round_trip() {
         let original = Srgba::new(255, 200, 0, 255);
         assert_eq!(hex_to_srgba(&srgba_to_hex(original)), Some(original));
+    }
+
+    #[test]
+    fn contrast_color_returns_black_or_white() {
+        assert_eq!(contrast_color(Srgba::new(255, 255, 255, 255)), "#000000");
+        assert_eq!(contrast_color(Srgba::new(0, 0, 0, 255)), "#ffffff");
+        assert_eq!(contrast_color(Srgba::new(145, 65, 172, 255)), "#ffffff");
+        assert_eq!(contrast_color(Srgba::new(200, 200, 200, 255)), "#000000");
     }
 
     #[test]
