@@ -16,6 +16,7 @@ pub fn ViewerSettingsModal(
     #[prop(into)] open: Signal<bool>,
     #[prop(into)] on_close: Callback<()>,
     #[prop(into)] highlight_color: RwSignal<Srgba>,
+    #[prop(into)] skybox_color: RwSignal<Srgba>,
 ) -> impl IntoView {
     let on_color_input = move |ev: leptos::web_sys::Event| {
         let value = ev
@@ -25,6 +26,17 @@ pub fn ViewerSettingsModal(
             .unwrap_or_default();
         if let Some(color) = hex_to_srgba(&value) {
             highlight_color.set(color);
+        }
+    };
+
+    let on_skybox_input = move |ev: leptos::web_sys::Event| {
+        let value = ev
+            .target()
+            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+            .map(|input| input.value())
+            .unwrap_or_default();
+        if let Some(color) = hex_to_srgba(&value) {
+            skybox_color.set(color);
         }
     };
 
@@ -41,7 +53,7 @@ pub fn ViewerSettingsModal(
                     </div>
                 </div>
 
-                <div class="rounded-none border border-base-content/10 bg-base-200/30 p-3">
+                <div class="rounded-none border border-base-content/10 bg-base-200/30 p-3 space-y-4">
                     <div class="flex items-center justify-between gap-3">
                         <label class="text-sm font-medium text-base-content" for="highlight-color">
                             "Object highlight color"
@@ -60,6 +72,28 @@ pub fn ViewerSettingsModal(
                                 style=move || format!("background-color: {}; color: {};", srgba_to_hex(highlight_color.get()), contrast_color(highlight_color.get()))
                             >
                                 {move || srgba_to_hex(highlight_color.get())}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-3">
+                        <label class="text-sm font-medium text-base-content" for="skybox-color">
+                            "Skybox color"
+                        </label>
+                        <div class="relative">
+                            <input
+                                id="skybox-color"
+                                type="color"
+                                value=move || srgba_to_hex(skybox_color.get())
+                                on:input=on_skybox_input
+                                class="peer h-8 w-24 cursor-pointer appearance-none border-0 bg-transparent p-0 opacity-0 absolute inset-0"
+                            />
+                            <button
+                                type="button"
+                                class="h-8 w-24 rounded-none border border-base-content/20 bg-base-100 px-2 py-1 text-xs font-bold font-mono text-base-content peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-primary"
+                                style=move || format!("background-color: {}; color: {};", srgba_to_hex(skybox_color.get()), contrast_color(skybox_color.get()))
+                            >
+                                {move || srgba_to_hex(skybox_color.get())}
                             </button>
                         </div>
                     </div>

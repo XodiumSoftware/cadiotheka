@@ -2,8 +2,7 @@
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
-#[cfg(target_arch = "wasm32")]
-use crate::three_d_viewer::environment::{build_ibl_ambient, build_skybox};
+use crate::three_d_viewer::environment::build_skybox;
 use crate::three_d_viewer::scene::{build_axes, build_framing_camera, canvas_size};
 use crate::three_d_viewer::state::{ViewDirection, ViewState, ViewerTheme};
 use leptos::web_sys::HtmlCanvasElement;
@@ -42,6 +41,7 @@ pub struct Renderer {
     pub(crate) outline: Option<Gm<BoundingBox, ColorMaterial>>,
     pub(crate) hovered_primitive: Option<usize>,
     pub(crate) highlight_color: Srgba,
+    pub(crate) skybox_color: Srgba,
     pub(crate) skybox: Option<Skybox>,
     pub(crate) show_axes: bool,
     pub(crate) total_vertices: usize,
@@ -73,6 +73,7 @@ impl Renderer {
 
         #[cfg(target_arch = "wasm32")]
         {
+            use crate::three_d_viewer::environment::build_ibl_ambient;
             use crate::three_d_viewer::scene::suppress_webgl_debug_renderer_info;
 
             suppress_webgl_debug_renderer_info(&gl_context);
@@ -83,7 +84,8 @@ impl Renderer {
             let light =
                 DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(0.3_f32, -0.8, -0.5));
             let ambient = build_ibl_ambient(&context);
-            let skybox = Some(build_skybox(&context));
+            let skybox_color = Srgba::WHITE;
+            let skybox = Some(build_skybox(&context, skybox_color));
 
             let (camera, control) = build_framing_camera([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], canvas);
 
@@ -98,6 +100,7 @@ impl Renderer {
                 outline: None,
                 hovered_primitive: None,
                 highlight_color: Srgba::new(255, 200, 0, 255),
+                skybox_color,
                 skybox,
                 show_axes: true,
                 total_vertices: 0,
@@ -335,6 +338,15 @@ impl Renderer {
             background.4,
         ));
         target.render(&self.camera, objects, &[&self.light, &self.ambient]);
+    }
+
+    /// Rebuilds the skybox with the given tint color.
+    ///
+    /// The IBL ambient light is left unchanged, so model lighting stays
+    /// consistent while only the background changes.
+    pub fn set_skybox_color(&mut self, color: Srgba) {
+        self.skybox_color = color;
+        self.skybox = Some(build_skybox(&self.context, color));
     }
 
     /// Sets whether the axes gizmo is rendered.

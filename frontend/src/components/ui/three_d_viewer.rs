@@ -54,6 +54,7 @@ pub fn IfcViewer(
     #[prop(into, optional)] gizmo_position_signal: Option<RwSignal<GizmoPosition>>,
     #[prop(into, optional)] gizmo_edit_mode_signal: Option<RwSignal<bool>>,
     #[prop(into, optional)] highlight_color_signal: Option<Signal<Srgba>>,
+    #[prop(into, optional)] skybox_color_signal: Option<Signal<Srgba>>,
     #[prop(optional)] on_raycast_hit: Option<Callback<RaycastHit>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
@@ -68,6 +69,7 @@ pub fn IfcViewer(
     let hovered_primitive: RwSignal<Option<usize>> = RwSignal::new(None);
     let highlight_color =
         highlight_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::new(255, 200, 0, 255)));
+    let skybox_color = skybox_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::WHITE));
 
     let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
@@ -283,6 +285,21 @@ pub fn IfcViewer(
     });
 
     Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            let color = skybox_color.get();
+            {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.set_skybox_color(color);
+                }
+            }
+            request_render.borrow_mut()();
+        }
+    });
+
+    Effect::new({
         let request_render = Rc::clone(&request_render);
         move |_| {
             let _ = hovered_primitive.get();
@@ -478,6 +495,7 @@ pub fn IfcViewer(
                         if let Some(r) = renderer.borrow_mut().as_mut() {
                             r.set_show_axes(show_axes.get());
                             r.set_highlight_color(highlight_color.get_untracked());
+                            r.set_skybox_color(skybox_color.get_untracked());
                         }
 
                         request_render.borrow_mut()();

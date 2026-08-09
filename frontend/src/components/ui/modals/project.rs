@@ -45,6 +45,7 @@ const GIZMO_POSITION_KEY: &str = "gizmo_position";
 const GIZMO_VISIBLE_KEY: &str = "gizmo_visible";
 const AXES_VISIBLE_KEY: &str = "axes_visible";
 const OBJECT_HIGHLIGHT_COLOR_KEY: &str = "object_highlight_color";
+const SKYBOX_COLOR_KEY: &str = "skybox_color";
 
 /// Default outline color used when no viewer preferences are saved.
 const DEFAULT_OBJECT_HIGHLIGHT_COLOR: Srgba = Srgba::new(255, 200, 0, 255);
@@ -170,6 +171,30 @@ fn preferences_with_object_highlight_color(
     let mut prefs: serde_json::Value =
         serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
     prefs[OBJECT_HIGHLIGHT_COLOR_KEY] = serde_json::json!(srgba_to_hex(color));
+    serde_json::to_string(&prefs).ok()
+}
+
+/// Loads the saved skybox background color from account viewer preferences.
+fn load_skybox_color_from_preferences(account: Option<&AccountData>) -> Srgba {
+    let Some(account) = account else {
+        return Srgba::WHITE;
+    };
+    let prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs
+        .get(SKYBOX_COLOR_KEY)
+        .and_then(serde_json::Value::as_str)
+        .and_then(hex_to_srgba)
+        .unwrap_or(Srgba::WHITE)
+}
+
+/// Returns the account's existing viewer preferences with the skybox background
+/// color updated, preserving any other keys that may exist in the JSON blob.
+fn preferences_with_skybox_color(account: Option<&AccountData>, color: Srgba) -> Option<String> {
+    let account = account?;
+    let mut prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs[SKYBOX_COLOR_KEY] = serde_json::json!(srgba_to_hex(color));
     serde_json::to_string(&prefs).ok()
 }
 
@@ -1994,6 +2019,112 @@ fn ProjectModalContent(
                                                 }
                                             });
 
+                                            let skybox_color = RwSignal::new(
+                                                load_skybox_color_from_preferences(
+                                                    current_user.account.get_untracked().as_ref(),
+                                                ),
+                                            );
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let set_skybox_color = skybox_color;
+                                                move |_| {
+                                                    let Some(account) = current_user.account.get() else {
+                                                        return;
+                                                    };
+                                                    let new_color = load_skybox_color_from_preferences(
+                                                        Some(&account),
+                                                    );
+                                                    if set_skybox_color.get_untracked() != new_color {
+                                                        set_skybox_color.set(new_color);
+                                                    }
+                                                }
+                                            });
+
+                                            let initial_skybox_color = skybox_color.get_untracked();
+                                            let skybox_save_generation =
+                                                Rc::new(std::cell::Cell::new(0u64));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let profile_modal = profile_modal;
+                                                let skybox_save_generation = Rc::clone(
+                                                    &skybox_save_generation);
+                                                move |_| {
+                                                    let color = skybox_color.get();
+                                                    if color == initial_skybox_color {
+                                                        return;
+                                                    }
+                                                    let Some(account) =
+                                                        current_user.account.get_untracked()
+                                                    else {
+                                                        return;
+                                                    };
+                                                    let Some(new_preferences) =
+                                                        preferences_with_skybox_color(
+                                                            Some(&account),
+                                                            color,
+                                                        )
+                                                    else {
+                                                        return;
+                                                    };
+                                                    if new_preferences == account.viewer_preferences {
+                                                        return;
+                                                    }
+
+                                                    let expected = skybox_save_generation
+                                                        .get()
+                                                        .wrapping_add(1);
+                                                    skybox_save_generation.set(expected);
+
+                                                    let set_current_user = current_user.set_account;
+                                                    let set_profile_account = profile_modal.set_account;
+                                                    let skybox_save_generation = Rc::clone(
+                                                        &skybox_save_generation);
+                                                    leptos::task::spawn_local(async move {
+                                                        gloo_timers::future::TimeoutFuture::new(300)
+                                                            .await;
+                                                        if skybox_save_generation.get() != expected {
+                                                            return;
+                                                        }
+
+                                                        match crate::contexts::current_user::update_viewer_preferences(
+                                                            new_preferences,
+                                                        )
+                                                        .await
+                                                        {
+                                                            Ok(saved) => {
+                                                                set_current_user.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                                set_profile_account.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                            }
+                                                            Err(err) => {
+                                                                leptos::web_sys::console::error_1(
+                                                                    &format!(
+                                                                        "Failed to save viewer preferences: {}",
+                                                                        err.message()
+                                                                    )
+                                                                    .into(),
+                                                                );
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            });
+
                                             view! {
                                         <div node_ref=viewer_ref class="h-full flex flex-col">
                                             <div class="flex items-center justify-end gap-2 rounded-none border border-base-content/10 bg-base-200/30 p-2 flex-shrink-0">
@@ -2078,6 +2209,7 @@ fn ProjectModalContent(
                                                     gizmo_position_signal=gizmo_position
                                                     gizmo_edit_mode_signal=gizmo_edit_mode
                                                     highlight_color_signal=Signal::derive(move || highlight_color.get())
+                                                    skybox_color_signal=Signal::derive(move || skybox_color.get())
                                                     disabled=Signal::derive({
                                                         let is_editable = is_editable;
                                                         let edit_mode = edit_mode;
@@ -2090,6 +2222,7 @@ fn ProjectModalContent(
                                         open=Signal::derive(move || viewer_settings_open.get())
                                         on_close=Callback::new(move |()| viewer_settings_open.set(false))
                                         highlight_color=highlight_color
+                                        skybox_color=skybox_color
                                     />
                                 }.into_any()
                                         }

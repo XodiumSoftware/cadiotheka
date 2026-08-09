@@ -70,6 +70,56 @@ fn sky_color(elevation: f32, azimuth: f32) -> [f32; 3] {
     ]
 }
 
+/// Builds a background skybox object from the generated HDR sky.
+///
+/// The skybox is tinted by the given `color` while keeping the existing sun
+/// highlight so the background stays visually interesting.
+pub fn build_skybox(context: &ThreeDContext, color: Srgba) -> Skybox {
+    let map = tinted_equirectangular_sky(SKY_WIDTH, SKY_HEIGHT, color);
+    Skybox::new_from_equirectangular(context, &map)
+}
+
+/// Generates an equirectangular HDR sky map tinted by the given color.
+///
+/// Unlike [`equirectangular_sky`], this keeps the ambient IBL default untouched;
+/// it is used only for the rendered background.
+fn tinted_equirectangular_sky(width: u32, height: u32, color: Srgba) -> Texture2D {
+    let mut data = Vec::with_capacity((width * height) as usize);
+    for y in 0..height {
+        let v = (y as f32 + 0.5) / height as f32;
+        let elevation = v * std::f32::consts::PI - std::f32::consts::FRAC_PI_2;
+        for x in 0..width {
+            let u = (x as f32 + 0.5) / width as f32;
+            let azimuth = u * std::f32::consts::TAU;
+            data.push(tinted_sky_color(elevation, azimuth, color));
+        }
+    }
+    Texture2D {
+        name: "procedural-sky-tinted.hdr".to_owned(),
+        data: TextureData::RgbF32(data),
+        width,
+        height,
+        ..Default::default()
+    }
+}
+
+/// Computes a tinted HDR sky color.
+fn tinted_sky_color(elevation: f32, azimuth: f32, color: Srgba) -> [f32; 3] {
+    let [r, g, b] = sky_color(elevation, azimuth);
+    let tint = vec3(
+        f32::from(color.r) / 255.0,
+        f32::from(color.g) / 255.0,
+        f32::from(color.b) / 255.0,
+    );
+    let color = vec3(r * tint.x, g * tint.y, b * tint.z);
+
+    [
+        color.x.clamp(0.0, 4.0),
+        color.y.clamp(0.0, 4.0),
+        color.z.clamp(0.0, 4.0),
+    ]
+}
+
 /// Builds an ambient light driven by the generated HDR environment.
 pub fn build_ibl_ambient(context: &ThreeDContext) -> AmbientLight {
     let map = equirectangular_sky(SKY_WIDTH, SKY_HEIGHT);
@@ -80,12 +130,6 @@ pub fn build_ibl_ambient(context: &ThreeDContext) -> AmbientLight {
 /// Converts an equirectangular HDR map into a cube map.
 fn build_environment(context: &ThreeDContext, cpu_texture: &Texture2D) -> TextureCubeMap {
     TextureCubeMap::new_from_equirectangular::<f32>(context, cpu_texture)
-}
-
-/// Builds a background skybox object from the generated HDR sky.
-pub fn build_skybox(context: &ThreeDContext) -> Skybox {
-    let map = equirectangular_sky(SKY_WIDTH, SKY_HEIGHT);
-    Skybox::new_from_equirectangular(context, &map)
 }
 
 #[cfg(test)]
