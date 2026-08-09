@@ -30,6 +30,7 @@ pub mod components {
             pub mod login;
             pub mod profile;
             pub mod project;
+            pub mod viewer_settings;
         }
         pub mod overflow_row;
         pub mod pagination;
@@ -47,7 +48,7 @@ pub mod components {
     pub use icons::Icon::{
         ICON_ARROW_DOWN, ICON_ARROW_DOWN_LEFT, ICON_ARROW_DOWN_RIGHT, ICON_ARROW_LEFT,
         ICON_ARROW_RIGHT, ICON_ARROW_UP, ICON_ARROW_UP_LEFT, ICON_ARROW_UP_RIGHT, ICON_AXES,
-        ICON_BOLD, ICON_CODE, ICON_FULLSCREEN_ENTER, ICON_FULLSCREEN_EXIT, ICON_GIZMO,
+        ICON_BOLD, ICON_CODE, ICON_FULLSCREEN_ENTER, ICON_FULLSCREEN_EXIT, ICON_GEAR, ICON_GIZMO,
         ICON_HEADING, ICON_ITALIC, ICON_LINK, ICON_LIST_BULLET, ICON_LIST_NUMBERED, ICON_RESET,
         ICON_TASK,
     };
@@ -62,6 +63,7 @@ pub mod components {
     pub use ui::modals::login::LoginModal;
     pub use ui::modals::profile::ProfileModal;
     pub use ui::modals::project::{ProjectDetailsTab, ProjectModal};
+    pub use ui::modals::viewer_settings::ViewerSettingsModal;
     pub use ui::overflow_row::OverflowRow;
     pub use ui::pagination::Pagination;
     pub use ui::three_d_viewer::{IfcViewer, IfcViewerState};

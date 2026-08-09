@@ -1,6 +1,7 @@
 use crate::components::Icon;
 use crate::components::IfcViewer;
 use crate::components::Pagination;
+use crate::components::ViewerSettingsModal;
 use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProperties};
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
@@ -1756,6 +1757,7 @@ fn ProjectModalContent(
                                             let gizmo_position = RwSignal::new(load_gizmo_position_from_preferences(
                                                 current_user.account.get_untracked().as_ref(),
                                             ));
+                                            let viewer_settings_open = RwSignal::new(false);
 
                                             Effect::new({
                                                 let current_user = current_user;
@@ -1890,6 +1892,15 @@ fn ProjectModalContent(
                                                         <Icon::Gizmo />
                                                     </ToolbarButton>
                                                     <ToolbarButton
+                                                        label="Viewer settings"
+                                                        tooltip_position=TooltipPosition::Left
+                                                        on_click=Callback::new(move |()| {
+                                                            viewer_settings_open.set(true);
+                                                        })
+                                                    >
+                                                        <Icon::Gear />
+                                                    </ToolbarButton>
+                                                    <ToolbarButton
                                                         label="Toggle fullscreen"
                                                         tooltip_position=TooltipPosition::Left
                                                         on_click=toggle_fullscreen
@@ -1933,7 +1944,11 @@ fn ProjectModalContent(
                                                 />
                                             </div>
                                         </div>
-                                    }.into_any()
+                                    <ViewerSettingsModal
+                                        open=Signal::derive(move || viewer_settings_open.get())
+                                        on_close=Callback::new(move |()| viewer_settings_open.set(false))
+                                    />
+                                }.into_any()
                                         }
                                         ProjectDetailsTab::Versions => view! {
                                                 <div class="min-h-0 h-full flex flex-col space-y-4 overflow-y-auto pr-1">
