@@ -199,7 +199,7 @@ pub fn ViewGizmo(
                                 y=ty
                                 text-anchor="middle"
                                 dominant-baseline="central"
-                                class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black"
+                                class=move || if disabled.get() || editing.get() { "fill-base-content text-[11px] font-bold pointer-events-none" } else { "fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black" }
                             >
                                 {label}
                             </text>
@@ -223,7 +223,7 @@ pub fn ViewGizmo(
                         y=center - INNER_RADIUS / 2
                         text-anchor="middle"
                         dominant-baseline="central"
-                        class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black"
+                        class=move || if disabled.get() || editing.get() { "fill-base-content text-[11px] font-bold pointer-events-none" } else { "fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black" }
                     >
                         "T"
                     </text>
@@ -244,7 +244,7 @@ pub fn ViewGizmo(
                         y=center + INNER_RADIUS / 2
                         text-anchor="middle"
                         dominant-baseline="central"
-                        class="fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black"
+                        class=move || if disabled.get() || editing.get() { "fill-base-content text-[11px] font-bold pointer-events-none" } else { "fill-base-content text-[11px] font-bold pointer-events-none group-hover:fill-black" }
                     >
                         "B"
                     </text>
