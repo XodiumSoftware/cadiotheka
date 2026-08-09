@@ -37,7 +37,7 @@ pub fn ViewerSettingsModal(
                         <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
                             "esc"
                         </kbd>
-                        <span>"to dismiss"</span>
+                        <span>"to close"</span>
                     </div>
                 </div>
 
