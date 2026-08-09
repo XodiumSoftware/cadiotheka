@@ -284,6 +284,9 @@ pub fn IfcViewer(
         let request_render = Rc::clone(&request_render);
         let controls = Rc::clone(&controls);
         move |ev: leptos::web_sys::MouseEvent| {
+            if disabled.get() || gizmo_edit_mode.get() {
+                return;
+            }
             let mut state = controls.borrow_mut();
             if state.on_mouse_down(&ev, &renderer, show_axes.get()) {
                 request_render.borrow_mut()();
@@ -295,6 +298,9 @@ pub fn IfcViewer(
         let request_render = Rc::clone(&request_render);
         let controls = Rc::clone(&controls);
         move |ev: leptos::web_sys::MouseEvent| {
+            if disabled.get() || gizmo_edit_mode.get() {
+                return;
+            }
             let mut needs_render = false;
             {
                 let state = controls.borrow();
@@ -302,7 +308,7 @@ pub fn IfcViewer(
                     needs_render = true;
                 }
             }
-            if !disabled.get() && state.get() == IfcViewerState::Rendering && ev.buttons() == 0 {
+            if state.get() == IfcViewerState::Rendering && ev.buttons() == 0 {
                 let Some(canvas) = canvas_ref.get() else {
                     return;
                 };
@@ -335,6 +341,9 @@ pub fn IfcViewer(
         let request_render = Rc::clone(&request_render);
         let controls = Rc::clone(&controls);
         move |ev: leptos::web_sys::MouseEvent| {
+            if disabled.get() || gizmo_edit_mode.get() {
+                return;
+            }
             let mut state = controls.borrow_mut();
             if state.on_mouse_up(&ev, &renderer) {
                 request_render.borrow_mut()();
@@ -345,6 +354,9 @@ pub fn IfcViewer(
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         move |ev: leptos::web_sys::WheelEvent| {
+            if disabled.get() || gizmo_edit_mode.get() {
+                return;
+            }
             if OrbitControls::on_wheel(&ev, &renderer) {
                 request_render.borrow_mut()();
             }
@@ -356,7 +368,7 @@ pub fn IfcViewer(
     let on_click = {
         let renderer = Rc::clone(&renderer);
         move |ev: leptos::web_sys::MouseEvent| {
-            if disabled.get() {
+            if disabled.get() || gizmo_edit_mode.get() {
                 return;
             }
             let Some(canvas) = canvas_ref.get() else {
@@ -518,12 +530,14 @@ pub fn IfcViewer(
                                     <ViewGizmo
                                         disabled=Signal::derive({
                                             let disabled = disabled;
-                                            move || disabled.get() || state.get() != IfcViewerState::Rendering
+                                            move || disabled.get() || state.get() != IfcViewerState::Rendering || gizmo_edit_mode.get()
                                         })
                                         position=Signal::derive(move || gizmo_position.get())
                                         editing=Signal::derive(move || gizmo_edit_mode.get())
                                         on_direction=Callback::new(move |dir| {
-                                            focus_direction.set(Some(dir));
+                                            if !gizmo_edit_mode.get() {
+                                                focus_direction.set(Some(dir));
+                                            }
                                         })
                                     />
                                 }.into_any()

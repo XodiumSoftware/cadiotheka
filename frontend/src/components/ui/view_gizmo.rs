@@ -125,7 +125,7 @@ pub fn ViewGizmo(
     #[prop(into, optional)] position: Option<Signal<GizmoPosition>>,
     #[prop(into, optional)] editing: Option<Signal<bool>>,
 ) -> impl IntoView {
-    let _disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
+    let disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
     let position = position.unwrap_or_else(|| Signal::derive(|| GizmoPosition::TopRight));
     let editing = editing.unwrap_or_else(|| Signal::derive(|| false));
     let diameter = DIAMETER;
@@ -181,13 +181,17 @@ pub fn ViewGizmo(
                     let (tx, ty) = label_position(center, u32::midpoint(RADIUS, INNER_RADIUS), mid);
                     view! {
                         <g
-                            class="group cursor-pointer"
-                            on:click=move |_| on_direction.run(dir)
+                            class=move || if disabled.get() || editing.get() { "group" } else { "group cursor-pointer" }
+                            on:click=move |_| {
+                                if !disabled.get() && !editing.get() {
+                                    on_direction.run(dir);
+                                }
+                            }
                         >
                             <path
                                 d=path
                                 fill="currentColor"
-                                class="text-base-content/10 hover:text-primary transition-colors"
+                                class=move || if disabled.get() || editing.get() { "text-base-content/10" } else { "text-base-content/10 hover:text-primary transition-colors" }
                                 aria-label=aria
                             />
                             <text
@@ -203,11 +207,15 @@ pub fn ViewGizmo(
                     }
                 }).collect_view()}
 
-                <g class="cursor-pointer group" on:click=move |_| on_direction.run(ViewGizmoDirection::Top)>
+                <g class=move || if disabled.get() || editing.get() { "group" } else { "group cursor-pointer" } on:click=move |_| {
+                    if !disabled.get() && !editing.get() {
+                        on_direction.run(ViewGizmoDirection::Top);
+                    }
+                }>
                     <path
                         d=upper_semicircle_path(center, center, INNER_RADIUS)
                         fill="currentColor"
-                        class="text-base-content/10 hover:text-primary transition-colors"
+                        class=move || if disabled.get() || editing.get() { "text-base-content/10" } else { "text-base-content/10 hover:text-primary transition-colors" }
                         aria-label="View from top"
                     />
                     <text
@@ -220,11 +228,15 @@ pub fn ViewGizmo(
                         "T"
                     </text>
                 </g>
-                <g class="cursor-pointer group" on:click=move |_| on_direction.run(ViewGizmoDirection::Bottom)>
+                <g class=move || if disabled.get() || editing.get() { "group" } else { "group cursor-pointer" } on:click=move |_| {
+                    if !disabled.get() && !editing.get() {
+                        on_direction.run(ViewGizmoDirection::Bottom);
+                    }
+                }>
                     <path
                         d=lower_semicircle_path(center, center, INNER_RADIUS)
                         fill="currentColor"
-                        class="text-base-content/10 hover:text-primary transition-colors"
+                        class=move || if disabled.get() || editing.get() { "text-base-content/10" } else { "text-base-content/10 hover:text-primary transition-colors" }
                         aria-label="View from bottom"
                     />
                     <text
