@@ -16,14 +16,18 @@ use three_d::InnerSpace;
 use three_d::MetricSpace;
 use three_d::core::{ClearState, Context as ThreeDContext, RenderTarget};
 use three_d::renderer::AmbientLight;
+use three_d::renderer::BoundingBox;
 use three_d::renderer::Camera as ThreeDCamera;
+use three_d::renderer::ColorMaterial;
 use three_d::renderer::DirectionalLight;
+use three_d::renderer::Gm;
 use three_d::renderer::Object;
 use three_d::renderer::Skybox;
 use three_d::renderer::control::{Event, OrbitControl};
+use three_d_asset::Srgba;
 use three_d_asset::vec3;
 #[cfg(target_arch = "wasm32")]
-use three_d_asset::{Model, Scene, Srgba};
+use three_d_asset::{Model, Scene};
 use wasm_bindgen::JsCast;
 
 /// `three-d` renderer for a parsed GLB document.
@@ -35,6 +39,7 @@ pub struct Renderer {
     pub(crate) scene_bounds: ([f32; 3], [f32; 3]),
     pub(crate) models: Vec<Box<dyn Object>>,
     pub(crate) axes: Option<Box<dyn Object>>,
+    pub(crate) outline: Option<Gm<BoundingBox, ColorMaterial>>,
     pub(crate) skybox: Option<Skybox>,
     pub(crate) show_axes: bool,
     pub(crate) total_vertices: usize,
@@ -88,6 +93,7 @@ impl Renderer {
                 scene_bounds: ([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]),
                 models: Vec::new(),
                 axes: None,
+                outline: None,
                 skybox,
                 show_axes: true,
                 total_vertices: 0,
@@ -126,6 +132,7 @@ impl Renderer {
         self.models.clear();
         self.total_vertices = 0;
         self.total_triangles = 0;
+        self.outline = None;
         for primitive in &model.geometries {
             upload_primitive(
                 &self.context,
@@ -307,6 +314,7 @@ impl Renderer {
                     .map(AsRef::as_ref),
             )
             .chain(self.skybox.iter().flatten())
+            .chain(self.outline.iter().map(|outline| outline as &dyn Object))
             .collect();
         let (background, light_intensity) = match self.theme {
             ViewerTheme::Dark => ((0.05, 0.05, 0.05, 1.0, 1.0), 1.0),
@@ -411,5 +419,47 @@ impl Renderer {
     /// Returns the total number of triangles across all primitives.
     pub fn total_triangles(&self) -> usize {
         self.total_triangles
+    }
+
+    /// Casts a ray from the camera through the given viewport pixel and
+    /// returns the closest model intersection.
+    ///
+    /// `x` and `y` are in physical pixels with the origin at the bottom-left
+    /// of the canvas, matching `three-d`'s coordinate convention.
+    pub fn pick(&self, x: f32, y: f32) -> Option<crate::three_d_viewer::raycast::RaycastHit> {
+        crate::three_d_viewer::raycast::raycast(self, x, y)
+    }
+
+    /// Sets the primitive to highlight with a bounding-box outline.
+    ///
+    /// Pass `None` to remove the outline.
+    pub fn set_hovered_primitive(&mut self, index: Option<usize>) {
+        self.outline = index.and_then(|i| self.build_outline(i));
+    }
+
+    /// Builds a bounding-box outline object around the given primitive.
+    fn build_outline(
+        &self,
+        index: usize,
+    ) -> Option<Gm<three_d::renderer::geometry::BoundingBox, ColorMaterial>> {
+        let model = self.models.get(index)?;
+        let aabb = model.aabb();
+        let margin = aabb.size().magnitude() * 0.001_f32;
+        let min = aabb.min() - vec3(margin, margin, margin);
+        let max = aabb.max() + vec3(margin, margin, margin);
+        let outline_aabb = three_d_asset::AxisAlignedBoundingBox::new_with_positions(&[min, max]);
+        let thickness = aabb.size().magnitude() * 0.005_f32;
+        let geometry =
+            BoundingBox::new_with_thickness(&self.context, outline_aabb, thickness.max(0.001));
+        let color = match self.theme {
+            ViewerTheme::Dark => Srgba::new(255, 200, 0, 255),
+            ViewerTheme::Light => Srgba::new(255, 100, 0, 255),
+        };
+        let cpu_material = three_d_asset::PbrMaterial {
+            albedo: color,
+            ..Default::default()
+        };
+        let material = ColorMaterial::new_opaque(&self.context, &cpu_material);
+        Some(Gm::new(geometry, material))
     }
 }

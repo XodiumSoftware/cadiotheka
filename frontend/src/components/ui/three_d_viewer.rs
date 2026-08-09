@@ -5,7 +5,7 @@
 
 use crate::components::Icon;
 use crate::components::ui::view_gizmo::{GizmoPosition, ViewGizmo, ViewGizmoDirection};
-use crate::three_d_viewer::{OrbitControls, Renderer, ViewState, ViewerTheme};
+use crate::three_d_viewer::{OrbitControls, RaycastHit, Renderer, ViewState, ViewerTheme};
 use crate::utils::{local_storage_get, local_storage_remove, local_storage_set};
 use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
@@ -15,6 +15,12 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::Closure;
+
+/// Truncates an `f64` viewport coordinate to `f32`, clamping to the valid range.
+#[allow(clippy::cast_possible_truncation, clippy::cast_lossless)]
+fn f32_clamp(value: f64) -> f32 {
+    value.clamp(f64::from(f32::MIN), f64::from(f32::MAX)) as f32
+}
 
 /// Viewer states exposed to the parent.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -46,6 +52,7 @@ pub fn IfcViewer(
     #[prop(optional)] show_gizmo_signal: Option<RwSignal<bool>>,
     #[prop(into, optional)] gizmo_position_signal: Option<RwSignal<GizmoPosition>>,
     #[prop(into, optional)] gizmo_edit_mode_signal: Option<RwSignal<bool>>,
+    #[prop(optional)] on_raycast_hit: Option<Callback<RaycastHit>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -56,6 +63,7 @@ pub fn IfcViewer(
     let gizmo_position =
         gizmo_position_signal.unwrap_or_else(|| RwSignal::new(GizmoPosition::TopRight));
     let gizmo_edit_mode = gizmo_edit_mode_signal.unwrap_or_else(|| RwSignal::new(false));
+    let hovered_primitive: RwSignal<Option<usize>> = RwSignal::new(None);
 
     let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
@@ -258,6 +266,14 @@ pub fn IfcViewer(
     Effect::new({
         let request_render = Rc::clone(&request_render);
         move |_| {
+            let _ = hovered_primitive.get();
+            request_render.borrow_mut()();
+        }
+    });
+
+    Effect::new({
+        let request_render = Rc::clone(&request_render);
+        move |_| {
             let _ = show_gizmo.get();
             request_render.borrow_mut()();
         }
@@ -279,8 +295,37 @@ pub fn IfcViewer(
         let request_render = Rc::clone(&request_render);
         let controls = Rc::clone(&controls);
         move |ev: leptos::web_sys::MouseEvent| {
-            let state = controls.borrow();
-            if state.on_mouse_move(&ev, &renderer) {
+            let mut needs_render = false;
+            {
+                let state = controls.borrow();
+                if state.on_mouse_move(&ev, &renderer) {
+                    needs_render = true;
+                }
+            }
+            if !disabled.get() && state.get() == IfcViewerState::Rendering && ev.buttons() == 0 {
+                let Some(canvas) = canvas_ref.get() else {
+                    return;
+                };
+                let rect = canvas.get_bounding_client_rect();
+                let x = f32_clamp(f64::from(ev.client_x()) - rect.left());
+                let y = f32_clamp(rect.height() - (f64::from(ev.client_y()) - rect.top()));
+                let next = renderer
+                    .borrow()
+                    .as_ref()
+                    .and_then(|renderer| renderer.pick(x, y))
+                    .map(|hit| hit.primitive_index);
+                if hovered_primitive.get_untracked() != next {
+                    hovered_primitive.set(next);
+                    {
+                        let mut renderer_ref = renderer.borrow_mut();
+                        if let Some(renderer) = renderer_ref.as_mut() {
+                            renderer.set_hovered_primitive(next);
+                        }
+                    }
+                    needs_render = true;
+                }
+            }
+            if needs_render {
                 request_render.borrow_mut()();
             }
         }
@@ -308,6 +353,29 @@ pub fn IfcViewer(
     let on_context_menu = |ev: leptos::web_sys::MouseEvent| {
         ev.prevent_default();
     };
+    let on_click = {
+        let renderer = Rc::clone(&renderer);
+        move |ev: leptos::web_sys::MouseEvent| {
+            if disabled.get() {
+                return;
+            }
+            let Some(canvas) = canvas_ref.get() else {
+                return;
+            };
+            let rect = canvas.get_bounding_client_rect();
+            let x = f32_clamp(f64::from(ev.client_x()) - rect.left());
+            let y = f32_clamp(rect.height() - (f64::from(ev.client_y()) - rect.top()));
+            let hit = renderer
+                .borrow()
+                .as_ref()
+                .and_then(|renderer| renderer.pick(x, y));
+            if let Some(hit) = hit
+                && let Some(ref callback) = on_raycast_hit
+            {
+                callback.run(hit);
+            }
+        }
+    };
     let on_mouse_leave = {
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
@@ -315,6 +383,13 @@ pub fn IfcViewer(
         move |_: leptos::web_sys::MouseEvent| {
             let mut state = controls.borrow_mut();
             state.on_mouse_leave(&renderer);
+            hovered_primitive.set(None);
+            {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.set_hovered_primitive(None);
+                }
+            }
             request_render.borrow_mut()();
         }
     };
@@ -403,6 +478,7 @@ pub fn IfcViewer(
                 on:mouseleave=on_mouse_leave
                 on:wheel=on_wheel
                 on:contextmenu=on_context_menu
+                on:click=on_click
             />
             {move || if disabled.get() {
                 view! {
