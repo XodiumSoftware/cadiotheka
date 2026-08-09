@@ -56,7 +56,7 @@ pub fn ViewerSettingsModal(
                             />
                             <button
                                 type="button"
-                                class="h-8 w-24 rounded-none border border-base-content/20 bg-base-100 px-2 py-1 text-xs font-mono text-base-content peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-primary"
+                                class="h-8 w-24 rounded-none border border-base-content/20 bg-base-100 px-2 py-1 text-xs font-bold font-mono text-base-content peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-primary"
                                 style=move || format!("background-color: {}; color: {};", srgba_to_hex(highlight_color.get()), contrast_color(highlight_color.get()))
                             >
                                 {move || srgba_to_hex(highlight_color.get())}
