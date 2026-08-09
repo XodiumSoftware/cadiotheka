@@ -560,7 +560,7 @@ pub fn IfcViewer(
                                 view! {
                                     <div class="absolute inset-0 flex items-center justify-center">
                                         <span class="text-xs text-error bg-base-100/80 px-2 py-1 border border-error/30 shadow backdrop-blur-sm">
-                                            "R+click the view gizmo button again to close edit mode."
+                                            "R+click the view gizmo button again to close position edit mode."
                                         </span>
                                     </div>
                                 }.into_any()

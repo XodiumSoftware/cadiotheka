@@ -1877,7 +1877,7 @@ fn ProjectModalContent(
                                                         <Icon::Reset />
                                                     </ToolbarButton>
                                                     <ToolbarButton
-                                                        label="L+click to toggle view gizmo\nR+click to unlock view gizmos position"
+                                                        label="L+click to toggle view gizmo\nR+click to edit view gizmos position"
                                                         tooltip_position=TooltipPosition::Left
                                                         on_click=Callback::new(move |()| {
                                                             show_gizmo.update(|v| *v = !*v);
