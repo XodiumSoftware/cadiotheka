@@ -1,16 +1,6 @@
 use crate::utils::{local_storage_get, local_storage_set};
 use leptos::prelude::*;
 
-const LAYOUT_WIDE_KEY: &str = "layout_wide";
-
-fn load_layout_wide() -> Option<bool> {
-    local_storage_get(LAYOUT_WIDE_KEY).map(|value| value == "true")
-}
-
-fn save_layout_wide(wide: bool) {
-    local_storage_set(LAYOUT_WIDE_KEY, if wide { "true" } else { "false" });
-}
-
 /// Provides and reads the wide/narrow grid layout preference.
 ///
 /// `true` = wide (5 columns), `false` = narrow (3 columns).
@@ -21,10 +11,20 @@ pub struct LayoutContext {
 }
 
 impl LayoutContext {
+    const KEY: &str = "layout_wide";
+
+    fn load() -> Option<bool> {
+        local_storage_get(Self::KEY).map(|value| value == "true")
+    }
+
+    fn save(wide: bool) {
+        local_storage_set(Self::KEY, if wide { "true" } else { "false" });
+    }
+
     /// Create a provider context, reading any persisted preference from
     /// `localStorage` and falling back to `default` if none exists.
     pub fn provide_with_default(default: bool) {
-        let initial = load_layout_wide().unwrap_or(default);
+        let initial = Self::load().unwrap_or(default);
         let (wide, set_wide) = signal(initial);
         provide_context(Self {
             wide: wide.into(),
@@ -32,7 +32,7 @@ impl LayoutContext {
         });
 
         Effect::new(move |_| {
-            save_layout_wide(wide.get());
+            Self::save(wide.get());
         });
     }
 
