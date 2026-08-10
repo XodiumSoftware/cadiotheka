@@ -740,7 +740,7 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Select All"</span>
-                            <kbd class="kbd kbd-xs">"A"</kbd>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"A"</kbd>
                         </button>
                         <button
                             type="button"
@@ -770,7 +770,7 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Deselect All"</span>
-                            <kbd class="kbd kbd-xs">"Esc"</kbd>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"Esc"</kbd>
                         </button>
                         <button
                             type="button"
@@ -807,7 +807,7 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Hide"</span>
-                            <kbd class="kbd kbd-xs">"H"</kbd>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"H"</kbd>
                         </button>
                         <button
                             type="button"
@@ -837,10 +837,10 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Unhide All"</span>
-                            <div class="flex items-center gap-0.5">
-                                <kbd class="kbd kbd-xs">"Shift"</kbd>
-                                <span class="text-base-content/50">"+"</span>
-                                <kbd class="kbd kbd-xs">"H"</kbd>
+                            <div class="flex items-center gap-1">
+                                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"Shift"</kbd>
+                                <span class="text-xs text-base-content/50">"+"</span>
+                                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"H"</kbd>
                             </div>
                         </button>
                     </div>
