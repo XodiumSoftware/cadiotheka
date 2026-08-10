@@ -1,8 +1,6 @@
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 
-const DEFAULT_TOAST_DURATION_MS: u32 = 1500;
-
 /// State for the single global toast notification.
 #[derive(Clone, Copy)]
 pub struct ToastContext {
@@ -13,6 +11,8 @@ pub struct ToastContext {
 }
 
 impl ToastContext {
+    const DEFAULT_DURATION_MS: u32 = 1500;
+
     /// Provide the global toast context.
     pub fn provide() {
         let (message, set_message) = signal(String::new());
@@ -36,7 +36,7 @@ impl ToastContext {
         self.set_visible.set(true);
         let set_visible = self.set_visible;
         leptos::task::spawn_local(async move {
-            TimeoutFuture::new(DEFAULT_TOAST_DURATION_MS).await;
+            TimeoutFuture::new(Self::DEFAULT_DURATION_MS).await;
             set_visible.set(false);
         });
     }
