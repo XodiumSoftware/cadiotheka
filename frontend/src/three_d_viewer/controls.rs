@@ -36,12 +36,14 @@ impl OrbitControls {
         renderer: &Rc<RefCell<Option<Renderer>>>,
         show_axes: bool,
     ) -> bool {
-        ev.prevent_default();
+        let button = mouse_button_from_web(ev.button());
+        if button != MouseButton::Right {
+            ev.prevent_default();
+        }
         let Some(pending_events) = renderer_events(renderer) else {
             return false;
         };
         let position = physical_point_from_mouse(ev);
-        let button = mouse_button_from_web(ev.button());
         let modifiers = modifiers_from_mouse(ev);
         let now = window_performance_now();
         let is_double_click = button == MouseButton::Middle && now - self.last_press_time <= 300.0;
