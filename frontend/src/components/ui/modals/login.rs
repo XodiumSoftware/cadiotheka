@@ -17,8 +17,8 @@ struct AuthUrlResponse {
 /// from the backend and navigating the browser there.
 async fn start_oauth(provider: &str) {
     let url = match provider {
-        "github" => encode_redirect_url(&github_login_url()),
-        "google" => encode_redirect_url(&google_login_url()),
+        "/github" => encode_redirect_url(&github_login_url()),
+        "/google" => encode_redirect_url(&google_login_url()),
         _ => return,
     };
     if let Ok(resp) = Request::get(&url).send().await
