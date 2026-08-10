@@ -1066,14 +1066,22 @@ async fn fetch_project_versions(
     } else {
         "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, downloads FROM project_versions WHERE project_id = ?1 AND state != ?2 ORDER BY created_at DESC"
     };
-    let result = db(ctx)?
-        .prepare(sql)
-        .bind(&[
-            project_id.into(),
-            VersionState::Undefined.to_string().into(),
-        ])?
-        .all()
-        .await?;
+    let result = if include_undefined {
+        db(ctx)?
+            .prepare(sql)
+            .bind(&[project_id.into()])?
+            .all()
+            .await?
+    } else {
+        db(ctx)?
+            .prepare(sql)
+            .bind(&[
+                project_id.into(),
+                VersionState::Undefined.to_string().into(),
+            ])?
+            .all()
+            .await?
+    };
     result.results::<ProjectVersion>()
 }
 
