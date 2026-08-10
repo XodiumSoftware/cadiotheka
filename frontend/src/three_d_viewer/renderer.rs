@@ -42,7 +42,10 @@ pub struct Renderer {
     pub(crate) outline: Option<Gm<BoundingBox, ColorMaterial>>,
     pub(crate) hovered_primitive: Option<usize>,
     pub(crate) hidden_primitives: HashSet<usize>,
+    pub(crate) selected_primitives: HashSet<usize>,
+    pub(crate) selected_outlines: Vec<Gm<BoundingBox, ColorMaterial>>,
     pub(crate) highlight_color: Srgba,
+    pub(crate) selection_color: Srgba,
     pub(crate) skybox_color: Srgba,
     pub(crate) skybox: Option<Skybox>,
     pub(crate) show_axes: bool,
@@ -102,7 +105,10 @@ impl Renderer {
                 outline: None,
                 hovered_primitive: None,
                 hidden_primitives: HashSet::new(),
+                selected_primitives: HashSet::new(),
+                selected_outlines: Vec::new(),
                 highlight_color: Srgba::new(255, 200, 0, 255),
+                selection_color: Srgba::new(0, 150, 255, 255),
                 skybox_color,
                 skybox,
                 show_axes: true,
@@ -144,6 +150,8 @@ impl Renderer {
         self.total_triangles = 0;
         self.outline = None;
         self.hidden_primitives.clear();
+        self.selected_primitives.clear();
+        self.selected_outlines.clear();
         self.hovered_primitive = None;
         for primitive in &model.geometries {
             upload_primitive(
@@ -329,6 +337,11 @@ impl Renderer {
             )
             .chain(self.skybox.iter().flatten())
             .chain(self.outline.iter().map(|outline| outline as &dyn Object))
+            .chain(
+                self.selected_outlines
+                    .iter()
+                    .map(|outline| outline as &dyn Object),
+            )
             .collect();
         let (background, light_intensity) = match self.theme {
             ViewerTheme::Dark => ((0.05, 0.05, 0.05, 1.0, 1.0), 1.0),
@@ -458,13 +471,15 @@ impl Renderer {
     /// Pass `None` to remove the outline.
     pub fn set_hovered_primitive(&mut self, index: Option<usize>) {
         self.hovered_primitive = index;
-        self.outline = index.and_then(|i| self.build_outline(i));
+        self.outline = index.and_then(|i| self.build_outline(i, self.highlight_color));
     }
 
     /// Sets the outline highlight color and rebuilds the current outline if one exists.
     pub fn set_highlight_color(&mut self, color: Srgba) {
         self.highlight_color = color;
-        self.outline = self.hovered_primitive.and_then(|i| self.build_outline(i));
+        self.outline = self
+            .hovered_primitive
+            .and_then(|i| self.build_outline(i, color));
     }
 
     /// Hides the primitive with the given index so it is no longer rendered or
@@ -498,10 +513,81 @@ impl Renderer {
         self.hidden_primitives.len()
     }
 
+    /// Hides every selected primitive and clears the selection.
+    pub fn hide_selected(&mut self) {
+        for index in &self.selected_primitives {
+            self.hidden_primitives.insert(*index);
+        }
+        if self
+            .hovered_primitive
+            .is_some_and(|index| self.hidden_primitives.contains(&index))
+        {
+            self.set_hovered_primitive(None);
+        }
+        self.deselect_all();
+    }
+
+    /// Selects the primitive with the given index and adds a selection outline.
+    pub fn select_primitive(&mut self, index: usize) {
+        if index < self.models.len()
+            && !self.hidden_primitives.contains(&index)
+            && self.selected_primitives.insert(index)
+            && let Some(outline) = self.build_outline(index, self.selection_color)
+        {
+            self.selected_outlines.push(outline);
+        }
+    }
+
+    /// Deselects the primitive with the given index and removes its outline.
+    pub fn deselect_primitive(&mut self, index: usize) {
+        self.selected_primitives.remove(&index);
+        self.rebuild_selection_outlines();
+    }
+
+    /// Selects every currently visible primitive.
+    pub fn select_all_visible(&mut self) {
+        self.selected_primitives.clear();
+        self.selected_outlines.clear();
+        for index in 0..self.models.len() {
+            if !self.hidden_primitives.contains(&index) {
+                self.selected_primitives.insert(index);
+                if let Some(outline) = self.build_outline(index, self.selection_color) {
+                    self.selected_outlines.push(outline);
+                }
+            }
+        }
+    }
+
+    /// Clears the current selection.
+    pub fn deselect_all(&mut self) {
+        self.selected_primitives.clear();
+        self.selected_outlines.clear();
+    }
+
+    /// Returns whether the primitive with the given index is currently selected.
+    pub fn is_selected(&self, index: usize) -> bool {
+        self.selected_primitives.contains(&index)
+    }
+
+    /// Returns the number of currently selected primitives.
+    pub fn selected_count(&self) -> usize {
+        self.selected_primitives.len()
+    }
+
+    /// Rebuilds the selection outlines after the selection set changes.
+    fn rebuild_selection_outlines(&mut self) {
+        self.selected_outlines = self
+            .selected_primitives
+            .iter()
+            .filter_map(|index| self.build_outline(*index, self.selection_color))
+            .collect();
+    }
+
     /// Builds a bounding-box outline object around the given primitive.
     fn build_outline(
         &self,
         index: usize,
+        color: Srgba,
     ) -> Option<Gm<three_d::renderer::geometry::BoundingBox, ColorMaterial>> {
         let model = self.models.get(index)?;
         let aabb = model.aabb();
@@ -512,7 +598,6 @@ impl Renderer {
         let thickness = aabb.size().magnitude() * 0.005_f32;
         let geometry =
             BoundingBox::new_with_thickness(&self.context, outline_aabb, thickness.max(0.001));
-        let color = self.highlight_color;
         let cpu_material = three_d_asset::PbrMaterial {
             albedo: color,
             ..Default::default()

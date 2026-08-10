@@ -355,16 +355,28 @@ pub fn IfcViewer(
                     }
 
                     let key = ev.key().to_lowercase();
-                    if key == "h" && !ev.shift_key() {
+                    if key == "a" && !ev.shift_key() {
                         ev.prevent_default();
-                        let Some(index) = hovered_primitive.get_untracked() else {
-                            return;
-                        };
                         let changed = {
                             let mut renderer_ref = renderer.borrow_mut();
                             if let Some(renderer) = renderer_ref.as_mut() {
-                                renderer.hide_primitive(index);
-                                renderer.is_hidden(index)
+                                renderer.select_all_visible();
+                                renderer.selected_count() > 0
+                            } else {
+                                false
+                            }
+                        };
+                        if changed {
+                            request_render.borrow_mut()();
+                        }
+                    } else if key == "h" && !ev.shift_key() {
+                        ev.prevent_default();
+                        let changed = {
+                            let mut renderer_ref = renderer.borrow_mut();
+                            if let Some(renderer) = renderer_ref.as_mut() {
+                                let had_selection = renderer.selected_count() > 0;
+                                renderer.hide_selected();
+                                had_selection
                             } else {
                                 false
                             }
@@ -378,9 +390,24 @@ pub fn IfcViewer(
                         let changed = {
                             let mut renderer_ref = renderer.borrow_mut();
                             if let Some(renderer) = renderer_ref.as_mut() {
-                                let had_hidden = renderer.hidden_count() > 0;
+                                let any_hidden = renderer.hidden_count() > 0;
                                 renderer.show_all();
-                                had_hidden
+                                any_hidden
+                            } else {
+                                false
+                            }
+                        };
+                        if changed {
+                            request_render.borrow_mut()();
+                        }
+                    } else if key == "escape" {
+                        ev.prevent_default();
+                        let changed = {
+                            let mut renderer_ref = renderer.borrow_mut();
+                            if let Some(renderer) = renderer_ref.as_mut() {
+                                let had_selection = renderer.selected_count() > 0;
+                                renderer.deselect_all();
+                                had_selection
                             } else {
                                 false
                             }
@@ -664,10 +691,12 @@ pub fn IfcViewer(
         let request_render = context_menu_request_render;
         move || {
             context_menu.get().map(|(x, y)| {
-                let has_hidden = renderer
+                let (has_selection, has_hidden) = renderer
                     .borrow()
                     .as_ref()
-                    .is_some_and(|r| r.hidden_count() > 0);
+                    .map_or((false, false), |r| {
+                        (r.selected_count() > 0, r.hidden_count() > 0)
+                    });
                 view! {
                     <div
                         class="viewer-context-menu absolute z-30 min-w-[10rem] rounded border border-base-content/10 bg-base-100 shadow-lg py-1 text-sm"
@@ -680,14 +709,47 @@ pub fn IfcViewer(
                                 let renderer = Rc::clone(&renderer);
                                 let request_render = Rc::clone(&request_render);
                                 move |_| {
-                                    let Some(index) = context_menu_primitive.get_untracked() else {
-                                        return;
-                                    };
                                     let changed = {
                                         let mut renderer_ref = renderer.borrow_mut();
                                         if let Some(renderer) = renderer_ref.as_mut() {
-                                            renderer.hide_primitive(index);
-                                            renderer.is_hidden(index)
+                                            renderer.select_all_visible();
+                                            renderer.selected_count() > 0
+                                        } else {
+                                            false
+                                        }
+                                    };
+                                    if changed {
+                                        context_menu.set(None);
+                                        request_render.borrow_mut()();
+                                    }
+                                }
+                            }
+                        >
+                            <span>"Select All"</span>
+                            <span class="text-xs text-base-content/50">"A"</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between"
+                            class:opacity-50=move || !has_selection && context_menu_primitive.get().is_none()
+                            class:cursor-not-allowed=move || !has_selection && context_menu_primitive.get().is_none()
+                            disabled=move || !has_selection && context_menu_primitive.get().is_none()
+                            on:click={
+                                let renderer = Rc::clone(&renderer);
+                                let request_render = Rc::clone(&request_render);
+                                move |_| {
+                                    let changed = {
+                                        let mut renderer_ref = renderer.borrow_mut();
+                                        if let Some(renderer) = renderer_ref.as_mut() {
+                                            if renderer.selected_count() > 0 {
+                                                renderer.hide_selected();
+                                                true
+                                            } else if let Some(index) = context_menu_primitive.get_untracked() {
+                                                renderer.hide_primitive(index);
+                                                renderer.is_hidden(index)
+                                            } else {
+                                                false
+                                            }
                                         } else {
                                             false
                                         }
