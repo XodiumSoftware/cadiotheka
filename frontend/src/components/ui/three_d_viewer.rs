@@ -862,11 +862,7 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Unhide All"</span>
-                            <div class="flex items-center gap-1">
-                                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"Shift"</kbd>
-                                <span class="text-xs text-base-content/50">"+"</span>
-                                <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"H"</kbd>
-                            </div>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"Shift+H"</kbd>
                         </button>
                     </div>
                 }
