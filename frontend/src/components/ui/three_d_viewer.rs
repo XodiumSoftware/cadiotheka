@@ -739,7 +739,7 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Select All"</span>
-                            <span class="text-xs text-base-content/50">"A"</span>
+                            <kbd class="kbd kbd-xs">"A"</kbd>
                         </button>
                         <button
                             type="button"
@@ -769,7 +769,7 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Deselect All"</span>
-                            <span class="text-xs text-base-content/50">"Esc"</span>
+                            <kbd class="kbd kbd-xs">"Esc"</kbd>
                         </button>
                         <button
                             type="button"
@@ -806,7 +806,7 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Hide"</span>
-                            <span class="text-xs text-base-content/50">"H"</span>
+                            <kbd class="kbd kbd-xs">"H"</kbd>
                         </button>
                         <button
                             type="button"
@@ -836,7 +836,11 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Unhide All"</span>
-                            <span class="text-xs text-base-content/50">"Shift+H"</span>
+                            <div class="flex items-center gap-0.5">
+                                <kbd class="kbd kbd-xs">"Shift"</kbd>
+                                <span class="text-base-content/50">"+"</span>
+                                <kbd class="kbd kbd-xs">"H"</kbd>
+                            </div>
                         </button>
                     </div>
                 }
