@@ -20,7 +20,7 @@ const fn backend_origin() -> &'static str {
 
 /// Builds a full backend URL from a route path.
 fn backend_url(path: &str) -> String {
-    let base = format!("{}{}", backend_origin(), shared::routes::DATA_PREFIX);
+    let base = backend_origin();
     if path.starts_with('/') {
         format!("{base}{path}")
     } else {
