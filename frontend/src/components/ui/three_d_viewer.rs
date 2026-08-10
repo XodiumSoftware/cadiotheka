@@ -680,6 +680,7 @@ pub fn IfcViewer(
                         if let Some(r) = renderer.borrow_mut().as_mut() {
                             r.set_show_axes(show_axes.get());
                             r.set_highlight_color(highlight_color.get_untracked());
+                            r.set_selection_color(selection_color.get_untracked());
                             r.set_skybox_color(skybox_color.get_untracked());
                         }
 
