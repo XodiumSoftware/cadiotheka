@@ -31,6 +31,43 @@ pub fn rate_limiter(ctx: &RouteContext<()>) -> Result<RateLimiter> {
     ctx.env.rate_limiter(RATE_LIMIT_BINDING)
 }
 
+/// Namespaces used with the rate limiter binding.
+///
+/// Each variant produces a stable `snake_case` key so limits are grouped by
+/// feature rather than by raw strings that are easy to mistype.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RateLimitNamespace {
+    /// OAuth login initiation.
+    OauthLogin,
+    /// OAuth callback exchange.
+    OauthCallback,
+    /// Project creation.
+    ProjectCreate,
+    /// IFC model upload.
+    IfcUpload,
+    /// IFC model deletion.
+    IfcDelete,
+    /// GLB conversion.
+    GlbConvert,
+    /// Project download counter.
+    Downloads,
+}
+
+impl std::fmt::Display for RateLimitNamespace {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::OauthLogin => "oauth_login",
+            Self::OauthCallback => "oauth_callback",
+            Self::ProjectCreate => "project_create",
+            Self::IfcUpload => "ifc_upload",
+            Self::IfcDelete => "ifc_delete",
+            Self::GlbConvert => "glb_convert",
+            Self::Downloads => "downloads",
+        };
+        write!(f, "{s}")
+    }
+}
+
 /// Builds a JSON error response with the given message and HTTP status.
 ///
 /// The response body has the shape `{"error": "message"}`. This is used
@@ -83,7 +120,7 @@ fn client_ip(req: &Request) -> String {
 pub async fn check_rate_limit(
     req: &Request,
     ctx: &RouteContext<()>,
-    namespace: &str,
+    namespace: RateLimitNamespace,
 ) -> Result<Option<Response>> {
     let key = format!("{namespace}:{}", client_ip(req));
     let outcome = rate_limiter(ctx)?.limit(key).await?;

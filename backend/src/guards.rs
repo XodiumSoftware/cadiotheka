@@ -3,7 +3,7 @@ use worker::{Request, Response, Result, RouteContext};
 use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::api::turnstile::verify_turnstile_token;
-use crate::utils::check_rate_limit;
+use crate::utils::{RateLimitNamespace, check_rate_limit};
 
 /// Outcome of running authentication guards.
 ///
@@ -24,7 +24,7 @@ pub enum GuardOutcome {
 pub async fn require_auth_with_rate_limit(
     req: &Request,
     ctx: &RouteContext<()>,
-    namespace: &str,
+    namespace: RateLimitNamespace,
 ) -> Result<GuardOutcome> {
     if let Some(response) = check_rate_limit(req, ctx, namespace).await? {
         return Ok(GuardOutcome::Response(response));
@@ -40,7 +40,7 @@ pub async fn require_auth_with_rate_limit(
 pub async fn require_auth_with_turnstile_and_rate_limit(
     req: &mut Request,
     ctx: &RouteContext<()>,
-    namespace: &str,
+    namespace: RateLimitNamespace,
 ) -> Result<GuardOutcome> {
     if let Some(response) = check_rate_limit(req, ctx, namespace).await? {
         return Ok(GuardOutcome::Response(response));

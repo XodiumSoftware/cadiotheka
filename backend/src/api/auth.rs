@@ -17,15 +17,19 @@ use crate::api::accounts::{
 };
 use crate::api::session::{create_session, read_session};
 use crate::utils::{
-    bad_request, check_rate_limit, is_https_request, kv, public_origin, rust_err,
-    safe_redirect_target,
+    RateLimitNamespace, bad_request, check_rate_limit, is_https_request, kv, public_origin,
+    rust_err, safe_redirect_target,
 };
 
 const OAUTH_STATE_TTL_SECONDS: u64 = 10 * 60;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-enum Provider {
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Provider {
+    #[default]
+    #[serde(rename = "github")]
     GitHub,
+    #[serde(rename = "google")]
     Google,
 }
 
@@ -66,6 +70,24 @@ impl Provider {
     }
 }
 
+impl std::fmt::Display for Provider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for Provider {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "github" => Ok(Self::GitHub),
+            "google" => Ok(Self::Google),
+            _ => Err("unknown provider"),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct OAuthState {
     provider: Provider,
@@ -84,7 +106,7 @@ fn oauth_client(ctx: &RouteContext<()>, provider: Provider) -> Result<BasicClien
 }
 
 pub async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    if let Some(response) = check_rate_limit(&req, &ctx, "oauth_login").await? {
+    if let Some(response) = check_rate_limit(&req, &ctx, RateLimitNamespace::OauthLogin).await? {
         return Ok(response);
     }
     let redirect_to = req
@@ -98,7 +120,7 @@ pub async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Respons
 }
 
 pub async fn google_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    if let Some(response) = check_rate_limit(&req, &ctx, "oauth_login").await? {
+    if let Some(response) = check_rate_limit(&req, &ctx, RateLimitNamespace::OauthLogin).await? {
         return Ok(response);
     }
     let redirect_to = req
@@ -179,7 +201,7 @@ struct CallbackQuery {
 }
 
 async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Result<Response> {
-    if let Some(response) = check_rate_limit(&req, &ctx, "oauth_callback").await? {
+    if let Some(response) = check_rate_limit(&req, &ctx, RateLimitNamespace::OauthCallback).await? {
         return Ok(response);
     }
     let url = req.url()?;
@@ -207,7 +229,7 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
 
     let account = if let Some(account_id) = state.link_account_id {
         let (provider_id, _profile) = fetch_provider_profile(&ctx, provider, &token).await?;
-        link_oauth_account(&ctx, &account_id, provider.as_str(), &provider_id).await?;
+        link_oauth_account(&ctx, &account_id, provider, &provider_id).await?;
         fetch_account(&ctx, &account_id)
             .await?
             .ok_or_else(|| rust_err("account to link not found"))?
@@ -284,11 +306,11 @@ async fn fetch_or_create_account(
 ) -> Result<Account> {
     let (provider_id, profile) = fetch_provider_profile(ctx, provider, access_token).await?;
 
-    if let Some(account) = fetch_account_by_provider(ctx, provider.as_str(), &provider_id).await? {
+    if let Some(account) = fetch_account_by_provider(ctx, provider, &provider_id).await? {
         return Ok(account);
     }
 
-    create_oauth_account(ctx, provider.as_str(), &provider_id, profile).await
+    create_oauth_account(ctx, provider, &provider_id, profile).await
 }
 
 async fn fetch_provider_profile(

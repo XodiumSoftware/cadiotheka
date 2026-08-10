@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 use worker::{Request, Response, Result, RouteContext};
 
+pub use crate::api::auth::Provider;
+
 use crate::api::session::require_account;
 use crate::utils::{db, forbidden, js_option, not_found, now_utc};
 
-const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences FROM accounts a";
+const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences, a.provider, a.provider_id FROM accounts a";
 
 /// The set of roles an account can have.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -41,6 +43,12 @@ pub struct Account {
     /// JSON blob storing account-scoped viewer preferences.
     #[serde(default)]
     pub viewer_preferences: String,
+    /// OAuth provider used to create this account, stored as a `snake_case` string.
+    #[serde(default)]
+    pub provider: Provider,
+    /// Provider-scoped unique identifier for this account.
+    #[serde(default)]
+    pub provider_id: String,
 }
 
 /// Payload used to create or update an account.
@@ -58,6 +66,12 @@ pub struct AccountPayload {
     pub viewer_preferences: String,
 }
 
+/// Row shape used when reading a linked OAuth provider back from D1.
+#[derive(Deserialize)]
+struct ProviderRow {
+    provider: Provider,
+}
+
 /// Fetches a single account by id, returning `None` when no row matches.
 pub async fn fetch_account(ctx: &RouteContext<()>, id: &str) -> Result<Option<Account>> {
     let result = db(ctx)?
@@ -72,14 +86,14 @@ pub async fn fetch_account(ctx: &RouteContext<()>, id: &str) -> Result<Option<Ac
 /// Fetches a single account by its OAuth provider and provider id.
 pub async fn fetch_account_by_provider(
     ctx: &RouteContext<()>,
-    provider: &str,
+    provider: Provider,
     provider_id: &str,
 ) -> Result<Option<Account>> {
     let result = db(ctx)?
         .prepare(format!(
             "{SELECT_ACCOUNT_COLUMNS} JOIN account_providers ap ON a.id = ap.account_id WHERE ap.provider = ?1 AND ap.provider_id = ?2"
         ))
-        .bind(&[provider.into(), provider_id.into()])?
+        .bind(&[provider.to_string().into(), provider_id.into()])?
         .all()
         .await?;
     let mut accounts: Vec<Account> = result.results::<Account>()?;
@@ -90,18 +104,13 @@ pub async fn fetch_account_by_provider(
 pub async fn fetch_linked_providers(
     ctx: &RouteContext<()>,
     account_id: &str,
-) -> Result<Vec<String>> {
-    #[derive(Deserialize)]
-    struct Row {
-        provider: String,
-    }
-
+) -> Result<Vec<Provider>> {
     let result = db(ctx)?
         .prepare("SELECT provider FROM account_providers WHERE account_id = ?1 ORDER BY created_at")
         .bind(&[account_id.into()])?
         .all()
         .await?;
-    let rows: Vec<Row> = result.results::<Row>()?;
+    let rows: Vec<ProviderRow> = result.results::<ProviderRow>()?;
     Ok(rows.into_iter().map(|r| r.provider).collect())
 }
 
@@ -112,7 +121,7 @@ pub async fn fetch_linked_providers(
 pub async fn link_oauth_account(
     ctx: &RouteContext<()>,
     account_id: &str,
-    provider: &str,
+    provider: Provider,
     provider_id: &str,
 ) -> Result<()> {
     let existing = fetch_account_by_provider(ctx, provider, provider_id).await?;
@@ -135,7 +144,7 @@ pub async fn link_oauth_account(
         )
         .bind(&[
             account_id.into(),
-            provider.into(),
+            provider.to_string().into(),
             provider_id.into(),
             created_at.into(),
         ])?
@@ -153,10 +162,10 @@ pub async fn link_oauth_account(
 pub async fn unlink_oauth_account(
     ctx: &RouteContext<()>,
     account_id: &str,
-    provider: &str,
+    provider: Provider,
 ) -> Result<()> {
     let linked = fetch_linked_providers(ctx, account_id).await?;
-    let position = linked.iter().position(|p| p == provider);
+    let position = linked.iter().position(|p| p == &provider);
 
     let Some(_position) = position else {
         return Err(worker::Error::RustError("provider not linked".into()));
@@ -170,19 +179,19 @@ pub async fn unlink_oauth_account(
 
     db(ctx)?
         .prepare("DELETE FROM account_providers WHERE account_id = ?1 AND provider = ?2")
-        .bind(&[account_id.into(), provider.into()])?
+        .bind(&[account_id.into(), provider.to_string().into()])?
         .run()
         .await?;
 
     let providers = fetch_linked_providers(ctx, account_id).await?;
     let mut providers_iter = providers.iter();
     let first_provider = providers_iter.next();
-    if first_provider == Some(&provider.to_string())
+    if first_provider == Some(&provider)
         && let Some(new_primary) = providers_iter.next()
     {
         db(ctx)?
             .prepare("UPDATE accounts SET provider = ?1 WHERE id = ?2")
-            .bind(&[new_primary.into(), account_id.into()])?
+            .bind(&[new_primary.to_string().into(), account_id.into()])?
             .run()
             .await?;
     }
@@ -220,7 +229,7 @@ pub struct OAuthProfile {
 /// provider's preferred login is already taken.
 pub async fn create_oauth_account(
     ctx: &RouteContext<()>,
-    provider: &str,
+    provider: Provider,
     provider_id: &str,
     profile: OAuthProfile,
 ) -> Result<Account> {
@@ -241,12 +250,14 @@ pub async fn create_oauth_account(
         created_at: created_at.clone(),
         verified: 1,
         viewer_preferences: "{}".to_string(),
+        provider,
+        provider_id: provider_id.to_string(),
     };
 
     db(ctx)?
         .prepare(
-            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified, viewer_preferences) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified, viewer_preferences, provider, provider_id) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
         )
         .bind(&[
             id.clone().into(),
@@ -259,6 +270,8 @@ pub async fn create_oauth_account(
             account.created_at.clone().into(),
             account.verified.into(),
             account.viewer_preferences.clone().into(),
+            account.provider.to_string().into(),
+            account.provider_id.clone().into(),
         ])?
         .run()
         .await?;
@@ -269,7 +282,7 @@ pub async fn create_oauth_account(
         )
         .bind(&[
             id.into(),
-            provider.into(),
+            provider.to_string().into(),
             provider_id.into(),
             created_at.into(),
         ])?
@@ -336,14 +349,18 @@ pub async fn read_account(_req: Request, ctx: RouteContext<()>) -> Result<Respon
 pub async fn list_linked_providers(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
     let providers = fetch_linked_providers(&ctx, &account.id).await?;
-    Response::from_json(&serde_json::json!({ "providers": providers }))
+    let provider_names: Vec<String> = providers.into_iter().map(|p| p.to_string()).collect();
+    Response::from_json(&serde_json::json!({ "providers": provider_names }))
 }
 
 /// Unlinks an OAuth provider from the currently authenticated account.
 pub async fn unlink_provider(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
-    let provider = ctx.param("provider").cloned().unwrap_or_default();
-    crate::api::accounts::unlink_oauth_account(&ctx, &account.id, &provider).await?;
+    let provider = ctx
+        .param("provider")
+        .and_then(|p| p.parse::<Provider>().ok())
+        .ok_or_else(|| worker::Error::RustError("invalid provider".into()))?;
+    crate::api::accounts::unlink_oauth_account(&ctx, &account.id, provider).await?;
     Response::empty()
 }
 

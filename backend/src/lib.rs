@@ -140,8 +140,8 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use api::accounts::{Account, Role};
-    use api::projects::Project;
+    use api::accounts::{Account, Provider, Role};
+    use api::projects::{Project, Tag};
     use serde::Deserialize;
 
     /// Frontend-compatible representation of an account response.
@@ -211,6 +211,8 @@ mod tests {
             created_at: "2025-01-01T00:00:00Z".to_string(),
             verified: 1,
             viewer_preferences: "{}".to_string(),
+            provider: Provider::GitHub,
+            provider_id: String::new(),
         };
 
         let json = serde_json::to_string(&account)?;
@@ -227,8 +229,8 @@ mod tests {
         assert_eq!(parsed.created_at, account.created_at);
         assert_eq!(parsed.verified, account.verified);
         assert_eq!(parsed.viewer_preferences, account.viewer_preferences);
-        assert!(parsed.provider.is_empty());
-        assert!(parsed.provider_id.is_empty());
+        assert_eq!(parsed.provider, account.provider.to_string());
+        assert_eq!(parsed.provider_id, account.provider_id);
         Ok(())
     }
 
@@ -242,7 +244,7 @@ mod tests {
             author_username: "trailblazer".to_string(),
             collaborator_ids: vec!["acc-2".to_string()],
             description: "Extended description.".to_string(),
-            tags: vec!["3d_model".to_string(), "vehicle".to_string()],
+            tags: vec![Tag::ThreeDModel, Tag::Vehicle],
             downloads: 1200,
             favorites: vec!["fav-1".to_string()],
             timestamp: "2026-07-07T14:30:00Z".to_string(),

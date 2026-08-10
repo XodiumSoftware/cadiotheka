@@ -9,7 +9,8 @@ use crate::guards::{
     GuardOutcome, require_auth_with_rate_limit, require_auth_with_turnstile_and_rate_limit,
 };
 use crate::utils::{
-    assets_bucket, bad_request, check_rate_limit, db, error_response, forbidden, not_found, now_utc,
+    RateLimitNamespace, assets_bucket, bad_request, check_rate_limit, db, error_response,
+    forbidden, not_found, now_utc,
 };
 use ifc_lite_export::{GltfOptions, export_glb};
 
@@ -21,6 +22,92 @@ const MAX_TITLE_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 5000;
 /// Maximum allowed size for an uploaded project IFC model, in bytes.
 const MAX_IFC_SIZE_BYTES: usize = 25 * 1024 * 1024; // 25 MiB
+
+/// Content tags for projects, mirroring the frontend tag set so the backend can
+/// validate and round-trip the same wire ids.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Tag {
+    /// Three-dimensional models and assets.
+    #[serde(rename = "3d_model")]
+    ThreeDModel,
+    /// Two-dimensional drawings and diagrams.
+    #[serde(rename = "2d_drawing")]
+    TwoDDrawing,
+    /// Parametric or algorithmically defined designs.
+    Parametric,
+    /// Designs intended for fabrication or manufacturing.
+    Fabrication,
+    /// Robotics parts, assemblies, and accessories.
+    Robotics,
+    /// Furniture designs.
+    Furniture,
+    /// Vehicles and vehicle parts.
+    Vehicle,
+    /// Architectural models and elements.
+    Architecture,
+    /// Electronics enclosures and components.
+    Electronics,
+    /// Tools, jigs, and workshop helpers.
+    Tooling,
+    /// Lighting fixtures and designs.
+    Lighting,
+    /// Do-it-yourself projects and hacks.
+    Diy,
+    /// Interior design objects and layouts.
+    Interior,
+    /// General engineering models.
+    Engineering,
+    /// Aerospace parts and assemblies.
+    Aerospace,
+    /// Decorative objects.
+    Decor,
+    /// Medical devices and helpers.
+    Medical,
+    /// Assets for games and real-time rendering.
+    GameAsset,
+    /// Artistic or sculptural models.
+    Art,
+    /// Educational models and demonstrations.
+    Educational,
+    /// Work-in-progress designs.
+    Wip,
+}
+
+impl Tag {
+    /// Stable wire id stored on project rows.
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::ThreeDModel => "3d_model",
+            Self::TwoDDrawing => "2d_drawing",
+            Self::Parametric => "parametric",
+            Self::Fabrication => "fabrication",
+            Self::Robotics => "robotics",
+            Self::Furniture => "furniture",
+            Self::Vehicle => "vehicle",
+            Self::Architecture => "architecture",
+            Self::Electronics => "electronics",
+            Self::Tooling => "tooling",
+            Self::Lighting => "lighting",
+            Self::Diy => "diy",
+            Self::Interior => "interior",
+            Self::Engineering => "engineering",
+            Self::Aerospace => "aerospace",
+            Self::Decor => "decor",
+            Self::Medical => "medical",
+            Self::GameAsset => "game_asset",
+            Self::Art => "art",
+            Self::Educational => "educational",
+            Self::Wip => "wip",
+        }
+    }
+}
+
+impl std::fmt::Display for Tag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.id())
+    }
+}
 
 /// A version state for an IFC file.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,8 +181,8 @@ pub struct Project {
     #[serde(with = "json_string")]
     pub collaborator_ids: Vec<String>,
     pub description: String,
-    #[serde(with = "json_string")]
-    pub tags: Vec<String>,
+    #[serde(with = "json_tags")]
+    pub tags: Vec<Tag>,
     pub downloads: u64,
     #[serde(with = "json_string")]
     pub favorites: Vec<String>,
@@ -113,8 +200,8 @@ pub struct ProjectPayload {
     #[serde(with = "json_string")]
     pub collaborator_ids: Vec<String>,
     pub description: String,
-    #[serde(with = "json_string")]
-    pub tags: Vec<String>,
+    #[serde(with = "json_tags")]
+    pub tags: Vec<Tag>,
     pub downloads: u64,
     #[serde(with = "json_string")]
     pub favorites: Vec<String>,
@@ -141,6 +228,21 @@ mod json_string {
     }
 }
 
+mod json_tags {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    use super::Tag;
+
+    pub fn serialize<S: Serializer>(value: &Vec<Tag>, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<Tag>, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        serde_json::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Responds with a JSON array of all projects.
 pub async fn list_projects(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let result = db(&ctx)?.prepare(SELECT_PROJECT_COLUMNS).all().await?;
@@ -160,11 +262,16 @@ pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Respon
 /// Creates a new project from the request body, attributing it to the
 /// authenticated user.
 pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account =
-        match require_auth_with_turnstile_and_rate_limit(&mut req, &ctx, "project_create").await? {
-            GuardOutcome::Account(account) => account,
-            GuardOutcome::Response(resp) => return Ok(resp),
-        };
+    let account = match require_auth_with_turnstile_and_rate_limit(
+        &mut req,
+        &ctx,
+        RateLimitNamespace::ProjectCreate,
+    )
+    .await?
+    {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let mut payload: ProjectPayload = req.json().await?;
     let validation_errors = validate_project_payload(&payload);
     if !validation_errors.is_empty() {
@@ -176,7 +283,12 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     payload.author_username = account.username;
     let project_id = payload.id.clone();
 
-    let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
+    let tags = payload
+        .tags
+        .iter()
+        .map(std::string::ToString::to_string)
+        .collect::<Vec<_>>();
+    let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
     let favorites = serde_json::to_string(&payload.favorites).unwrap_or_else(|_| "[]".to_string());
     let collaborator_ids =
         serde_json::to_string(&payload.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
@@ -218,7 +330,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 #[allow(clippy::option_option)]
 pub struct ProjectPatch {
     title: Option<String>,
-    tags: Option<Vec<String>>,
+    tags: Option<Vec<Tag>>,
     collaborator_ids: Option<Vec<String>>,
     description: Option<String>,
 }
@@ -248,6 +360,10 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
     }
 
     if let Some(tags) = patch.tags {
+        let tags = tags
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect::<Vec<_>>();
         let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
         db(&ctx)?
             .prepare("UPDATE projects SET tags = ?1 WHERE id = ?2")
@@ -300,7 +416,12 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     payload.author_id = project.author_id;
     payload.author = project.author;
     payload.author_username = project.author_username;
-    let tags = serde_json::to_string(&payload.tags).unwrap_or_else(|_| "[]".to_string());
+    let tags = payload
+        .tags
+        .iter()
+        .map(std::string::ToString::to_string)
+        .collect::<Vec<_>>();
+    let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
     payload.collaborator_ids = project.collaborator_ids.clone();
     let favorites = serde_json::to_string(&project.favorites).unwrap_or_else(|_| "[]".to_string());
     let collaborator_ids =
@@ -357,10 +478,11 @@ pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Respo
 /// Handles a multipart upload of a project IFC model, stores it in R2,
 /// and creates a new `project_versions` row with state `undefined`.
 pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = match require_auth_with_rate_limit(&req, &ctx, "ifc_upload").await? {
-        GuardOutcome::Account(account) => account,
-        GuardOutcome::Response(resp) => return Ok(resp),
-    };
+    let account =
+        match require_auth_with_rate_limit(&req, &ctx, RateLimitNamespace::IfcUpload).await? {
+            GuardOutcome::Account(account) => account,
+            GuardOutcome::Response(resp) => return Ok(resp),
+        };
     let project_id = ctx.param("id").cloned().unwrap_or_default();
     let project = fetch_project(&ctx, &project_id)
         .await?
@@ -445,10 +567,11 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 /// Deletes all IFC versions for a project from R2 and the `project_versions`
 /// table. Restricted to project editors.
 pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = match require_auth_with_rate_limit(&req, &ctx, "ifc_delete").await? {
-        GuardOutcome::Account(account) => account,
-        GuardOutcome::Response(resp) => return Ok(resp),
-    };
+    let account =
+        match require_auth_with_rate_limit(&req, &ctx, RateLimitNamespace::IfcDelete).await? {
+            GuardOutcome::Account(account) => account,
+            GuardOutcome::Response(resp) => return Ok(resp),
+        };
     let project_id = ctx.param("id").cloned().unwrap_or_default();
     let project = fetch_project(&ctx, &project_id)
         .await?
@@ -873,10 +996,11 @@ pub async fn serve_project_glb_metadata(_req: Request, ctx: RouteContext<()>) ->
 /// The caller must be able to edit the project. Returns a JSON body describing
 /// whether the conversion succeeded, failed, or found no renderable geometry.
 pub async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = match require_auth_with_rate_limit(&req, &ctx, "glb_convert").await? {
-        GuardOutcome::Account(account) => account,
-        GuardOutcome::Response(resp) => return Ok(resp),
-    };
+    let account =
+        match require_auth_with_rate_limit(&req, &ctx, RateLimitNamespace::GlbConvert).await? {
+            GuardOutcome::Account(account) => account,
+            GuardOutcome::Response(resp) => return Ok(resp),
+        };
     let id = ctx.param("id").cloned().unwrap_or_default();
     let project = fetch_project(&ctx, &id)
         .await?
@@ -1026,7 +1150,7 @@ pub async fn increment_project_downloads(req: Request, ctx: RouteContext<()>) ->
         ctx.param("id")
     );
 
-    if let Some(rate_limited) = check_rate_limit(&req, &ctx, "downloads").await? {
+    if let Some(rate_limited) = check_rate_limit(&req, &ctx, RateLimitNamespace::Downloads).await? {
         console_log!("increment_project_downloads: rate limit exceeded");
         return Ok(rate_limited);
     }
@@ -1062,11 +1186,14 @@ async fn fetch_project_versions(
     let sql = if include_undefined {
         "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, downloads FROM project_versions WHERE project_id = ?1 ORDER BY created_at DESC"
     } else {
-        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, downloads FROM project_versions WHERE project_id = ?1 AND state != 'undefined' ORDER BY created_at DESC"
+        "SELECT id, project_id, filename, ifc_key, state, created_at, file_size, version, downloads FROM project_versions WHERE project_id = ?1 AND state != ?2 ORDER BY created_at DESC"
     };
     let result = db(ctx)?
         .prepare(sql)
-        .bind(&[project_id.into()])?
+        .bind(&[
+            project_id.into(),
+            VersionState::Undefined.to_string().into(),
+        ])?
         .all()
         .await?;
     result.results::<ProjectVersion>()
@@ -1120,6 +1247,8 @@ mod tests {
             created_at: "2025-01-01T00:00:00Z".into(),
             verified: 1,
             viewer_preferences: "{}".into(),
+            provider: crate::api::accounts::Provider::GitHub,
+            provider_id: String::new(),
         }
     }
 
