@@ -82,6 +82,17 @@ pub fn bad_request(message: &str) -> Result<Response> {
     error_response(message, 400)
 }
 
+/// Extracts a required path parameter, returning `Ok(value)` when present and a
+/// `400 Bad Request` response when missing or empty.
+pub fn required_param(ctx: &RouteContext<()>, name: &str) -> Result<String> {
+    match ctx.param(name) {
+        Some(value) if !value.is_empty() => Ok(value.clone()),
+        _ => Err(worker::Error::RustError(format!(
+            "missing path parameter: {name}"
+        ))),
+    }
+}
+
 /// Builds a 401 Unauthorized error response.
 pub fn unauthorized(message: &str) -> Result<Response> {
     error_response(message, 401)

@@ -4,7 +4,7 @@ use worker::{Request, Response, Result, RouteContext};
 pub use crate::api::auth::Provider;
 
 use crate::api::session::require_account;
-use crate::utils::{db, forbidden, js_option, not_found, now_utc};
+use crate::utils::{db, forbidden, js_option, not_found, now_utc, required_param};
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences, a.provider, a.provider_id FROM accounts a";
 
@@ -336,14 +336,13 @@ pub async fn list_accounts(_req: Request, ctx: RouteContext<()>) -> Result<Respo
 
 /// Responds with the account matching the `:id` path parameter, or 404 if not found.
 pub async fn read_account(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let id = ctx.param("id").cloned().unwrap_or_default();
+    let id = required_param(&ctx, "id")?;
     match fetch_account(&ctx, &id).await? {
         Some(account) => Response::from_json(&account),
         None => not_found("Not found"),
     }
 }
 
-/// Creates a new account from the request body.
 /// Responds with the OAuth providers linked to the currently authenticated
 /// account as a JSON array of provider names.
 pub async fn list_linked_providers(req: Request, ctx: RouteContext<()>) -> Result<Response> {
@@ -402,7 +401,7 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
         return forbidden("Forbidden");
     }
 
-    let id = ctx.param("id").cloned().unwrap_or_default();
+    let id = required_param(&ctx, "id")?;
     let payload: AccountPayload = req.json().await?;
     db(&ctx)?
         .prepare(
@@ -435,7 +434,7 @@ pub async fn delete_account(req: Request, ctx: RouteContext<()>) -> Result<Respo
     if account.role != Role::Admin {
         return forbidden("Forbidden");
     }
-    let id = ctx.param("id").cloned().unwrap_or_default();
+    let id = required_param(&ctx, "id")?;
     db(&ctx)?
         .prepare("DELETE FROM accounts WHERE id = ?1")
         .bind(&[id.into()])?

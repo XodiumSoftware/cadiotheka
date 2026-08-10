@@ -10,7 +10,7 @@ use crate::guards::{
 };
 use crate::utils::{
     RateLimitNamespace, assets_bucket, bad_request, check_rate_limit, db, error_response,
-    forbidden, not_found, now_utc,
+    forbidden, not_found, now_utc, required_param,
 };
 use ifc_lite_export::{GltfOptions, export_glb};
 
@@ -252,7 +252,7 @@ pub async fn list_projects(_req: Request, ctx: RouteContext<()>) -> Result<Respo
 
 /// Responds with the project matching the `:id` path parameter, or 404 if not found.
 pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let id = ctx.param("id").cloned().unwrap_or_default();
+    let id = required_param(&ctx, "id")?;
     match fetch_project(&ctx, &id).await? {
         Some(project) => Response::from_json(&project),
         None => not_found("Not found"),
@@ -339,7 +339,7 @@ pub struct ProjectPatch {
 /// Only the project owner or an admin may edit it.
 pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
-    let id = ctx.param("id").cloned().unwrap_or_default();
+    let id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
@@ -399,7 +399,7 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
 /// Replaces an existing project, identified by the `:id` path parameter.
 pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
-    let id = ctx.param("id").cloned().unwrap_or_default();
+    let id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
@@ -458,7 +458,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 /// Deletes the project identified by the `:id` path parameter.
 pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
-    let id = ctx.param("id").cloned().unwrap_or_default();
+    let id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
@@ -483,7 +483,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
             GuardOutcome::Account(account) => account,
             GuardOutcome::Response(resp) => return Ok(resp),
         };
-    let project_id = ctx.param("id").cloned().unwrap_or_default();
+    let project_id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &project_id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
@@ -572,7 +572,7 @@ pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<R
             GuardOutcome::Account(account) => account,
             GuardOutcome::Response(resp) => return Ok(resp),
         };
-    let project_id = ctx.param("id").cloned().unwrap_or_default();
+    let project_id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &project_id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
@@ -600,7 +600,7 @@ pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<R
 /// Responds with the IFC versions for a project. Undefined versions are omitted
 /// unless the caller can edit the project.
 pub async fn list_project_versions(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let project_id = ctx.param("id").cloned().unwrap_or_default();
+    let project_id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &project_id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
@@ -617,8 +617,8 @@ pub async fn list_project_versions(req: Request, ctx: RouteContext<()>) -> Resul
 /// Patches a single project version (state only). Restricted to project editors.
 pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
-    let project_id = ctx.param("id").cloned().unwrap_or_default();
-    let version_id = ctx.param("version_id").cloned().unwrap_or_default();
+    let project_id = required_param(&ctx, "id")?;
+    let version_id = required_param(&ctx, "version_id")?;
     let project = fetch_project(&ctx, &project_id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
@@ -649,8 +649,8 @@ pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> 
 /// Deletes a single project version. Restricted to project editors.
 pub async fn delete_project_version(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
-    let project_id = ctx.param("id").cloned().unwrap_or_default();
-    let version_id = ctx.param("version_id").cloned().unwrap_or_default();
+    let project_id = required_param(&ctx, "id")?;
+    let version_id = required_param(&ctx, "version_id")?;
     let project = fetch_project(&ctx, &project_id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
@@ -683,11 +683,8 @@ pub async fn delete_project_version(req: Request, ctx: RouteContext<()>) -> Resu
 
 /// Serves an IFC model from R2 by its version id and filename.
 pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let version_id = ctx.param("version_id").cloned().unwrap_or_default();
-    let filename = ctx.param("filename").cloned().unwrap_or_default();
-    if version_id.is_empty() || filename.is_empty() {
-        return bad_request("Invalid IFC key");
-    }
+    let version_id = required_param(&ctx, "version_id")?;
+    let filename = required_param(&ctx, "filename")?;
 
     let result = db(&ctx)?
         .prepare("SELECT ifc_key FROM project_versions WHERE id = ?1 AND filename = ?2")
@@ -876,10 +873,7 @@ fn visit_gltf_node(
 
 /// Serves a project's IFC model converted to a binary GLB for the 3D viewer.
 pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let id = ctx.param("id").cloned().unwrap_or_default();
-    if id.is_empty() {
-        return bad_request("Invalid project id");
-    }
+    let id = required_param(&ctx, "id")?;
 
     let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
         return not_found("No IFC model uploaded for this project");
@@ -934,10 +928,7 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
 
 /// Serves per-primitive metadata for a project's converted GLB.
 pub async fn serve_project_glb_metadata(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let id = ctx.param("id").cloned().unwrap_or_default();
-    if id.is_empty() {
-        return bad_request("Invalid project id");
-    }
+    let id = required_param(&ctx, "id")?;
 
     let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
         return not_found("No IFC model uploaded for this project");
@@ -1001,7 +992,7 @@ pub async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> Result<
             GuardOutcome::Account(account) => account,
             GuardOutcome::Response(resp) => return Ok(resp),
         };
-    let id = ctx.param("id").cloned().unwrap_or_default();
+    let id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
@@ -1112,7 +1103,7 @@ fn can_edit_project(account: &Account, project: &Project) -> bool {
 
 pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
-    let id = ctx.param("id").cloned().unwrap_or_default();
+    let id = required_param(&ctx, "id")?;
     let mut project = fetch_project(&ctx, &id)
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
@@ -1145,17 +1136,13 @@ pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Res
 /// This endpoint is rate-limited per client IP to discourage abuse while still
 /// allowing legitimate downloads.
 pub async fn increment_project_downloads(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    console_log!(
-        "increment_project_downloads: received request for id {:?}",
-        ctx.param("id")
-    );
+    let id = required_param(&ctx, "id")?;
 
     if let Some(rate_limited) = check_rate_limit(&req, &ctx, RateLimitNamespace::Downloads).await? {
         console_log!("increment_project_downloads: rate limit exceeded");
         return Ok(rate_limited);
     }
 
-    let id = ctx.param("id").cloned().unwrap_or_default();
     console_log!("increment_project_downloads: looking up project {id}");
 
     let project = fetch_project(&ctx, &id)
