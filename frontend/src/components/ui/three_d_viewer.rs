@@ -564,17 +564,13 @@ pub fn IfcViewer(
             let y = f32_clamp(f64::from(ev.client_y()) - rect.top());
             let viewport_y = f32_clamp(rect.height() - (f64::from(ev.client_y()) - rect.top()));
 
-            if let Some(hit) = renderer
+            let hit = renderer
                 .borrow()
                 .as_ref()
-                .and_then(|renderer| renderer.pick(x, viewport_y))
-            {
-                context_menu_primitive.set(Some(hit.primitive_index));
-                context_menu.set(Some((x, y)));
-                ev.prevent_default();
-            } else {
-                context_menu.set(None);
-            }
+                .and_then(|renderer| renderer.pick(x, viewport_y));
+            context_menu_primitive.set(hit.map(|h| h.primitive_index));
+            context_menu.set(Some((x, y)));
+            ev.prevent_default();
         }
     };
     let on_click = {
