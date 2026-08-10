@@ -365,6 +365,9 @@ impl Renderer {
     /// The IBL ambient light is left unchanged, so model lighting stays
     /// consistent while only the background changes.
     pub fn set_skybox_color(&mut self, color: Srgba) {
+        if self.skybox_color == color {
+            return;
+        }
         self.skybox_color = color;
         self.skybox = Some(build_skybox(&self.context, color));
     }
@@ -562,6 +565,17 @@ impl Renderer {
                 }
             }
         }
+    }
+
+    /// Returns whether every currently visible primitive is selected.
+    pub fn all_visible_selected(&self) -> bool {
+        let visible_count = self
+            .models
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| !self.hidden_primitives.contains(index))
+            .count();
+        visible_count > 0 && self.selected_primitives.len() == visible_count
     }
 
     /// Clears the current selection.

@@ -700,11 +700,11 @@ pub fn IfcViewer(
         let request_render = context_menu_request_render;
         move || {
             context_menu.get().map(|(x, y)| {
-                let (has_selection, has_hidden) = renderer
+                let (has_selection, has_hidden, all_visible_selected) = renderer
                     .borrow()
                     .as_ref()
-                    .map_or((false, false), |r| {
-                        (r.selected_count() > 0, r.hidden_count() > 0)
+                    .map_or((false, false, false), |r| {
+                        (r.selected_count() > 0, r.hidden_count() > 0, r.all_visible_selected())
                     });
                 view! {
                     <div
@@ -714,6 +714,9 @@ pub fn IfcViewer(
                         <button
                             type="button"
                             class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between"
+                            class:opacity-50=move || all_visible_selected
+                            class:cursor-not-allowed=move || all_visible_selected
+                            disabled=move || all_visible_selected
                             on:click={
                                 let renderer = Rc::clone(&renderer);
                                 let request_render = Rc::clone(&request_render);
@@ -721,8 +724,9 @@ pub fn IfcViewer(
                                     let changed = {
                                         let mut renderer_ref = renderer.borrow_mut();
                                         if let Some(renderer) = renderer_ref.as_mut() {
+                                            let was_already_all_selected = renderer.all_visible_selected();
                                             renderer.select_all_visible();
-                                            renderer.selected_count() > 0
+                                            !was_already_all_selected && renderer.selected_count() > 0
                                         } else {
                                             false
                                         }
@@ -736,6 +740,36 @@ pub fn IfcViewer(
                         >
                             <span>"Select All"</span>
                             <span class="text-xs text-base-content/50">"A"</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between"
+                            class:opacity-50=move || !has_selection
+                            class:cursor-not-allowed=move || !has_selection
+                            disabled=move || !has_selection
+                            on:click={
+                                let renderer = Rc::clone(&renderer);
+                                let request_render = Rc::clone(&request_render);
+                                move |_| {
+                                    let changed = {
+                                        let mut renderer_ref = renderer.borrow_mut();
+                                        if let Some(renderer) = renderer_ref.as_mut() {
+                                            let had_any = renderer.selected_count() > 0;
+                                            renderer.deselect_all();
+                                            had_any
+                                        } else {
+                                            false
+                                        }
+                                    };
+                                    if changed {
+                                        context_menu.set(None);
+                                        request_render.borrow_mut()();
+                                    }
+                                }
+                            }
+                        >
+                            <span>"Deselect All"</span>
+                            <span class="text-xs text-base-content/50">"Esc"</span>
                         </button>
                         <button
                             type="button"
