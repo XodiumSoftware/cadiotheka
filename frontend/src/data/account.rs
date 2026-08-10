@@ -1,16 +1,10 @@
 use crate::data::error::RequestError;
 use crate::utils::accounts_url;
 use serde::{Deserialize, Serialize};
+use shared::accounts::Role;
 
 /// Account role for a registered user.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, derive_more::Display)]
-#[serde(rename_all = "snake_case")]
-pub enum AccountRole {
-    /// Regular content creator.
-    Creator,
-    /// Platform administrator.
-    Admin,
-}
+pub type AccountRole = Role;
 
 /// A registered user account.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -65,7 +59,7 @@ impl AccountData {
             username: String::new(),
             display_name: String::new(),
             email: String::new(),
-            role: AccountRole::Creator,
+            role: Role::Creator,
             bio: String::new(),
             avatar_url: None,
             project_ids: Vec::new(),
@@ -124,7 +118,7 @@ mod tests {
             username: "TrailBlazer".to_owned(),
             display_name: "Trail Blazer".to_owned(),
             email: "trail@example.com".to_owned(),
-            role: AccountRole::Creator,
+            role: Role::Creator,
             bio: "Outdoor gear and mechanical models.".to_owned(),
             avatar_url: None,
             project_ids: vec!["71e3dcb4-f52a-4ebc-bd1e-7052a8d5e5d2".to_owned()],
@@ -147,15 +141,15 @@ mod tests {
 
     #[test]
     fn account_role_serializes_to_snake_case() -> Result<(), serde_json::Error> {
-        assert_eq!(serde_json::to_string(&AccountRole::Creator)?, "\"creator\"");
-        assert_eq!(serde_json::to_string(&AccountRole::Admin)?, "\"admin\"");
+        assert_eq!(serde_json::to_string(&Role::Creator)?, "\"creator\"");
+        assert_eq!(serde_json::to_string(&Role::Admin)?, "\"admin\"");
         Ok(())
     }
 
     #[test]
     fn account_role_displays_as_human_label() {
-        assert_eq!(AccountRole::Creator.to_string(), "Creator");
-        assert_eq!(AccountRole::Admin.to_string(), "Admin");
+        assert_eq!(Role::Creator.to_string(), "creator");
+        assert_eq!(Role::Admin.to_string(), "admin");
     }
 
     #[test]

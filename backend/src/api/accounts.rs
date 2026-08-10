@@ -1,33 +1,12 @@
 use serde::{Deserialize, Serialize};
+use shared::accounts::Role;
 use worker::{Request, Response, Result, RouteContext};
 
-pub use crate::api::auth::Provider;
-
+use crate::api::auth::Provider;
 use crate::api::session::require_account;
 use crate::utils::{db, forbidden, js_option, not_found, now_utc, required_param};
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences, a.provider, a.provider_id FROM accounts a";
-
-/// The set of roles an account can have.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Role {
-    /// Regular content creator.
-    Creator,
-    /// Platform administrator.
-    Admin,
-}
-
-impl std::fmt::Display for Role {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Creator => write!(f, "creator"),
-            Self::Admin => write!(f, "admin"),
-        }
-    }
-}
-
-/// A Cadiotheka account stored in D1.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Account {
     pub id: String,
@@ -295,7 +274,7 @@ pub async fn create_oauth_account(
 /// Returns a unique username based on `preferred`, appending a random suffix if
 /// the base username is already taken.
 async fn unique_username(ctx: &RouteContext<()>, preferred: &str) -> Result<String> {
-    let base = sanitize_username(preferred);
+    let base = sanitize_username_local(preferred);
     if fetch_account_by_username(ctx, &base).await?.is_none() {
         return Ok(base);
     }
@@ -311,20 +290,8 @@ async fn unique_username(ctx: &RouteContext<()>, preferred: &str) -> Result<Stri
 }
 
 /// Normalizes a raw provider login into a valid username.
-fn sanitize_username(login: &str) -> String {
-    let mut out = String::with_capacity(login.len().min(32));
-    for ch in login.chars().take(32) {
-        if ch.is_alphanumeric() || ch == '-' || ch == '_' {
-            out.push(ch);
-        } else {
-            out.push('_');
-        }
-    }
-    if out.chars().all(|c| c == '_') {
-        out.clear();
-        out.push_str("user");
-    }
-    out
+fn sanitize_username_local(login: &str) -> String {
+    shared::accounts::sanitize_username(login)
 }
 
 /// Returns a list of all accounts.
@@ -449,17 +416,23 @@ mod tests {
 
     #[test]
     fn sanitize_username_keeps_allowed_characters() {
-        assert_eq!(sanitize_username("hello-world_123"), "hello-world_123");
+        assert_eq!(
+            sanitize_username_local("hello-world_123"),
+            "hello-world_123"
+        );
     }
 
     #[test]
     fn sanitize_username_replaces_invalid_characters() {
-        assert_eq!(sanitize_username("hello world@foo"), "hello_world_foo");
+        assert_eq!(
+            sanitize_username_local("hello world@foo"),
+            "hello_world_foo"
+        );
     }
 
     #[test]
     fn sanitize_username_falls_back_for_empty() {
-        assert_eq!(sanitize_username(""), "user");
-        assert_eq!(sanitize_username("!!!"), "user");
+        assert_eq!(sanitize_username_local(""), "user");
+        assert_eq!(sanitize_username_local("!!!"), "user");
     }
 }

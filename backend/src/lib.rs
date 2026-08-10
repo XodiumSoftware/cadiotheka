@@ -116,10 +116,11 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use api::accounts::{Account, Provider, Role};
+    use api::accounts::Account;
+    use api::auth::Provider;
     use api::projects::Project;
     use serde::Deserialize;
-    use shared::tags::Tag;
+    use shared::{accounts::Role, tags::Tag};
 
     /// Frontend-compatible representation of an account response.
     ///

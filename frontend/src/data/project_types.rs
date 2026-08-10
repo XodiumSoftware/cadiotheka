@@ -1,6 +1,6 @@
-pub use crate::metadata::version_state::VersionState;
 use crate::utils::ifc_url;
 use serde::{Deserialize, Serialize};
+pub use shared::version_state::VersionState;
 
 /// Serde adapter for a JSON-text column holding an array of strings.
 ///

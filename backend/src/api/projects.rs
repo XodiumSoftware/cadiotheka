@@ -2,12 +2,13 @@ use serde::{Deserialize, Serialize};
 use shared::{
     tags::Tag,
     validation::{MAX_DESCRIPTION_LENGTH, MAX_IFC_SIZE_BYTES, MAX_TITLE_LENGTH},
+    version_state::VersionState,
 };
 use worker::{
     FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext, console_log,
 };
 
-use crate::api::accounts::{Account, Role};
+use crate::api::accounts::Account;
 use crate::api::session::require_account;
 use crate::guards::{
     GuardOutcome, require_auth_with_rate_limit, require_auth_with_turnstile_and_rate_limit,
@@ -17,30 +18,9 @@ use crate::utils::{
     forbidden, not_found, now_utc, required_param,
 };
 use ifc_lite_export::{GltfOptions, export_glb};
+use shared::accounts::Role;
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, downloads, favorites, timestamp FROM projects";
-
-/// A version state for an IFC file.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum VersionState {
-    Undefined,
-    Alpha,
-    Beta,
-    Stable,
-}
-
-impl std::fmt::Display for VersionState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            Self::Undefined => "undefined",
-            Self::Alpha => "alpha",
-            Self::Beta => "beta",
-            Self::Stable => "stable",
-        };
-        write!(f, "{s}")
-    }
-}
 
 /// A single IFC file version attached to a project.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1145,7 +1125,7 @@ mod tests {
             created_at: "2025-01-01T00:00:00Z".into(),
             verified: 1,
             viewer_preferences: "{}".into(),
-            provider: crate::api::accounts::Provider::GitHub,
+            provider: crate::api::auth::Provider::GitHub,
             provider_id: String::new(),
         }
     }
