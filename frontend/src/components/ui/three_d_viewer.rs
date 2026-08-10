@@ -490,7 +490,7 @@ pub fn IfcViewer(
             }
             let mut needs_render = false;
             {
-                let state = controls.borrow();
+                let mut state = controls.borrow_mut();
                 if state.on_mouse_move(&ev, &renderer) {
                     needs_render = true;
                 }
@@ -575,9 +575,17 @@ pub fn IfcViewer(
     };
     let on_click = {
         let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        let controls = Rc::clone(&controls);
         move |ev: leptos::web_sys::MouseEvent| {
             if disabled.get() || gizmo_edit_mode.get() {
                 return;
+            }
+            {
+                let controls = controls.borrow();
+                if !controls.is_click(three_d::renderer::control::MouseButton::Left, 4.0) {
+                    return;
+                }
             }
             let Some(canvas) = canvas_ref.get() else {
                 return;
@@ -592,6 +600,20 @@ pub fn IfcViewer(
             else {
                 return;
             };
+            let changed = {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    let index = hit.primitive_index;
+                    if ev.ctrl_key() || ev.meta_key() {
+                        renderer.toggle_select_primitive(index);
+                    } else {
+                        renderer.select_only_primitive(index);
+                    }
+                    true
+                } else {
+                    false
+                }
+            };
             let meta = metadata
                 .get_untracked()
                 .as_ref()
@@ -603,6 +625,9 @@ pub fn IfcViewer(
                     express_id: meta.as_ref().and_then(|m| m.express_id),
                     name: meta.as_ref().and_then(|m| m.name.clone()),
                 });
+            }
+            if changed {
+                request_render.borrow_mut()();
             }
         }
     };

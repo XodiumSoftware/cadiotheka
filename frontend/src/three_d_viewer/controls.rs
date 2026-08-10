@@ -17,11 +17,14 @@ use three_d_asset::PixelPoint;
 /// Cross-event state for the orbit controls.
 ///
 /// Handlers are invoked from Leptos `on:` attributes; this struct tracks the
-/// pressed button and the double-click timer between events.
+/// pressed button, the double-click timer, and whether a left-click drag has
+/// occurred so a single click on an object can be distinguished from orbit
+/// rotation.
 #[derive(Default)]
 pub struct OrbitControls {
     pub last_button: Option<MouseButton>,
     pub last_press_time: f64,
+    pub drag_pixels: f32,
 }
 
 impl OrbitControls {
@@ -48,6 +51,7 @@ impl OrbitControls {
         let now = window_performance_now();
         let is_double_click = button == MouseButton::Middle && now - self.last_press_time <= 300.0;
         self.last_button = Some(button);
+        self.drag_pixels = 0.0;
         self.last_press_time = now;
         pending_events.borrow_mut().push(Event::MousePress {
             button,
@@ -66,7 +70,11 @@ impl OrbitControls {
     ///
     /// Returns `true` when an event was recorded so the caller can request a
     /// render.
-    pub fn on_mouse_move(&self, ev: &MouseEvent, renderer: &Rc<RefCell<Option<Renderer>>>) -> bool {
+    pub fn on_mouse_move(
+        &mut self,
+        ev: &MouseEvent,
+        renderer: &Rc<RefCell<Option<Renderer>>>,
+    ) -> bool {
         ev.prevent_default();
         let Some(pending_events) = renderer_events(renderer) else {
             return false;
@@ -74,6 +82,7 @@ impl OrbitControls {
         let position = physical_point_from_mouse(ev);
         let modifiers = modifiers_from_mouse(ev);
         let delta = (ev.movement_x() as f32, ev.movement_y() as f32);
+        self.drag_pixels += delta.0.abs() + delta.1.abs();
         let button = self.last_button;
         // Holding the middle mouse button behaves like shift: pan instead of orbit.
         let modifiers = if button == Some(MouseButton::Middle) {
@@ -119,6 +128,16 @@ impl OrbitControls {
         true
     }
 
+    /// Returns `true` if the previous left-button press stayed within the drag
+    /// threshold and can be treated as a click on the object under the pointer.
+    ///
+    /// This is checked during the DOM `click` event, after `mouseup` has reset the
+    /// tracked button. `threshold_pixels` defines how far the pointer may have
+    /// moved between press and release before it is considered an orbit drag.
+    pub fn is_click(&self, button: MouseButton, threshold_pixels: f32) -> bool {
+        button == MouseButton::Left && self.drag_pixels <= threshold_pixels
+    }
+
     /// Clears the tracked pressed button when the pointer leaves the canvas.
     pub fn on_mouse_leave(&mut self, renderer: &Rc<RefCell<Option<Renderer>>>) {
         let Some(pending_events) = renderer_events(renderer) else {
@@ -133,6 +152,7 @@ impl OrbitControls {
                 handled: false,
             });
         }
+        self.drag_pixels = 0.0;
     }
 
     /// Handles `wheel`, zooming the camera.

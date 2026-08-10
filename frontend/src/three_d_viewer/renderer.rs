@@ -536,6 +536,22 @@ impl Renderer {
         self.deselect_all();
     }
 
+    /// Selects only the given primitive, clearing any existing selection first.
+    pub fn select_only_primitive(&mut self, index: usize) {
+        self.deselect_all();
+        self.select_primitive(index);
+    }
+
+    /// Toggles the selection state of the given primitive without clearing the
+    /// rest of the selection.
+    pub fn toggle_select_primitive(&mut self, index: usize) {
+        if self.is_selected(index) {
+            self.deselect_primitive(index);
+        } else {
+            self.select_primitive(index);
+        }
+    }
+
     /// Selects the primitive with the given index and adds a selection outline.
     pub fn select_primitive(&mut self, index: usize) {
         if index < self.models.len()
