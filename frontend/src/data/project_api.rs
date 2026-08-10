@@ -22,34 +22,21 @@ pub async fn create_project(
     turnstile_token: Option<String>,
 ) -> ProjectCreationResult {
     let url = projects_url();
-    let mut payload = match serde_json::to_value(project) {
+    let body = match serde_json::to_string(project) {
         Ok(json) => json,
         Err(err) => {
             return ProjectCreationResult::Failed(format!("Failed to prepare project data: {err}"));
         }
     };
 
-    if let Some(token) = turnstile_token
-        && let Some(object) = payload.as_object_mut()
-    {
-        object.insert(
-            "_turnstile_token".to_string(),
-            serde_json::Value::String(token),
-        );
+    let mut builder = Request::post(&url)
+        .credentials(RequestCredentials::Include)
+        .header("Content-Type", "application/json");
+    if let Some(token) = turnstile_token {
+        builder = builder.header("X-Turnstile-Token", &token);
     }
 
-    let body = match serde_json::to_string(&payload) {
-        Ok(json) => json,
-        Err(err) => {
-            return ProjectCreationResult::Failed(format!("Failed to prepare project data: {err}"));
-        }
-    };
-
-    let request = match Request::post(&url)
-        .credentials(RequestCredentials::Include)
-        .header("Content-Type", "application/json")
-        .body(body)
-    {
+    let request = match builder.body(body) {
         Ok(req) => req,
         Err(err) => {
             return ProjectCreationResult::Failed(format!("Could not start the request: {err}"));

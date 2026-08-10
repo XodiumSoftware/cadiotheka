@@ -29,7 +29,10 @@ pub fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Response> {
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     )?;
-    headers.set("Access-Control-Allow-Headers", "Content-Type")?;
+    headers.set(
+        "Access-Control-Allow-Headers",
+        "Content-Type, X-Turnstile-Token",
+    )?;
     headers.set("Access-Control-Allow-Credentials", "true")?;
     Ok(resp)
 }
@@ -52,7 +55,10 @@ pub fn cors_preflight(origin: &str) -> Result<Response> {
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     )?;
-    headers.set("Access-Control-Allow-Headers", "Content-Type")?;
+    headers.set(
+        "Access-Control-Allow-Headers",
+        "Content-Type, X-Turnstile-Token",
+    )?;
     headers.set("Access-Control-Allow-Credentials", "true")?;
     Ok(resp)
 }
@@ -90,7 +96,10 @@ pub fn error_response_with_cors(err: &worker::Error, origin: &str) -> Result<Res
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     );
-    let _ = headers.set("Access-Control-Allow-Headers", "Content-Type");
+    let _ = headers.set(
+        "Access-Control-Allow-Headers",
+        "Content-Type, X-Turnstile-Token",
+    );
     Ok(ResponseBuilder::new()
         .with_status(500)
         .with_headers(headers)
