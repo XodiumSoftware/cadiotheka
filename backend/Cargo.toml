@@ -27,6 +27,7 @@ html-escape = "0.2"
 serde_qs = "0.15"
 cookie = "0.18"
 ifc-lite-export = "4.1.4"
+shared = { path = "../shared" }
 
 [lints]
 workspace = true

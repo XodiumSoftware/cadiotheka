@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use shared::tags::Tag;
 use worker::{
     FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext, console_log,
 };
@@ -22,92 +23,6 @@ const MAX_TITLE_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 5000;
 /// Maximum allowed size for an uploaded project IFC model, in bytes.
 const MAX_IFC_SIZE_BYTES: usize = 25 * 1024 * 1024; // 25 MiB
-
-/// Content tags for projects, mirroring the frontend tag set so the backend can
-/// validate and round-trip the same wire ids.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Tag {
-    /// Three-dimensional models and assets.
-    #[serde(rename = "3d_model")]
-    ThreeDModel,
-    /// Two-dimensional drawings and diagrams.
-    #[serde(rename = "2d_drawing")]
-    TwoDDrawing,
-    /// Parametric or algorithmically defined designs.
-    Parametric,
-    /// Designs intended for fabrication or manufacturing.
-    Fabrication,
-    /// Robotics parts, assemblies, and accessories.
-    Robotics,
-    /// Furniture designs.
-    Furniture,
-    /// Vehicles and vehicle parts.
-    Vehicle,
-    /// Architectural models and elements.
-    Architecture,
-    /// Electronics enclosures and components.
-    Electronics,
-    /// Tools, jigs, and workshop helpers.
-    Tooling,
-    /// Lighting fixtures and designs.
-    Lighting,
-    /// Do-it-yourself projects and hacks.
-    Diy,
-    /// Interior design objects and layouts.
-    Interior,
-    /// General engineering models.
-    Engineering,
-    /// Aerospace parts and assemblies.
-    Aerospace,
-    /// Decorative objects.
-    Decor,
-    /// Medical devices and helpers.
-    Medical,
-    /// Assets for games and real-time rendering.
-    GameAsset,
-    /// Artistic or sculptural models.
-    Art,
-    /// Educational models and demonstrations.
-    Educational,
-    /// Work-in-progress designs.
-    Wip,
-}
-
-impl Tag {
-    /// Stable wire id stored on project rows.
-    pub fn id(self) -> &'static str {
-        match self {
-            Self::ThreeDModel => "3d_model",
-            Self::TwoDDrawing => "2d_drawing",
-            Self::Parametric => "parametric",
-            Self::Fabrication => "fabrication",
-            Self::Robotics => "robotics",
-            Self::Furniture => "furniture",
-            Self::Vehicle => "vehicle",
-            Self::Architecture => "architecture",
-            Self::Electronics => "electronics",
-            Self::Tooling => "tooling",
-            Self::Lighting => "lighting",
-            Self::Diy => "diy",
-            Self::Interior => "interior",
-            Self::Engineering => "engineering",
-            Self::Aerospace => "aerospace",
-            Self::Decor => "decor",
-            Self::Medical => "medical",
-            Self::GameAsset => "game_asset",
-            Self::Art => "art",
-            Self::Educational => "educational",
-            Self::Wip => "wip",
-        }
-    }
-}
-
-impl std::fmt::Display for Tag {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.id())
-    }
-}
 
 /// A version state for an IFC file.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]

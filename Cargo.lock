@@ -155,6 +155,7 @@ dependencies = [
  "serde_qs",
  "serde_urlencoded",
  "sha2",
+ "shared",
  "time",
  "url",
  "uuid",
@@ -694,7 +695,7 @@ dependencies = [
  "send_wrapper",
  "serde",
  "serde_json",
- "strum",
+ "shared",
  "thiserror 2.0.19",
  "thousands",
  "three-d",
@@ -2545,6 +2546,15 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+]
+
+[[package]]
+name = "shared"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "strum",
 ]
 
 [[package]]

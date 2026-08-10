@@ -21,6 +21,7 @@ ammonia = "4.1"
 timeago = { version = "0.6", default-features = false }
 human_format = "1.2"
 thousands = "0.2"
+shared = { path = "../shared" }
 web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "HtmlDialogElement", "HtmlInputElement", "HtmlCanvasElement", "HtmlButtonElement", "Node", "NodeList", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry", "File", "FileList", "Blob", "Url", "FormData", "Window", "Performance", "Navigator", "Clipboard", "WebGl2RenderingContext", "MouseEvent", "WheelEvent", "UiEvent"] }
 console_error_panic_hook = "0.1.7"
 urlencoding = "2.1"
@@ -29,7 +30,9 @@ three-d = { version = "0.19", default-features = false, features = ["serde", "im
 three-d-asset = { version = "0.10", features = ["gltf", "png", "jpeg"] }
 glow = "0.17"
 uuid = { version = "1.11", features = ["v4", "serde", "js"] }
-strum = { version = "0.27", features = ["derive"] }
+
+[package.metadata.cargo-machete]
+ignored = ["strum"]
 
 [lints]
 workspace = true
