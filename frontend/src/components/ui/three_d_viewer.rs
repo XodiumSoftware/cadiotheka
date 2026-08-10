@@ -9,7 +9,8 @@ use crate::three_d_viewer::{
     ObjectHit, OrbitControls, PrimitiveMetadata, Renderer, ViewState, ViewerTheme, fetch_metadata,
 };
 use crate::utils::{
-    local_storage_get, local_storage_remove, local_storage_set, window_event_listener,
+    document_event_listener, local_storage_get, local_storage_remove, local_storage_set,
+    window_event_listener,
 };
 use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
@@ -72,6 +73,8 @@ pub fn IfcViewer(
         gizmo_position_signal.unwrap_or_else(|| RwSignal::new(GizmoPosition::TopRight));
     let gizmo_edit_mode = gizmo_edit_mode_signal.unwrap_or_else(|| RwSignal::new(false));
     let hovered_primitive: RwSignal<Option<usize>> = RwSignal::new(None);
+    let context_menu: RwSignal<Option<(f32, f32)>> = RwSignal::new(None);
+    let context_menu_primitive: RwSignal<Option<usize>> = RwSignal::new(None);
     let highlight_color =
         highlight_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::new(255, 200, 0, 255)));
     let skybox_color = skybox_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::WHITE));
@@ -399,6 +402,25 @@ pub fn IfcViewer(
         }
     });
 
+    Effect::new(move || {
+        if context_menu.get().is_some() {
+            document_event_listener::<leptos::web_sys::MouseEvent, _>("mousedown", {
+                let context_menu = context_menu;
+                move |ev| {
+                    let target = ev.target();
+                    let is_inside = target
+                        .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlElement>().ok())
+                        .is_some_and(|el| {
+                            el.closest(".viewer-context-menu").ok().flatten().is_some()
+                        });
+                    if !is_inside {
+                        context_menu.set(None);
+                    }
+                }
+            });
+        }
+    });
+
     let on_mouse_down = {
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
@@ -482,8 +504,33 @@ pub fn IfcViewer(
             }
         }
     };
-    let on_context_menu = |ev: leptos::web_sys::MouseEvent| {
-        ev.prevent_default();
+    let on_context_menu = {
+        let renderer = Rc::clone(&renderer);
+        move |ev: leptos::web_sys::MouseEvent| {
+            if disabled.get() || gizmo_edit_mode.get() || state.get() != IfcViewerState::Rendering {
+                context_menu.set(None);
+                return;
+            }
+            let Some(canvas) = canvas_ref.get() else {
+                return;
+            };
+            let rect = canvas.get_bounding_client_rect();
+            let x = f32_clamp(f64::from(ev.client_x()) - rect.left());
+            let y = f32_clamp(f64::from(ev.client_y()) - rect.top());
+            let viewport_y = f32_clamp(rect.height() - (f64::from(ev.client_y()) - rect.top()));
+
+            if let Some(hit) = renderer
+                .borrow()
+                .as_ref()
+                .and_then(|renderer| renderer.pick(x, viewport_y))
+            {
+                context_menu_primitive.set(Some(hit.primitive_index));
+                context_menu.set(Some((x, y)));
+                ev.prevent_default();
+            } else {
+                context_menu.set(None);
+            }
+        }
     };
     let on_click = {
         let renderer = Rc::clone(&renderer);
@@ -526,6 +573,7 @@ pub fn IfcViewer(
             let mut state = controls.borrow_mut();
             state.on_mouse_leave(&renderer);
             hovered_primitive.set(None);
+            context_menu.set(None);
             {
                 let mut renderer_ref = renderer.borrow_mut();
                 if let Some(renderer) = renderer_ref.as_mut() {
@@ -535,6 +583,9 @@ pub fn IfcViewer(
             request_render.borrow_mut()();
         }
     };
+
+    let context_menu_renderer = Rc::clone(&renderer);
+    let context_menu_request_render = Rc::clone(&request_render);
 
     Effect::new(move |_| {
         let Some(canvas) = canvas_ref.get() else {
@@ -604,6 +655,86 @@ pub fn IfcViewer(
         });
     });
 
+    let context_menu_view = SendWrapper::new({
+        let renderer = context_menu_renderer;
+        let request_render = context_menu_request_render;
+        move || {
+            context_menu.get().map(|(x, y)| {
+                let has_hidden = renderer
+                    .borrow()
+                    .as_ref()
+                    .is_some_and(|r| r.hidden_count() > 0);
+                view! {
+                    <div
+                        class="viewer-context-menu absolute z-30 min-w-[10rem] rounded border border-base-content/10 bg-base-100 shadow-lg py-1 text-sm"
+                        style=format!("left: {x}px; top: {y}px;")
+                    >
+                        <button
+                            type="button"
+                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between"
+                            on:click={
+                                let renderer = Rc::clone(&renderer);
+                                let request_render = Rc::clone(&request_render);
+                                move |_| {
+                                    let Some(index) = context_menu_primitive.get_untracked() else {
+                                        return;
+                                    };
+                                    let changed = {
+                                        let mut renderer_ref = renderer.borrow_mut();
+                                        if let Some(renderer) = renderer_ref.as_mut() {
+                                            renderer.hide_primitive(index);
+                                            renderer.is_hidden(index)
+                                        } else {
+                                            false
+                                        }
+                                    };
+                                    if changed {
+                                        hovered_primitive.set(None);
+                                        context_menu.set(None);
+                                        request_render.borrow_mut()();
+                                    }
+                                }
+                            }
+                        >
+                            <span>"Hide"</span>
+                            <span class="text-xs text-base-content/50">"H"</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between"
+                            class:opacity-50=move || !has_hidden
+                            class:cursor-not-allowed=move || !has_hidden
+                            disabled=move || !has_hidden
+                            on:click={
+                                let renderer = Rc::clone(&renderer);
+                                let request_render = Rc::clone(&request_render);
+                                move |_| {
+                                    let changed = {
+                                        let mut renderer_ref = renderer.borrow_mut();
+                                        if let Some(renderer) = renderer_ref.as_mut() {
+                                            let any_hidden = renderer.hidden_count() > 0;
+                                            renderer.show_all();
+                                            any_hidden
+                                        } else {
+                                            false
+                                        }
+                                    };
+                                    if changed {
+                                        context_menu.set(None);
+                                        request_render.borrow_mut()();
+                                    }
+                                }
+                            }
+                        >
+                            <span>"Unhide All"</span>
+                            <span class="text-xs text-base-content/50">"Shift+H"</span>
+                        </button>
+                    </div>
+                }
+            })
+        }
+    });
+
     view! {
         <div class="relative w-full h-full overflow-hidden border border-base-content/10">
             <canvas
@@ -626,6 +757,7 @@ pub fn IfcViewer(
                 on:contextmenu=on_context_menu
                 on:click=on_click
             />
+            {move || context_menu_view()}
             {move || if disabled.get() {
                 view! {
                     <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-base-content/50 text-sm pointer-events-none bg-base-100/80 z-10">
