@@ -1125,8 +1125,8 @@ mod tests {
             created_at: "2025-01-01T00:00:00Z".into(),
             verified: 1,
             viewer_preferences: "{}".into(),
-            provider: crate::api::auth::Provider::GitHub,
-            provider_id: String::new(),
+            provider: Some(crate::api::auth::Provider::GitHub),
+            provider_id: Some(String::new()),
         }
     }
 

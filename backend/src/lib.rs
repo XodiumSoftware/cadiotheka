@@ -189,8 +189,8 @@ mod tests {
             created_at: "2025-01-01T00:00:00Z".to_string(),
             verified: 1,
             viewer_preferences: "{}".to_string(),
-            provider: Provider::GitHub,
-            provider_id: String::new(),
+            provider: Some(Provider::GitHub),
+            provider_id: Some("gh-123".to_string()),
         };
 
         let json = serde_json::to_string(&account)?;
@@ -207,8 +207,42 @@ mod tests {
         assert_eq!(parsed.created_at, account.created_at);
         assert_eq!(parsed.verified, account.verified);
         assert_eq!(parsed.viewer_preferences, account.viewer_preferences);
-        assert_eq!(parsed.provider, account.provider.to_string());
-        assert_eq!(parsed.provider_id, account.provider_id);
+        let Some(provider) = account.provider.as_ref() else {
+            panic!("expected provider to be set");
+        };
+        assert_eq!(parsed.provider, provider.to_string());
+
+        let Some(provider_id) = account.provider_id.as_ref() else {
+            panic!("expected provider_id to be set");
+        };
+        assert_eq!(parsed.provider_id, *provider_id);
+        Ok(())
+    }
+
+    #[test]
+    fn account_json_omits_empty_provider_for_seed_accounts() -> Result<(), serde_json::Error> {
+        let account = Account {
+            id: "acc-2".to_string(),
+            username: "admin".to_string(),
+            display_name: "Admin".to_string(),
+            email: "admin@example.com".to_string(),
+            role: Role::Admin,
+            bio: String::new(),
+            avatar_url: None,
+            created_at: "2025-01-01T00:00:00Z".to_string(),
+            verified: 1,
+            viewer_preferences: "{}".to_string(),
+            provider: None,
+            provider_id: None,
+        };
+
+        let json = serde_json::to_string(&account)?;
+        assert!(!json.contains("\"provider\""));
+        assert!(!json.contains("\"provider_id\""));
+
+        let parsed: FrontendAccountData = serde_json::from_str(&json)?;
+        assert!(parsed.provider.is_empty());
+        assert!(parsed.provider_id.is_empty());
         Ok(())
     }
 

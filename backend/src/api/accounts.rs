@@ -6,7 +6,7 @@ use crate::api::auth::Provider;
 use crate::api::session::require_account;
 use crate::utils::{db, forbidden, js_option, not_found, now_utc, required_param};
 
-const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences, a.provider, a.provider_id FROM accounts a";
+const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences, (SELECT provider FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider, (SELECT provider_id FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider_id FROM accounts a";
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Account {
     pub id: String,
@@ -22,12 +22,12 @@ pub struct Account {
     /// JSON blob storing account-scoped viewer preferences.
     #[serde(default)]
     pub viewer_preferences: String,
-    /// OAuth provider used to create this account, stored as a `snake_case` string.
-    #[serde(default)]
-    pub provider: Provider,
-    /// Provider-scoped unique identifier for this account.
-    #[serde(default)]
-    pub provider_id: String,
+    /// OAuth provider used to create this account, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<Provider>,
+    /// Provider-scoped unique identifier for this account, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_id: Option<String>,
 }
 
 /// Payload used to create or update an account.
@@ -162,19 +162,6 @@ pub async fn unlink_oauth_account(
         .run()
         .await?;
 
-    let providers = fetch_linked_providers(ctx, account_id).await?;
-    let mut providers_iter = providers.iter();
-    let first_provider = providers_iter.next();
-    if first_provider == Some(&provider)
-        && let Some(new_primary) = providers_iter.next()
-    {
-        db(ctx)?
-            .prepare("UPDATE accounts SET provider = ?1 WHERE id = ?2")
-            .bind(&[new_primary.to_string().into(), account_id.into()])?
-            .run()
-            .await?;
-    }
-
     Ok(())
 }
 
@@ -229,14 +216,14 @@ pub async fn create_oauth_account(
         created_at: created_at.clone(),
         verified: 1,
         viewer_preferences: "{}".to_string(),
-        provider,
-        provider_id: provider_id.to_string(),
+        provider: Some(provider),
+        provider_id: Some(provider_id.to_string()),
     };
 
     db(ctx)?
         .prepare(
-            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified, viewer_preferences, provider, provider_id) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified, viewer_preferences) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         )
         .bind(&[
             id.clone().into(),
@@ -249,8 +236,6 @@ pub async fn create_oauth_account(
             account.created_at.clone().into(),
             account.verified.into(),
             account.viewer_preferences.clone().into(),
-            account.provider.to_string().into(),
-            account.provider_id.clone().into(),
         ])?
         .run()
         .await?;
