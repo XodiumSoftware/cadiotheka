@@ -600,7 +600,6 @@ pub fn IfcViewer(
             let mut state = controls.borrow_mut();
             state.on_mouse_leave(&renderer);
             hovered_primitive.set(None);
-            context_menu.set(None);
             {
                 let mut renderer_ref = renderer.borrow_mut();
                 if let Some(renderer) = renderer_ref.as_mut() {
