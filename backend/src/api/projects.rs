@@ -32,26 +32,15 @@ pub enum VersionState {
     Stable,
 }
 
-impl VersionState {
-    fn as_str(self) -> &'static str {
-        match self {
+impl std::fmt::Display for VersionState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
             Self::Undefined => "undefined",
             Self::Alpha => "alpha",
             Self::Beta => "beta",
             Self::Stable => "stable",
-        }
-    }
-
-    fn parse(value: &str) -> Result<Self> {
-        match value {
-            "undefined" => Ok(Self::Undefined),
-            "alpha" => Ok(Self::Alpha),
-            "beta" => Ok(Self::Beta),
-            "stable" => Ok(Self::Stable),
-            _ => Err(worker::Error::RustError(format!(
-                "invalid version state: {value}"
-            ))),
-        }
+        };
+        write!(f, "{s}")
     }
 }
 
@@ -72,7 +61,7 @@ pub struct ProjectVersion {
 /// Payload used to patch a project version.
 #[derive(Deserialize, Debug)]
 pub struct VersionPatch {
-    pub state: Option<String>,
+    pub state: Option<VersionState>,
 }
 
 /// Row shape used when looking up an IFC key by version id.
@@ -430,7 +419,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
             project_id.clone().into(),
             filename.into(),
             key.clone().into(),
-            VersionState::Undefined.as_str().into(),
+            VersionState::Undefined.to_string().into(),
             created_at.into(),
             file_size_value.into(),
             version.clone().into(),
@@ -516,12 +505,11 @@ pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> 
 
     let patch: VersionPatch = req.json().await?;
 
-    if let Some(state_str) = patch.state {
-        let state = VersionState::parse(&state_str)?;
+    if let Some(state) = patch.state {
         db(&ctx)?
             .prepare("UPDATE project_versions SET state = ?1 WHERE id = ?2 AND project_id = ?3")
             .bind(&[
-                state.as_str().into(),
+                state.to_string().into(),
                 version_id.clone().into(),
                 project_id.clone().into(),
             ])?
