@@ -482,6 +482,12 @@ impl Renderer {
             .and_then(|i| self.build_outline(i, color));
     }
 
+    /// Sets the selection outline color and rebuilds existing selection outlines.
+    pub fn set_selection_color(&mut self, color: Srgba) {
+        self.selection_color = color;
+        self.rebuild_selection_outlines();
+    }
+
     /// Hides the primitive with the given index so it is no longer rendered or
     /// pickable.
     pub fn hide_primitive(&mut self, index: usize) {
