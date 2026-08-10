@@ -17,7 +17,10 @@ pub struct RaycastHit {
 }
 
 /// Casts a ray from the camera through the given viewport pixel and returns
-/// the closest model intersection.
+/// the closest visible model intersection.
+///
+/// Hidden primitives are skipped so they do not block picking of objects behind
+/// them.
 ///
 /// `x` and `y` are in physical pixels with the origin at the bottom-left of
 /// the canvas, matching `three-d`'s coordinate convention.
@@ -26,8 +29,19 @@ pub fn raycast(renderer: &Renderer, x: f32, y: f32) -> Option<RaycastHit> {
     use three_d::core::render_states::Cull;
     use three_d::renderer::pick;
 
+    let visible: Vec<(usize, &dyn three_d::renderer::Object)> = renderer
+        .models
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| !renderer.is_hidden(*index))
+        .map(|(index, model)| (index, model.as_ref()))
+        .collect();
+    if visible.is_empty() {
+        return None;
+    }
+
     let pixel = three_d_asset::PixelPoint { x, y };
-    let geometries = renderer.models.iter().map(std::convert::AsRef::as_ref);
+    let geometries = visible.iter().map(|(_, object)| *object);
     match pick(
         &renderer.context,
         &renderer.camera,
@@ -35,10 +49,15 @@ pub fn raycast(renderer: &Renderer, x: f32, y: f32) -> Option<RaycastHit> {
         geometries,
         Cull::None,
     ) {
-        Ok(Some(result)) => Some(RaycastHit {
-            primitive_index: result.geometry_id as usize,
-            position: crate::utils::math::vec3_to_array(result.position),
-        }),
+        Ok(Some(result)) => {
+            let geometry_id = usize::try_from(result.geometry_id).unwrap_or(0);
+            visible
+                .get(geometry_id)
+                .map(|(original_index, _)| RaycastHit {
+                    primitive_index: *original_index,
+                    position: crate::utils::math::vec3_to_array(result.position),
+                })
+        }
         Ok(None) => None,
         Err(err) => {
             leptos::web_sys::console::error_1(&format!("Raycast failed: {err:?}").into());

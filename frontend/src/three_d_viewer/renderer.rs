@@ -8,6 +8,7 @@ use crate::three_d_viewer::state::{ViewDirection, ViewState, ViewerTheme};
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 #[cfg(target_arch = "wasm32")]
 use std::sync::Arc;
@@ -40,6 +41,7 @@ pub struct Renderer {
     pub(crate) axes: Option<Box<dyn Object>>,
     pub(crate) outline: Option<Gm<BoundingBox, ColorMaterial>>,
     pub(crate) hovered_primitive: Option<usize>,
+    pub(crate) hidden_primitives: HashSet<usize>,
     pub(crate) highlight_color: Srgba,
     pub(crate) skybox_color: Srgba,
     pub(crate) skybox: Option<Skybox>,
@@ -99,6 +101,7 @@ impl Renderer {
                 axes: None,
                 outline: None,
                 hovered_primitive: None,
+                hidden_primitives: HashSet::new(),
                 highlight_color: Srgba::new(255, 200, 0, 255),
                 skybox_color,
                 skybox,
@@ -140,6 +143,8 @@ impl Renderer {
         self.total_vertices = 0;
         self.total_triangles = 0;
         self.outline = None;
+        self.hidden_primitives.clear();
+        self.hovered_primitive = None;
         for primitive in &model.geometries {
             upload_primitive(
                 &self.context,
@@ -313,7 +318,9 @@ impl Renderer {
         let objects: Vec<&dyn Object> = self
             .models
             .iter()
-            .map(std::convert::AsRef::as_ref)
+            .enumerate()
+            .filter(|(index, _)| !self.hidden_primitives.contains(index))
+            .map(|(_, model)| model.as_ref())
             .chain(
                 self.axes
                     .iter()
@@ -458,6 +465,37 @@ impl Renderer {
     pub fn set_highlight_color(&mut self, color: Srgba) {
         self.highlight_color = color;
         self.outline = self.hovered_primitive.and_then(|i| self.build_outline(i));
+    }
+
+    /// Hides the primitive with the given index so it is no longer rendered or
+    /// pickable.
+    pub fn hide_primitive(&mut self, index: usize) {
+        if index < self.models.len() {
+            self.hidden_primitives.insert(index);
+            if self.hovered_primitive == Some(index) {
+                self.set_hovered_primitive(None);
+            }
+        }
+    }
+
+    /// Shows the primitive with the given index if it was previously hidden.
+    pub fn show_primitive(&mut self, index: usize) {
+        self.hidden_primitives.remove(&index);
+    }
+
+    /// Shows every primitive that was hidden.
+    pub fn show_all(&mut self) {
+        self.hidden_primitives.clear();
+    }
+
+    /// Returns whether the primitive with the given index is currently hidden.
+    pub fn is_hidden(&self, index: usize) -> bool {
+        self.hidden_primitives.contains(&index)
+    }
+
+    /// Returns the number of currently hidden primitives.
+    pub fn hidden_count(&self) -> usize {
+        self.hidden_primitives.len()
     }
 
     /// Builds a bounding-box outline object around the given primitive.

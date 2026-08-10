@@ -8,7 +8,9 @@ use crate::components::ui::view_gizmo::{GizmoPosition, ViewGizmo, ViewGizmoDirec
 use crate::three_d_viewer::{
     ObjectHit, OrbitControls, PrimitiveMetadata, Renderer, ViewState, ViewerTheme, fetch_metadata,
 };
-use crate::utils::{local_storage_get, local_storage_remove, local_storage_set};
+use crate::utils::{
+    local_storage_get, local_storage_remove, local_storage_set, window_event_listener,
+};
 use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
@@ -321,6 +323,71 @@ pub fn IfcViewer(
         move |_| {
             let _ = hovered_primitive.get();
             request_render.borrow_mut()();
+        }
+    });
+
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", {
+                let renderer = Rc::clone(&renderer);
+                let request_render = Rc::clone(&request_render);
+                move |ev| {
+                    if state.get() != IfcViewerState::Rendering || gizmo_edit_mode.get() {
+                        return;
+                    }
+                    if ev.repeat() {
+                        return;
+                    }
+                    let target = ev.target();
+                    let is_input = target
+                        .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlElement>().ok())
+                        .is_some_and(|el| {
+                            let tag = el.tag_name().to_lowercase();
+                            tag == "input" || tag == "textarea" || el.is_content_editable()
+                        });
+                    if is_input {
+                        return;
+                    }
+
+                    let key = ev.key().to_lowercase();
+                    if key == "h" && !ev.shift_key() {
+                        ev.prevent_default();
+                        let Some(index) = hovered_primitive.get_untracked() else {
+                            return;
+                        };
+                        let changed = {
+                            let mut renderer_ref = renderer.borrow_mut();
+                            if let Some(renderer) = renderer_ref.as_mut() {
+                                renderer.hide_primitive(index);
+                                renderer.is_hidden(index)
+                            } else {
+                                false
+                            }
+                        };
+                        if changed {
+                            hovered_primitive.set(None);
+                            request_render.borrow_mut()();
+                        }
+                    } else if key == "h" && ev.shift_key() {
+                        ev.prevent_default();
+                        let changed = {
+                            let mut renderer_ref = renderer.borrow_mut();
+                            if let Some(renderer) = renderer_ref.as_mut() {
+                                let had_hidden = renderer.hidden_count() > 0;
+                                renderer.show_all();
+                                had_hidden
+                            } else {
+                                false
+                            }
+                        };
+                        if changed {
+                            request_render.borrow_mut()();
+                        }
+                    }
+                }
+            });
         }
     });
 
