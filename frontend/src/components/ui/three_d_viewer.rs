@@ -534,14 +534,11 @@ pub fn IfcViewer(
     let on_context_menu = {
         let renderer = Rc::clone(&renderer);
         move |ev: leptos::web_sys::MouseEvent| {
-            leptos::web_sys::console::log_1(&"contextmenu fired".into());
             if disabled.get() || gizmo_edit_mode.get() || state.get() != IfcViewerState::Rendering {
                 context_menu.set(None);
-                leptos::web_sys::console::log_1(&"contextmenu early exit".into());
                 return;
             }
             let Some(canvas) = canvas_ref.get() else {
-                leptos::web_sys::console::log_1(&"contextmenu no canvas".into());
                 return;
             };
             let rect = canvas.get_bounding_client_rect();
@@ -549,12 +546,11 @@ pub fn IfcViewer(
             let y = f32_clamp(f64::from(ev.client_y()) - rect.top());
             let viewport_y = f32_clamp(rect.height() - (f64::from(ev.client_y()) - rect.top()));
 
-            let hit = renderer
+            if let Some(hit) = renderer
                 .borrow()
                 .as_ref()
-                .and_then(|renderer| renderer.pick(x, viewport_y));
-            leptos::web_sys::console::log_1(&format!("contextmenu hit: {hit:?}").into());
-            if let Some(hit) = hit {
+                .and_then(|renderer| renderer.pick(x, viewport_y))
+            {
                 context_menu_primitive.set(Some(hit.primitive_index));
                 context_menu.set(Some((x, y)));
                 ev.prevent_default();

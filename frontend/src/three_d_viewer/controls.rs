@@ -37,10 +37,9 @@ impl OrbitControls {
         show_axes: bool,
     ) -> bool {
         let button = mouse_button_from_web(ev.button());
-        if button == MouseButton::Right {
-            return false;
+        if button != MouseButton::Right {
+            ev.prevent_default();
         }
-        ev.prevent_default();
         let Some(pending_events) = renderer_events(renderer) else {
             return false;
         };
@@ -104,11 +103,8 @@ impl OrbitControls {
         ev: &MouseEvent,
         renderer: &Rc<RefCell<Option<Renderer>>>,
     ) -> bool {
-        let button = mouse_button_from_web(ev.button());
-        if button == MouseButton::Right {
-            return false;
-        }
         let position = physical_point_from_mouse(ev);
+        let button = mouse_button_from_web(ev.button());
         let modifiers = modifiers_from_mouse(ev);
         self.last_button = None;
         let Some(pending_events) = renderer_events(renderer) else {
