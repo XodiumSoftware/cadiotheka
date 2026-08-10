@@ -2,7 +2,10 @@ use crate::data::error::RequestError;
 use crate::data::project_types::{
     ProjectCreationResult, ProjectData, ProjectVersion, ValidationErrorResponse,
 };
-use crate::utils::api_url;
+use crate::utils::{
+    project_downloads_url, project_favorites_url, project_glb_url, project_ifc_url, project_url,
+    project_version_url, project_versions_url, projects_url,
+};
 use gloo_net::http::Request;
 use serde::Deserialize;
 use web_sys::RequestCredentials;
@@ -18,7 +21,7 @@ pub async fn create_project(
     project: &ProjectData,
     turnstile_token: Option<String>,
 ) -> ProjectCreationResult {
-    let url = api_url("/projects");
+    let url = projects_url();
     let mut payload = match serde_json::to_value(project) {
         Ok(json) => json,
         Err(err) => {
@@ -94,7 +97,7 @@ pub async fn create_project(
 /// Returns a [`RequestError`] when serialization fails or the backend rejects
 /// the request.
 pub async fn update_project_title(id: &str, title: String) -> Result<String, RequestError> {
-    let url = api_url(&format!("/projects/{id}"));
+    let url = project_url(id);
     let body = serde_json::to_string(&serde_json::json!({ "title": title })).map_err(|err| {
         RequestError::Serialize(format!("Failed to serialize title update: {err}"))
     })?;
@@ -112,7 +115,7 @@ pub async fn update_project_title(id: &str, title: String) -> Result<String, Req
 /// Returns a [`RequestError`] when serialization fails or the backend rejects
 /// the request.
 pub async fn update_project_tags(id: &str, tags: Vec<String>) -> Result<Vec<String>, RequestError> {
-    let url = api_url(&format!("/projects/{id}"));
+    let url = project_url(id);
     let body = serde_json::to_string(&serde_json::json!({ "tags": tags })).map_err(|err| {
         RequestError::Serialize(format!("Failed to serialize tags update: {err}"))
     })?;
@@ -133,7 +136,7 @@ pub async fn update_project_description(
     id: &str,
     description: String,
 ) -> Result<String, RequestError> {
-    let url = api_url(&format!("/projects/{id}"));
+    let url = project_url(id);
     let body = serde_json::to_string(&serde_json::json!({ "description": description })).map_err(
         |err| RequestError::Serialize(format!("Failed to serialize description update: {err}")),
     )?;
@@ -154,7 +157,7 @@ pub async fn update_project_collaborators(
     id: &str,
     collaborator_ids: Vec<String>,
 ) -> Result<Vec<String>, RequestError> {
-    let url = api_url(&format!("/projects/{id}"));
+    let url = project_url(id);
     let body = serde_json::to_string(&serde_json::json!({ "collaborator_ids": collaborator_ids }))
         .map_err(|err| {
             RequestError::Serialize(format!("Failed to serialize collaborator update: {err}"))
@@ -173,7 +176,7 @@ pub async fn update_project_collaborators(
 /// Returns a [`RequestError`] when the request cannot be built, the network
 /// fails, or the backend rejects the request.
 pub async fn toggle_project_favorite(id: &str) -> Result<ProjectData, RequestError> {
-    let url = api_url(&format!("/projects/{id}/favorites"));
+    let url = project_favorites_url(id);
     let request = Request::post(&url)
         .credentials(RequestCredentials::Include)
         .body("")
@@ -214,7 +217,7 @@ pub async fn toggle_project_favorite(id: &str) -> Result<ProjectData, RequestErr
 /// Returns a [`RequestError`] when the request cannot be built, the network
 /// fails, or the backend rejects the request.
 pub async fn increment_project_downloads(id: &str) -> Result<ProjectData, RequestError> {
-    let url = api_url(&format!("/projects/{id}/downloads"));
+    let url = project_downloads_url(id);
     let request = Request::post(&url)
         .credentials(RequestCredentials::Include)
         .body("")
@@ -255,7 +258,7 @@ pub async fn increment_project_downloads(id: &str) -> Result<ProjectData, Reques
 /// Returns a [`RequestError`] when the request cannot be built, the network
 /// fails, or the backend rejects the request.
 pub async fn delete_project_ifc(id: &str) -> Result<(), RequestError> {
-    let url = api_url(&format!("/projects/{id}/ifc"));
+    let url = project_ifc_url(id);
     let request = Request::delete(&url)
         .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json")
@@ -303,7 +306,7 @@ pub async fn upload_project_ifc(
         downloads: i64,
     }
 
-    let url = api_url(&format!("/projects/{id}/ifc"));
+    let url = project_ifc_url(id);
     let form = web_sys::FormData::new().map_err(|err| {
         RequestError::BuildRequest(format!("Failed to create IFC upload form data: {err:?}"))
     })?;
@@ -369,7 +372,7 @@ pub async fn upload_project_ifc(
 /// Returns a [`RequestError`] when the network fails, the backend rejects the
 /// request, or the response cannot be parsed.
 pub async fn fetch_project_versions(id: &str) -> Result<Vec<ProjectVersion>, RequestError> {
-    let url = api_url(&format!("/projects/{id}/versions"));
+    let url = project_versions_url(id);
     match Request::get(&url)
         .credentials(RequestCredentials::Include)
         .send()
@@ -409,7 +412,7 @@ pub async fn update_project_version_state(
     version_id: &str,
     state: crate::metadata::version_state::VersionState,
 ) -> Result<(), RequestError> {
-    let url = api_url(&format!("/projects/{project_id}/versions/{version_id}"));
+    let url = project_version_url(project_id, version_id);
     let body = serde_json::to_string(&serde_json::json!({
         "state": serde_json::to_string(&state).unwrap_or_default().trim_matches('"')
     }))
@@ -453,7 +456,7 @@ pub async fn delete_project_version(
     project_id: &str,
     version_id: &str,
 ) -> Result<(), RequestError> {
-    let url = api_url(&format!("/projects/{project_id}/versions/{version_id}"));
+    let url = project_version_url(project_id, version_id);
     let request = Request::delete(&url)
         .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json")
@@ -488,7 +491,7 @@ pub async fn delete_project_version(
 /// Returns a [`RequestError`] when the request cannot be built, the network
 /// fails, or the backend rejects the request with an unexpected status.
 pub async fn convert_project_glb(id: &str) -> Result<bool, RequestError> {
-    let url = api_url(&format!("/projects/{id}/glb"));
+    let url = project_glb_url(id);
     let request = Request::post(&url)
         .credentials(RequestCredentials::Include)
         .body(web_sys::FormData::new().map_err(|err| {
@@ -526,7 +529,7 @@ pub async fn convert_project_glb(id: &str) -> Result<bool, RequestError> {
 /// Returns a [`RequestError`] when the network fails or the backend rejects the
 /// request.
 pub async fn delete_project(id: &str) -> Result<(), RequestError> {
-    let url = api_url(&format!("/projects/{id}"));
+    let url = project_url(id);
     match Request::delete(&url)
         .credentials(RequestCredentials::Include)
         .send()
@@ -556,7 +559,7 @@ pub async fn delete_project(id: &str) -> Result<(), RequestError> {
 /// Returns a [`RequestError`] when the network fails, the backend rejects the
 /// request, or the response cannot be parsed.
 pub async fn fetch_projects() -> Result<Vec<ProjectData>, RequestError> {
-    match Request::get(&api_url("/projects")).send().await {
+    match Request::get(&projects_url()).send().await {
         Ok(response) if response.ok() => {
             let text = response.text().await.unwrap_or_default();
             serde_json::from_str::<Vec<ProjectData>>(&text).map_err(|err| {

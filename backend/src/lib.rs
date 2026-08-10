@@ -1,28 +1,4 @@
-/// Backend route paths.
-pub(crate) mod routes {
-    pub(crate) const AUTH_PREFIX: &str = "/auth/";
-    pub(crate) const ACCOUNTS: &str = "/data/accounts";
-    pub(crate) const ACCOUNT: &str = "/data/accounts/:id";
-    pub(crate) const PROJECTS: &str = "/data/projects";
-    pub(crate) const PROJECT: &str = "/data/projects/:id";
-    pub(crate) const PROJECT_FAVORITES: &str = "/data/projects/:id/favorites";
-    pub(crate) const PROJECT_DOWNLOADS: &str = "/data/projects/:id/downloads";
-    pub(crate) const PROJECT_IFC: &str = "/data/projects/:id/ifc";
-    pub(crate) const PROJECT_VERSIONS: &str = "/data/projects/:id/versions";
-    pub(crate) const PROJECT_VERSION: &str = "/data/projects/:id/versions/:version_id";
-    pub(crate) const PROJECT_GLBS: &str = "/data/projects/:id/glb";
-    pub(crate) const PROJECT_GLBS_METADATA: &str = "/data/projects/:id/glb-metadata";
-    pub(crate) const IFCS: &str = "/data/ifcs/:version_id/:filename";
-    pub(crate) const LOGIN_GITHUB: &str = "/login/github";
-    pub(crate) const AUTH_GITHUB_CALLBACK: &str = "/auth/github/callback";
-    pub(crate) const LOGIN_GOOGLE: &str = "/login/google";
-    pub(crate) const AUTH_GOOGLE_CALLBACK: &str = "/auth/google/callback";
-    pub(crate) const AUTH_LINKED_PROVIDERS: &str = "/auth/linked-providers";
-    pub(crate) const AUTH_LINKED_PROVIDER: &str = "/auth/linked-providers/:provider";
-    pub(crate) const AUTH_ME: &str = "/auth/me";
-    pub(crate) const AUTH_ME_VIEWER_PREFERENCES: &str = "/auth/me/viewer-preferences";
-    pub(crate) const AUTH_LOGOUT: &str = "/auth/logout";
-}
+pub(crate) use shared::routes;
 
 mod utils;
 

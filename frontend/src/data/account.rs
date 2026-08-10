@@ -1,5 +1,5 @@
 use crate::data::error::RequestError;
-use crate::utils::api_url;
+use crate::utils::accounts_url;
 use serde::{Deserialize, Serialize};
 
 /// Account role for a registered user.
@@ -87,7 +87,7 @@ impl AccountData {
 /// Returns a [`RequestError`] when the network fails, the backend rejects the
 /// request, or the response cannot be parsed.
 pub async fn fetch_accounts() -> Result<Vec<AccountData>, RequestError> {
-    let url = api_url("/accounts");
+    let url = accounts_url();
     match gloo_net::http::Request::get(&url).send().await {
         Ok(response) if response.ok() => {
             let status = response.status();

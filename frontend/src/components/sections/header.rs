@@ -7,7 +7,7 @@ use crate::contexts::{
 };
 use crate::engines::{SearchEngine, Suggestion, SuggestionKind};
 use crate::utils::{
-    auth_url, encode_redirect_url, placeholder_color, placeholder_letter, window_event_listener,
+    encode_redirect_url, logout_url, placeholder_color, placeholder_letter, window_event_listener,
 };
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -186,7 +186,7 @@ pub fn Header() -> impl IntoView {
                 if let Some(window) = leptos::web_sys::window() {
                     let _ = window
                         .location()
-                        .set_href(&encode_redirect_url(&auth_url("/logout")));
+                        .set_href(&encode_redirect_url(&logout_url()));
                 }
             }
             _ => {}

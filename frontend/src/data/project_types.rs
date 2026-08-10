@@ -1,5 +1,5 @@
 pub use crate::metadata::version_state::VersionState;
-use crate::utils::api_url;
+use crate::utils::ifc_url;
 use serde::{Deserialize, Serialize};
 
 /// Serde adapter for a JSON-text column holding an array of strings.
@@ -121,11 +121,7 @@ pub struct ProjectData {
 /// actual R2 object key stored on the version row. This avoids assuming the second
 /// segment of `ifc_key` is the version id, which is not true for legacy migrations.
 pub fn ifc_download_url(version: &ProjectVersion) -> String {
-    api_url(&format!(
-        "/ifcs/{version_id}/{filename}",
-        version_id = version.id,
-        filename = version.filename
-    ))
+    ifc_url(&version.id, &version.filename)
 }
 
 /// Returns the public download URL for the latest visible IFC version, if any.
@@ -235,7 +231,7 @@ mod tests {
         ];
         assert_eq!(
             latest_visible_ifc_url(&versions),
-            Some(api_url("/ifcs/v2/b.ifc"))
+            Some(ifc_url("v2", "b.ifc"))
         );
     }
 
@@ -323,10 +319,7 @@ mod tests {
             version: "1.0.0".to_owned(),
             downloads: 0,
         };
-        assert_eq!(
-            ifc_download_url(&version),
-            api_url("/ifcs/vid-123/model.ifc")
-        );
+        assert_eq!(ifc_download_url(&version), ifc_url("vid-123", "model.ifc"));
     }
 
     #[test]

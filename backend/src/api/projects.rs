@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
-use shared::tags::Tag;
+use shared::{
+    tags::Tag,
+    validation::{MAX_DESCRIPTION_LENGTH, MAX_IFC_SIZE_BYTES, MAX_TITLE_LENGTH},
+};
 use worker::{
     FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext, console_log,
 };
@@ -16,13 +19,6 @@ use crate::utils::{
 use ifc_lite_export::{GltfOptions, export_glb};
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, downloads, favorites, timestamp FROM projects";
-
-/// Maximum allowed length for a project title.
-const MAX_TITLE_LENGTH: usize = 100;
-/// Maximum allowed length for a project description.
-const MAX_DESCRIPTION_LENGTH: usize = 5000;
-/// Maximum allowed size for an uploaded project IFC model, in bytes.
-const MAX_IFC_SIZE_BYTES: usize = 25 * 1024 * 1024; // 25 MiB
 
 /// A version state for an IFC file.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]

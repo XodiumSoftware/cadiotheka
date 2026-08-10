@@ -1,3 +1,4 @@
+use shared::origins::{ALLOWED_LOCALHOST_ORIGINS, ALLOWED_REDIRECT_ORIGINS};
 use worker::{
     Bucket, D1Database, KvStore, RateLimiter, Request, Response, Result, RouteContext, wasm_bindgen,
 };
@@ -211,14 +212,6 @@ pub fn query_param(url: &url::Url, name: &str) -> Option<String> {
         .find(|(key, _)| key == name)
         .map(|(_, value)| value.into_owned())
 }
-
-/// Origins allowed for post-auth browser redirects. Must match the frontend
-/// deployment origins. Relative paths are also accepted and resolved against
-/// the request's public origin.
-const ALLOWED_REDIRECT_ORIGINS: &[&str] = &["https://cadiotheka.com", "https://www.cadiotheka.com"];
-
-/// Localhost origins allowed for non-HTTPS development requests.
-const ALLOWED_LOCALHOST_ORIGINS: &[&str] = &["http://localhost:8080", "http://localhost:8787"];
 
 /// Returns a safe redirect target from a query parameter.
 ///

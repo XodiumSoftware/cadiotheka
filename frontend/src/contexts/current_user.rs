@@ -1,6 +1,6 @@
 use crate::data::AccountData;
 use crate::data::error::RequestError;
-use crate::utils::auth_url;
+use crate::utils::{linked_provider_url, linked_providers_url, me_url, me_viewer_preferences_url};
 use gloo_net::http::Request;
 use leptos::prelude::*;
 use web_sys::RequestCredentials;
@@ -51,7 +51,7 @@ impl CurrentUserContext {
 /// Returns a [`RequestError`] when the network fails, the backend returns an
 /// unexpected error, or the response cannot be parsed.
 pub async fn fetch_current_user() -> Result<Option<AccountData>, RequestError> {
-    let url = auth_url("/me");
+    let url = me_url();
     match Request::get(&url)
         .credentials(RequestCredentials::Include)
         .send()
@@ -96,7 +96,7 @@ struct MeResponse {
 /// Returns a [`RequestError`] when the network fails or the backend returns an
 /// unexpected error.
 pub async fn fetch_viewer_preferences() -> Result<String, RequestError> {
-    let url = auth_url("/me/viewer-preferences");
+    let url = me_viewer_preferences_url();
     match Request::get(&url)
         .credentials(RequestCredentials::Include)
         .send()
@@ -141,7 +141,7 @@ struct ViewerPreferencesResponse {
 /// Returns a [`RequestError`] when serialization fails or the backend rejects
 /// the request.
 pub async fn update_viewer_preferences(preferences: String) -> Result<String, RequestError> {
-    let url = auth_url("/me");
+    let url = me_url();
     let body = serde_json::json!({ "viewer_preferences": preferences }).to_string();
     let request = Request::put(&url)
         .credentials(RequestCredentials::Include)
@@ -179,7 +179,7 @@ pub async fn update_viewer_preferences(preferences: String) -> Result<String, Re
 /// Returns a [`RequestError`] when the network fails, the backend returns an
 /// unexpected error, or the response cannot be parsed.
 pub async fn fetch_linked_providers() -> Result<Vec<String>, RequestError> {
-    let url = auth_url("/linked-providers");
+    let url = linked_providers_url();
     match Request::get(&url)
         .credentials(RequestCredentials::Include)
         .send()
@@ -219,7 +219,7 @@ pub async fn fetch_linked_providers() -> Result<Vec<String>, RequestError> {
 /// Returns a [`RequestError`] when the network fails or the backend rejects the
 /// request.
 pub async fn unlink_provider(provider: &str) -> Result<(), RequestError> {
-    let url = auth_url(&format!("/linked-providers/{provider}"));
+    let url = linked_provider_url(provider);
     match Request::delete(&url)
         .credentials(RequestCredentials::Include)
         .send()
@@ -263,7 +263,7 @@ pub async fn update_bio(new_bio: String) -> Result<String, RequestError> {
         )));
     }
 
-    let url = auth_url("/me");
+    let url = me_url();
     let request = Request::put(&url)
         .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json")

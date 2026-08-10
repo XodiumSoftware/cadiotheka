@@ -24,16 +24,15 @@ use crate::data::{
 use crate::metadata::VersionState;
 use crate::metadata::tags::Tag;
 use crate::utils::{
-    api_url, format_number, format_version_timestamp, hex_to_srgba, placeholder_color,
-    placeholder_letter, srgba_to_hex,
+    format_number, format_version_timestamp, hex_to_srgba, placeholder_color, placeholder_letter,
+    project_glb_metadata_url, project_glb_url, srgba_to_hex,
 };
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
+use shared::validation::{MAX_DESCRIPTION_LENGTH, MAX_TITLE_LENGTH};
 use std::rc::Rc;
 use three_d_asset::Srgba;
 
-const MAX_TITLE_LENGTH: usize = 100;
-const MAX_DESCRIPTION_LENGTH: usize = 100;
 const VERSIONS_PER_PAGE: usize = 20;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -2196,7 +2195,7 @@ fn ProjectModalContent(
                                                         let project_id = project_id.clone();
                                                         move || {
                                                             latest_visible_ifc_url(&versions.get(),
-                                                            ).map(|_| api_url(&format!("/projects/{project_id}/glb")))
+                                                            ).map(|_| project_glb_url(&project_id))
                                                         }
                                                     })
                                                     metadata_url=Signal::derive({
@@ -2205,7 +2204,7 @@ fn ProjectModalContent(
                                                             latest_visible_ifc_url(
                                                                 &versions.get(),
                                                             )
-                                                            .map(|_| api_url(&format!("/projects/{project_id}/glb-metadata")))
+                                                            .map(|_| project_glb_metadata_url(&project_id))
                                                         }
                                                     })
                                                     storage_key=Signal::derive({

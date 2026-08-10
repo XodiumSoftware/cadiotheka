@@ -2,7 +2,8 @@ use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::modals::base::BaseModal;
 use crate::contexts::{CurrentUserContext, ProfileModalContext, ToastContext};
 use crate::utils::{
-    encode_redirect_url, format_time_full, login_url, placeholder_color, placeholder_letter,
+    encode_redirect_url, format_time_full, github_login_url, google_login_url, placeholder_color,
+    placeholder_letter,
 };
 use gloo_net::http::Request;
 use leptos::prelude::*;
@@ -126,7 +127,11 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
 
     let start_link_oauth = move |provider: &'static str| {
         leptos::task::spawn_local(async move {
-            let url = encode_redirect_url(&login_url(provider));
+            let url = match provider {
+                "github" => encode_redirect_url(&github_login_url()),
+                "google" => encode_redirect_url(&google_login_url()),
+                _ => return,
+            };
             let Ok(resp) = Request::get(&url)
                 .credentials(web_sys::RequestCredentials::Include)
                 .send()
