@@ -3,7 +3,7 @@ use worker::{
     FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext, console_log,
 };
 
-use crate::api::accounts::Account;
+use crate::api::accounts::{Account, Role};
 use crate::api::session::require_account;
 use crate::guards::{
     GuardOutcome, require_auth_with_rate_limit, require_auth_with_turnstile_and_rate_limit,
@@ -624,6 +624,145 @@ fn glb_key_for_project(id: &str) -> String {
     format!("ifcs/{id}/model.glb")
 }
 
+/// Returns the R2 key used to cache per-primitive metadata for the GLB.
+fn glb_metadata_key_for_project(id: &str) -> String {
+    format!("ifcs/{id}/model-metadata.json")
+}
+
+/// Metadata for a single primitive in the converted GLB.
+#[derive(Debug, Serialize, Deserialize)]
+struct GltfPrimitiveMetadata {
+    express_id: Option<u32>,
+    name: Option<String>,
+}
+
+/// Extracts per-primitive metadata from a binary GLB.
+///
+/// The exporter stores the IFC express id in each node's `extras.expressId`.
+/// This function walks the default scene in the same depth-first order that
+/// `three-d-asset` uses when flattening nodes to primitives, so the returned
+/// array index matches the primitive index used by the viewer's raycaster.
+fn extract_glb_metadata(glb_bytes: &[u8]) -> Vec<GltfPrimitiveMetadata> {
+    if glb_bytes.len() <= 12 {
+        return Vec::new();
+    }
+
+    let json_chunk_len = match glb_bytes.get(12..16).and_then(|s| s.try_into().ok()) {
+        Some(bytes) => u32::from_le_bytes(bytes) as usize,
+        None => return Vec::new(),
+    };
+    let json_chunk_type = match glb_bytes.get(16..20).and_then(|s| s.try_into().ok()) {
+        Some(bytes) => u32::from_le_bytes(bytes),
+        None => return Vec::new(),
+    };
+    if json_chunk_type != 0x4E4F_534A {
+        return Vec::new();
+    }
+
+    let json_start: usize = 20;
+    let json_end = json_start.saturating_add(json_chunk_len);
+    if json_end > glb_bytes.len() {
+        return Vec::new();
+    }
+    let json: serde_json::Value = match serde_json::from_slice(&glb_bytes[json_start..json_end]) {
+        Ok(value) => value,
+        Err(_) => return Vec::new(),
+    };
+
+    let nodes = json
+        .get("nodes")
+        .and_then(serde_json::Value::as_array)
+        .cloned();
+    let meshes = json
+        .get("meshes")
+        .and_then(serde_json::Value::as_array)
+        .cloned();
+    let Some(nodes) = nodes else {
+        return Vec::new();
+    };
+
+    let default_scene = json
+        .get("scene")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0)
+        .try_into()
+        .unwrap_or(0usize);
+    let scenes = json
+        .get("scenes")
+        .and_then(serde_json::Value::as_array)
+        .cloned();
+    let root_indices: Vec<usize> = scenes
+        .as_ref()
+        .and_then(|s| s.get(default_scene))
+        .and_then(|s| s.get("nodes"))
+        .and_then(serde_json::Value::as_array)
+        .map_or_else(
+            || (0..nodes.len()).collect(),
+            |arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_u64().and_then(|n| n.try_into().ok()))
+                    .collect()
+            },
+        );
+
+    let mut result = Vec::new();
+    for index in root_indices {
+        visit_gltf_node(index, &nodes, meshes.as_deref(), &mut result);
+    }
+    result
+}
+
+fn visit_gltf_node(
+    index: usize,
+    nodes: &[serde_json::Value],
+    meshes: Option<&[serde_json::Value]>,
+    out: &mut Vec<GltfPrimitiveMetadata>,
+) {
+    let Some(node) = nodes.get(index) else {
+        return;
+    };
+
+    let name = node
+        .get("name")
+        .and_then(serde_json::Value::as_str)
+        .map(String::from);
+    let express_id = node
+        .get("extras")
+        .and_then(|e| e.get("expressId"))
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|n| n.try_into().ok());
+
+    if let Some(mesh_index) = node
+        .get("mesh")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|n| n.try_into().ok())
+    {
+        let mesh_index: usize = mesh_index;
+        let primitive_count = meshes
+            .and_then(|list: &[serde_json::Value]| list.get(mesh_index))
+            .and_then(|m: &serde_json::Value| m.get("primitives"))
+            .and_then(serde_json::Value::as_array)
+            .map_or(0, std::vec::Vec::len);
+        for _ in 0..primitive_count {
+            out.push(GltfPrimitiveMetadata {
+                express_id,
+                name: name.clone(),
+            });
+        }
+    }
+
+    let children = node
+        .get("children")
+        .and_then(serde_json::Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    for child in children {
+        if let Some(child_index) = child.as_u64().and_then(|n| n.try_into().ok()) {
+            visit_gltf_node(child_index, nodes, meshes, out);
+        }
+    }
+}
+
 /// Serves a project's IFC model converted to a binary GLB for the 3D viewer.
 pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let id = ctx.param("id").cloned().unwrap_or_default();
@@ -650,7 +789,7 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
         return Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers));
     }
 
-    match ensure_glb_cached(&ctx, &id, &key).await? {
+    match ensure_glb_assets_cached(&ctx, &id, &key).await? {
         Some(GlbConversion::Success(bytes)) => {
             let headers = Headers::new();
             headers.set("Content-Type", "model/gltf-binary")?;
@@ -682,6 +821,63 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
     }
 }
 
+/// Serves per-primitive metadata for a project's converted GLB.
+pub async fn serve_project_glb_metadata(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let id = ctx.param("id").cloned().unwrap_or_default();
+    if id.is_empty() {
+        return bad_request("Invalid project id");
+    }
+
+    let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
+        return not_found("No IFC model uploaded for this project");
+    };
+
+    let metadata_cache_key = glb_metadata_key_for_project(&id);
+    if let Some(cached) = assets_bucket(&ctx)?
+        .get(&metadata_cache_key)
+        .execute()
+        .await?
+    {
+        let body = cached.body().ok_or_else(|| {
+            worker::Error::RustError("GLB metadata cache object has no body".into())
+        })?;
+        let http_metadata = cached.http_metadata();
+        let content_type = http_metadata
+            .content_type
+            .unwrap_or_else(|| "application/json".to_string());
+        let headers = Headers::new();
+        headers.set("Content-Type", &content_type)?;
+        headers.set("Cache-Control", "public, max-age=3600")?;
+        return Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers));
+    }
+
+    match ensure_glb_assets_cached(&ctx, &id, &key).await? {
+        Some(GlbConversion::Success(_)) | None => {
+            let cached = assets_bucket(&ctx)?
+                .get(glb_metadata_key_for_project(&id))
+                .execute()
+                .await?
+                .ok_or_else(|| {
+                    worker::Error::RustError("GLB metadata cache object has no body".into())
+                })?;
+            let body = cached.body().ok_or_else(|| {
+                worker::Error::RustError("GLB metadata cache object has no body".into())
+            })?;
+            let http_metadata = cached.http_metadata();
+            let content_type = http_metadata
+                .content_type
+                .unwrap_or_else(|| "application/json".to_string());
+            let headers = Headers::new();
+            headers.set("Content-Type", &content_type)?;
+            headers.set("Cache-Control", "public, max-age=3600")?;
+            Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
+        }
+        Some(GlbConversion::NoGeometry) => {
+            error_response("IFC model has no renderable geometry", 422)
+        }
+    }
+}
+
 /// Eagerly converts a project's IFC model to GLB and caches it, returning the
 /// pipeline status so the client can report progress without waiting for the
 /// first viewer open.
@@ -705,7 +901,7 @@ pub async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> Result<
         return not_found("No IFC model uploaded for this project");
     };
 
-    match ensure_glb_cached(&ctx, &id, &key).await? {
+    match ensure_glb_assets_cached(&ctx, &id, &key).await? {
         Some(GlbConversion::Success(_)) | None => {
             Response::from_json(&serde_json::json!({ "status": "ready" }))
         }
@@ -723,21 +919,28 @@ enum GlbConversion {
     NoGeometry,
 }
 
-/// Converts the IFC object at `key` to GLB, caches it under the project's GLB
-/// key, and returns the outcome. Cache hits return `None` so callers can serve
-/// the cached body directly.
-async fn ensure_glb_cached(
+/// Converts the IFC object at `key` to GLB, caches both the GLB and a
+/// per-primitive metadata file, and returns the outcome. Cache hits return
+/// `None` so callers can serve the cached body directly.
+async fn ensure_glb_assets_cached(
     ctx: &RouteContext<()>,
     id: &str,
     ifc_key: &str,
 ) -> Result<Option<GlbConversion>> {
     let glb_cache_key = glb_key_for_project(id);
-    if assets_bucket(ctx)?
+    let metadata_cache_key = glb_metadata_key_for_project(id);
+    let glb_cached = assets_bucket(ctx)?
         .get(&glb_cache_key)
         .execute()
         .await?
-        .is_some()
-    {
+        .is_some();
+    let metadata_cached = assets_bucket(ctx)?
+        .get(&metadata_cache_key)
+        .execute()
+        .await?
+        .is_some();
+
+    if glb_cached && metadata_cached {
         return Ok(None);
     }
 
@@ -762,13 +965,26 @@ async fn ensure_glb_cached(
         return Ok(Some(GlbConversion::NoGeometry));
     }
 
-    let cache_metadata = HttpMetadata {
+    let metadata = extract_glb_metadata(&glb_bytes);
+    let metadata_json = serde_json::to_vec(&serde_json::json!({ "primitives": metadata }))?;
+
+    let glb_http_metadata = HttpMetadata {
         content_type: Some("model/gltf-binary".to_string()),
         ..Default::default()
     };
+    let metadata_http_metadata = HttpMetadata {
+        content_type: Some("application/json".to_string()),
+        ..Default::default()
+    };
+
     assets_bucket(ctx)?
         .put(&glb_cache_key, glb_bytes.clone())
-        .http_metadata(cache_metadata)
+        .http_metadata(glb_http_metadata)
+        .execute()
+        .await?;
+    assets_bucket(ctx)?
+        .put(&metadata_cache_key, metadata_json)
+        .http_metadata(metadata_http_metadata)
         .execute()
         .await?;
 
@@ -777,7 +993,7 @@ async fn ensure_glb_cached(
 
 /// Whether the given account may edit or delete the project.
 fn can_edit_project(account: &Account, project: &Project) -> bool {
-    account.role == "admin"
+    account.role == Role::Admin
         || account.id == project.author_id
         || project.collaborator_ids.contains(&account.id)
 }
@@ -904,13 +1120,13 @@ async fn fetch_project(ctx: &RouteContext<()>, id: &str) -> Result<Option<Projec
 mod tests {
     use super::*;
 
-    fn sample_account(role: &str) -> Account {
+    fn sample_account(role: Role) -> Account {
         Account {
             id: "acc-1".into(),
             username: "creator".into(),
             display_name: "Creator".into(),
             email: "creator@example.com".into(),
-            role: role.into(),
+            role,
             bio: String::new(),
             avatar_url: None,
             created_at: "2025-01-01T00:00:00Z".into(),
@@ -969,22 +1185,74 @@ mod tests {
 
     #[test]
     fn owner_can_edit_project() {
-        let account = sample_account("creator");
+        let account = sample_account(Role::Creator);
         let project = sample_project(&account.id);
         assert!(can_edit_project(&account, &project));
     }
 
     #[test]
     fn non_owner_cannot_edit_project() {
-        let account = sample_account("creator");
+        let account = sample_account(Role::Creator);
         let project = sample_project("other");
         assert!(!can_edit_project(&account, &project));
     }
 
     #[test]
     fn admin_can_edit_any_project() {
-        let account = sample_account("admin");
+        let account = sample_account(Role::Admin);
         let project = sample_project("other");
         assert!(can_edit_project(&account, &project));
+    }
+
+    #[test]
+    fn extract_glb_metadata_maps_primitives_to_express_ids() {
+        let glb = build_test_glb(
+            r#"{
+                "scene": 0,
+                "scenes": [{"nodes": [0, 1]}],
+                "nodes": [
+                    {"name": "Wall-1", "mesh": 0, "extras": {"expressId": 123}},
+                    {"name": "Door-1", "mesh": 1, "extras": {"expressId": 456}}
+                ],
+                "meshes": [
+                    {"primitives": [{"attributes": {"POSITION": 0}}]},
+                    {"primitives": [
+                        {"attributes": {"POSITION": 1}},
+                        {"attributes": {"POSITION": 2}}
+                    ]}
+                ]
+            }"#,
+        );
+
+        let metadata = extract_glb_metadata(&glb);
+
+        assert_eq!(metadata.len(), 3);
+        assert_eq!(metadata[0].express_id, Some(123));
+        assert_eq!(metadata[0].name.as_deref(), Some("Wall-1"));
+        assert_eq!(metadata[1].express_id, Some(456));
+        assert_eq!(metadata[1].name.as_deref(), Some("Door-1"));
+        assert_eq!(metadata[2].express_id, Some(456));
+        assert_eq!(metadata[2].name.as_deref(), Some("Door-1"));
+    }
+
+    #[test]
+    fn extract_glb_metadata_returns_empty_for_short_bytes() {
+        assert!(extract_glb_metadata(b"glTF\x02\x00\x00\x00").is_empty());
+    }
+
+    fn build_test_glb(json: &str) -> Vec<u8> {
+        #![allow(clippy::cast_possible_truncation)]
+
+        let json_bytes = json.as_bytes();
+        let chunk_len = json_bytes.len() as u32;
+        let total_len = 12 + 8 + chunk_len;
+        let mut glb = Vec::with_capacity(total_len as usize);
+        glb.extend_from_slice(b"glTF");
+        glb.extend_from_slice(&2u32.to_le_bytes());
+        glb.extend_from_slice(&total_len.to_le_bytes());
+        glb.extend_from_slice(&chunk_len.to_le_bytes());
+        glb.extend_from_slice(&0x4E4F_534A_u32.to_le_bytes());
+        glb.extend_from_slice(json_bytes);
+        glb
     }
 }

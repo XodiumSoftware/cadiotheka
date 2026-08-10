@@ -8,6 +8,7 @@ use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::base::BaseModal;
 use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
 use crate::components::ui::view_gizmo::GizmoPosition;
+use crate::three_d_viewer::ObjectHit;
 
 use crate::contexts::{
     AccountsContext, CurrentUserContext, MetadataContext, ProfileModalContext, ProjectModalContext,
@@ -2194,8 +2195,17 @@ fn ProjectModalContent(
                                                     url=Signal::derive({
                                                         let project_id = project_id.clone();
                                                         move || {
-                                                            latest_visible_ifc_url(&versions.get()
+                                                            latest_visible_ifc_url(&versions.get(),
                                                             ).map(|_| api_url(&format!("/projects/{project_id}/glb")))
+                                                        }
+                                                    })
+                                                    metadata_url=Signal::derive({
+                                                        let project_id = project_id.clone();
+                                                        move || {
+                                                            latest_visible_ifc_url(
+                                                                &versions.get(),
+                                                            )
+                                                            .map(|_| api_url(&format!("/projects/{project_id}/glb-metadata")))
                                                         }
                                                     })
                                                     storage_key=Signal::derive({
@@ -2214,6 +2224,11 @@ fn ProjectModalContent(
                                                         let is_editable = is_editable;
                                                         let edit_mode = edit_mode;
                                                         move || is_editable.get() && edit_mode.get()
+                                                    })
+                                                    on_object_hit=Callback::new(move |hit: ObjectHit| {
+                                                        leptos::web_sys::console::log_1(
+                                                            &format!("Clicked object: {hit:?}").into(),
+                                                        );
                                                     })
                                                 />
                                             </div>

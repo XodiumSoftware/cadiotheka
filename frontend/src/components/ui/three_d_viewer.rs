@@ -5,7 +5,9 @@
 
 use crate::components::Icon;
 use crate::components::ui::view_gizmo::{GizmoPosition, ViewGizmo, ViewGizmoDirection};
-use crate::three_d_viewer::{OrbitControls, RaycastHit, Renderer, ViewState, ViewerTheme};
+use crate::three_d_viewer::{
+    ObjectHit, OrbitControls, PrimitiveMetadata, Renderer, ViewState, ViewerTheme, fetch_metadata,
+};
 use crate::utils::{local_storage_get, local_storage_remove, local_storage_set};
 use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
@@ -55,7 +57,8 @@ pub fn IfcViewer(
     #[prop(into, optional)] gizmo_edit_mode_signal: Option<RwSignal<bool>>,
     #[prop(into, optional)] highlight_color_signal: Option<Signal<Srgba>>,
     #[prop(into, optional)] skybox_color_signal: Option<Signal<Srgba>>,
-    #[prop(optional)] on_raycast_hit: Option<Callback<RaycastHit>>,
+    #[prop(into)] metadata_url: Signal<Option<String>>,
+    #[prop(optional)] on_object_hit: Option<Callback<ObjectHit>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -70,6 +73,7 @@ pub fn IfcViewer(
     let highlight_color =
         highlight_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::new(255, 200, 0, 255)));
     let skybox_color = skybox_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::WHITE));
+    let metadata: RwSignal<Option<Vec<PrimitiveMetadata>>> = RwSignal::new(None);
 
     let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
@@ -299,6 +303,19 @@ pub fn IfcViewer(
         }
     });
 
+    Effect::new(move |_| {
+        let Some(url) = metadata_url.get().filter(|u| !u.is_empty()) else {
+            metadata.set(None);
+            return;
+        };
+        leptos::task::spawn_local({
+            let metadata = metadata;
+            async move {
+                metadata.set(fetch_metadata(&url).await);
+            }
+        });
+    });
+
     Effect::new({
         let request_render = Rc::clone(&request_render);
         move |_| {
@@ -413,14 +430,24 @@ pub fn IfcViewer(
             let rect = canvas.get_bounding_client_rect();
             let x = f32_clamp(f64::from(ev.client_x()) - rect.left());
             let y = f32_clamp(rect.height() - (f64::from(ev.client_y()) - rect.top()));
-            let hit = renderer
+            let Some(hit) = renderer
                 .borrow()
                 .as_ref()
-                .and_then(|renderer| renderer.pick(x, y));
-            if let Some(hit) = hit
-                && let Some(ref callback) = on_raycast_hit
-            {
-                callback.run(hit);
+                .and_then(|renderer| renderer.pick(x, y))
+            else {
+                return;
+            };
+            let meta = metadata
+                .get_untracked()
+                .as_ref()
+                .and_then(|list| list.get(hit.primitive_index).cloned());
+            if let Some(ref callback) = on_object_hit {
+                callback.run(ObjectHit {
+                    primitive_index: hit.primitive_index,
+                    position: hit.position,
+                    express_id: meta.as_ref().and_then(|m| m.express_id),
+                    name: meta.as_ref().and_then(|m| m.name.clone()),
+                });
             }
         }
     };

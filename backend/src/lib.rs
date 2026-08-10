@@ -11,6 +11,7 @@ pub(crate) mod routes {
     pub(crate) const PROJECT_VERSIONS: &str = "/data/projects/:id/versions";
     pub(crate) const PROJECT_VERSION: &str = "/data/projects/:id/versions/:version_id";
     pub(crate) const PROJECT_GLBS: &str = "/data/projects/:id/glb";
+    pub(crate) const PROJECT_GLBS_METADATA: &str = "/data/projects/:id/glb-metadata";
     pub(crate) const IFCS: &str = "/data/ifcs/:version_id/:filename";
     pub(crate) const LOGIN_GITHUB: &str = "/login/github";
     pub(crate) const AUTH_GITHUB_CALLBACK: &str = "/auth/github/callback";
@@ -78,6 +79,10 @@ pub fn build_router() -> Router<'static, ()> {
             api::projects::delete_project_version,
         )
         .get_async(routes::PROJECT_GLBS, api::projects::serve_project_glb)
+        .get_async(
+            routes::PROJECT_GLBS_METADATA,
+            api::projects::serve_project_glb_metadata,
+        )
         .post_async(routes::PROJECT_GLBS, api::projects::convert_project_glb)
         .get_async(routes::IFCS, api::projects::serve_ifc)
         .patch_async(routes::PROJECT, api::projects::patch_project)
@@ -135,7 +140,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use api::accounts::Account;
+    use api::accounts::{Account, Role};
     use api::projects::Project;
     use serde::Deserialize;
 
@@ -200,7 +205,7 @@ mod tests {
             username: "creator".to_string(),
             display_name: "Creator".to_string(),
             email: "creator@example.com".to_string(),
-            role: "creator".to_string(),
+            role: Role::Creator,
             bio: "Bio".to_string(),
             avatar_url: Some("https://example.com/avatar.png".to_string()),
             created_at: "2025-01-01T00:00:00Z".to_string(),
@@ -215,7 +220,7 @@ mod tests {
         assert_eq!(parsed.username, account.username);
         assert_eq!(parsed.display_name, account.display_name);
         assert_eq!(parsed.email, account.email);
-        assert_eq!(parsed.role, account.role);
+        assert_eq!(parsed.role, account.role.to_string());
         assert_eq!(parsed.bio, account.bio);
         assert_eq!(parsed.avatar_url, account.avatar_url);
         assert!(parsed.project_ids.is_empty());

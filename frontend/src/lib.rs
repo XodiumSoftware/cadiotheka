@@ -136,6 +136,7 @@ pub mod metadata {
 pub mod three_d_viewer {
     pub mod controls;
     pub mod environment;
+    pub mod primitive_metadata;
     pub mod raycast;
     pub mod renderer;
     pub mod scene;
@@ -143,14 +144,11 @@ pub mod three_d_viewer {
     pub mod upload;
 
     pub use controls::OrbitControls;
+    pub use primitive_metadata::{ObjectHit, PrimitiveMetadata, fetch_metadata};
     pub use raycast::RaycastHit;
     pub use renderer::Renderer;
     pub use state::{ViewDirection, ViewState, ViewerTheme};
 }
-
-pub use three_d_viewer::{
-    OrbitControls, RaycastHit, Renderer, ViewDirection, ViewState, ViewerTheme,
-};
 
 pub mod utils {
     pub mod color;

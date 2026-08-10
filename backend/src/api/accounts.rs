@@ -6,6 +6,25 @@ use crate::utils::{db, forbidden, js_option, not_found, now_utc};
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences FROM accounts a";
 
+/// The set of roles an account can have.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Role {
+    /// Regular content creator.
+    Creator,
+    /// Platform administrator.
+    Admin,
+}
+
+impl std::fmt::Display for Role {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Creator => write!(f, "creator"),
+            Self::Admin => write!(f, "admin"),
+        }
+    }
+}
+
 /// A Cadiotheka account stored in D1.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Account {
@@ -13,7 +32,7 @@ pub struct Account {
     pub username: String,
     pub display_name: String,
     pub email: String,
-    pub role: String,
+    pub role: Role,
     pub bio: String,
     pub avatar_url: Option<String>,
     pub created_at: String,
@@ -31,7 +50,7 @@ pub struct AccountPayload {
     pub username: String,
     pub display_name: String,
     pub email: String,
-    pub role: String,
+    pub role: Role,
     pub bio: String,
     pub avatar_url: Option<String>,
     pub created_at: String,
@@ -216,7 +235,7 @@ pub async fn create_oauth_account(
         username: username.clone(),
         display_name: profile.display_name,
         email: profile.email,
-        role: "creator".to_string(),
+        role: Role::Creator,
         bio: profile.bio,
         avatar_url: profile.avatar_url,
         created_at: created_at.clone(),
@@ -234,7 +253,7 @@ pub async fn create_oauth_account(
             username.into(),
             account.display_name.clone().into(),
             account.email.clone().into(),
-            account.role.clone().into(),
+            account.role.to_string().into(),
             account.bio.clone().into(),
             js_option(account.avatar_url.clone()),
             account.created_at.clone().into(),
@@ -331,7 +350,7 @@ pub async fn unlink_provider(req: Request, ctx: RouteContext<()>) -> Result<Resp
 /// Creates a new account from the request body. Restricted to admins.
 pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
-    if account.role != "admin" {
+    if account.role != Role::Admin {
         return forbidden("Forbidden");
     }
 
@@ -346,7 +365,7 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
             payload.username.into(),
             payload.display_name.into(),
             payload.email.into(),
-            payload.role.into(),
+            payload.role.to_string().into(),
             payload.bio.into(),
             js_option(payload.avatar_url),
             payload.created_at.into(),
@@ -362,7 +381,7 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
 /// Restricted to admins.
 pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
-    if account.role != "admin" {
+    if account.role != Role::Admin {
         return forbidden("Forbidden");
     }
 
@@ -379,7 +398,7 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
                 payload.username.into(),
                 payload.display_name.into(),
                 payload.email.into(),
-                payload.role.into(),
+                payload.role.to_string().into(),
                 payload.bio.into(),
                 js_option(payload.avatar_url),
                 payload.created_at.into(),
@@ -396,7 +415,7 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
 /// Restricted to admins.
 pub async fn delete_account(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = require_account(&req, &ctx).await?;
-    if account.role != "admin" {
+    if account.role != Role::Admin {
         return forbidden("Forbidden");
     }
     let id = ctx.param("id").cloned().unwrap_or_default();
