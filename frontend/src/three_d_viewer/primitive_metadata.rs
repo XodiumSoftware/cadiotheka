@@ -12,8 +12,12 @@ use serde::Deserialize;
 pub struct PrimitiveMetadata {
     /// IFC express id of the product that produced this primitive, if known.
     pub express_id: Option<u32>,
+    /// IFC `GlobalId` (GUID) of the product, when available.
+    pub global_id: Option<String>,
     /// Human-readable name of the IFC product, if present in the GLB node.
     pub name: Option<String>,
+    /// IFC type name (e.g. `IfcWall`, `IfcDoor`) of the product, when available.
+    pub ifc_type: Option<String>,
 }
 
 /// Full sidecar metadata file returned by `/data/projects/:id/glb-metadata`.
@@ -32,8 +36,12 @@ pub struct ObjectHit {
     pub position: [f32; 3],
     /// IFC express id of the clicked object, when metadata is available.
     pub express_id: Option<u32>,
+    /// IFC `GlobalId` of the clicked object, when metadata is available.
+    pub global_id: Option<String>,
     /// Human-readable name of the clicked object, when metadata is available.
     pub name: Option<String>,
+    /// IFC type of the clicked object, when metadata is available.
+    pub ifc_type: Option<String>,
 }
 
 /// Fetches primitive metadata for the given URL.

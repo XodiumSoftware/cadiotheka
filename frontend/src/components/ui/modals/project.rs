@@ -787,11 +787,24 @@ fn ProjectModalContent(
         crate::utils::local_storage_get("project_modal.sidebar_collapsed")
             .is_some_and(|v| v == "true"),
     );
+    let (object_sidebar_collapsed, set_object_sidebar_collapsed) = signal(
+        crate::utils::local_storage_get("project_modal.object_sidebar_collapsed")
+            .is_none_or(|v| v == "true"),
+    );
+    let selected_object: RwSignal<Option<ObjectHit>> = RwSignal::new(None);
 
     Effect::new(move |_| {
         let collapsed = sidebar_collapsed.get();
         crate::utils::local_storage_set(
             "project_modal.sidebar_collapsed",
+            if collapsed { "true" } else { "false" },
+        );
+    });
+
+    Effect::new(move |_| {
+        let collapsed = object_sidebar_collapsed.get();
+        crate::utils::local_storage_set(
+            "project_modal.object_sidebar_collapsed",
             if collapsed { "true" } else { "false" },
         );
     });
@@ -1600,6 +1613,86 @@ fn ProjectModalContent(
                             }
                         }>
                             <div class=move || {
+                                if active_tab.get() != ProjectDetailsTab::Viewer3d || viewer_fullscreen.get() || object_sidebar_collapsed.get() {
+                                    "hidden".to_string()
+                                } else {
+                                    "w-full xl:w-72 flex-shrink-0 space-y-4".to_string()
+                                }
+                            }>
+                                <div class="rounded-none border border-base-content/10 bg-base-200/20 p-4 space-y-3">
+                                    <h3 class="text-sm font-semibold text-base-content">"Object Info"</h3>
+                                    {move || match selected_object.get() {
+                                        None => view! {
+                                            <p class="text-xs text-base-content/50">
+                                                "Click an object in the 3D viewer to see its IFC information."
+                                            </p>
+                                        }.into_any(),
+                                        Some(hit) => {
+                                            let name = hit.name.unwrap_or_else(|| "Unnamed object".to_owned());
+                                            let ifc_type = hit.ifc_type.unwrap_or_else(|| "Unknown type".to_owned());
+                                            view! {
+                                                <div class="space-y-2 text-sm">
+                                                    <div>
+                                                        <span class="text-xs text-base-content/50 uppercase">"Name"</span>
+                                                        <p class="text-base-content font-medium break-words">{name}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-xs text-base-content/50 uppercase">"IFC Type"</span>
+                                                        <p class="text-base-content font-medium break-words">{ifc_type}</p>
+                                                    </div>
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <span class="text-xs text-base-content/50 uppercase">"Express ID"</span>
+                                                            <p class="text-base-content font-medium">
+                                                                {hit.express_id.map_or_else(|| "-".to_owned(), |id| id.to_string())}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <span class="text-xs text-base-content/50 uppercase">"Primitive"</span>
+                                                            <p class="text-base-content font-medium">{hit.primitive_index.to_string()}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-xs text-base-content/50 uppercase">"GlobalId"</span>
+                                                        <p class="text-base-content font-medium break-words font-mono text-xs">
+                                                            {hit.global_id.unwrap_or_else(|| "-".to_owned())}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-xs text-base-content/50 uppercase">"Hit Position"</span>
+                                                        <p class="text-base-content font-medium font-mono text-xs">
+                                                            {format!("X: {:.3}, Y: {:.3}, Z: {:.3}", hit.position[0], hit.position[1], hit.position[2])}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            }.into_any()
+                                        }
+                                    }}
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                class=move || {
+                                    if active_tab.get() != ProjectDetailsTab::Viewer3d || viewer_fullscreen.get() {
+                                        "hidden".to_string()
+                                    } else {
+                                        "hidden xl:flex self-stretch w-6 -mx-3 cursor-pointer group items-center justify-center".to_string()
+                                    }
+                                }
+                                aria-label=move || if object_sidebar_collapsed.get() { "Expand object sidebar" } else { "Collapse object sidebar" }
+                                on:click=move |_| set_object_sidebar_collapsed.update(|v| *v = !*v)
+                            >
+                                <div class="flex flex-col items-center justify-center w-full h-full">
+                                    <div class="w-px flex-1 bg-base-content/10 group-hover:bg-primary transition-colors"></div>
+                                    <div class="py-2 text-base-content/50 group-hover:text-primary transition-colors">
+                                        {move || if object_sidebar_collapsed.get() { ">" } else { "<" }}
+                                    </div>
+                                    <div class="w-px flex-1 bg-base-content/10 group-hover:bg-primary transition-colors"></div>
+                                </div>
+                            </button>
+
+                            <div class=move || {
                                 if viewer_fullscreen.get() {
                                     "min-w-0 h-full flex flex-col".to_string()
                                 } else {
@@ -2363,6 +2456,7 @@ fn ProjectModalContent(
                                                         let edit_mode = edit_mode;
                                                         move || is_editable.get() && edit_mode.get()
                                                     })
+                                                    selected_object_signal=selected_object
                                                     on_object_hit=Callback::new(move |hit: ObjectHit| {
                                                         leptos::web_sys::console::log_1(
                                                             &format!("Clicked object: {hit:?}").into(),

@@ -632,15 +632,18 @@ fn glb_metadata_key_for_project(id: &str) -> String {
 #[derive(Debug, Serialize, Deserialize)]
 struct GltfPrimitiveMetadata {
     express_id: Option<u32>,
+    global_id: Option<String>,
     name: Option<String>,
+    ifc_type: Option<String>,
 }
 
 /// Extracts per-primitive metadata from a binary GLB.
 ///
-/// The exporter stores the IFC express id in each node's `extras.expressId`.
-/// This function walks the default scene in the same depth-first order that
-/// `three-d-asset` uses when flattening nodes to primitives, so the returned
-/// array index matches the primitive index used by the viewer's raycaster.
+/// The exporter stores IFC information in each node's `extras`: `expressId`,
+/// `ifcType`, and optionally `GlobalId`. This function walks the default scene in
+/// the same depth-first order that `three-d-asset` uses when flattening nodes to
+/// primitives, so the returned array index matches the primitive index used by
+/// the viewer's raycaster.
 fn extract_glb_metadata(glb_bytes: &[u8]) -> Vec<GltfPrimitiveMetadata> {
     if glb_bytes.len() <= 12 {
         return Vec::new();
@@ -730,6 +733,16 @@ fn visit_gltf_node(
         .and_then(|e| e.get("expressId"))
         .and_then(serde_json::Value::as_u64)
         .and_then(|n| n.try_into().ok());
+    let ifc_type = node
+        .get("extras")
+        .and_then(|e| e.get("ifcType"))
+        .and_then(serde_json::Value::as_str)
+        .map(String::from);
+    let global_id = node
+        .get("extras")
+        .and_then(|e| e.get("GlobalId"))
+        .and_then(serde_json::Value::as_str)
+        .map(String::from);
 
     if let Some(mesh_index) = node
         .get("mesh")
@@ -745,7 +758,9 @@ fn visit_gltf_node(
         for _ in 0..primitive_count {
             out.push(GltfPrimitiveMetadata {
                 express_id,
+                global_id: global_id.clone(),
                 name: name.clone(),
+                ifc_type: ifc_type.clone(),
             });
         }
     }
@@ -1214,8 +1229,8 @@ mod tests {
                 "scene": 0,
                 "scenes": [{"nodes": [0, 1]}],
                 "nodes": [
-                    {"name": "Wall-1", "mesh": 0, "extras": {"expressId": 123}},
-                    {"name": "Door-1", "mesh": 1, "extras": {"expressId": 456}}
+                    {"name": "Wall-1", "mesh": 0, "extras": {"expressId": 123, "ifcType": "IfcWall", "GlobalId": "ABC"}},
+                    {"name": "Door-1", "mesh": 1, "extras": {"expressId": 456, "ifcType": "IfcDoor"}}
                 ],
                 "meshes": [
                     {"primitives": [{"attributes": {"POSITION": 0}}]},
@@ -1231,11 +1246,16 @@ mod tests {
 
         assert_eq!(metadata.len(), 3);
         assert_eq!(metadata[0].express_id, Some(123));
+        assert_eq!(metadata[0].global_id.as_deref(), Some("ABC"));
         assert_eq!(metadata[0].name.as_deref(), Some("Wall-1"));
+        assert_eq!(metadata[0].ifc_type.as_deref(), Some("IfcWall"));
         assert_eq!(metadata[1].express_id, Some(456));
+        assert_eq!(metadata[1].global_id.as_deref(), None);
         assert_eq!(metadata[1].name.as_deref(), Some("Door-1"));
+        assert_eq!(metadata[1].ifc_type.as_deref(), Some("IfcDoor"));
         assert_eq!(metadata[2].express_id, Some(456));
         assert_eq!(metadata[2].name.as_deref(), Some("Door-1"));
+        assert_eq!(metadata[2].ifc_type.as_deref(), Some("IfcDoor"));
     }
 
     #[test]

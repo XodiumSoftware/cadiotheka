@@ -63,6 +63,7 @@ pub fn IfcViewer(
     #[prop(into, optional)] skybox_color_signal: Option<Signal<Srgba>>,
     #[prop(into)] metadata_url: Signal<Option<String>>,
     #[prop(optional)] on_object_hit: Option<Callback<ObjectHit>>,
+    #[prop(optional)] selected_object_signal: Option<RwSignal<Option<ObjectHit>>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
@@ -82,6 +83,7 @@ pub fn IfcViewer(
         selection_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::new(0, 150, 255, 255)));
     let skybox_color = skybox_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::WHITE));
     let metadata: RwSignal<Option<Vec<PrimitiveMetadata>>> = RwSignal::new(None);
+    let selected_object = selected_object_signal.unwrap_or_else(|| RwSignal::new(None));
 
     let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
@@ -418,7 +420,7 @@ pub fn IfcViewer(
                         if changed {
                             request_render.borrow_mut()();
                         }
-                    } else if key == "escape" {
+                    } else if key == "a" && ev.shift_key() {
                         ev.prevent_default();
                         let changed = {
                             let mut renderer_ref = renderer.borrow_mut();
@@ -433,6 +435,7 @@ pub fn IfcViewer(
                         if changed {
                             request_render.borrow_mut()();
                         }
+                        selected_object.set(None);
                     }
                 }
             });
@@ -593,11 +596,25 @@ pub fn IfcViewer(
             let rect = canvas.get_bounding_client_rect();
             let x = f32_clamp(f64::from(ev.client_x()) - rect.left());
             let y = f32_clamp(rect.height() - (f64::from(ev.client_y()) - rect.top()));
-            let Some(hit) = renderer
+            let hit = renderer
                 .borrow()
                 .as_ref()
-                .and_then(|renderer| renderer.pick(x, y))
-            else {
+                .and_then(|renderer| renderer.pick(x, y));
+            let Some(hit) = hit else {
+                let cleared = {
+                    let mut renderer_ref = renderer.borrow_mut();
+                    if let Some(renderer) = renderer_ref.as_mut() {
+                        let had_selection = !renderer.selected_primitives.is_empty();
+                        renderer.deselect_all();
+                        had_selection
+                    } else {
+                        false
+                    }
+                };
+                selected_object.set(None);
+                if cleared {
+                    request_render.borrow_mut()();
+                }
                 return;
             };
             let changed = {
@@ -618,13 +635,17 @@ pub fn IfcViewer(
                 .get_untracked()
                 .as_ref()
                 .and_then(|list| list.get(hit.primitive_index).cloned());
+            let object_hit = ObjectHit {
+                primitive_index: hit.primitive_index,
+                position: hit.position,
+                express_id: meta.as_ref().and_then(|m| m.express_id),
+                global_id: meta.as_ref().and_then(|m| m.global_id.clone()),
+                name: meta.as_ref().and_then(|m| m.name.clone()),
+                ifc_type: meta.as_ref().and_then(|m| m.ifc_type.clone()),
+            };
+            selected_object.set(Some(object_hit.clone()));
             if let Some(ref callback) = on_object_hit {
-                callback.run(ObjectHit {
-                    primitive_index: hit.primitive_index,
-                    position: hit.position,
-                    express_id: meta.as_ref().and_then(|m| m.express_id),
-                    name: meta.as_ref().and_then(|m| m.name.clone()),
-                });
+                callback.run(object_hit);
             }
             if changed {
                 request_render.borrow_mut()();
@@ -739,7 +760,7 @@ pub fn IfcViewer(
                     >
                         <button
                             type="button"
-                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between"
+                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between gap-4"
                             class:opacity-50=move || all_visible_selected
                             class:cursor-not-allowed=move || all_visible_selected
                             disabled=move || all_visible_selected
@@ -765,11 +786,11 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Select All"</span>
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"A"</kbd>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd flex-shrink-0">"A"</kbd>
                         </button>
                         <button
                             type="button"
-                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between"
+                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between gap-4"
                             class:opacity-50=move || !has_selection
                             class:cursor-not-allowed=move || !has_selection
                             disabled=move || !has_selection
@@ -795,11 +816,11 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Deselect All"</span>
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"Esc"</kbd>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd flex-shrink-0">"Shift + A"</kbd>
                         </button>
                         <button
                             type="button"
-                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between"
+                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between gap-4"
                             class:opacity-50=move || !has_selection && context_menu_primitive.get().is_none()
                             class:cursor-not-allowed=move || !has_selection && context_menu_primitive.get().is_none()
                             disabled=move || !has_selection && context_menu_primitive.get().is_none()
@@ -832,11 +853,11 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Hide"</span>
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"H"</kbd>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd flex-shrink-0">"H"</kbd>
                         </button>
                         <button
                             type="button"
-                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between"
+                            class="w-full text-left px-3 py-1.5 hover:bg-primary/10 focus:bg-primary/10 focus:outline-none flex items-center justify-between gap-4"
                             class:opacity-50=move || !has_hidden
                             class:cursor-not-allowed=move || !has_hidden
                             disabled=move || !has_hidden
@@ -862,7 +883,7 @@ pub fn IfcViewer(
                             }
                         >
                             <span>"Unhide All"</span>
-                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">"Shift+H"</kbd>
+                            <kbd class="px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd flex-shrink-0">"Shift + H"</kbd>
                         </button>
                     </div>
                 }
