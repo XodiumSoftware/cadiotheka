@@ -44,7 +44,10 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     let projects_ctx = ProjectsContext::use_context();
     let metadata = MetadataContext::use_context();
 
-    let (focused_index, set_focused_index) = signal::<Option<usize>>(Some(0));
+    let project_modal = ProjectModalContext::use_context();
+
+    let (focused_index, set_focused_index) = signal::<Option<usize>>(None);
+    let (hovered_index, set_hovered_index) = signal::<Option<usize>>(None);
 
     let filtered = Memo::new(move |_| {
         let query = search.query.get();
@@ -66,6 +69,13 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         });
     });
 
+    Effect::new(move |_| {
+        if !project_modal.open.get() {
+            set_focused_index.set(None);
+            set_hovered_index.set(None);
+        }
+    });
+
     let grid_ref: NodeRef<leptos::html::Div> = NodeRef::new();
 
     let grid_columns = move || -> Option<usize> {
@@ -84,10 +94,6 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     };
 
     let handle_grid_keydown = Callback::new(move |ev: leptos::web_sys::KeyboardEvent| {
-        let Some(current) = focused_index.get() else {
-            return;
-        };
-
         let cols = grid_columns().unwrap_or(1);
         if cols == 0 {
             return;
@@ -99,6 +105,8 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         if item_count == 0 {
             return;
         }
+
+        let current = focused_index.get().unwrap_or(0);
 
         let next = match ev.key().as_str() {
             "ArrowRight" => Some((current + 1) % item_count),
@@ -314,6 +322,11 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                         set_focused_index.set(Some(index));
                                     }
                                 }
+                                on:pointerleave=move |_ev| {
+                                    // Mouse hover highlight is tied to the pointer being over the grid.
+                                    // Keyboard focus remains untouched so arrow-key selection persists.
+                                    set_hovered_index.set(None);
+                                }
                             >
                                 {move || {
                                     if query_active {
@@ -322,15 +335,17 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                 type="button"
                                                 class=move || {
                                                     let base = "group btn-lift flex flex-col items-center justify-center h-full w-full bg-white hover:text-primary border-2 border-base-content/80 p-2 text-left";
-                                                    if focused_index.get() == Some(0) {
+                                                    let selected = hovered_index.get() == Some(0)
+                                                        || (hovered_index.get().is_none() && focused_index.get() == Some(0));
+                                                    if selected {
                                                         format!("{base} ring-2 ring-primary ring-offset-2 ring-offset-base-100")
                                                     } else {
                                                         base.to_string()
                                                     }
                                                 }
-                                                tabindex=move || if focused_index.get() == Some(0) { "0" } else { "-1" }
-                                                on:pointerenter=move |_| set_focused_index.set(Some(0))
+                                                tabindex=move || if focused_index.get().is_none_or(|i| i == 0) { "0" } else { "-1" }
                                                 on:keydown=move |ev| handle_grid_keydown.run(ev)
+                                                on:pointerenter=move |_| set_hovered_index.set(Some(0))
                                                 on:click=move |_| search.set_query.set(String::new())
                                             >
                                                 <CornerFrame style="square" black=true class="h-full w-full flex flex-col items-center justify-center">
@@ -359,9 +374,18 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                         view! {
                                             <ProjectCard
                                                 props=props
-                                                focused=Signal::derive(move || focused_index.get() == Some(index))
+                                                selected=Signal::derive(move || {
+                                                    hovered_index.get() == Some(index)
+                                                        || (hovered_index.get().is_none() && focused_index.get() == Some(index))
+                                                })
+                                                tabbable=Signal::derive(move || {
+                                                    match focused_index.get() {
+                                                        Some(i) => i == index,
+                                                        None => index == card_offset,
+                                                    }
+                                                })
+                                                on_pointer_enter=move |()| set_hovered_index.set(Some(index))
                                                 on_click=move |()| project_modal.open(project_for_modal.clone().into())
-                                                on_focus=move |()| set_focused_index.set(Some(index))
                                                 on_author_click=move |()| {
                                                     let account = accounts_ctx
                                                         .accounts

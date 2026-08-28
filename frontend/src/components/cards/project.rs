@@ -111,8 +111,9 @@ pub fn ProjectCard(
     #[prop(into)] props: ProjectCardProperties,
     #[prop(into)] on_click: Callback<()>,
     #[prop(into)] on_author_click: Callback<()>,
-    #[prop(into)] on_focus: Callback<()>,
-    #[prop(into)] focused: Signal<bool>,
+    #[prop(into)] selected: Signal<bool>,
+    #[prop(into)] tabbable: Signal<bool>,
+    #[prop(into)] on_pointer_enter: Callback<()>,
 ) -> impl IntoView {
     let ProjectCardProperties {
         id,
@@ -208,14 +209,14 @@ pub fn ProjectCard(
         <article
             class=move || {
                 let base = "btn-lift block h-full p-2 cursor-pointer transition-all";
-                if focused.get() {
+                if selected.get() {
                     format!("{base} border-primary btn-lift-selected")
                 } else {
                     base.to_string()
                 }
             }
-            on:pointerenter=move |_| on_focus.run(())
             on:click=move |_| on_click.run(())
+            on:pointerenter=move |_| on_pointer_enter.run(())
             on:keydown=move |ev: leptos::web_sys::KeyboardEvent| {
                 if matches!(ev.key().as_str(), "Enter" | " ") {
                     ev.prevent_default();
@@ -223,7 +224,7 @@ pub fn ProjectCard(
                 }
             }
             role="button"
-            tabindex=move || if focused.get() { "0" } else { "-1" }
+            tabindex=move || if tabbable.get() { "0" } else { "-1" }
             aria-label=aria_label
         >
             <CornerFrame style="square" class="h-full">
