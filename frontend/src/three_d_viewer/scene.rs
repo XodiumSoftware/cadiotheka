@@ -57,9 +57,9 @@ pub fn build_framing_camera(
     canvas: &HtmlCanvasElement,
 ) -> (ThreeDCamera, OrbitControl) {
     let center = [
-        (min[0] + max[0]) * 0.5,
-        (min[1] + max[1]) * 0.5,
-        (min[2] + max[2]) * 0.5,
+        f32::midpoint(min[0], max[0]),
+        f32::midpoint(min[1], max[1]),
+        f32::midpoint(min[2], max[2]),
     ];
     let size = [
         (max[0] - min[0]).abs(),

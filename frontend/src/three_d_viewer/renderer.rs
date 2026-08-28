@@ -240,9 +240,9 @@ impl Renderer {
     pub fn set_focus(&mut self, direction: ViewDirection) {
         let (min, max) = self.scene_bounds;
         let center = vec3(
-            (min[0] + max[0]) * 0.5,
-            (min[1] + max[1]) * 0.5,
-            (min[2] + max[2]) * 0.5,
+            f32::midpoint(min[0], max[0]),
+            f32::midpoint(min[1], max[1]),
+            f32::midpoint(min[2], max[2]),
         );
 
         let size = [
