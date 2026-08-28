@@ -22,6 +22,27 @@ use three_d_asset::Srgba;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::Closure;
 
+/// Default width of the object info panel in pixels.
+const OBJECT_PANEL_DEFAULT_WIDTH: f64 = 256.0;
+
+/// Minimum width of the object info panel in pixels.
+const OBJECT_PANEL_MIN_WIDTH: f64 = 192.0;
+
+/// Maximum width of the object info panel in pixels.
+const OBJECT_PANEL_MAX_WIDTH: f64 = 480.0;
+
+/// Local storage key for the object info panel width.
+const OBJECT_PANEL_WIDTH_KEY: &str = "three_d_viewer.object_panel_width";
+
+/// Reads the saved object info panel width from localStorage.
+fn load_object_panel_width() -> f64 {
+    local_storage_get(OBJECT_PANEL_WIDTH_KEY)
+        .and_then(|v| v.parse::<f64>().ok())
+        .map_or(OBJECT_PANEL_DEFAULT_WIDTH, |w| {
+            w.clamp(OBJECT_PANEL_MIN_WIDTH, OBJECT_PANEL_MAX_WIDTH)
+        })
+}
+
 /// Truncates an `f64` viewport coordinate to `f32`, clamping to the valid range.
 #[allow(clippy::cast_possible_truncation, clippy::cast_lossless)]
 fn f32_clamp(value: f64) -> f32 {
@@ -84,6 +105,8 @@ pub fn IfcViewer(
     let skybox_color = skybox_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::WHITE));
     let metadata: RwSignal<Option<Vec<PrimitiveMetadata>>> = RwSignal::new(None);
     let selected_object = selected_object_signal.unwrap_or_else(|| RwSignal::new(None));
+    let object_panel_width: RwSignal<f64> = RwSignal::new(load_object_panel_width());
+    let object_panel_resizing: RwSignal<bool> = RwSignal::new(false);
 
     let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
@@ -576,12 +599,13 @@ pub fn IfcViewer(
             ev.prevent_default();
         }
     };
+
     let on_click = {
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         let controls = Rc::clone(&controls);
         move |ev: leptos::web_sys::MouseEvent| {
-            if disabled.get() || gizmo_edit_mode.get() {
+            if disabled.get() || gizmo_edit_mode.get() || object_panel_resizing.get() {
                 return;
             }
             {
@@ -652,6 +676,53 @@ pub fn IfcViewer(
             }
         }
     };
+
+    let on_resize_mouse_down = {
+        move |ev: leptos::web_sys::MouseEvent| {
+            ev.prevent_default();
+            object_panel_resizing.set(true);
+        }
+    };
+
+    Effect::new({
+        move |_| {
+            if !object_panel_resizing.get() {
+                return;
+            }
+            let Some(window) = leptos::web_sys::window() else {
+                return;
+            };
+            let move_listener = Closure::wrap(Box::new(move |ev: web_sys::MouseEvent| {
+                let new_width =
+                    f64::from(ev.client_x()).clamp(OBJECT_PANEL_MIN_WIDTH, OBJECT_PANEL_MAX_WIDTH);
+                object_panel_width.set(new_width);
+            }) as Box<dyn FnMut(_)>);
+            let up_listener = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
+                object_panel_resizing.set(false);
+                local_storage_set(
+                    OBJECT_PANEL_WIDTH_KEY,
+                    &format!("{:.0}", object_panel_width.get_untracked()),
+                );
+            }) as Box<dyn FnMut(_)>);
+            let move_function: js_sys::Function = move_listener
+                .as_ref()
+                .unchecked_ref::<js_sys::Function>()
+                .clone();
+            let up_function: js_sys::Function = up_listener
+                .as_ref()
+                .unchecked_ref::<js_sys::Function>()
+                .clone();
+            let _ = window.add_event_listener_with_callback("mousemove", &move_function);
+            let _ = window.add_event_listener_with_callback("mouseup", &up_function);
+            on_cleanup(move || {
+                let _ = window.remove_event_listener_with_callback("mousemove", &move_function);
+                let _ = window.remove_event_listener_with_callback("mouseup", &up_function);
+            });
+            std::mem::forget(move_listener);
+            std::mem::forget(up_listener);
+        }
+    });
+
     let on_mouse_leave = {
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
@@ -977,6 +1048,76 @@ pub fn IfcViewer(
                                 }.into_any()
                             } else {
                                 ().into_any()
+                            }}
+                            {move || {
+                                let Some(hit) = selected_object.get() else {
+                                    return ().into_any();
+                                };
+                                let name = hit.name.unwrap_or_else(|| "Unnamed object".to_owned());
+                                let ifc_type = hit.ifc_type.unwrap_or_else(|| "Unknown type".to_owned());
+                                let width = object_panel_width.get();
+                                view! {
+                                    <div
+                                        class="absolute top-0 left-0 bottom-0 z-30 pointer-events-auto flex"
+                                        style=format!("width: {width}px;")
+                                    >
+                                        <div class="flex-1 min-w-0 bg-base-100/95 backdrop-blur-sm border-r border-base-content/10 shadow-lg flex flex-col">
+                                            <div class="flex items-center justify-between px-3 py-2 border-b border-base-content/10 bg-base-200/50">
+                                                <h3 class="text-sm font-semibold text-base-content truncate">"Object Info"</h3>
+                                                <button
+                                                    type="button"
+                                                    class="text-base-content/50 hover:text-base-content p-1"
+                                                    aria-label="Close object info panel"
+                                                    on:click=move |_| { selected_object.set(None); }
+                                                >
+                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div class="flex-1 overflow-y-auto p-3 space-y-3 text-sm">
+                                                <div>
+                                                    <span class="text-xs text-base-content/50 uppercase">"Name"</span>
+                                                    <p class="text-base-content font-medium break-words">{name}</p>
+                                                </div>
+                                                <div>
+                                                    <span class="text-xs text-base-content/50 uppercase">"IFC Type"</span>
+                                                    <p class="text-base-content font-medium break-words">{ifc_type}</p>
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <span class="text-xs text-base-content/50 uppercase">"Express ID"</span>
+                                                        <p class="text-base-content font-medium">
+                                                            {hit.express_id.map_or_else(|| "-".to_owned(), |id| id.to_string())}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-xs text-base-content/50 uppercase">"Primitive"</span>
+                                                        <p class="text-base-content font-medium">{hit.primitive_index.to_string()}</p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <span class="text-xs text-base-content/50 uppercase">"GlobalId"</span>
+                                                    <p class="text-base-content font-medium break-words font-mono text-xs">
+                                                        {hit.global_id.unwrap_or_else(|| "-".to_owned())}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span class="text-xs text-base-content/50 uppercase">"Hit Position"</span>
+                                                    <p class="text-base-content font-medium font-mono text-xs">
+                                                        {format!("X: {:.3}, Y: {:.3}, Z: {:.3}", hit.position[0], hit.position[1], hit.position[2])}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                            on:mousedown=on_resize_mouse_down
+                                            aria-label="Resize object info panel"
+                                        ></div>
+                                    </div>
+                                }.into_any()
                             }}
                             {move || if gizmo_edit_mode.get() {
                                 view! {
