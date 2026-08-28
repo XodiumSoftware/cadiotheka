@@ -22,6 +22,24 @@ use three_d_asset::Srgba;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::Closure;
 
+/// Default width of the label column in the object info table, as a fraction [0, 1].
+const OBJECT_LABEL_COL_DEFAULT: f64 = 0.33;
+/// Minimum label column width fraction.
+const OBJECT_LABEL_COL_MIN: f64 = 0.2;
+/// Maximum label column width fraction.
+const OBJECT_LABEL_COL_MAX: f64 = 0.7;
+/// Local storage key for the label column width fraction.
+const OBJECT_LABEL_COL_KEY: &str = "three_d_viewer.object_label_col_width";
+
+/// Reads the saved label column width fraction from localStorage.
+fn load_label_col_width() -> f64 {
+    local_storage_get(OBJECT_LABEL_COL_KEY)
+        .and_then(|v| v.parse::<f64>().ok())
+        .map_or(OBJECT_LABEL_COL_DEFAULT, |w| {
+            w.clamp(OBJECT_LABEL_COL_MIN, OBJECT_LABEL_COL_MAX)
+        })
+}
+
 /// Default width of the object info panel in pixels.
 const OBJECT_PANEL_DEFAULT_WIDTH: f64 = 256.0;
 
@@ -87,6 +105,7 @@ pub fn IfcViewer(
     #[prop(optional)] selected_object_signal: Option<RwSignal<Option<ObjectHit>>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
+    let object_panel_ref: NodeRef<leptos::html::Div> = NodeRef::new();
     let state = state_signal.unwrap_or_else(|| RwSignal::new(IfcViewerState::NoModel));
     let reset_view = reset_view_signal.unwrap_or_else(|| RwSignal::new(false));
     let show_axes = show_axes_signal.unwrap_or_else(|| RwSignal::new(true));
@@ -107,6 +126,8 @@ pub fn IfcViewer(
     let selected_object = selected_object_signal.unwrap_or_else(|| RwSignal::new(None));
     let object_panel_width: RwSignal<f64> = RwSignal::new(load_object_panel_width());
     let object_panel_resizing: RwSignal<bool> = RwSignal::new(false);
+    let label_col_width: RwSignal<f64> = RwSignal::new(load_label_col_width());
+    let label_col_resizing: RwSignal<bool> = RwSignal::new(false);
 
     let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
@@ -684,6 +705,14 @@ pub fn IfcViewer(
         }
     };
 
+    let on_label_resize_mouse_down = {
+        move |ev: leptos::web_sys::MouseEvent| {
+            ev.prevent_default();
+            ev.stop_propagation();
+            label_col_resizing.set(true);
+        }
+    };
+
     Effect::new({
         move |_| {
             if !object_panel_resizing.get() {
@@ -702,6 +731,51 @@ pub fn IfcViewer(
                 local_storage_set(
                     OBJECT_PANEL_WIDTH_KEY,
                     &format!("{:.0}", object_panel_width.get_untracked()),
+                );
+            }) as Box<dyn FnMut(_)>);
+            let move_function: js_sys::Function = move_listener
+                .as_ref()
+                .unchecked_ref::<js_sys::Function>()
+                .clone();
+            let up_function: js_sys::Function = up_listener
+                .as_ref()
+                .unchecked_ref::<js_sys::Function>()
+                .clone();
+            let _ = window.add_event_listener_with_callback("mousemove", &move_function);
+            let _ = window.add_event_listener_with_callback("mouseup", &up_function);
+            on_cleanup(move || {
+                let _ = window.remove_event_listener_with_callback("mousemove", &move_function);
+                let _ = window.remove_event_listener_with_callback("mouseup", &up_function);
+            });
+            std::mem::forget(move_listener);
+            std::mem::forget(up_listener);
+        }
+    });
+
+    Effect::new({
+        move |_| {
+            if !label_col_resizing.get() {
+                return;
+            }
+            let Some(window) = leptos::web_sys::window() else {
+                return;
+            };
+            let Some(panel) = object_panel_ref.get() else {
+                return;
+            };
+            let panel_width = f64::from(panel.client_width()).max(1.0);
+            let move_listener = Closure::wrap(Box::new(move |ev: web_sys::MouseEvent| {
+                let panel_rect = panel.get_bounding_client_rect();
+                let relative_x = f64::from(ev.client_x()) - panel_rect.left();
+                let fraction =
+                    (relative_x / panel_width).clamp(OBJECT_LABEL_COL_MIN, OBJECT_LABEL_COL_MAX);
+                label_col_width.set(fraction);
+            }) as Box<dyn FnMut(_)>);
+            let up_listener = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
+                label_col_resizing.set(false);
+                local_storage_set(
+                    OBJECT_LABEL_COL_KEY,
+                    &format!("{:.3}", label_col_width.get_untracked()),
                 );
             }) as Box<dyn FnMut(_)>);
             let move_function: js_sys::Function = move_listener
@@ -1056,12 +1130,17 @@ pub fn IfcViewer(
                                 let name = hit.name.unwrap_or_else(|| "Unnamed object".to_owned());
                                 let ifc_type = hit.ifc_type.unwrap_or_else(|| "Unknown type".to_owned());
                                 let width = object_panel_width.get();
+                                let label_width = label_col_width.get();
+                                let value_width = 1.0 - label_width;
                                 view! {
                                     <div
                                         class="absolute top-0 left-0 bottom-0 z-30 pointer-events-auto flex"
                                         style=format!("width: {width}px;")
                                     >
-                                        <div class="flex-1 min-w-0 bg-base-100/95 backdrop-blur-sm border-r border-base-content/10 shadow-lg flex flex-col">
+                                        <div
+                                            node_ref=object_panel_ref
+                                            class="flex-1 min-w-0 bg-base-100/95 backdrop-blur-sm border-r border-base-content/10 shadow-lg flex flex-col"
+                                        >
                                             <div class="flex items-center justify-between px-3 py-2 border-b border-base-content/10 bg-base-200/50">
                                                 <h3 class="text-sm font-semibold text-base-content truncate">"Object Info"</h3>
                                                 <button
@@ -1076,39 +1155,107 @@ pub fn IfcViewer(
                                                     </svg>
                                                 </button>
                                             </div>
-                                            <div class="flex-1 overflow-y-auto p-3 space-y-3 text-sm">
-                                                <div>
-                                                    <span class="text-xs text-base-content/50 uppercase">"Name"</span>
-                                                    <p class="text-base-content font-medium break-words">{name}</p>
-                                                </div>
-                                                <div>
-                                                    <span class="text-xs text-base-content/50 uppercase">"IFC Type"</span>
-                                                    <p class="text-base-content font-medium break-words">{ifc_type}</p>
-                                                </div>
-                                                <div class="grid grid-cols-2 gap-2">
-                                                    <div>
-                                                        <span class="text-xs text-base-content/50 uppercase">"Express ID"</span>
-                                                        <p class="text-base-content font-medium">
-                                                            {hit.express_id.map_or_else(|| "-".to_owned(), |id| id.to_string())}
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <span class="text-xs text-base-content/50 uppercase">"Primitive"</span>
-                                                        <p class="text-base-content font-medium">{hit.primitive_index.to_string()}</p>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <span class="text-xs text-base-content/50 uppercase">"GlobalId"</span>
-                                                    <p class="text-base-content font-medium break-words font-mono text-xs">
-                                                        {hit.global_id.unwrap_or_else(|| "-".to_owned())}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <span class="text-xs text-base-content/50 uppercase">"Hit Position"</span>
-                                                    <p class="text-base-content font-medium font-mono text-xs">
-                                                        {format!("X: {:.3}, Y: {:.3}, Z: {:.3}", hit.position[0], hit.position[1], hit.position[2])}
-                                                    </p>
-                                                </div>
+                                            <div class="flex-1 overflow-y-auto">
+                                                <table class="w-full text-sm table-fixed">
+                                                    <tbody class="divide-y divide-base-content/10">
+                                                        <tr class="even:bg-base-200/30">
+                                                            <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
+                                                                style=format!("width: {:.2}%", label_width * 100.0)
+                                                            >
+                                                                <span class="truncate">"Name"</span>
+                                                                <div
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    on:mousedown=on_label_resize_mouse_down
+                                                                    aria-label="Resize label column"
+                                                                ></div>
+                                                            </th>
+                                                            <td class="px-3 py-2 text-base-content font-medium break-words"
+                                                                style=format!("width: {:.2}%", value_width * 100.0)
+                                                            >{name}</td>
+                                                        </tr>
+                                                        <tr class="even:bg-base-200/30">
+                                                            <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
+                                                                style=format!("width: {:.2}%", label_width * 100.0)
+                                                            >
+                                                                <span class="truncate">"IFC Type"</span>
+                                                                <div
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    on:mousedown=on_label_resize_mouse_down
+                                                                    aria-label="Resize label column"
+                                                                ></div>
+                                                            </th>
+                                                            <td class="px-3 py-2 text-base-content font-medium break-words"
+                                                                style=format!("width: {:.2}%", value_width * 100.0)
+                                                            >{ifc_type}</td>
+                                                        </tr>
+                                                        <tr class="even:bg-base-200/30">
+                                                            <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
+                                                                style=format!("width: {:.2}%", label_width * 100.0)
+                                                            >
+                                                                <span class="truncate">"Express ID"</span>
+                                                                <div
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    on:mousedown=on_label_resize_mouse_down
+                                                                    aria-label="Resize label column"
+                                                                ></div>
+                                                            </th>
+                                                            <td class="px-3 py-2 text-base-content font-medium"
+                                                                style=format!("width: {:.2}%", value_width * 100.0)
+                                                            >
+                                                                {hit.express_id.map_or_else(|| "-".to_owned(), |id| id.to_string())}
+                                                            </td>
+                                                        </tr>
+                                                        <tr class="even:bg-base-200/30">
+                                                            <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
+                                                                style=format!("width: {:.2}%", label_width * 100.0)
+                                                            >
+                                                                <span class="truncate">"Primitive"</span>
+                                                                <div
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    on:mousedown=on_label_resize_mouse_down
+                                                                    aria-label="Resize label column"
+                                                                ></div>
+                                                            </th>
+                                                            <td class="px-3 py-2 text-base-content font-medium"
+                                                                style=format!("width: {:.2}%", value_width * 100.0)
+                                                            >{hit.primitive_index.to_string()}</td>
+                                                        </tr>
+                                                        <tr class="even:bg-base-200/30">
+                                                            <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
+                                                                style=format!("width: {:.2}%", label_width * 100.0)
+                                                            >
+                                                                <span class="truncate">"GlobalId"</span>
+                                                                <div
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    on:mousedown=on_label_resize_mouse_down
+                                                                    aria-label="Resize label column"
+                                                                ></div>
+                                                            </th>
+                                                            <td class="px-3 py-2 text-base-content font-medium break-words font-mono text-xs"
+                                                                style=format!("width: {:.2}%", value_width * 100.0)
+                                                            >
+                                                                {hit.global_id.unwrap_or_else(|| "-".to_owned())}
+                                                            </td>
+                                                        </tr>
+                                                        <tr class="even:bg-base-200/30">
+                                                            <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
+                                                                style=format!("width: {:.2}%", label_width * 100.0)
+                                                            >
+                                                                <span class="truncate">"Hit Position"</span>
+                                                                <div
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    on:mousedown=on_label_resize_mouse_down
+                                                                    aria-label="Resize label column"
+                                                                ></div>
+                                                            </th>
+                                                            <td class="px-3 py-2 text-base-content font-medium font-mono text-xs"
+                                                                style=format!("width: {:.2}%", value_width * 100.0)
+                                                            >
+                                                                {format!("X: {:.3}, Y: {:.3}, Z: {:.3}", hit.position[0], hit.position[1], hit.position[2])}
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
                                         <div
