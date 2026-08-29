@@ -1173,7 +1173,7 @@ pub fn IfcViewer(
                                                     </svg>
                                                 </button>
                                             </div>
-                                            <div class="flex-1 overflow-y-auto">
+                                            <div class="flex-1 min-h-0 overflow-y-auto">
                                                 <table class="w-full text-sm table-fixed">
                                                     <tbody class="divide-y divide-base-content/10">
                                                         <tr class="even:bg-base-200/30">
