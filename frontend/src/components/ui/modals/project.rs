@@ -47,6 +47,7 @@ const AXES_VISIBLE_KEY: &str = "axes_visible";
 const SHOW_FPS_KEY: &str = "show_fps";
 const FOV_DEGREES_KEY: &str = "fov_degrees";
 const ORTHOGRAPHIC_KEY: &str = "orthographic";
+const WIREFRAME_KEY: &str = "wireframe";
 const OBJECT_HIGHLIGHT_COLOR_KEY: &str = "object_highlight_color";
 const OBJECT_SELECTION_COLOR_KEY: &str = "object_selection_color";
 const SKYBOX_COLOR_KEY: &str = "skybox_color";
@@ -181,6 +182,29 @@ fn preferences_with_orthographic(
     let mut prefs: serde_json::Value =
         serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
     prefs[ORTHOGRAPHIC_KEY] = serde_json::json!(orthographic);
+    serde_json::to_string(&prefs).ok()
+}
+
+/// Loads the saved wireframe rendering setting from account viewer preferences.
+fn load_wireframe_from_preferences(account: Option<&AccountData>) -> bool {
+    let Some(account) = account else {
+        return false;
+    };
+    let prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs
+        .get(WIREFRAME_KEY)
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+}
+
+/// Returns the account's existing viewer preferences with the wireframe rendering
+/// setting updated, preserving any other keys that may exist in the JSON blob.
+fn preferences_with_wireframe(account: Option<&AccountData>, wireframe: bool) -> Option<String> {
+    let account = account?;
+    let mut prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs[WIREFRAME_KEY] = serde_json::json!(wireframe);
     serde_json::to_string(&prefs).ok()
 }
 
@@ -2227,6 +2251,106 @@ fn ProjectModalContent(
                                                     });
                                                 }
                                             });
+                                            let wireframe = RwSignal::new(load_wireframe_from_preferences(
+                                                current_user.account.get_untracked().as_ref(),
+                                            ));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let set_wireframe = wireframe;
+                                                move |_| {
+                                                    let Some(account) = current_user.account.get() else {
+                                                        return;
+                                                    };
+                                                    let new_wireframe =
+                                                        load_wireframe_from_preferences(Some(&account));
+                                                    if set_wireframe.get_untracked() != new_wireframe {
+                                                        set_wireframe.set(new_wireframe);
+                                                    }
+                                                }
+                                            });
+
+                                            let initial_wireframe = wireframe.get_untracked();
+                                            let wireframe_save_generation = Rc::new(std::cell::Cell::new(0u64));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let profile_modal = profile_modal;
+                                                let wireframe_save_generation = Rc::clone(&wireframe_save_generation);
+                                                move |_| {
+                                                    let wireframe_value = wireframe.get();
+                                                    if wireframe_value == initial_wireframe {
+                                                        return;
+                                                    }
+                                                    let Some(account) =
+                                                        current_user.account.get_untracked()
+                                                    else {
+                                                        return;
+                                                    };
+                                                    let Some(new_preferences) =
+                                                        preferences_with_wireframe(
+                                                            Some(&account),
+                                                            wireframe_value,
+                                                        )
+                                                    else {
+                                                        return;
+                                                    };
+                                                    if new_preferences == account.viewer_preferences {
+                                                        return;
+                                                    }
+
+                                                    let expected = wireframe_save_generation
+                                                        .get()
+                                                        .wrapping_add(1);
+                                                    wireframe_save_generation.set(expected);
+
+                                                    let set_current_user = current_user.set_account;
+                                                    let set_profile_account = profile_modal.set_account;
+                                                    let wireframe_save_generation = Rc::clone(
+                                                        &wireframe_save_generation);
+                                                    leptos::task::spawn_local(async move {
+                                                        gloo_timers::future::TimeoutFuture::new(300)
+                                                            .await;
+                                                        if wireframe_save_generation.get() != expected {
+                                                            return;
+                                                        }
+
+                                                        match crate::contexts::current_user::update_viewer_preferences(
+                                                            new_preferences,
+                                                        )
+                                                        .await
+                                                        {
+                                                            Ok(saved) => {
+                                                                set_current_user.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                                set_profile_account.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                            }
+                                                            Err(err) => {
+                                                                leptos::web_sys::console::error_1(
+                                                                    &format!(
+                                                                        "Failed to save viewer preferences: {}",
+                                                                        err.message()
+                                                                    )
+                                                                    .into(),
+                                                                );
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            });
                                             let gizmo_position = RwSignal::new(load_gizmo_position_from_preferences(
                                                 current_user.account.get_untracked().as_ref(),
                                             ));
@@ -2701,6 +2825,16 @@ fn ProjectModalContent(
                                                         <Icon::Cube />
                                                     </ToolbarButton>
                                                     <ToolbarButton
+                                                        label="Toggle wireframe"
+                                                        tooltip_position=TooltipPosition::Left
+                                                        active=Signal::derive(move || wireframe.get())
+                                                        on_click=Callback::new(move |()| {
+                                                            wireframe.update(|v| *v = !*v);
+                                                        })
+                                                    >
+                                                        <Icon::Wireframe />
+                                                    </ToolbarButton>
+                                                    <ToolbarButton
                                                         label="Viewer settings"
                                                         tooltip_position=TooltipPosition::Left
                                                         on_click=Callback::new(move |()| {
@@ -2761,6 +2895,7 @@ fn ProjectModalContent(
                                                     fps_signal=fps_value
                                                     fov_signal=Signal::derive(move || fov_degrees.get().to_radians())
                                                     orthographic_signal=orthographic
+                                                    wireframe_signal=wireframe
                                                     disabled=Signal::derive({
                                                         let is_editable = is_editable;
                                                         let edit_mode = edit_mode;

@@ -104,6 +104,7 @@ pub fn IfcViewer(
     #[prop(optional)] fps_signal: Option<RwSignal<u32>>,
     #[prop(into, optional)] fov_signal: Option<Signal<f32>>,
     #[prop(optional)] orthographic_signal: Option<RwSignal<bool>>,
+    #[prop(optional)] wireframe_signal: Option<RwSignal<bool>>,
     #[prop(into)] metadata_url: Signal<Option<String>>,
     #[prop(optional)] on_object_hit: Option<Callback<ObjectHit>>,
     #[prop(optional)] selected_object_signal: Option<RwSignal<Option<ObjectHit>>>,
@@ -131,6 +132,7 @@ pub fn IfcViewer(
         Signal::derive(|| crate::three_d_viewer::renderer::Renderer::DEFAULT_FOV_Y)
     });
     let orthographic = orthographic_signal.unwrap_or_else(|| RwSignal::new(false));
+    let wireframe = wireframe_signal.unwrap_or_else(|| RwSignal::new(false));
     let metadata: RwSignal<Option<Vec<PrimitiveMetadata>>> = RwSignal::new(None);
     let selected_object = selected_object_signal.unwrap_or_else(|| RwSignal::new(None));
     let object_panel_width: RwSignal<f64> = RwSignal::new(load_object_panel_width());
@@ -459,6 +461,21 @@ pub fn IfcViewer(
                 let mut renderer_ref = renderer.borrow_mut();
                 if let Some(renderer) = renderer_ref.as_mut() {
                     renderer.set_orthographic(ortho);
+                }
+            }
+            request_render.borrow_mut()();
+        }
+    });
+
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            let wire = wireframe.get();
+            {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.set_wireframe(wire);
                 }
             }
             request_render.borrow_mut()();

@@ -5,6 +5,7 @@
 use crate::three_d_viewer::environment::build_skybox;
 use crate::three_d_viewer::scene::{build_axes, build_framing_camera, canvas_size};
 use crate::three_d_viewer::state::{ViewDirection, ViewState, ViewerTheme};
+use crate::three_d_viewer::upload::upload_primitive;
 use leptos::web_sys::HtmlCanvasElement;
 use leptos::web_sys::WebGl2RenderingContext;
 use std::cell::RefCell;
@@ -23,6 +24,7 @@ use three_d::renderer::DirectionalLight;
 use three_d::renderer::Gm;
 use three_d::renderer::Object;
 use three_d::renderer::Skybox;
+use three_d::renderer::Wireframe;
 use three_d::renderer::control::{Event, OrbitControl};
 use three_d_asset::Srgba;
 use three_d_asset::vec3;
@@ -57,6 +59,10 @@ pub struct Renderer {
     pub(crate) theme: ViewerTheme,
     pub(crate) fov_y: f32,
     pub(crate) orthographic: bool,
+    pub(crate) wireframe: bool,
+    pub(crate) source_model: Option<Model>,
+    pub(crate) wireframe_color: Srgba,
+    pub(crate) wireframe_width: f32,
 }
 
 impl Renderer {
@@ -128,6 +134,10 @@ impl Renderer {
                 theme: ViewerTheme::default(),
                 fov_y: Self::DEFAULT_FOV_Y,
                 orthographic: false,
+                wireframe: false,
+                source_model: None,
+                wireframe_color: Srgba::new(0, 0, 0, 255),
+                wireframe_width: 1.0,
             })
         }
     }
@@ -139,8 +149,6 @@ impl Renderer {
     #[cfg(target_arch = "wasm32")]
     pub fn load_model(&mut self, glb_bytes: &[u8]) -> bool {
         use crate::three_d_viewer::scene::scene_bounds_from_model;
-        use crate::three_d_viewer::upload::upload_primitive;
-
         let mut raw_assets = three_d_asset::io::RawAssets::new();
         raw_assets.insert("model.glb", glb_bytes.to_vec());
         let scene: Scene = match raw_assets.deserialize("model.glb") {
@@ -168,16 +176,8 @@ impl Renderer {
         self.selected_primitives.clear();
         self.selected_outlines.clear();
         self.hovered_primitive = None;
-        for primitive in &model.geometries {
-            upload_primitive(
-                &self.context,
-                primitive,
-                &model.materials,
-                &mut self.models,
-                &mut self.total_vertices,
-                &mut self.total_triangles,
-            );
-        }
+        self.source_model = Some(model.clone());
+        self.rebuild_models();
 
         self.rebuild_axes(self.show_axes);
         true
@@ -495,6 +495,99 @@ impl Renderer {
     /// Returns whether the camera currently uses an orthographic projection.
     pub fn orthographic(&self) -> bool {
         self.orthographic
+    }
+
+    /// Rebuilds the renderable objects from the stored source model.
+    ///
+    /// Uses either shaded PBR materials or screen-space wireframes depending on
+    /// the current `wireframe` flag.
+    pub fn rebuild_models(&mut self) {
+        let model = self.source_model.clone();
+        let Some(model) = model else {
+            return;
+        };
+        self.models.clear();
+        self.total_vertices = 0;
+        self.total_triangles = 0;
+        if self.wireframe {
+            let wireframes = Wireframe::new_from_cpu_model(
+                &self.context,
+                &model,
+                self.wireframe_width,
+                self.wireframe_color,
+            );
+            for wireframe in wireframes {
+                self.models.push(Box::new(wireframe));
+            }
+            self.count_geometry(&model);
+        } else {
+            for primitive in &model.geometries {
+                upload_primitive(
+                    &self.context,
+                    primitive,
+                    &model.materials,
+                    &mut self.models,
+                    &mut self.total_vertices,
+                    &mut self.total_triangles,
+                );
+            }
+        }
+        self.hidden_primitives.clear();
+        self.selected_primitives.clear();
+        self.selected_outlines.clear();
+        self.outline = None;
+        self.hovered_primitive = None;
+    }
+
+    fn count_geometry(&mut self, model: &Model) {
+        for primitive in &model.geometries {
+            if let three_d_asset::Geometry::Triangles(tri_mesh) = &primitive.geometry {
+                let position_count = tri_mesh.positions.len();
+                let index_count = tri_mesh.indices.len().unwrap_or(0);
+                self.total_vertices += position_count;
+                self.total_triangles += if index_count == 0 {
+                    position_count / 3
+                } else {
+                    index_count / 3
+                };
+            }
+        }
+    }
+
+    /// Sets whether to render the model as a wireframe and rebuilds the objects.
+    pub fn set_wireframe(&mut self, wireframe: bool) {
+        if self.wireframe == wireframe {
+            return;
+        }
+        self.wireframe = wireframe;
+        self.rebuild_models();
+    }
+
+    /// Returns whether the model is currently rendered as a wireframe.
+    pub fn wireframe(&self) -> bool {
+        self.wireframe
+    }
+
+    /// Sets the color used for wireframe lines.
+    pub fn set_wireframe_color(&mut self, color: Srgba) {
+        if self.wireframe_color == color {
+            return;
+        }
+        self.wireframe_color = color;
+        if self.wireframe {
+            self.rebuild_models();
+        }
+    }
+
+    /// Sets the width of wireframe lines.
+    pub fn set_wireframe_width(&mut self, width: f32) {
+        if (self.wireframe_width - width).abs() < f32::EPSILON {
+            return;
+        }
+        self.wireframe_width = width;
+        if self.wireframe {
+            self.rebuild_models();
+        }
     }
 
     fn rebuild_camera(&mut self) {

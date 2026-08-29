@@ -92,6 +92,14 @@ pub mod Icon {
     );
 
     icon!(
+        Wireframe,
+        ICON_WIREFRAME,
+        r#"
+        <path d="M216,48H40a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V56A8,8,0,0,0,216,48Zm-8,144H48V64H208ZM88,160V96h80v64Z"/>
+    "#
+    );
+
+    icon!(
         Bold,
         ICON_BOLD,
         r#"
