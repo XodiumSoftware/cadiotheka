@@ -128,6 +128,9 @@ pub fn IfcViewer(
     let object_panel_resizing: RwSignal<bool> = RwSignal::new(false);
     let label_col_width: RwSignal<f64> = RwSignal::new(load_label_col_width());
     let label_col_resizing: RwSignal<bool> = RwSignal::new(false);
+    let fps: RwSignal<u32> = RwSignal::new(0);
+    let fps_frame_times: Rc<RefCell<Vec<f64>>> = Rc::new(RefCell::new(Vec::new()));
+    let fps_last_update: Rc<RefCell<f64>> = Rc::new(RefCell::new(0.0));
 
     let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
@@ -198,12 +201,52 @@ pub fn IfcViewer(
                 let animation_handle = Rc::clone(&animation_handle);
                 let schedule_save = schedule_save.clone();
                 let disabled = disabled;
+                let fps = fps;
+                let fps_frame_times = Rc::clone(&fps_frame_times);
+                let fps_last_update = Rc::clone(&fps_last_update);
                 Closure::<dyn FnMut()>::new(move || {
                     *pending_frame.borrow_mut() = false;
                     *animation_handle.borrow_mut() = None;
                     if *dirty.borrow() && !disabled.get() {
+                        let start = leptos::web_sys::window()
+                            .and_then(|w| w.performance())
+                            .map_or(0.0, |p| p.now());
                         if let Some(renderer) = renderer.borrow_mut().as_mut() {
                             renderer.render();
+                        }
+                        let end = leptos::web_sys::window()
+                            .and_then(|w| w.performance())
+                            .map_or(0.0, |p| p.now());
+                        let duration = (end - start).max(0.0);
+                        {
+                            let mut times = fps_frame_times.borrow_mut();
+                            times.push(duration);
+                            if times.len() > 60 {
+                                times.remove(0);
+                            }
+                        }
+                        if end - *fps_last_update.borrow() >= 500.0 {
+                            let avg = {
+                                let times = fps_frame_times.borrow();
+                                if times.is_empty() {
+                                    0.0
+                                } else {
+                                    #[allow(clippy::cast_precision_loss)]
+                                    let count = times.len() as f64;
+                                    times.iter().sum::<f64>() / count
+                                }
+                            };
+                            let new_fps = if avg > 0.0 {
+                                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                                {
+                                    (1000.0 / avg).round() as u32
+                                }
+                            } else {
+                                0
+                            };
+                            fps.set(new_fps);
+                            *fps_last_update.borrow_mut() = end;
+                            fps_frame_times.borrow_mut().clear();
                         }
                         *dirty.borrow_mut() = false;
                         let schedule_save = schedule_save.clone();
@@ -1056,6 +1099,11 @@ pub fn IfcViewer(
 
     view! {
         <div class="relative w-full h-full overflow-hidden border border-base-content/10">
+            <div class="absolute top-2 left-2 z-30 pointer-events-none">
+                <span class="text-xs font-mono text-base-content/70 bg-base-100/80 backdrop-blur-sm px-2 py-1 rounded border border-base-content/10">
+                    {move || format!("{} FPS", fps.get())}
+                </span>
+            </div>
             <canvas
                 node_ref=canvas_ref
                 class=move || {
