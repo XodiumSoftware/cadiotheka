@@ -705,11 +705,29 @@ pub fn IfcViewer(
         }
     };
 
+    let on_resize_double_click = {
+        move |ev: leptos::web_sys::MouseEvent| {
+            ev.prevent_default();
+            ev.stop_propagation();
+            object_panel_width.set(OBJECT_PANEL_DEFAULT_WIDTH);
+            local_storage_remove(OBJECT_PANEL_WIDTH_KEY);
+        }
+    };
+
     let on_label_resize_mouse_down = {
         move |ev: leptos::web_sys::MouseEvent| {
             ev.prevent_default();
             ev.stop_propagation();
             label_col_resizing.set(true);
+        }
+    };
+
+    let on_label_resize_double_click = {
+        move |ev: leptos::web_sys::MouseEvent| {
+            ev.prevent_default();
+            ev.stop_propagation();
+            label_col_width.set(OBJECT_LABEL_COL_DEFAULT);
+            local_storage_remove(OBJECT_LABEL_COL_KEY);
         }
     };
 
@@ -1166,6 +1184,7 @@ pub fn IfcViewer(
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
+                                                                    on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
                                                                 ></div>
                                                             </th>
@@ -1181,6 +1200,7 @@ pub fn IfcViewer(
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
+                                                                    on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
                                                                 ></div>
                                                             </th>
@@ -1196,6 +1216,7 @@ pub fn IfcViewer(
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
+                                                                    on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
                                                                 ></div>
                                                             </th>
@@ -1213,6 +1234,7 @@ pub fn IfcViewer(
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
+                                                                    on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
                                                                 ></div>
                                                             </th>
@@ -1228,6 +1250,7 @@ pub fn IfcViewer(
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
+                                                                    on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
                                                                 ></div>
                                                             </th>
@@ -1245,6 +1268,7 @@ pub fn IfcViewer(
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
+                                                                    on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
                                                                 ></div>
                                                             </th>
@@ -1261,6 +1285,7 @@ pub fn IfcViewer(
                                         <div
                                             class="w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
                                             on:mousedown=on_resize_mouse_down
+                                            on:dblclick=on_resize_double_click
                                             aria-label="Resize object info panel"
                                         ></div>
                                     </div>
