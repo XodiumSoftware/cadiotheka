@@ -1182,7 +1182,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="break-words">"Name"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
@@ -1198,7 +1198,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="break-words">"IFC Type"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
@@ -1214,7 +1214,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="break-words">"Express ID"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
@@ -1232,7 +1232,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="break-words">"Primitive"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
@@ -1248,7 +1248,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="break-words">"GlobalId"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
@@ -1266,7 +1266,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="break-words">"Hit Position"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     on:dblclick=on_label_resize_double_click
                                                                     aria-label="Resize label column"
