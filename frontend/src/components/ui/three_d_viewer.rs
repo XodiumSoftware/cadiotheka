@@ -1162,7 +1162,7 @@ pub fn IfcViewer(
                                                             <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
                                                                 style=format!("width: {:.2}%", label_width * 100.0)
                                                             >
-                                                                <span class="truncate">"Name"</span>
+                                                                <span class="break-words">"Name"</span>
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
@@ -1177,7 +1177,7 @@ pub fn IfcViewer(
                                                             <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
                                                                 style=format!("width: {:.2}%", label_width * 100.0)
                                                             >
-                                                                <span class="truncate">"IFC Type"</span>
+                                                                <span class="break-words">"IFC Type"</span>
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
@@ -1192,7 +1192,7 @@ pub fn IfcViewer(
                                                             <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
                                                                 style=format!("width: {:.2}%", label_width * 100.0)
                                                             >
-                                                                <span class="truncate">"Express ID"</span>
+                                                                <span class="break-words">"Express ID"</span>
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
@@ -1209,7 +1209,7 @@ pub fn IfcViewer(
                                                             <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
                                                                 style=format!("width: {:.2}%", label_width * 100.0)
                                                             >
-                                                                <span class="truncate">"Primitive"</span>
+                                                                <span class="break-words">"Primitive"</span>
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
@@ -1224,7 +1224,7 @@ pub fn IfcViewer(
                                                             <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
                                                                 style=format!("width: {:.2}%", label_width * 100.0)
                                                             >
-                                                                <span class="truncate">"GlobalId"</span>
+                                                                <span class="break-words">"GlobalId"</span>
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
@@ -1241,7 +1241,7 @@ pub fn IfcViewer(
                                                             <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
                                                                 style=format!("width: {:.2}%", label_width * 100.0)
                                                             >
-                                                                <span class="truncate">"Hit Position"</span>
+                                                                <span class="break-words">"Hit Position"</span>
                                                                 <div
                                                                     class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
