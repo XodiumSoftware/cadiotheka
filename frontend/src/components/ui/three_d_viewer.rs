@@ -1163,7 +1163,7 @@ pub fn IfcViewer(
                                                 <h3 class="text-sm font-semibold text-base-content truncate">"Object Info"</h3>
                                                 <button
                                                     type="button"
-                                                    class="text-base-content/50 hover:text-base-content p-1"
+                                                    class="text-base-content/50 hover:text-base-content p-1 cursor-pointer"
                                                     aria-label="Close object info panel"
                                                     on:click=move |_| { selected_object.set(None); }
                                                 >
