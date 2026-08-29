@@ -100,6 +100,7 @@ pub fn IfcViewer(
     #[prop(into, optional)] highlight_color_signal: Option<Signal<Srgba>>,
     #[prop(into, optional)] selection_color_signal: Option<Signal<Srgba>>,
     #[prop(into, optional)] skybox_color_signal: Option<Signal<Srgba>>,
+    #[prop(optional)] show_fps_signal: Option<RwSignal<bool>>,
     #[prop(into)] metadata_url: Signal<Option<String>>,
     #[prop(optional)] on_object_hit: Option<Callback<ObjectHit>>,
     #[prop(optional)] selected_object_signal: Option<RwSignal<Option<ObjectHit>>>,
@@ -122,6 +123,7 @@ pub fn IfcViewer(
     let selection_color =
         selection_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::new(0, 150, 255, 255)));
     let skybox_color = skybox_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::WHITE));
+    let show_fps = show_fps_signal.unwrap_or_else(|| RwSignal::new(false));
     let metadata: RwSignal<Option<Vec<PrimitiveMetadata>>> = RwSignal::new(None);
     let selected_object = selected_object_signal.unwrap_or_else(|| RwSignal::new(None));
     let object_panel_width: RwSignal<f64> = RwSignal::new(load_object_panel_width());
@@ -1098,32 +1100,39 @@ pub fn IfcViewer(
     });
 
     view! {
-        <div class="relative w-full h-full overflow-hidden border border-base-content/10">
-            <div class="absolute top-2 left-2 z-30 pointer-events-none">
-                <span class="text-xs font-mono text-base-content/70 bg-base-100/80 backdrop-blur-sm px-2 py-1 rounded border border-base-content/10">
-                    {move || format!("{} FPS", fps.get())}
-                </span>
+        <div class="relative w-full h-full overflow-hidden border border-base-content/10 flex flex-col">
+            <div class="flex items-center justify-between px-3 py-1.5 border-b border-base-content/10 bg-base-100/95 backdrop-blur-sm z-30">
+                {move || if show_fps.get() {
+                    view! {
+                        <span class="text-xs font-mono text-base-content/70">
+                            {format!("{} FPS", fps.get())}
+                        </span>
+                    }.into_any()
+                } else {
+                    ().into_any()
+                }}
             </div>
-            <canvas
-                node_ref=canvas_ref
-                class=move || {
-                    if disabled.get() {
-                        "w-full h-full block cursor-grab active:cursor-grabbing hidden".to_string()
-                    } else if gizmo_edit_mode.get() {
-                        "w-full h-full block cursor-default".to_string()
-                    } else {
-                        "w-full h-full block cursor-grab active:cursor-grabbing".to_string()
+            <div class="relative flex-1 min-h-0 overflow-hidden">
+                <canvas
+                    node_ref=canvas_ref
+                    class=move || {
+                        if disabled.get() {
+                            "w-full h-full block cursor-grab active:cursor-grabbing hidden".to_string()
+                        } else if gizmo_edit_mode.get() {
+                            "w-full h-full block cursor-default".to_string()
+                        } else {
+                            "w-full h-full block cursor-grab active:cursor-grabbing".to_string()
+                        }
                     }
-                }
-                aria-label="IFC 3D viewer"
-                on:mousedown=on_mouse_down
-                on:mousemove=on_mouse_move
-                on:mouseup=on_mouse_up
-                on:mouseleave=on_mouse_leave
-                on:wheel=on_wheel
-                on:contextmenu=on_context_menu
-                on:click=on_click
-            />
+                    aria-label="IFC 3D viewer"
+                    on:mousedown=on_mouse_down
+                    on:mousemove=on_mouse_move
+                    on:mouseup=on_mouse_up
+                    on:mouseleave=on_mouse_leave
+                    on:wheel=on_wheel
+                    on:contextmenu=on_context_menu
+                    on:click=on_click
+                />
             {move || context_menu_view()}
             {move || if disabled.get() {
                 view! {
@@ -1354,6 +1363,7 @@ pub fn IfcViewer(
                     }.into_any(),
                 }
             }}
+            </div>
         </div>
     }
 }

@@ -44,6 +44,7 @@ pub enum ProjectDetailsTab {
 const GIZMO_POSITION_KEY: &str = "gizmo_position";
 const GIZMO_VISIBLE_KEY: &str = "gizmo_visible";
 const AXES_VISIBLE_KEY: &str = "axes_visible";
+const SHOW_FPS_KEY: &str = "show_fps";
 const OBJECT_HIGHLIGHT_COLOR_KEY: &str = "object_highlight_color";
 const OBJECT_SELECTION_COLOR_KEY: &str = "object_selection_color";
 const SKYBOX_COLOR_KEY: &str = "skybox_color";
@@ -97,6 +98,29 @@ fn preferences_with_axes_visible(account: Option<&AccountData>, visible: bool) -
     let mut prefs: serde_json::Value =
         serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
     prefs[AXES_VISIBLE_KEY] = serde_json::json!(visible);
+    serde_json::to_string(&prefs).ok()
+}
+
+/// Loads the saved FPS counter visibility from account viewer preferences.
+fn load_show_fps_from_preferences(account: Option<&AccountData>) -> bool {
+    let Some(account) = account else {
+        return false;
+    };
+    let prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs
+        .get(SHOW_FPS_KEY)
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+}
+
+/// Returns the account's existing viewer preferences with the FPS counter
+/// visibility updated, preserving any other keys that may exist in the JSON blob.
+fn preferences_with_show_fps(account: Option<&AccountData>, visible: bool) -> Option<String> {
+    let account = account?;
+    let mut prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs[SHOW_FPS_KEY] = serde_json::json!(visible);
     serde_json::to_string(&prefs).ok()
 }
 
@@ -1844,6 +1868,106 @@ fn ProjectModalContent(
                                                 }
                                             });
                                             let gizmo_edit_mode = RwSignal::new(false);
+                                            let show_fps = RwSignal::new(load_show_fps_from_preferences(
+                                                current_user.account.get_untracked().as_ref(),
+                                            ));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let set_show_fps = show_fps;
+                                                move |_| {
+                                                    let Some(account) = current_user.account.get() else {
+                                                        return;
+                                                    };
+                                                    let new_visible =
+                                                        load_show_fps_from_preferences(Some(&account));
+                                                    if set_show_fps.get_untracked() != new_visible {
+                                                        set_show_fps.set(new_visible);
+                                                    }
+                                                }
+                                            });
+
+                                            let initial_show_fps = show_fps.get_untracked();
+                                            let fps_save_generation = Rc::new(std::cell::Cell::new(0u64));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let profile_modal = profile_modal;
+                                                let fps_save_generation = Rc::clone(&fps_save_generation);
+                                                move |_| {
+                                                    let visible = show_fps.get();
+                                                    if visible == initial_show_fps {
+                                                        return;
+                                                    }
+                                                    let Some(account) =
+                                                        current_user.account.get_untracked()
+                                                    else {
+                                                        return;
+                                                    };
+                                                    let Some(new_preferences) =
+                                                        preferences_with_show_fps(
+                                                            Some(&account),
+                                                            visible,
+                                                        )
+                                                    else {
+                                                        return;
+                                                    };
+                                                    if new_preferences == account.viewer_preferences {
+                                                        return;
+                                                    }
+
+                                                    let expected = fps_save_generation
+                                                        .get()
+                                                        .wrapping_add(1);
+                                                    fps_save_generation.set(expected);
+
+                                                    let set_current_user = current_user.set_account;
+                                                    let set_profile_account = profile_modal.set_account;
+                                                    let fps_save_generation = Rc::clone(
+                                                        &fps_save_generation);
+                                                    leptos::task::spawn_local(async move {
+                                                        gloo_timers::future::TimeoutFuture::new(300)
+                                                            .await;
+                                                        if fps_save_generation.get() != expected {
+                                                            return;
+                                                        }
+
+                                                        match crate::contexts::current_user::update_viewer_preferences(
+                                                            new_preferences,
+                                                        )
+                                                        .await
+                                                        {
+                                                            Ok(saved) => {
+                                                                set_current_user.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                                set_profile_account.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                            }
+                                                            Err(err) => {
+                                                                leptos::web_sys::console::error_1(
+                                                                    &format!(
+                                                                        "Failed to save viewer preferences: {}",
+                                                                        err.message()
+                                                                    )
+                                                                    .into(),
+                                                                );
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            });
                                             let gizmo_position = RwSignal::new(load_gizmo_position_from_preferences(
                                                 current_user.account.get_untracked().as_ref(),
                                             ));
@@ -2359,6 +2483,7 @@ fn ProjectModalContent(
                                                     highlight_color_signal=Signal::derive(move || highlight_color.get())
                                                     selection_color_signal=Signal::derive(move || selection_color.get())
                                                     skybox_color_signal=Signal::derive(move || skybox_color.get())
+                                                    show_fps_signal=show_fps
                                                     disabled=Signal::derive({
                                                         let is_editable = is_editable;
                                                         let edit_mode = edit_mode;
@@ -2379,6 +2504,7 @@ fn ProjectModalContent(
                                         highlight_color=highlight_color
                                         selection_color=selection_color
                                         skybox_color=skybox_color
+                                        show_fps=show_fps
                                     />
                                 }.into_any()
                                         }

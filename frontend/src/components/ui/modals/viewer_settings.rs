@@ -18,6 +18,7 @@ pub fn ViewerSettingsModal(
     #[prop(into)] highlight_color: RwSignal<Srgba>,
     #[prop(into)] selection_color: RwSignal<Srgba>,
     #[prop(into)] skybox_color: RwSignal<Srgba>,
+    #[prop(into)] show_fps: RwSignal<bool>,
 ) -> impl IntoView {
     let on_color_input = move |ev: leptos::web_sys::Event| {
         let value = ev
@@ -52,6 +53,14 @@ pub fn ViewerSettingsModal(
         }
     };
 
+    let on_fps_toggle = move |ev: leptos::web_sys::Event| {
+        let checked = ev
+            .target()
+            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+            .is_some_and(|input| input.checked());
+        show_fps.set(checked);
+    };
+
     view! {
         <BaseModal open=open on_close=move |()| on_close.run(())>
             <div class="space-y-6 flex flex-col min-h-0">
@@ -66,6 +75,19 @@ pub fn ViewerSettingsModal(
                 </div>
 
                 <div class="rounded-none border border-base-content/10 bg-base-200/30 p-3 space-y-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label class="text-sm font-medium text-base-content" for="show-fps">
+                            "Show FPS counter"
+                        </label>
+                        <input
+                            id="show-fps"
+                            type="checkbox"
+                            checked=move || show_fps.get()
+                            on:change=on_fps_toggle
+                            class="toggle toggle-primary toggle-sm"
+                        />
+                    </div>
+
                     <div class="flex items-center justify-between gap-3">
                         <label class="text-sm font-medium text-base-content" for="highlight-color">
                             "Object highlight color"
