@@ -26,10 +26,11 @@ use three_d::renderer::Object;
 use three_d::renderer::Skybox;
 use three_d::renderer::Wireframe;
 use three_d::renderer::control::{Event, OrbitControl};
+use three_d_asset::Model;
+#[cfg(target_arch = "wasm32")]
+use three_d_asset::Scene;
 use three_d_asset::Srgba;
 use three_d_asset::vec3;
-#[cfg(target_arch = "wasm32")]
-use three_d_asset::{Model, Scene};
 use wasm_bindgen::JsCast;
 
 /// `three-d` renderer for a parsed GLB document.
