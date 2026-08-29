@@ -55,6 +55,7 @@ pub fn build_framing_camera(
     min: [f32; 3],
     max: [f32; 3],
     canvas: &HtmlCanvasElement,
+    fov_y: f32,
 ) -> (ThreeDCamera, OrbitControl) {
     let center = [
         f32::midpoint(min[0], max[0]),
@@ -71,7 +72,6 @@ pub fn build_framing_camera(
     // Fit the scene's largest extent into the viewport using the smaller of the
     // horizontal and vertical fields of view, with a small padding margin so the
     // model does not touch the edges of the canvas.
-    let fov_y = std::f32::consts::PI * 0.25;
     let (width, height) = canvas_size(canvas);
     let aspect = if height == 0 {
         1.0

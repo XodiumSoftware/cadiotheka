@@ -55,6 +55,7 @@ pub struct Renderer {
     pub(crate) ambient: AmbientLight,
     pub(crate) pending_events: Rc<RefCell<Vec<Event>>>,
     pub(crate) theme: ViewerTheme,
+    pub(crate) fov_y: f32,
 }
 
 impl Renderer {
@@ -92,7 +93,12 @@ impl Renderer {
             let skybox_color = Srgba::WHITE;
             let skybox = Some(build_skybox(&context, skybox_color));
 
-            let (camera, control) = build_framing_camera([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], canvas);
+            let (camera, control) = build_framing_camera(
+                [0.0, 0.0, 0.0],
+                [1.0, 1.0, 1.0],
+                canvas,
+                Self::DEFAULT_FOV_Y,
+            );
 
             Some(Self {
                 context,
@@ -118,6 +124,7 @@ impl Renderer {
                 ambient,
                 pending_events: Rc::new(RefCell::new(Vec::new())),
                 theme: ViewerTheme::default(),
+                fov_y: Self::DEFAULT_FOV_Y,
             })
         }
     }
@@ -140,8 +147,12 @@ impl Renderer {
         let model = Model::from(scene);
 
         self.scene_bounds = scene_bounds_from_model(&model);
-        let (camera, control) =
-            build_framing_camera(self.scene_bounds.0, self.scene_bounds.1, &self.canvas);
+        let (camera, control) = build_framing_camera(
+            self.scene_bounds.0,
+            self.scene_bounds.1,
+            &self.canvas,
+            self.fov_y,
+        );
         self.camera = camera;
         self.control = control;
 
@@ -209,7 +220,7 @@ impl Renderer {
             vec3(state.eye[0], state.eye[1], state.eye[2]),
             vec3(state.target[0], state.target[1], state.target[2]),
             vec3(state.up[0], state.up[1], state.up[2]),
-            three_d_asset::radians(Self::FOV_Y),
+            three_d_asset::radians(self.fov_y),
             self.camera.z_near(),
             self.camera.z_far(),
         );
@@ -224,8 +235,12 @@ impl Renderer {
 
     /// Resets the camera and orbit target to frame the loaded model.
     pub fn reset_view(&mut self, show_axes: bool) {
-        let (camera, control) =
-            build_framing_camera(self.scene_bounds.0, self.scene_bounds.1, &self.canvas);
+        let (camera, control) = build_framing_camera(
+            self.scene_bounds.0,
+            self.scene_bounds.1,
+            &self.canvas,
+            self.fov_y,
+        );
         self.camera = camera;
         self.control = control;
         self.rebuild_axes(show_axes);
@@ -252,7 +267,7 @@ impl Renderer {
         ];
         let max_size = size[0].max(size[1]).max(size[2]).max(1.0);
 
-        let fov_y = Self::FOV_Y;
+        let fov_y = self.fov_y;
         let (width, height) = canvas_size(&self.canvas);
         let aspect = if height == 0 {
             1.0
@@ -277,7 +292,7 @@ impl Renderer {
             eye,
             center,
             up,
-            three_d_asset::radians(fov_y),
+            three_d_asset::radians(self.fov_y),
             self.camera.z_near(),
             self.camera.z_far(),
         );
@@ -293,7 +308,6 @@ impl Renderer {
         self.show_axes = show;
     }
 
-    /// Vertical field of view in radians.
     /// Renders the scene once.
     pub fn render(&mut self) {
         let (width, height) = canvas_size(&self.canvas);
@@ -402,7 +416,7 @@ impl Renderer {
     fn handle_pan_events(&mut self, events: &mut [Event]) {
         let viewport_height = self.canvas.client_height().max(1) as f32;
         let distance = self.camera.position().distance(self.camera.target());
-        let scale = distance * (Self::FOV_Y * 0.5).tan() * 2.0 / viewport_height;
+        let scale = distance * (self.fov_y * 0.5).tan() * 2.0 / viewport_height;
 
         for event in events.iter_mut() {
             let Event::MouseMotion {
@@ -427,8 +441,32 @@ impl Renderer {
         }
     }
 
-    /// Vertical field of view in radians.
-    const FOV_Y: f32 = std::f32::consts::PI * 0.25;
+    /// Sets the vertical field of view and rebuilds the camera to match.
+    pub fn set_fov_y(&mut self, fov_y: f32) {
+        if (self.fov_y - fov_y).abs() < f32::EPSILON {
+            return;
+        }
+        self.fov_y = fov_y;
+        let viewport =
+            three_d_asset::Viewport::new_at_origo(self.canvas.width(), self.canvas.height());
+        self.camera = ThreeDCamera::new_perspective(
+            viewport,
+            self.camera.position(),
+            self.camera.target(),
+            self.camera.up_orthogonal(),
+            three_d_asset::radians(fov_y),
+            self.camera.z_near(),
+            self.camera.z_far(),
+        );
+    }
+
+    /// Returns the current vertical field of view in radians.
+    pub fn fov_y(&self) -> f32 {
+        self.fov_y
+    }
+
+    /// Default vertical field of view in radians.
+    pub const DEFAULT_FOV_Y: f32 = std::f32::consts::PI * 0.25;
 
     /// Returns a reference to the `three-d` camera.
     pub fn camera(&self) -> &ThreeDCamera {

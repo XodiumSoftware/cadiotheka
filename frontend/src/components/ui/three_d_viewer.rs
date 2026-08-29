@@ -101,6 +101,8 @@ pub fn IfcViewer(
     #[prop(into, optional)] selection_color_signal: Option<Signal<Srgba>>,
     #[prop(into, optional)] skybox_color_signal: Option<Signal<Srgba>>,
     #[prop(optional)] show_fps_signal: Option<RwSignal<bool>>,
+    #[prop(optional)] fps_signal: Option<RwSignal<u32>>,
+    #[prop(into, optional)] fov_signal: Option<Signal<f32>>,
     #[prop(into)] metadata_url: Signal<Option<String>>,
     #[prop(optional)] on_object_hit: Option<Callback<ObjectHit>>,
     #[prop(optional)] selected_object_signal: Option<RwSignal<Option<ObjectHit>>>,
@@ -123,7 +125,10 @@ pub fn IfcViewer(
     let selection_color =
         selection_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::new(0, 150, 255, 255)));
     let skybox_color = skybox_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::WHITE));
-    let show_fps = show_fps_signal.unwrap_or_else(|| RwSignal::new(false));
+    let _show_fps = show_fps_signal.unwrap_or_else(|| RwSignal::new(false));
+    let fov = fov_signal.unwrap_or_else(|| {
+        Signal::derive(|| crate::three_d_viewer::renderer::Renderer::DEFAULT_FOV_Y)
+    });
     let metadata: RwSignal<Option<Vec<PrimitiveMetadata>>> = RwSignal::new(None);
     let selected_object = selected_object_signal.unwrap_or_else(|| RwSignal::new(None));
     let object_panel_width: RwSignal<f64> = RwSignal::new(load_object_panel_width());
@@ -133,6 +138,17 @@ pub fn IfcViewer(
     let fps: RwSignal<u32> = RwSignal::new(0);
     let fps_frame_times: Rc<RefCell<Vec<f64>>> = Rc::new(RefCell::new(Vec::new()));
     let fps_last_update: Rc<RefCell<f64>> = Rc::new(RefCell::new(0.0));
+    {
+        let fps_value = fps;
+        leptos::task::spawn_local(async move {
+            loop {
+                gloo_timers::future::TimeoutFuture::new(100).await;
+                if let Some(external) = fps_signal {
+                    external.set(fps_value.get_untracked());
+                }
+            }
+        });
+    }
 
     let focus_direction: RwSignal<Option<ViewGizmoDirection>> = RwSignal::new(None);
 
@@ -411,6 +427,21 @@ pub fn IfcViewer(
                 let mut renderer_ref = renderer.borrow_mut();
                 if let Some(renderer) = renderer_ref.as_mut() {
                     renderer.set_skybox_color(color);
+                }
+            }
+            request_render.borrow_mut()();
+        }
+    });
+
+    Effect::new({
+        let renderer = Rc::clone(&renderer);
+        let request_render = Rc::clone(&request_render);
+        move |_| {
+            let fov = fov.get();
+            {
+                let mut renderer_ref = renderer.borrow_mut();
+                if let Some(renderer) = renderer_ref.as_mut() {
+                    renderer.set_fov_y(fov);
                 }
             }
             request_render.borrow_mut()();
@@ -1100,20 +1131,8 @@ pub fn IfcViewer(
     });
 
     view! {
-        <div class="relative w-full h-full overflow-hidden border border-base-content/10 flex flex-col">
-            <div class="flex items-center justify-between px-3 py-1.5 border-b border-base-content/10 bg-base-100/95 backdrop-blur-sm z-30">
-                {move || if show_fps.get() {
-                    view! {
-                        <span class="text-xs font-mono text-base-content/70">
-                            {format!("{} FPS", fps.get())}
-                        </span>
-                    }.into_any()
-                } else {
-                    ().into_any()
-                }}
-            </div>
-            <div class="relative flex-1 min-h-0 overflow-hidden">
-                <canvas
+        <div class="relative w-full h-full overflow-hidden border border-base-content/10">
+            <canvas
                     node_ref=canvas_ref
                     class=move || {
                         if disabled.get() {
@@ -1363,7 +1382,6 @@ pub fn IfcViewer(
                     }.into_any(),
                 }
             }}
-            </div>
         </div>
     }
 }
