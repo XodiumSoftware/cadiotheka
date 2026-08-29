@@ -1164,7 +1164,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="truncate">"Name"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     aria-label="Resize label column"
                                                                 ></div>
@@ -1179,7 +1179,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="truncate">"IFC Type"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     aria-label="Resize label column"
                                                                 ></div>
@@ -1194,7 +1194,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="truncate">"Express ID"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     aria-label="Resize label column"
                                                                 ></div>
@@ -1211,7 +1211,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="truncate">"Primitive"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     aria-label="Resize label column"
                                                                 ></div>
@@ -1226,7 +1226,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="truncate">"GlobalId"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     aria-label="Resize label column"
                                                                 ></div>
@@ -1243,7 +1243,7 @@ pub fn IfcViewer(
                                                             >
                                                                 <span class="truncate">"Hit Position"</span>
                                                                 <div
-                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize active:bg-primary transition-colors"
                                                                     on:mousedown=on_label_resize_mouse_down
                                                                     aria-label="Resize label column"
                                                                 ></div>
