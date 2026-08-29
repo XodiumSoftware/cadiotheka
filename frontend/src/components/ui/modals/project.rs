@@ -46,6 +46,7 @@ const GIZMO_VISIBLE_KEY: &str = "gizmo_visible";
 const AXES_VISIBLE_KEY: &str = "axes_visible";
 const SHOW_FPS_KEY: &str = "show_fps";
 const FOV_DEGREES_KEY: &str = "fov_degrees";
+const ORTHOGRAPHIC_KEY: &str = "orthographic";
 const OBJECT_HIGHLIGHT_COLOR_KEY: &str = "object_highlight_color";
 const OBJECT_SELECTION_COLOR_KEY: &str = "object_selection_color";
 const SKYBOX_COLOR_KEY: &str = "skybox_color";
@@ -154,6 +155,32 @@ fn preferences_with_fov_degrees(account: Option<&AccountData>, degrees: f32) -> 
     let mut prefs: serde_json::Value =
         serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
     prefs[FOV_DEGREES_KEY] = serde_json::json!(degrees);
+    serde_json::to_string(&prefs).ok()
+}
+
+/// Loads the saved orthographic camera setting from account viewer preferences.
+fn load_orthographic_from_preferences(account: Option<&AccountData>) -> bool {
+    let Some(account) = account else {
+        return false;
+    };
+    let prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs
+        .get(ORTHOGRAPHIC_KEY)
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+}
+
+/// Returns the account's existing viewer preferences with the orthographic camera
+/// setting updated, preserving any other keys that may exist in the JSON blob.
+fn preferences_with_orthographic(
+    account: Option<&AccountData>,
+    orthographic: bool,
+) -> Option<String> {
+    let account = account?;
+    let mut prefs: serde_json::Value =
+        serde_json::from_str(&account.viewer_preferences).unwrap_or(serde_json::json!({}));
+    prefs[ORTHOGRAPHIC_KEY] = serde_json::json!(orthographic);
     serde_json::to_string(&prefs).ok()
 }
 
@@ -2100,6 +2127,106 @@ fn ProjectModalContent(
                                                     });
                                                 }
                                             });
+                                            let orthographic = RwSignal::new(load_orthographic_from_preferences(
+                                                current_user.account.get_untracked().as_ref(),
+                                            ));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let set_orthographic = orthographic;
+                                                move |_| {
+                                                    let Some(account) = current_user.account.get() else {
+                                                        return;
+                                                    };
+                                                    let new_orthographic =
+                                                        load_orthographic_from_preferences(Some(&account));
+                                                    if set_orthographic.get_untracked() != new_orthographic {
+                                                        set_orthographic.set(new_orthographic);
+                                                    }
+                                                }
+                                            });
+
+                                            let initial_orthographic = orthographic.get_untracked();
+                                            let orthographic_save_generation = Rc::new(std::cell::Cell::new(0u64));
+
+                                            Effect::new({
+                                                let current_user = current_user;
+                                                let profile_modal = profile_modal;
+                                                let orthographic_save_generation = Rc::clone(&orthographic_save_generation);
+                                                move |_| {
+                                                    let orthographic_value = orthographic.get();
+                                                    if orthographic_value == initial_orthographic {
+                                                        return;
+                                                    }
+                                                    let Some(account) =
+                                                        current_user.account.get_untracked()
+                                                    else {
+                                                        return;
+                                                    };
+                                                    let Some(new_preferences) =
+                                                        preferences_with_orthographic(
+                                                            Some(&account),
+                                                            orthographic_value,
+                                                        )
+                                                    else {
+                                                        return;
+                                                    };
+                                                    if new_preferences == account.viewer_preferences {
+                                                        return;
+                                                    }
+
+                                                    let expected = orthographic_save_generation
+                                                        .get()
+                                                        .wrapping_add(1);
+                                                    orthographic_save_generation.set(expected);
+
+                                                    let set_current_user = current_user.set_account;
+                                                    let set_profile_account = profile_modal.set_account;
+                                                    let orthographic_save_generation = Rc::clone(
+                                                        &orthographic_save_generation);
+                                                    leptos::task::spawn_local(async move {
+                                                        gloo_timers::future::TimeoutFuture::new(300)
+                                                            .await;
+                                                        if orthographic_save_generation.get() != expected {
+                                                            return;
+                                                        }
+
+                                                        match crate::contexts::current_user::update_viewer_preferences(
+                                                            new_preferences,
+                                                        )
+                                                        .await
+                                                        {
+                                                            Ok(saved) => {
+                                                                set_current_user.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                                set_profile_account.update(|opt| {
+                                                                    if let Some(acc) = opt.as_mut() {
+                                                                        acc.viewer_preferences
+                                                                            .clone_from(
+                                                                                &saved,
+                                                                            );
+                                                                    }
+                                                                });
+                                                            }
+                                                            Err(err) => {
+                                                                leptos::web_sys::console::error_1(
+                                                                    &format!(
+                                                                        "Failed to save viewer preferences: {}",
+                                                                        err.message()
+                                                                    )
+                                                                    .into(),
+                                                                );
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            });
                                             let gizmo_position = RwSignal::new(load_gizmo_position_from_preferences(
                                                 current_user.account.get_untracked().as_ref(),
                                             ));
@@ -2564,6 +2691,16 @@ fn ProjectModalContent(
                                                         <Icon::Gizmo />
                                                     </ToolbarButton>
                                                     <ToolbarButton
+                                                        label="Toggle orthographic camera"
+                                                        tooltip_position=TooltipPosition::Left
+                                                        active=Signal::derive(move || orthographic.get())
+                                                        on_click=Callback::new(move |()| {
+                                                            orthographic.update(|v| *v = !*v);
+                                                        })
+                                                    >
+                                                        <Icon::Cube />
+                                                    </ToolbarButton>
+                                                    <ToolbarButton
                                                         label="Viewer settings"
                                                         tooltip_position=TooltipPosition::Left
                                                         on_click=Callback::new(move |()| {
@@ -2623,6 +2760,7 @@ fn ProjectModalContent(
                                                     show_fps_signal=show_fps
                                                     fps_signal=fps_value
                                                     fov_signal=Signal::derive(move || fov_degrees.get().to_radians())
+                                                    orthographic_signal=orthographic
                                                     disabled=Signal::derive({
                                                         let is_editable = is_editable;
                                                         let edit_mode = edit_mode;

@@ -50,12 +50,17 @@ pub fn suppress_webgl_debug_renderer_info(context: &WebGl2RenderingContext) {
     let _ = Reflect::set(context, &"getExtension".into(), &wrapper);
 }
 
-/// Builds a perspective camera and orbit controller that frame the given bounds.
+/// Builds a camera and orbit controller that frame the given bounds.
+///
+/// When `orthographic` is `true`, the camera uses an orthographic projection with
+/// a height chosen so the model fills the viewport similarly to the perspective
+/// framing. Otherwise a perspective projection with the given `fov_y` is used.
 pub fn build_framing_camera(
     min: [f32; 3],
     max: [f32; 3],
     canvas: &HtmlCanvasElement,
     fov_y: f32,
+    orthographic: bool,
 ) -> (ThreeDCamera, OrbitControl) {
     let center = [
         f32::midpoint(min[0], max[0]),
@@ -97,15 +102,30 @@ pub fn build_framing_camera(
 
     let viewport = Viewport::new_at_origo(width, height);
 
-    let camera = ThreeDCamera::new_perspective(
-        viewport,
-        vec3(eye[0], eye[1], eye[2]),
-        vec3(center[0], center[1], center[2]),
-        vec3(0.0_f32, 1.0, 0.0),
-        radians(fov_y),
-        near,
-        far,
-    );
+    let camera = if orthographic {
+        // Match the perspective framing distance, then derive an orthographic
+        // height that shows the same visible region at that distance.
+        let ortho_height = 2.0 * distance * (limiting_fov * 0.5).tan();
+        ThreeDCamera::new_orthographic(
+            viewport,
+            vec3(eye[0], eye[1], eye[2]),
+            vec3(center[0], center[1], center[2]),
+            vec3(0.0_f32, 1.0, 0.0),
+            ortho_height,
+            near,
+            far,
+        )
+    } else {
+        ThreeDCamera::new_perspective(
+            viewport,
+            vec3(eye[0], eye[1], eye[2]),
+            vec3(center[0], center[1], center[2]),
+            vec3(0.0_f32, 1.0, 0.0),
+            radians(fov_y),
+            near,
+            far,
+        )
+    };
     let control = OrbitControl::new(
         vec3(center[0], center[1], center[2]),
         max_size * 0.001,
