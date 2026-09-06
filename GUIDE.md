@@ -48,10 +48,11 @@ trunk --version
 
 ## Project Layout
 
-This repository is a Cargo workspace with two members:
+This repository is a Cargo workspace with three members:
 
 - `frontend/` — Leptos CSR browser app compiled to `wasm32-unknown-unknown`.
 - `backend/` — Cloudflare Pages Functions Rust backend using D1.
+- `shared/` — Route paths, validation constants, and tag definitions shared by both crates.
 
 Most day-to-day development commands are run from inside one of those crates.
 
@@ -80,7 +81,7 @@ The output is placed in `frontend/dist/`.
 ## Run Frontend Locally
 
 The frontend needs the backend dev server running on port `8787`. Trunk will
-proxy `/data/*` requests there automatically.
+proxy `/data/*`, `/login/*`, and `/auth/*` requests there automatically.
 
 Start the backend first:
 
@@ -116,7 +117,7 @@ The backend is a Cloudflare Pages Functions Rust worker. First build the WASM bu
 
 ```bash
 cd backend
-cargo install worker-build --version 0.7.5 --force
+cargo install worker-build
 worker-build
 npx wrangler dev
 ```
@@ -272,7 +273,7 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
 
     ```bash
     cd backend
-    npx wrangler d1 create cadiotheka-db
+    npx wrangler d1 create cadiotheka
     ```
 
 2. Create an R2 bucket for project assets:
@@ -295,10 +296,10 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
 4. Apply the schemas:
 
     ```bash
-    npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql
-    npx wrangler d1 execute cadiotheka-db --file=schemas/account_providers.sql
-    npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql
-    npx wrangler d1 execute cadiotheka-db --file=schemas/project_versions.sql
+    npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql
+    npx wrangler d1 execute cadiotheka --file=schemas/account_providers.sql
+    npx wrangler d1 execute cadiotheka --file=schemas/projects.sql
+    npx wrangler d1 execute cadiotheka --file=schemas/project_versions.sql
     ```
 
     When upgrading an existing database, apply any pending files from `migrations/` in order instead.

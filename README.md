@@ -55,7 +55,7 @@ cargo install --locked trunk
 
 ## Running Locally
 
-Cadiotheka is a Cargo workspace with two members: `frontend` and `backend`.
+Cadiotheka is a Cargo workspace with three members: `frontend`, `backend`, and `shared`.
 
 ### Frontend
 
@@ -75,7 +75,7 @@ npx wrangler dev
 
 Then open <http://localhost:8080/index.html#dev> in a browser.
 
-Trunk proxies `/data/*` requests to the backend dev server on `http://127.0.0.1:8787`.
+Trunk proxies `/data/*`, `/login/*`, and `/auth/*` requests to the backend dev server on `http://127.0.0.1:8787`.
 
 ### Backend
 
@@ -83,7 +83,7 @@ The backend is a Cloudflare Pages Functions Rust worker. First build the WASM bu
 
 ```bash
 cd backend
-cargo install worker-build --version 0.7.5 --force
+cargo install worker-build
 worker-build
 npx wrangler dev
 ```
@@ -165,7 +165,7 @@ The static site is placed in `frontend/dist/`.
 1. Create a D1 database:
 
     ```bash
-    npx wrangler d1 create cadiotheka-db
+    npx wrangler d1 create cadiotheka
     ```
 
 2. Update `backend/wrangler.toml` with the database ID from step 1.
