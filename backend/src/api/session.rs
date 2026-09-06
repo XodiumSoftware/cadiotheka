@@ -209,15 +209,6 @@ const MAX_BIO_LENGTH: usize = 160;
 /// Maximum size for the `viewer_preferences` JSON blob, in bytes.
 const MAX_VIEWER_PREFERENCES_LENGTH: usize = 4_096;
 
-/// Requires a valid session and returns the authenticated account. Returns 401
-/// if the request is not authenticated.
-pub async fn require_account(req: &Request, ctx: &RouteContext<()>) -> Result<Account> {
-    match read_session(req, ctx).await? {
-        Some(account) => Ok(account),
-        None => Err(worker::Error::RustError("Unauthorized".into())),
-    }
-}
-
 /// Updates the currently authenticated account.
 ///
 /// Accepts a JSON body with the fields the user is allowed to edit themselves.
@@ -229,7 +220,9 @@ pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Respon
         viewer_preferences: Option<String>,
     }
 
-    let account = require_account(&req, &ctx).await?;
+    let Some(account) = read_session(&req, &ctx).await? else {
+        return unauthorized("Unauthorized");
+    };
     let payload: UpdatePayload = req.json().await?;
 
     if let Some(bio) = &payload.bio
@@ -288,7 +281,9 @@ struct PreferencesRow {
 /// Returns the viewer preferences for the currently authenticated account,
 /// or 401 if not authenticated.
 pub async fn me_viewer_preferences(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let Some(account) = read_session(&req, &ctx).await? else {
+        return unauthorized("Unauthorized");
+    };
 
     let row = db(&ctx)?
         .prepare("SELECT viewer_preferences FROM accounts WHERE id = ?1")

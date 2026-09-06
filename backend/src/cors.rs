@@ -1,4 +1,4 @@
-use worker::{Headers, Request, Response, ResponseBody, ResponseBuilder, Result};
+use worker::{Request, Response, Result};
 
 /// Origins allowed to call the API from a browser.
 ///
@@ -85,25 +85,16 @@ pub fn select_allowed_origin(origin: Option<&str>) -> String {
         .to_string()
 }
 
-/// Builds a raw 500 response with CORS headers so frontend error handlers can
-/// read it when an unhandled worker error occurs.
+/// Builds a generic 500 response with CORS headers so frontend error handlers
+/// can read it when an unhandled worker error occurs.
+///
+/// The raw error is logged server-side and never sent to the client: error
+/// strings can contain database details, OAuth response bodies, or other
+/// internals that must not leak to browsers.
 pub fn error_response_with_cors(err: &worker::Error, origin: &str) -> Result<Response> {
-    let headers = Headers::new();
-    headers.set("Content-Type", "text/plain")?;
-    let _ = headers.set("Access-Control-Allow-Origin", origin);
-    let _ = headers.set("Access-Control-Allow-Credentials", "true");
-    let _ = headers.set(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    );
-    let _ = headers.set(
-        "Access-Control-Allow-Headers",
-        "Content-Type, X-Turnstile-Token",
-    );
-    Ok(ResponseBuilder::new()
-        .with_status(500)
-        .with_headers(headers)
-        .body(ResponseBody::Body(err.to_string().into())))
+    worker::console_error!("unhandled request error: {err}");
+    let resp = crate::utils::error_response("Internal Server Error", 500)?;
+    add_cors_headers(resp, origin)
 }
 
 #[cfg(test)]

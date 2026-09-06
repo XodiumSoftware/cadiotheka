@@ -9,9 +9,10 @@ use worker::{
 };
 
 use crate::api::accounts::Account;
-use crate::api::session::require_account;
+use crate::api::session::read_session;
 use crate::guards::{
-    GuardOutcome, require_auth_with_rate_limit, require_auth_with_turnstile_and_rate_limit,
+    GuardOutcome, require_auth, require_auth_with_rate_limit,
+    require_auth_with_turnstile_and_rate_limit,
 };
 use crate::utils::{
     RateLimitNamespace, assets_bucket, bad_request, check_rate_limit, db, error_response,
@@ -229,7 +230,10 @@ pub struct ProjectPatch {
 /// Partially updates an existing project, identified by the `:id` path parameter.
 /// Only the project owner or an admin may edit it.
 pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &id)
         .await?
@@ -289,7 +293,10 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
 
 /// Replaces an existing project, identified by the `:id` path parameter.
 pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &id)
         .await?
@@ -348,7 +355,10 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
 /// Deletes the project identified by the `:id` path parameter.
 pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &id)
         .await?
@@ -496,9 +506,9 @@ pub async fn list_project_versions(req: Request, ctx: RouteContext<()>) -> Resul
         .await?
         .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
 
-    let include_undefined = match require_account(&req, &ctx).await {
-        Ok(account) => can_edit_project(&account, &project),
-        Err(_) => false,
+    let include_undefined = match read_session(&req, &ctx).await? {
+        Some(account) => can_edit_project(&account, &project),
+        None => false,
     };
 
     let versions = fetch_project_versions(&ctx, &project_id, include_undefined).await?;
@@ -507,7 +517,10 @@ pub async fn list_project_versions(req: Request, ctx: RouteContext<()>) -> Resul
 
 /// Patches a single project version (state only). Restricted to project editors.
 pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let project_id = required_param(&ctx, "id")?;
     let version_id = required_param(&ctx, "version_id")?;
     let project = fetch_project(&ctx, &project_id)
@@ -539,7 +552,10 @@ pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> 
 
 /// Deletes a single project version. Restricted to project editors.
 pub async fn delete_project_version(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let project_id = required_param(&ctx, "id")?;
     let version_id = required_param(&ctx, "version_id")?;
     let project = fetch_project(&ctx, &project_id)
@@ -1008,7 +1024,10 @@ fn can_edit_project(account: &Account, project: &Project) -> bool {
 }
 
 pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let id = required_param(&ctx, "id")?;
     let mut project = fetch_project(&ctx, &id)
         .await?

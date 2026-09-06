@@ -83,8 +83,11 @@ pub fn bad_request(message: &str) -> Result<Response> {
     error_response(message, 400)
 }
 
-/// Extracts a required path parameter, returning `Ok(value)` when present and a
-/// `400 Bad Request` response when missing or empty.
+/// Extracts a required path parameter, returning `Ok(value)` when present and
+/// an internal error (surfaced as a 500) when missing or empty.
+///
+/// Missing parameters indicate a route registered without its placeholder,
+/// which is a server-side bug rather than a client error.
 pub fn required_param(ctx: &RouteContext<()>, name: &str) -> Result<String> {
     match ctx.param(name) {
         Some(value) if !value.is_empty() => Ok(value.clone()),

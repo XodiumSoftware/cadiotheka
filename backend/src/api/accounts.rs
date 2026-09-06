@@ -3,8 +3,8 @@ use shared::accounts::Role;
 use worker::{Request, Response, Result, RouteContext};
 
 use crate::api::auth::Provider;
-use crate::api::session::require_account;
-use crate::utils::{db, forbidden, js_option, not_found, now_utc, required_param};
+use crate::guards::{GuardOutcome, require_auth};
+use crate::utils::{bad_request, db, forbidden, js_option, not_found, now_utc, required_param};
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences, (SELECT provider FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider, (SELECT provider_id FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider_id FROM accounts a";
 const SELECT_PUBLIC_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.role, a.bio, a.avatar_url, a.created_at, a.verified, (SELECT provider FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider, (SELECT provider_id FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider_id FROM accounts a";
@@ -338,7 +338,10 @@ pub async fn read_account(_req: Request, ctx: RouteContext<()>) -> Result<Respon
 /// Responds with the OAuth providers linked to the currently authenticated
 /// account as a JSON array of provider names.
 pub async fn list_linked_providers(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     let providers = fetch_linked_providers(&ctx, &account.id).await?;
     let provider_names: Vec<String> = providers.into_iter().map(|p| p.to_string()).collect();
     Response::from_json(&serde_json::json!({ "providers": provider_names }))
@@ -346,18 +349,26 @@ pub async fn list_linked_providers(req: Request, ctx: RouteContext<()>) -> Resul
 
 /// Unlinks an OAuth provider from the currently authenticated account.
 pub async fn unlink_provider(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
-    let provider = ctx
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
+    let Some(provider) = ctx
         .param("provider")
         .and_then(|p| p.parse::<Provider>().ok())
-        .ok_or_else(|| worker::Error::RustError("invalid provider".into()))?;
+    else {
+        return bad_request("Invalid provider");
+    };
     crate::api::accounts::unlink_oauth_account(&ctx, &account.id, provider).await?;
     Response::empty()
 }
 
 /// Creates a new account from the request body. Restricted to admins.
 pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     if account.role != Role::Admin {
         return forbidden("Forbidden");
     }
@@ -388,7 +399,10 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
 /// Replaces an existing account, identified by the `:id` path parameter.
 /// Restricted to admins.
 pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     if account.role != Role::Admin {
         return forbidden("Forbidden");
     }
@@ -422,7 +436,10 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
 /// Deletes the account identified by the `:id` path parameter.
 /// Restricted to admins.
 pub async fn delete_account(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = require_account(&req, &ctx).await?;
+    let account = match require_auth(&req, &ctx).await? {
+        GuardOutcome::Account(account) => account,
+        GuardOutcome::Response(resp) => return Ok(resp),
+    };
     if account.role != Role::Admin {
         return forbidden("Forbidden");
     }
