@@ -4,6 +4,7 @@ use crate::contexts::{CurrentUserContext, MetadataContext, ProjectModalContext, 
 use crate::data::{ProjectData, ProjectVersion};
 use crate::utils::{format_number, format_number_full, format_time_ago, format_time_full};
 use leptos::prelude::*;
+use leptos::wasm_bindgen::JsCast;
 
 #[derive(Clone)]
 pub struct ProjectCardProperties {
@@ -205,6 +206,13 @@ pub fn ProjectCard(
         })
     };
 
+    let favorite_tooltip = move || {
+        format!(
+            "{} favorites",
+            format_number_full(favorite_count.get() as u64)
+        )
+    };
+
     view! {
         <article
             class=move || {
@@ -218,14 +226,24 @@ pub fn ProjectCard(
             on:click=move |_| on_click.run(())
             on:pointerenter=move |_| on_pointer_enter.run(())
             on:keydown=move |ev: leptos::web_sys::KeyboardEvent| {
-                if matches!(ev.key().as_str(), "Enter" | " ") {
-                    ev.prevent_default();
-                    on_click.run(());
+                if !matches!(ev.key().as_str(), "Enter" | " ") {
+                    return;
                 }
+                let from_nested_control = ev
+                    .target()
+                    .and_then(|target| {
+                        target
+                            .dyn_ref::<leptos::web_sys::HtmlElement>()
+                            .map(|el| el.tag_name())
+                    })
+                    .is_some_and(|tag| matches!(tag.as_str(), "BUTTON" | "A" | "INPUT"));
+                if from_nested_control {
+                    return;
+                }
+                ev.prevent_default();
+                on_click.run(());
             }
-            role="button"
             tabindex=move || if tabbable.get() { "0" } else { "-1" }
-            aria-label=aria_label
         >
             <CornerFrame style="square" class="h-full">
                 <div class="card bg-ghost h-full rounded-none">
@@ -233,7 +251,18 @@ pub fn ProjectCard(
                         <div class="flex flex-col gap-2">
                             <div class="flex items-start gap-2">
                                 <h2 class="card-title text-primary text-base leading-tight min-w-0 flex-1">
-                                    <span class="truncate tooltip tooltip-top" data-tip={card_title.clone()}>{card_title.clone()}</span>
+                                    <button
+                                        type="button"
+                                        class="truncate text-left tooltip tooltip-top"
+                                        data-tip={card_title.clone()}
+                                        aria-label=aria_label
+                                        on:click=move |ev| {
+                                            ev.stop_propagation();
+                                            on_click.run(());
+                                        }
+                                    >
+                                        {card_title.clone()}
+                                    </button>
                                     <span class="text-base-content/60 font-normal">{" by "}</span>
                                     <button
                                         type="button"
@@ -274,59 +303,71 @@ pub fn ProjectCard(
                                 <DownloadIcon />
                                 {move || format_number(download_count.get())}
                             </span>
-                            <span
-                                class=move || {
-                                    if current_user.account.get().is_some() {
-                                        if is_favorited.get() {
-                                            "flex items-center gap-1 cursor-pointer select-none text-error hover:text-base-content/50 tooltip tooltip-top"
-                                        } else {
-                                            "flex items-center gap-1 cursor-pointer select-none text-base-content/50 hover:text-error tooltip tooltip-top"
-                                        }
-                                    } else {
-                                        "flex items-center gap-1 select-none tooltip tooltip-top"
-                                    }
-                                }
-                                data-tip={move || format!("{} favorites", format_number_full(favorite_count.get() as u64))}
-                                aria-label=favorite_aria_label
-                                role=move || if current_user.account.get().is_some() { "button" } else { "" }
-                                tabindex=move || if current_user.account.get().is_some() { "0" } else { "-1" }
-                                on:click=move |ev: leptos::web_sys::MouseEvent| {
-                                    if current_user.account.get().is_none() {
-                                        return;
-                                    }
-                                    ev.stop_propagation();
-                                    let project_id = project_id_for_button.clone();
-                                    let set_projects = projects_ctx.set_projects;
-                                    let modal_set_card = project_modal.set_card;
-                                    leptos::task::spawn_local(async move {
-                                        match ProjectsContext::toggle_favorite(&project_id).await {
-                                            Ok(updated) => {
-                                                let updated_for_modal = updated.clone();
-                                                set_projects.update(|projects| {
-                                                    if let Some(project) = projects.iter_mut().find(|project| project.id == updated.id) {
-                                                        project.clone_from(&updated);
-                                                    }
-                                                });
-                                                modal_set_card.update(|card| {
-                                                    if let Some(card) = card.as_mut()
-                                                        && card.id == updated_for_modal.id
-                                                    {
-                                                        card.favorites.clone_from(&updated_for_modal.favorites);
+                            {move || {
+                                let project_id_for_button = project_id_for_button.clone();
+                                if current_user.account.get().is_some() {
+                                    view! {
+                                        <button
+                                            type="button"
+                                            class=move || {
+                                                if is_favorited.get() {
+                                                    "flex items-center gap-1 select-none text-error hover:text-base-content/50 tooltip tooltip-top"
+                                                } else {
+                                                    "flex items-center gap-1 select-none text-base-content/50 hover:text-error tooltip tooltip-top"
+                                                }
+                                            }
+                                            data-tip=favorite_tooltip
+                                            aria-label=favorite_aria_label
+                                            aria-pressed=move || if is_favorited.get() { "true" } else { "false" }
+                                            on:click=move |ev: leptos::web_sys::MouseEvent| {
+                                                ev.stop_propagation();
+                                                let project_id = project_id_for_button.clone();
+                                                let set_projects = projects_ctx.set_projects;
+                                                let modal_set_card = project_modal.set_card;
+                                                leptos::task::spawn_local(async move {
+                                                    match ProjectsContext::toggle_favorite(&project_id).await {
+                                                        Ok(updated) => {
+                                                            let updated_for_modal = updated.clone();
+                                                            set_projects.update(|projects| {
+                                                                if let Some(project) = projects.iter_mut().find(|project| project.id == updated.id) {
+                                                                    project.clone_from(&updated);
+                                                                }
+                                                            });
+                                                            modal_set_card.update(|card| {
+                                                                if let Some(card) = card.as_mut()
+                                                                    && card.id == updated_for_modal.id
+                                                                {
+                                                                    card.favorites.clone_from(&updated_for_modal.favorites);
+                                                                }
+                                                            });
+                                                        }
+                                                        Err(err) => {
+                                                            leptos::web_sys::console::error_1(
+                                                                &format!("Failed to toggle favorite: {}", err.message()).into(),
+                                                            );
+                                                        }
                                                     }
                                                 });
                                             }
-                                            Err(err) => {
-                                                leptos::web_sys::console::error_1(
-                                                    &format!("Failed to toggle favorite: {}", err.message()).into(),
-                                                );
-                                            }
-                                        }
-                                    });
+                                        >
+                                            <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
+                                            {move || format_number(favorite_count.get() as u64)}
+                                        </button>
+                                    }
+                                    .into_any()
+                                } else {
+                                    view! {
+                                        <span
+                                            class="flex items-center gap-1 select-none tooltip tooltip-top"
+                                            data-tip=favorite_tooltip
+                                        >
+                                            <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
+                                            {move || format_number(favorite_count.get() as u64)}
+                                        </span>
+                                    }
+                                    .into_any()
                                 }
-                            >
-                                <HeartIcon filled=Signal::derive(move || is_favorited.get()) />
-                                {move || format_number(favorite_count.get() as u64)}
-                            </span>
+                            }}
                             <span
                                 class="flex items-center gap-1 tooltip tooltip-top"
                                 data-tip={move || format!("Updated {}", format_time_full(timestamp))}
