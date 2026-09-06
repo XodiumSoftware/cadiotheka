@@ -41,8 +41,12 @@ fn sign(secret: &str, id: &str) -> Result<String> {
 }
 
 fn verify_signature(secret: &str, id: &str, sig: &str) -> Result<bool> {
-    let expected = sign(secret, id)?;
-    Ok(expected == sig)
+    let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).map_err(rust_err)?;
+    mac.update(id.as_bytes());
+    let Ok(sig_bytes) = hex::decode(sig) else {
+        return Ok(false);
+    };
+    Ok(mac.verify_slice(&sig_bytes).is_ok())
 }
 
 /// Returns the cookie name to use based on whether the request is HTTPS.
@@ -366,6 +370,12 @@ mod tests {
         let id = "session-id";
         let sig = sign("correct-secret", id)?;
         assert!(!verify_signature("wrong-secret", id, &sig)?);
+        Ok(())
+    }
+
+    #[test]
+    fn session_signature_rejects_malformed_hex() -> Result<(), worker::Error> {
+        assert!(!verify_signature("secret", "session-id", "not-hex")?);
         Ok(())
     }
 
