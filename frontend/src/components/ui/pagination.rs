@@ -7,7 +7,9 @@ const DEFAULT_SIBLING_COUNT: usize = 1;
 #[derive(Clone, Copy, PartialEq)]
 enum PageItem {
     Page(usize),
-    Ellipsis,
+    /// A truncation gap; carries the page it precedes so each gap has a unique
+    /// key in the keyed list.
+    Ellipsis(usize),
 }
 
 /// Builds the ordered list of page numbers and ellipsis markers to display.
@@ -40,7 +42,7 @@ fn pagination_pages(current: usize, total: usize, sibling_count: usize) -> Vec<P
             if page == prev + 2 {
                 items.push(PageItem::Page(prev + 1));
             } else {
-                items.push(PageItem::Ellipsis);
+                items.push(PageItem::Ellipsis(page));
             }
         }
         items.push(PageItem::Page(page));
@@ -116,7 +118,7 @@ pub fn Pagination(
                 each=move || items.get()
                 key=|item| match item {
                     PageItem::Page(n) => format!("p-{n}"),
-                    PageItem::Ellipsis => "ellipsis".to_string(),
+                    PageItem::Ellipsis(n) => format!("e-{n}"),
                 }
                 children=move |item| match item {
                     PageItem::Page(n) => {
@@ -138,7 +140,7 @@ pub fn Pagination(
                         }
                         .into_any()
                     }
-                    PageItem::Ellipsis => view! {
+                    PageItem::Ellipsis(_) => view! {
                         <button
                             type="button"
                             class="join-item btn btn-disabled"
@@ -172,7 +174,7 @@ mod tests {
             .iter()
             .filter_map(|item| match item {
                 PageItem::Page(n) => Some(*n),
-                PageItem::Ellipsis => None,
+                PageItem::Ellipsis(_) => None,
             })
             .collect()
     }
@@ -180,7 +182,7 @@ mod tests {
     fn ellipsis_count(items: &[PageItem]) -> usize {
         items
             .iter()
-            .filter(|item| matches!(item, PageItem::Ellipsis))
+            .filter(|item| matches!(item, PageItem::Ellipsis(_)))
             .count()
     }
 
@@ -223,6 +225,21 @@ mod tests {
         let items = pagination_pages(19, 20, 1);
         assert_eq!(page_numbers(&items), vec![0, 17, 18, 19]);
         assert_eq!(ellipsis_count(&items), 1);
+    }
+
+    #[test]
+    fn ellipsis_items_carry_unique_keys() {
+        let items = pagination_pages(9, 20, 1);
+        let keys: Vec<usize> = items
+            .iter()
+            .filter_map(|item| match item {
+                PageItem::Ellipsis(n) => Some(*n),
+                PageItem::Page(_) => None,
+            })
+            .collect();
+        let unique: std::collections::HashSet<_> = keys.iter().collect();
+        assert_eq!(unique.len(), keys.len());
+        assert!(keys.len() >= 2);
     }
 
     #[test]
