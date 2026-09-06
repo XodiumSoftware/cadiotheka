@@ -4,7 +4,9 @@ use worker::{Request, Response, Result, RouteContext};
 
 use crate::api::auth::Provider;
 use crate::guards::{GuardOutcome, require_auth};
-use crate::utils::{bad_request, db, forbidden, js_option, not_found, now_utc, required_param};
+use crate::utils::{
+    bad_request, db, forbidden, js_option, list_window, not_found, now_utc, required_param,
+};
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences, (SELECT provider FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider, (SELECT provider_id FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider_id FROM accounts a";
 const SELECT_PUBLIC_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.role, a.bio, a.avatar_url, a.created_at, a.verified, (SELECT provider FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider, (SELECT provider_id FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider_id FROM accounts a";
@@ -311,10 +313,17 @@ fn sanitize_username_local(login: &str) -> String {
     shared::accounts::sanitize_username(login)
 }
 
-/// Returns the public list of all accounts.
-pub async fn list_accounts(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+/// Returns the public list of accounts, oldest first.
+///
+/// Accepts `?limit=` and `?offset=` query parameters; the limit defaults to
+/// 100 and is capped at 500 so each D1 query stays bounded.
+pub async fn list_accounts(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let (limit, offset) = list_window(&req.url()?);
     let result = db(&ctx)?
-        .prepare(SELECT_PUBLIC_ACCOUNT_COLUMNS)
+        .prepare(format!(
+            "{SELECT_PUBLIC_ACCOUNT_COLUMNS} ORDER BY a.created_at ASC, a.id ASC LIMIT ?1 OFFSET ?2"
+        ))
+        .bind(&[f64::from(limit).into(), f64::from(offset).into()])?
         .all()
         .await?;
     let accounts: Vec<PublicAccount> = result.results::<PublicAccount>()?;

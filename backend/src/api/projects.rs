@@ -16,7 +16,7 @@ use crate::guards::{
 };
 use crate::utils::{
     RateLimitNamespace, assets_bucket, bad_request, check_rate_limit, db, error_response,
-    forbidden, not_found, now_utc, required_param,
+    forbidden, list_window, not_found, now_utc, required_param,
 };
 use ifc_lite_export::{GltfOptions, export_glb};
 use shared::accounts::Role;
@@ -137,9 +137,19 @@ mod json_tags {
     }
 }
 
-/// Responds with a JSON array of all projects.
-pub async fn list_projects(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let result = db(&ctx)?.prepare(SELECT_PROJECT_COLUMNS).all().await?;
+/// Responds with a JSON array of projects, newest first.
+///
+/// Accepts `?limit=` and `?offset=` query parameters; the limit defaults to
+/// 100 and is capped at 500 so each D1 query stays bounded.
+pub async fn list_projects(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let (limit, offset) = list_window(&req.url()?);
+    let result = db(&ctx)?
+        .prepare(format!(
+            "{SELECT_PROJECT_COLUMNS} ORDER BY timestamp DESC, id DESC LIMIT ?1 OFFSET ?2"
+        ))
+        .bind(&[f64::from(limit).into(), f64::from(offset).into()])?
+        .all()
+        .await?;
     let projects: Vec<Project> = result.results::<Project>()?;
     Response::from_json(&projects)
 }

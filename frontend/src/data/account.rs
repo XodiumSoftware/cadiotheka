@@ -76,7 +76,17 @@ impl AccountData {
     }
 }
 
+/// Page size used when sweeping the account list from the backend. Matches the
+/// maximum limit the backend accepts, minimizing the number of round trips.
+const ACCOUNTS_PAGE_SIZE: usize = 500;
+/// Safety cap on the number of pages fetched in one sweep, guarding against a
+/// misbehaving or misconfigured backend returning full pages forever.
+const MAX_SWEEP_PAGES: usize = 200;
+
 /// Fetch accounts from the backend API.
+///
+/// The backend serves the list in bounded windows of at most
+/// `ACCOUNTS_PAGE_SIZE` rows; this sweeps all pages and concatenates them.
 ///
 /// On success it returns a list of accounts.
 ///
@@ -85,7 +95,33 @@ impl AccountData {
 /// Returns a [`RequestError`] when the network fails, the backend rejects the
 /// request, or the response cannot be parsed.
 pub async fn fetch_accounts() -> Result<Vec<AccountData>, RequestError> {
-    let url = accounts_url();
+    let mut all = Vec::new();
+    let mut pages = 0;
+    let mut offset = 0;
+    loop {
+        let window = fetch_accounts_window(offset).await?;
+        let exhausted = window.len() < ACCOUNTS_PAGE_SIZE;
+        all.extend(window);
+        if exhausted {
+            return Ok(all);
+        }
+        offset += ACCOUNTS_PAGE_SIZE;
+        pages += 1;
+        if pages >= MAX_SWEEP_PAGES {
+            return Err(RequestError::Server {
+                status: 0,
+                body: "Account list pagination did not terminate".to_string(),
+            });
+        }
+    }
+}
+
+/// Fetches a single bounded window of the account list starting at `offset`.
+async fn fetch_accounts_window(offset: usize) -> Result<Vec<AccountData>, RequestError> {
+    let url = format!(
+        "{}?limit={ACCOUNTS_PAGE_SIZE}&offset={offset}",
+        accounts_url()
+    );
     match gloo_net::http::Request::get(&url).send().await {
         Ok(response) if response.ok() => {
             let status = response.status();

@@ -45,15 +45,15 @@ authenticated requests.
 Public account responses omit the private `email` and `viewer_preferences`
 fields; they are only included in `/auth/me` for the account owner.
 
-| Method | Path                               | Auth    | Description                                                                          |
-| ------ | ---------------------------------- | ------- | ------------------------------------------------------------------------------------ |
-| GET    | `/data/accounts`                   | -       | List all accounts (public fields only).                                              |
-| POST   | `/data/accounts`                   | admin   | Create a new account.                                                                |
-| GET    | `/data/accounts/:id`               | -       | Read a single account (public fields only).                                          |
-| PUT    | `/data/accounts/:id`               | admin   | Replace an account.                                                                  |
-| DELETE | `/data/accounts/:id`               | admin   | Delete an account.                                                                   |
-| GET    | `/auth/linked-providers`           | session | Returns `{ "providers": ["github", ...] }`.                                          |
-| DELETE | `/auth/linked-providers/:provider` | session | Unlink the given provider. The account's sole remaining provider cannot be unlinked. |
+| Method | Path                               | Auth    | Description                                                                                                |
+| ------ | ---------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------- |
+| GET    | `/data/accounts`                   | -       | List accounts (public fields only), oldest first. Accepts `?limit=` (default 100, max 500) and `?offset=`. |
+| POST   | `/data/accounts`                   | admin   | Create a new account.                                                                                      |
+| GET    | `/data/accounts/:id`               | -       | Read a single account (public fields only).                                                                |
+| PUT    | `/data/accounts/:id`               | admin   | Replace an account.                                                                                        |
+| DELETE | `/data/accounts/:id`               | admin   | Delete an account.                                                                                         |
+| GET    | `/auth/linked-providers`           | session | Returns `{ "providers": ["github", ...] }`.                                                                |
+| DELETE | `/auth/linked-providers/:provider` | session | Unlink the given provider. The account's sole remaining provider cannot be unlinked.                       |
 
 ## Metadata
 
@@ -70,7 +70,7 @@ token in the `X-Turnstile-Token` header.
 
 | Method | Path                                      | Auth                | Description                                                                                                                                  |
 | ------ | ----------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/data/projects`                          | -                   | List all projects.                                                                                                                           |
+| GET    | `/data/projects`                          | -                   | List projects, newest first. Accepts `?limit=` (default 100, max 500) and `?offset=`.                                                        |
 | POST   | `/data/projects`                          | session + Turnstile | Create a project. Returns the created project.                                                                                               |
 | GET    | `/data/projects/:id`                      | -                   | Read a single project.                                                                                                                       |
 | PUT    | `/data/projects/:id`                      | session owner/admin | Replace a project's editable fields.                                                                                                         |

@@ -1,6 +1,7 @@
 use crate::components::cards::project::{ProjectCard, ProjectCardProperties};
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::effects::section_fade::FadeOverlay;
+use crate::components::ui::pagination::Pagination;
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
 use crate::contexts::{
     AccountsContext, LayoutContext, MetadataContext, ProfileModalContext, ProjectModalContext,
@@ -37,6 +38,9 @@ fn grid_columns(wide: bool, viewport_width: f64) -> usize {
     }
 }
 
+/// Number of project cards shown per page of the grid.
+const PAGE_SIZE: usize = 24;
+
 #[component]
 pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     let layout = LayoutContext::use_context();
@@ -55,6 +59,32 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         let tag_labels = metadata.tag_labels();
         let parsed = SearchEngine::parse_query(&query);
         SearchEngine::new(projects, tag_labels).search_owned(&parsed)
+    });
+
+    let (page, set_page) = signal(0_usize);
+    let total_pages = Memo::new(move |_| filtered.get().len().div_ceil(PAGE_SIZE));
+    let current_page = Memo::new(move |_| page.get().min(total_pages.get().saturating_sub(1)));
+    let page_cards = Memo::new(move |_| {
+        let start = current_page.get() * PAGE_SIZE;
+        filtered
+            .get()
+            .into_iter()
+            .skip(start)
+            .take(PAGE_SIZE)
+            .collect::<Vec<_>>()
+    });
+
+    Effect::new(move |_| {
+        // Return to the first page whenever the search query changes.
+        let _ = search.query.get();
+        set_page.set(0);
+    });
+
+    Effect::new(move |_| {
+        // Clear any stale card selection when the visible page changes.
+        let _ = current_page.get();
+        set_focused_index.set(None);
+        set_hovered_index.set(None);
     });
 
     Effect::new(move |_| {
@@ -99,7 +129,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
             return;
         }
 
-        let card_count = filtered.get().len();
+        let card_count = page_cards.get().len();
         let has_clear_button = !search.query.get().is_empty();
         let item_count = card_count + usize::from(has_clear_button);
         if item_count == 0 {
@@ -266,7 +296,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                         .into_any();
                     }
 
-                    let cards = filtered.get();
+                    let cards = page_cards.get();
                     let query = search.query.get();
                     if cards.is_empty() {
                         view! {
@@ -424,6 +454,21 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                             </div>
                         }
                             .into_any()
+                    }
+                }}
+                {move || {
+                    if total_pages.get() > 1 {
+                        Some(view! {
+                            <div class="flex justify-center mt-8">
+                                <Pagination
+                                    page=current_page
+                                    set_page=set_page
+                                    total_pages=total_pages
+                                />
+                            </div>
+                        })
+                    } else {
+                        None
                     }
                 }}
             </div>

@@ -209,6 +209,28 @@ pub fn public_origin(req: &Request) -> String {
     format!("{proto}://{host}")
 }
 
+/// Default page size for list endpoints when no `limit` query parameter is given.
+const DEFAULT_LIST_LIMIT: u32 = 100;
+/// Maximum page size accepted by list endpoints. Bounds each D1 query so a
+/// single request can never scan the whole table.
+const MAX_LIST_LIMIT: u32 = 500;
+
+/// Resolves the `limit` and `offset` query parameters of a list request into a
+/// bounded D1 window.
+///
+/// Values that are missing, unparsable, or out of range fall back to safe
+/// defaults instead of failing the request, keeping list endpoints tolerant of
+/// sloppy clients while guaranteeing every query is bounded.
+pub fn list_window(url: &url::Url) -> (u32, u32) {
+    let limit = query_param(url, "limit")
+        .and_then(|value| value.parse::<u32>().ok())
+        .map_or(DEFAULT_LIST_LIMIT, |limit| limit.clamp(1, MAX_LIST_LIMIT));
+    let offset = query_param(url, "offset")
+        .and_then(|value| value.parse::<u32>().ok())
+        .unwrap_or(0);
+    (limit, offset)
+}
+
 /// Returns the value of a query parameter from a URL, if present.
 pub fn query_param(url: &url::Url, name: &str) -> Option<String> {
     url.query_pairs()
@@ -282,6 +304,36 @@ pub fn is_https_request(req: &Request) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn list_window_defaults_when_params_are_missing() -> Result<(), url::ParseError> {
+        let url = url::Url::parse("https://api.cadiotheka.com/data/projects")?;
+        assert_eq!(list_window(&url), (DEFAULT_LIST_LIMIT, 0));
+        Ok(())
+    }
+
+    #[test]
+    fn list_window_parses_limit_and_offset() -> Result<(), url::ParseError> {
+        let url = url::Url::parse("https://api.cadiotheka.com/data/projects?limit=25&offset=50")?;
+        assert_eq!(list_window(&url), (25, 50));
+        Ok(())
+    }
+
+    #[test]
+    fn list_window_clamps_limit_to_bounds() -> Result<(), url::ParseError> {
+        let url = url::Url::parse("https://api.cadiotheka.com/data/projects?limit=99999")?;
+        assert_eq!(list_window(&url), (MAX_LIST_LIMIT, 0));
+        let url = url::Url::parse("https://api.cadiotheka.com/data/projects?limit=0")?;
+        assert_eq!(list_window(&url), (1, 0));
+        Ok(())
+    }
+
+    #[test]
+    fn list_window_falls_back_for_unparsable_params() -> Result<(), url::ParseError> {
+        let url = url::Url::parse("https://api.cadiotheka.com/data/projects?limit=abc&offset=-5")?;
+        assert_eq!(list_window(&url), (DEFAULT_LIST_LIMIT, 0));
+        Ok(())
+    }
 
     #[test]
     fn safe_redirect_target_accepts_relative_paths() -> Result<(), url::ParseError> {
