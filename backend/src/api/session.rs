@@ -127,10 +127,9 @@ pub async fn create_session(
     let encoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(cookie);
     let value = build_session_cookie(cookie_name, &encoded, is_https);
     console_log!(
-        "create_session: origin={} name={} cookie={}",
+        "create_session: origin={} name={}",
         public_origin(req),
-        cookie_name,
-        value
+        cookie_name
     );
     Ok(value)
 }
@@ -163,9 +162,9 @@ pub async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Result<Optio
 
     let Some(encoded) = encoded else {
         console_log!(
-            "read_session: cookie {} not found in: {}",
+            "read_session: cookie {} not found (origin={})",
             cookie_name,
-            cookie_header
+            public_origin(req)
         );
         return Ok(None);
     };
