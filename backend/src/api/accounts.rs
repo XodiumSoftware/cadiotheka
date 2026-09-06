@@ -7,6 +7,13 @@ use crate::api::session::require_account;
 use crate::utils::{db, forbidden, js_option, not_found, now_utc, required_param};
 
 const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences, (SELECT provider FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider, (SELECT provider_id FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider_id FROM accounts a";
+const SELECT_PUBLIC_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.role, a.bio, a.avatar_url, a.created_at, a.verified, (SELECT provider FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider, (SELECT provider_id FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider_id FROM accounts a";
+
+/// Full account record including private fields.
+///
+/// This shape is only serialized to the account owner (`/auth/me`) or used
+/// internally. Public endpoints serialize [`PublicAccount`] instead so that
+/// `email` and `viewer_preferences` are never exposed to other users.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Account {
     pub id: String,
@@ -22,6 +29,29 @@ pub struct Account {
     /// JSON blob storing account-scoped viewer preferences.
     #[serde(default)]
     pub viewer_preferences: String,
+    /// OAuth provider used to create this account, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<Provider>,
+    /// Provider-scoped unique identifier for this account, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_id: Option<String>,
+}
+
+/// Public representation of an account returned by unauthenticated endpoints.
+///
+/// Mirrors [`Account`] without the private `email` and `viewer_preferences`
+/// fields.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PublicAccount {
+    pub id: String,
+    pub username: String,
+    pub display_name: String,
+    pub role: Role,
+    pub bio: String,
+    pub avatar_url: Option<String>,
+    pub created_at: String,
+    /// D1 stores booleans as integers, so this field is an `i32` instead of a `bool`.
+    pub verified: i32,
     /// OAuth provider used to create this account, if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider: Option<Provider>,
@@ -279,17 +309,27 @@ fn sanitize_username_local(login: &str) -> String {
     shared::accounts::sanitize_username(login)
 }
 
-/// Returns a list of all accounts.
+/// Returns the public list of all accounts.
 pub async fn list_accounts(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let result = db(&ctx)?.prepare(SELECT_ACCOUNT_COLUMNS).all().await?;
-    let accounts: Vec<Account> = result.results::<Account>()?;
+    let result = db(&ctx)?
+        .prepare(SELECT_PUBLIC_ACCOUNT_COLUMNS)
+        .all()
+        .await?;
+    let accounts: Vec<PublicAccount> = result.results::<PublicAccount>()?;
     Response::from_json(&accounts)
 }
 
-/// Responds with the account matching the `:id` path parameter, or 404 if not found.
+/// Responds with the public account matching the `:id` path parameter, or 404
+/// if not found.
 pub async fn read_account(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let id = required_param(&ctx, "id")?;
-    match fetch_account(&ctx, &id).await? {
+    let result = db(&ctx)?
+        .prepare(format!("{SELECT_PUBLIC_ACCOUNT_COLUMNS} WHERE a.id = ?1"))
+        .bind(&[id.into()])?
+        .all()
+        .await?;
+    let mut accounts: Vec<PublicAccount> = result.results::<PublicAccount>()?;
+    match accounts.pop() {
         Some(account) => Response::from_json(&account),
         None => not_found("Not found"),
     }
@@ -419,5 +459,27 @@ mod tests {
     fn sanitize_username_falls_back_for_empty() {
         assert_eq!(sanitize_username_local(""), "user");
         assert_eq!(sanitize_username_local("!!!"), "user");
+    }
+
+    #[test]
+    fn public_account_json_omits_private_fields() -> Result<(), serde_json::Error> {
+        let account = PublicAccount {
+            id: "acc-1".to_string(),
+            username: "creator".to_string(),
+            display_name: "Creator".to_string(),
+            role: Role::Creator,
+            bio: "Bio".to_string(),
+            avatar_url: None,
+            created_at: "2025-01-01T00:00:00Z".to_string(),
+            verified: 1,
+            provider: Some(Provider::GitHub),
+            provider_id: Some("gh-123".to_string()),
+        };
+
+        let json = serde_json::to_string(&account)?;
+        assert!(!json.contains("email"));
+        assert!(!json.contains("viewer_preferences"));
+        assert!(json.contains("\"provider\":\"github\""));
+        Ok(())
     }
 }

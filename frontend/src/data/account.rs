@@ -16,6 +16,10 @@ pub struct AccountData {
     /// Human-readable display name.
     pub display_name: String,
     /// Contact email address.
+    ///
+    /// Only present for the authenticated account fetched via `/auth/me`;
+    /// public account payloads omit it for privacy.
+    #[serde(default)]
     pub email: String,
     /// Account role.
     pub role: AccountRole,
@@ -164,6 +168,16 @@ mod tests {
         assert!(account.provider.is_empty());
         assert!(account.provider_id.is_empty());
         assert!(account.avatar_url.is_none());
+        assert_eq!(account.viewer_preferences, "{}");
+        Ok(())
+    }
+
+    #[test]
+    fn account_deserializes_public_payload_without_private_fields() -> Result<(), serde_json::Error>
+    {
+        let json = r#"{"id":"acc-1","username":"user","display_name":"User","role":"creator","created_at":"2025-01-01T00:00:00Z"}"#;
+        let account: AccountData = serde_json::from_str(json)?;
+        assert!(account.email.is_empty());
         assert_eq!(account.viewer_preferences, "{}");
         Ok(())
     }
