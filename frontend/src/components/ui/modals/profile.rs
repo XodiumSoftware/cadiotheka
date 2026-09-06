@@ -127,24 +127,25 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
     });
 
     let start_link_oauth = move |provider: &'static str| {
+        let toast = ToastContext::use_context();
         leptos::task::spawn_local(async move {
             let url = match provider {
                 "github" => encode_redirect_url(&github_login_url()),
                 "google" => encode_redirect_url(&google_login_url()),
                 _ => return,
             };
-            let Ok(resp) = Request::get(&url)
-                .credentials(web_sys::RequestCredentials::Include)
-                .send()
-                .await
-            else {
-                return;
-            };
-            let Ok(parsed) = resp.json::<AuthUrlResponse>().await else {
-                return;
-            };
-            if let Some(window) = web_sys::window() {
-                let _ = window.location().set_href(&parsed.url);
+            match fetch_link_url(&url).await {
+                Ok(target) => {
+                    if let Some(window) = web_sys::window() {
+                        let _ = window.location().set_href(&target);
+                    }
+                }
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to start provider linking: {err}").into(),
+                    );
+                    toast.show("Couldn't start provider linking. Please try again.");
+                }
             }
         });
     };
@@ -463,6 +464,26 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
             </div>
         </div>
     }
+}
+
+/// Fetches the provider redirect URL that starts the OAuth linking flow.
+///
+/// Authenticated variant of the login flow's URL fetch: the session cookie is
+/// sent so the backend can associate the provider with the current account.
+async fn fetch_link_url(url: &str) -> Result<String, String> {
+    let resp = Request::get(url)
+        .credentials(web_sys::RequestCredentials::Include)
+        .send()
+        .await
+        .map_err(|err| format!("request failed: {err}"))?;
+    if !resp.ok() {
+        return Err(format!("server returned status {}", resp.status()));
+    }
+    let parsed = resp
+        .json::<AuthUrlResponse>()
+        .await
+        .map_err(|err| format!("invalid response: {err}"))?;
+    Ok(parsed.url)
 }
 
 #[derive(Debug, serde::Deserialize)]

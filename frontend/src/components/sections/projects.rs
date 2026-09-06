@@ -4,7 +4,7 @@ use crate::components::ui::effects::section_fade::FadeOverlay;
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
 use crate::contexts::{
     AccountsContext, LayoutContext, MetadataContext, ProfileModalContext, ProjectModalContext,
-    ProjectsContext, SearchContext,
+    ProjectsContext, SearchContext, ToastContext,
 };
 use crate::data::ProjectData;
 use crate::engines::SearchEngine;
@@ -249,6 +249,23 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                         .into_any();
                     }
 
+                    if let Some(error) = projects_ctx.error.get() {
+                        return view! {
+                            <div class="flex flex-col items-center justify-center text-center h-full gap-4" role="alert">
+                                <span class="text-error">"Failed to load projects."</span>
+                                <span class="text-sm text-base-content/60">{error.message()}</span>
+                                <button
+                                    type="button"
+                                    class="btn btn-outline btn-lift gap-1.5"
+                                    on:click=move |_| projects_ctx.retry()
+                                >
+                                    <span>{"Try Again"}</span>
+                                </button>
+                            </div>
+                        }
+                        .into_any();
+                    }
+
                     let cards = filtered.get();
                     let query = search.query.get();
                     if cards.is_empty() {
@@ -370,6 +387,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                         let accounts_ctx = AccountsContext::use_context();
                                         let profile_modal = ProfileModalContext::use_context();
                                         let project_modal = ProjectModalContext::use_context();
+                                        let toast = ToastContext::use_context();
                                         let index = card_index + card_offset;
                                         view! {
                                             <ProjectCard
@@ -394,6 +412,9 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                                         .find(|a| a.id == project_for_profile.author_id);
                                                     if let Some(account) = account {
                                                         profile_modal.open(account);
+                                                    } else if accounts_ctx.error.get().is_some() {
+                                                        toast.show("Couldn't load account details. Retrying...");
+                                                        accounts_ctx.retry();
                                                     }
                                                 }
                                             />
