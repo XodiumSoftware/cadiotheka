@@ -59,6 +59,12 @@ fn validate_project_payload(payload: &ProjectPayload) -> std::collections::HashM
             "Title must be 100 characters or fewer".to_string(),
         );
     }
+    if payload.description.len() > MAX_DESCRIPTION_LENGTH {
+        errors.insert(
+            "description".to_string(),
+            "Description must be 5000 characters or fewer".to_string(),
+        );
+    }
     errors
 }
 
@@ -1199,6 +1205,17 @@ mod tests {
         assert_eq!(
             errors.get("title"),
             Some(&"Title must be 100 characters or fewer".to_string())
+        );
+    }
+
+    #[test]
+    fn payload_with_long_description_fails() {
+        let mut payload = sample_payload();
+        payload.description = "a".repeat(5001);
+        let errors = validate_project_payload(&payload);
+        assert_eq!(
+            errors.get("description"),
+            Some(&"Description must be 5000 characters or fewer".to_string())
         );
     }
 
