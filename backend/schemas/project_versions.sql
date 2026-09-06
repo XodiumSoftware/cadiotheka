@@ -10,3 +10,5 @@ CREATE TABLE IF NOT EXISTS project_versions (
     downloads INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_project_versions_project_id ON project_versions (project_id);

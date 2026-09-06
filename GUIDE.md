@@ -58,20 +58,22 @@ Most day-to-day development commands are run from inside one of those crates.
 ## Build the Frontend
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/XodiumSoftware/cadiotheka.git
-   cd cadiotheka/frontend
-   ```
+
+    ```bash
+    git clone https://github.com/XodiumSoftware/cadiotheka.git
+    cd cadiotheka/frontend
+    ```
 
 2. Build and bundle the web app with Trunk:
-   ```bash
-   trunk build
-   ```
+
+    ```bash
+    trunk build
+    ```
 
 3. For an optimized release build:
-   ```bash
-   trunk build --release
-   ```
+    ```bash
+    trunk build --release
+    ```
 
 The output is placed in `frontend/dist/`.
 
@@ -146,11 +148,15 @@ Apply the schemas to the local D1 database:
 ```bash
 cd backend
 npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
+npx wrangler d1 execute cadiotheka --file=schemas/account_providers.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
-npx wrangler d1 execute cadiotheka --file=migrations/0006_add_viewer_preferences_to_accounts.sql --local
+npx wrangler d1 execute cadiotheka --file=schemas/project_versions.sql --local
 ```
 
+Schemas describe the current table layout for fresh databases. When upgrading an existing database, apply any pending files from `migrations/` in order instead (e.g. `0006_add_viewer_preferences_to_accounts.sql` and `0007_add_query_indexes.sql`).
+
 The backend uses these short Worker bindings:
+
 - `DB` for the D1 database
 - `AUTH` for the KV namespace used by OAuth state and sessions
 - `PROJECT_ASSETS` for the R2 bucket that stores project assets
@@ -235,20 +241,20 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
 ### Build fails
 
 - Verify the latest stable Rust toolchain is installed and active:
-  ```bash
-  rustc --version
-  cargo --version
-  rustup show
-  ```
+    ```bash
+    rustc --version
+    cargo --version
+    rustup show
+    ```
 - Ensure the `wasm32-unknown-unknown` target is installed:
-  ```bash
-  rustup target list --installed
-  ```
+    ```bash
+    rustup target list --installed
+    ```
 - Try cleaning the build:
-  ```bash
-  cargo clean
-  trunk build
-  ```
+    ```bash
+    cargo clean
+    trunk build
+    ```
 
 ### Clippy warnings
 
@@ -263,37 +269,44 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
 ## Deploy the Backend
 
 1. Create a D1 database:
-   ```bash
-   cd backend
-   npx wrangler d1 create cadiotheka-db
-   ```
+
+    ```bash
+    cd backend
+    npx wrangler d1 create cadiotheka-db
+    ```
 
 2. Create an R2 bucket for project assets:
-   ```bash
-   npx wrangler r2 bucket create cadiotheka-assets
-   ```
+
+    ```bash
+    npx wrangler r2 bucket create cadiotheka-assets
+    ```
 
 3. Update `wrangler.toml` with:
-   - the D1 database ID from step 1
-   - the short bindings `DB`, `AUTH`, and `PROJECT_ASSETS` as needed
-   - the R2 binding:
-   ```toml
-   [[r2_buckets]]
-   binding = "PROJECT_ASSETS"
-   bucket_name = "cadiotheka-assets"
-   ```
+    - the D1 database ID from step 1
+    - the short bindings `DB`, `AUTH`, and `PROJECT_ASSETS` as needed
+    - the R2 binding:
 
-4. Apply the schema:
-   ```bash
-   npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql
-   npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql
-   npx wrangler d1 execute cadiotheka-db --file=migrations/0006_add_viewer_preferences_to_accounts.sql
-   ```
+    ```toml
+    [[r2_buckets]]
+    binding = "PROJECT_ASSETS"
+    bucket_name = "cadiotheka-assets"
+    ```
+
+4. Apply the schemas:
+
+    ```bash
+    npx wrangler d1 execute cadiotheka-db --file=schemas/accounts.sql
+    npx wrangler d1 execute cadiotheka-db --file=schemas/account_providers.sql
+    npx wrangler d1 execute cadiotheka-db --file=schemas/projects.sql
+    npx wrangler d1 execute cadiotheka-db --file=schemas/project_versions.sql
+    ```
+
+    When upgrading an existing database, apply any pending files from `migrations/` in order instead.
 
 5. Build and deploy:
-   ```bash
-   npx wrangler deploy
-   ```
+    ```bash
+    npx wrangler deploy
+    ```
 
 ---
 
