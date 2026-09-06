@@ -631,7 +631,7 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
     headers.set("Content-Type", &content_type)?;
     headers.set(
         "Content-Disposition",
-        &format!("attachment; filename=\"{filename}\""),
+        &attachment_content_disposition(&filename),
     )?;
 
     // Increment the per-version download counter.
@@ -647,6 +647,62 @@ pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response>
 /// Returns the R2 key used to cache a project's converted GLB.
 fn glb_key_for_project(id: &str) -> String {
     format!("ifcs/{id}/model.glb")
+}
+
+/// Builds a `Content-Disposition: attachment` header value for a
+/// user-controlled filename.
+///
+/// The quoted `filename` fallback is restricted to printable ASCII with `"`
+/// and `\` replaced, so the name cannot break out of the quoted string or
+/// inject extra header content. When sanitization changed the name, an
+/// RFC 5987 `filename*` parameter carries the full percent-encoded UTF-8 name.
+fn attachment_content_disposition(filename: &str) -> String {
+    let ascii_filename: String = filename
+        .chars()
+        .map(|c| match c {
+            '"' | '\\' => '_',
+            c if c.is_ascii() && !c.is_ascii_control() => c,
+            _ => '_',
+        })
+        .collect();
+    if ascii_filename == filename {
+        format!("attachment; filename=\"{ascii_filename}\"")
+    } else {
+        format!(
+            "attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{}",
+            rfc5987_encode(filename)
+        )
+    }
+}
+
+/// Percent-encodes a value for an RFC 5987 `filename*` parameter, keeping the
+/// `attr-char` set unencoded as required by the grammar.
+fn rfc5987_encode(value: &str) -> String {
+    use std::fmt::Write as _;
+    let mut out = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        match byte {
+            b'0'..=b'9'
+            | b'a'..=b'z'
+            | b'A'..=b'Z'
+            | b'!'
+            | b'#'
+            | b'$'
+            | b'&'
+            | b'+'
+            | b'-'
+            | b'.'
+            | b'^'
+            | b'_'
+            | b'`'
+            | b'|'
+            | b'~' => out.push(char::from(byte)),
+            _ => {
+                let _ = write!(out, "%{byte:02X}");
+            }
+        }
+    }
+    out
 }
 
 /// Returns the R2 key used to cache per-primitive metadata for the GLB.
@@ -1205,6 +1261,38 @@ mod tests {
             description: String::new(),
             tags: vec![],
         }
+    }
+
+    #[test]
+    fn content_disposition_keeps_plain_ascii_filename() {
+        assert_eq!(
+            attachment_content_disposition("mountain-bike.ifc"),
+            "attachment; filename=\"mountain-bike.ifc\""
+        );
+    }
+
+    #[test]
+    fn content_disposition_neutralizes_quotes_and_backslashes() {
+        assert_eq!(
+            attachment_content_disposition("evil\".ifc \\ x\".ifc"),
+            "attachment; filename=\"evil_.ifc _ x_.ifc\"; filename*=UTF-8''evil%22.ifc%20%5C%20x%22.ifc"
+        );
+    }
+
+    #[test]
+    fn content_disposition_adds_rfc5987_parameter_for_utf8_names() {
+        assert_eq!(
+            attachment_content_disposition("Schéma v2.ifc"),
+            "attachment; filename=\"Sch_ma v2.ifc\"; filename*=UTF-8''Sch%C3%A9ma%20v2.ifc"
+        );
+    }
+
+    #[test]
+    fn content_disposition_strips_control_characters() {
+        assert_eq!(
+            attachment_content_disposition("a\rb\n.ifc"),
+            "attachment; filename=\"a_b_.ifc\"; filename*=UTF-8''a%0Db%0A.ifc"
+        );
     }
 
     #[test]
