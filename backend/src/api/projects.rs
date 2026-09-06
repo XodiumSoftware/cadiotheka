@@ -82,22 +82,18 @@ pub struct Project {
 }
 
 /// Payload used to create or update a project.
+///
+/// Only carries client-editable fields. Server-owned fields (`id`, author
+/// attribution, `downloads`, `favorites`, `timestamp`) are generated or
+/// preserved by the backend and ignored when present in the request body.
 #[derive(Deserialize, Debug)]
 pub struct ProjectPayload {
-    pub id: String,
     pub title: String,
-    pub author: String,
-    pub author_id: String,
-    pub author_username: String,
     #[serde(with = "json_string")]
     pub collaborator_ids: Vec<String>,
     pub description: String,
     #[serde(with = "json_tags")]
     pub tags: Vec<Tag>,
-    pub downloads: u64,
-    #[serde(with = "json_string")]
-    pub favorites: Vec<String>,
-    pub timestamp: String,
 }
 
 /// Serde adapter that stores a `Vec<String>` as a single JSON string column.
@@ -164,16 +160,17 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
     };
-    let mut payload: ProjectPayload = req.json().await?;
+    let payload: ProjectPayload = req.json().await?;
     let validation_errors = validate_project_payload(&payload);
     if !validation_errors.is_empty() {
         let body = serde_json::json!({ "errors": validation_errors });
         return Ok(Response::from_json(&body)?.with_status(400));
     }
-    payload.author_id = account.id;
-    payload.author = account.display_name;
-    payload.author_username = account.username;
-    let project_id = payload.id.clone();
+
+    let project_id = uuid::Uuid::new_v4().to_string();
+    let timestamp = now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .map_err(|e| worker::Error::RustError(format!("failed to format timestamp: {e}")))?;
 
     let tags = payload
         .tags
@@ -181,12 +178,8 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
         .map(std::string::ToString::to_string)
         .collect::<Vec<_>>();
     let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
-    let favorites = serde_json::to_string(&payload.favorites).unwrap_or_else(|_| "[]".to_string());
     let collaborator_ids =
         serde_json::to_string(&payload.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
-
-    #[allow(clippy::cast_precision_loss)]
-    let downloads_value = payload.downloads as f64;
 
     db(&ctx)?
         .prepare(
@@ -195,17 +188,17 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
         )
         .bind(
             &[
-                payload.id.into(),
+                project_id.clone().into(),
                 payload.title.into(),
-                payload.author.into(),
-                payload.author_id.into(),
-                payload.author_username.into(),
+                account.display_name.into(),
+                account.id.into(),
+                account.username.into(),
                 collaborator_ids.into(),
                 payload.description.into(),
                 tags.into(),
-                downloads_value.into(),
-                favorites.into(),
-                payload.timestamp.into(),
+                0.0_f64.into(),
+                "[]".into(),
+                timestamp.into(),
             ])?
         .run()
         .await?;
@@ -305,28 +298,24 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
         return forbidden("Forbidden");
     }
 
-    let mut payload: ProjectPayload = req.json().await?;
+    let payload: ProjectPayload = req.json().await?;
     let validation_errors = validate_project_payload(&payload);
     if !validation_errors.is_empty() {
         let body = serde_json::json!({ "errors": validation_errors });
         return Ok(Response::from_json(&body)?.with_status(400));
     }
-    payload.author_id = project.author_id;
-    payload.author = project.author;
-    payload.author_username = project.author_username;
     let tags = payload
         .tags
         .iter()
         .map(std::string::ToString::to_string)
         .collect::<Vec<_>>();
     let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
-    payload.collaborator_ids = project.collaborator_ids.clone();
-    let favorites = serde_json::to_string(&project.favorites).unwrap_or_else(|_| "[]".to_string());
     let collaborator_ids =
-        serde_json::to_string(&payload.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
+        serde_json::to_string(&project.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
+    let favorites = serde_json::to_string(&project.favorites).unwrap_or_else(|_| "[]".to_string());
 
     #[allow(clippy::cast_precision_loss)]
-    let downloads_value = payload.downloads as f64;
+    let downloads_value = project.downloads as f64;
 
     db(&ctx)?
         .prepare(
@@ -337,15 +326,15 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
         .bind(
             &[
                 payload.title.into(),
-                payload.author.into(),
-                payload.author_id.into(),
-                payload.author_username.into(),
+                project.author.into(),
+                project.author_id.into(),
+                project.author_username.into(),
                 collaborator_ids.into(),
                 payload.description.into(),
                 tags.into(),
                 downloads_value.into(),
                 favorites.into(),
-                payload.timestamp.into(),
+                project.timestamp.into(),
                 id.into(),
             ])?
         .run()
@@ -1190,17 +1179,10 @@ mod tests {
 
     fn sample_payload() -> ProjectPayload {
         ProjectPayload {
-            id: "proj-1".into(),
             title: "Sample".into(),
-            author: "Author".into(),
-            author_id: "acc-1".into(),
-            author_username: "author".into(),
             collaborator_ids: vec![],
             description: String::new(),
             tags: vec![],
-            downloads: 0,
-            favorites: vec![],
-            timestamp: "2025-01-01T00:00:00Z".into(),
         }
     }
 

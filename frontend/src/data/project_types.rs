@@ -140,9 +140,10 @@ pub fn now_utc() -> time::OffsetDateTime {
 
 /// Creates a new project payload for submission to the backend.
 ///
-/// The backend fills in `author`, `author_id`, and `downloads`,
-/// so this function generates the remaining fields and leaves the computed
-/// ones empty or zeroed.
+/// The backend assigns the `id` and `timestamp`, attributes the project to the
+/// authenticated account, and initializes the `downloads`/`favorites`
+/// counters. The values generated here for those fields are placeholders that
+/// the server overrides.
 pub fn new_project_payload(title: String, description: String, tags: Vec<String>) -> ProjectData {
     ProjectData {
         id: uuid::Uuid::new_v4().to_string(),
