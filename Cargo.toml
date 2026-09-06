@@ -15,3 +15,9 @@ too_many_lines = "allow"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
