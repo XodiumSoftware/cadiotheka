@@ -5,15 +5,21 @@ on:
     branches: [main, dev]
     paths:
       - "backend/**"
+      - "shared/**"
       - "Cargo.toml"
       - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rustfmt.toml"
       - ".github/workflows/backend.yml"
   pull_request:
     branches: [main, dev]
     paths:
       - "backend/**"
+      - "shared/**"
       - "Cargo.toml"
       - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rustfmt.toml"
       - ".github/workflows/backend.yml"
   workflow_dispatch:
 
