@@ -228,6 +228,9 @@ pub struct ProjectPatch {
 
 /// Partially updates an existing project, identified by the `:id` path parameter.
 /// Only the project owner or an admin may edit it.
+///
+/// All provided fields are validated before any write and applied in a single
+/// D1 batch, so a patch atomically succeeds or fails as a whole.
 pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
@@ -242,15 +245,26 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
     }
 
     let patch: ProjectPatch = req.json().await?;
+    if let Some(title) = &patch.title
+        && title.len() > MAX_TITLE_LENGTH
+    {
+        return bad_request("Title must be 100 characters or fewer");
+    }
+    if let Some(description) = &patch.description
+        && description.len() > MAX_DESCRIPTION_LENGTH
+    {
+        return bad_request("Description must be 5000 characters or fewer");
+    }
+
+    let database = db(&ctx)?;
+    let mut statements = Vec::new();
+
     if let Some(title) = patch.title {
-        if title.len() > MAX_TITLE_LENGTH {
-            return bad_request("Title must be 100 characters or fewer");
-        }
-        db(&ctx)?
-            .prepare("UPDATE projects SET title = ?1 WHERE id = ?2")
-            .bind(&[title.into(), id.clone().into()])?
-            .run()
-            .await?;
+        statements.push(
+            database
+                .prepare("UPDATE projects SET title = ?1 WHERE id = ?2")
+                .bind(&[title.into(), id.clone().into()])?,
+        );
     }
 
     if let Some(tags) = patch.tags {
@@ -259,32 +273,33 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
             .map(std::string::ToString::to_string)
             .collect::<Vec<_>>();
         let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
-        db(&ctx)?
-            .prepare("UPDATE projects SET tags = ?1 WHERE id = ?2")
-            .bind(&[tags.into(), id.clone().into()])?
-            .run()
-            .await?;
+        statements.push(
+            database
+                .prepare("UPDATE projects SET tags = ?1 WHERE id = ?2")
+                .bind(&[tags.into(), id.clone().into()])?,
+        );
     }
 
     if let Some(collaborator_ids) = patch.collaborator_ids {
         let collaborator_ids =
             serde_json::to_string(&collaborator_ids).unwrap_or_else(|_| "[]".to_string());
-        db(&ctx)?
-            .prepare("UPDATE projects SET collaborator_ids = ?1 WHERE id = ?2")
-            .bind(&[collaborator_ids.into(), id.clone().into()])?
-            .run()
-            .await?;
+        statements.push(
+            database
+                .prepare("UPDATE projects SET collaborator_ids = ?1 WHERE id = ?2")
+                .bind(&[collaborator_ids.into(), id.clone().into()])?,
+        );
     }
 
     if let Some(description) = patch.description {
-        if description.len() > MAX_DESCRIPTION_LENGTH {
-            return bad_request("Description must be 5000 characters or fewer");
-        }
-        db(&ctx)?
-            .prepare("UPDATE projects SET description = ?1 WHERE id = ?2")
-            .bind(&[description.into(), id.into()])?
-            .run()
-            .await?;
+        statements.push(
+            database
+                .prepare("UPDATE projects SET description = ?1 WHERE id = ?2")
+                .bind(&[description.into(), id.into()])?,
+        );
+    }
+
+    if !statements.is_empty() {
+        database.batch(statements).await?;
     }
 
     Response::empty()

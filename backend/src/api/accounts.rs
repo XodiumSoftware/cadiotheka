@@ -222,7 +222,9 @@ pub struct OAuthProfile {
 /// Inserts a new account from an OAuth login.
 ///
 /// The username is made unique by appending a short random suffix if the
-/// provider's preferred login is already taken.
+/// provider's preferred login is already taken. The account row and its
+/// provider link are written in a single D1 batch so they are created
+/// atomically: a failure never leaves an account without a sign-in provider.
 pub async fn create_oauth_account(
     ctx: &RouteContext<()>,
     provider: Provider,
@@ -250,7 +252,8 @@ pub async fn create_oauth_account(
         provider_id: Some(provider_id.to_string()),
     };
 
-    db(ctx)?
+    let database = db(ctx)?;
+    let insert_account = database
         .prepare(
             "INSERT INTO accounts (id, username, display_name, email, role, bio, avatar_url, created_at, verified, viewer_preferences) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
@@ -266,11 +269,8 @@ pub async fn create_oauth_account(
             account.created_at.clone().into(),
             account.verified.into(),
             account.viewer_preferences.clone().into(),
-        ])?
-        .run()
-        .await?;
-
-    db(ctx)?
+        ])?;
+    let insert_provider = database
         .prepare(
             "INSERT INTO account_providers (account_id, provider, provider_id, created_at) VALUES (?1, ?2, ?3, ?4)",
         )
@@ -279,8 +279,10 @@ pub async fn create_oauth_account(
             provider.to_string().into(),
             provider_id.into(),
             created_at.into(),
-        ])?
-        .run()
+        ])?;
+
+    database
+        .batch(vec![insert_account, insert_provider])
         .await?;
 
     Ok(account)
