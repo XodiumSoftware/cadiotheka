@@ -147,6 +147,7 @@ dependencies = [
  "hex",
  "hmac",
  "html-escape",
+ "ifc-lite-core",
  "ifc-lite-export",
  "oauth2",
  "rand",
@@ -1239,9 +1240,9 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-core"
-version = "4.1.4"
+version = "4.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7c7ab662cb89d8e45d0dde1d494779f4956472bebf5928b624fd7b5d1abb204"
+checksum = "6b7a584f6e28c010ecb50d6d78bf5f05cc1668bbcf8835e050e4f096eaace953"
 dependencies = [
  "fast-float2",
  "futures-core",

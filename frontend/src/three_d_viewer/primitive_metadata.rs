@@ -18,6 +18,9 @@ pub struct PrimitiveMetadata {
     pub name: Option<String>,
     /// IFC type name (e.g. `IfcWall`, `IfcDoor`) of the product, when available.
     pub ifc_type: Option<String>,
+    /// IFC material names associated with the product, when available.
+    #[serde(default)]
+    pub materials: Vec<String>,
 }
 
 /// Full sidecar metadata file returned by `/data/projects/:id/glb-metadata`.
@@ -42,6 +45,8 @@ pub struct ObjectHit {
     pub name: Option<String>,
     /// IFC type of the clicked object, when metadata is available.
     pub ifc_type: Option<String>,
+    /// IFC material names of the clicked object, when metadata is available.
+    pub materials: Vec<String>,
 }
 
 /// Fetches primitive metadata for the given URL.

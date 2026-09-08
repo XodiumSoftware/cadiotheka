@@ -716,8 +716,11 @@ fn rfc5987_encode(value: &str) -> String {
 }
 
 /// Returns the R2 key used to cache per-primitive metadata for the GLB.
+///
+/// The key is versioned so deployments pick up metadata format additions
+/// (such as material names) without waiting for a new IFC upload.
 fn glb_metadata_key_for_project(id: &str) -> String {
-    format!("ifcs/{id}/model-metadata.json")
+    format!("ifcs/{id}/model-metadata-v2.json")
 }
 
 /// Metadata for a single primitive in the converted GLB.
@@ -727,6 +730,9 @@ struct GltfPrimitiveMetadata {
     global_id: Option<String>,
     name: Option<String>,
     ifc_type: Option<String>,
+    /// IFC material names associated with the primitive's source entity.
+    #[serde(default)]
+    materials: Vec<String>,
 }
 
 /// Extracts per-primitive metadata from a binary GLB.
@@ -853,6 +859,7 @@ fn visit_gltf_node(
                 global_id: global_id.clone(),
                 name: name.clone(),
                 ifc_type: ifc_type.clone(),
+                materials: Vec::new(),
             });
         }
     }
@@ -1066,7 +1073,14 @@ async fn ensure_glb_assets_cached(
         return Ok(Some(GlbConversion::NoGeometry));
     }
 
-    let metadata = extract_glb_metadata(&glb_bytes);
+    let mut metadata = extract_glb_metadata(&glb_bytes);
+    let material_names = crate::materials::extract_material_names(&ifc_bytes);
+    for primitive in &mut metadata {
+        primitive.materials = primitive
+            .express_id
+            .and_then(|id| material_names.get(&id).cloned())
+            .unwrap_or_default();
+    }
     let metadata_json = serde_json::to_vec(&serde_json::json!({ "primitives": metadata }))?;
 
     let glb_http_metadata = HttpMetadata {

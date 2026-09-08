@@ -797,6 +797,7 @@ pub fn IfcViewer(
                 global_id: meta.as_ref().and_then(|m| m.global_id.clone()),
                 name: meta.as_ref().and_then(|m| m.name.clone()),
                 ifc_type: meta.as_ref().and_then(|m| m.ifc_type.clone()),
+                materials: meta.as_ref().map_or_else(Vec::new, |m| m.materials.clone()),
             };
             selected_object.set(Some(object_hit.clone()));
             if let Some(ref callback) = on_object_hit {
@@ -1257,6 +1258,11 @@ pub fn IfcViewer(
                                 };
                                 let name = hit.name.unwrap_or_else(|| "Unnamed object".to_owned());
                                 let ifc_type = hit.ifc_type.unwrap_or_else(|| "Unknown type".to_owned());
+                                let material = if hit.materials.is_empty() {
+                                    "-".to_owned()
+                                } else {
+                                    hit.materials.join(", ")
+                                };
                                 let width = object_panel_width.get();
                                 let label_width = label_col_width.get();
                                 let value_width = 1.0 - label_width;
@@ -1317,6 +1323,22 @@ pub fn IfcViewer(
                                                             <td class="px-3 py-2 text-base-content font-medium break-words"
                                                                 style=format!("width: {:.2}%", value_width * 100.0)
                                                             >{ifc_type}</td>
+                                                        </tr>
+                                                        <tr class="even:bg-base-200/30">
+                                                            <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"
+                                                                style=format!("width: {:.2}%", label_width * 100.0)
+                                                            >
+                                                                <span class="break-words">"Material"</span>
+                                                                <div
+                                                                    class="absolute inset-y-0 right-0 w-1.5 cursor-col-resize"
+                                                                    on:mousedown=on_label_resize_mouse_down
+                                                                    on:dblclick=on_label_resize_double_click
+                                                                    aria-label="Resize label column"
+                                                                ></div>
+                                                            </th>
+                                                            <td class="px-3 py-2 text-base-content font-medium break-words"
+                                                                style=format!("width: {:.2}%", value_width * 100.0)
+                                                            >{material}</td>
                                                         </tr>
                                                         <tr class="even:bg-base-200/30">
                                                             <th class="relative px-3 py-2 text-left text-xs text-base-content/50 uppercase align-top border-r border-base-content/10 group"

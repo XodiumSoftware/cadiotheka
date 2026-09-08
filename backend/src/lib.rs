@@ -6,6 +6,8 @@ mod cors;
 
 mod guards;
 
+mod materials;
+
 mod api {
     pub mod accounts;
     pub mod auth;

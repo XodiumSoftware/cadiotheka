@@ -85,7 +85,7 @@ token in the `X-Turnstile-Token` header.
 | DELETE | `/data/projects/:id/versions/:version_id` | session owner/admin | Delete a single version.                                                                                                                     |
 | GET    | `/data/projects/:id/glb`                  | -                   | Serve the project's converted GLB (`model/gltf-binary`). Converts on demand when not cached.                                                 |
 | POST   | `/data/projects/:id/glb`                  | session owner/admin | Convert the latest IFC version to GLB. Returns `{ "status": "ready" }`, or 422 when the model has no renderable geometry.                    |
-| GET    | `/data/projects/:id/glb-metadata`         | -                   | Serve per-primitive metadata (JSON) mapping GLB primitives to IFC entities.                                                                  |
+| GET    | `/data/projects/:id/glb-metadata`         | -                   | Serve per-primitive metadata (JSON) mapping GLB primitives to IFC entities: express id, GlobalId, name, IFC type, and IFC material names.      |
 | GET    | `/data/ifcs/:version_id/:filename`        | -                   | Download a project IFC model as an attachment and increment its version download counter.                                                    |
 
 ### Project payload limits
