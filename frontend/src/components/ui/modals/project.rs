@@ -2902,11 +2902,6 @@ fn ProjectModalContent(
                                                         move || is_editable.get() && edit_mode.get()
                                                     })
                                                     selected_object_signal=selected_object
-                                                    on_object_hit=Callback::new(move |hit: ObjectHit| {
-                                                        leptos::web_sys::console::log_1(
-                                                            &format!("Clicked object: {hit:?}").into(),
-                                                        );
-                                                    })
                                                 />
                                             </div>
                                         </div>
