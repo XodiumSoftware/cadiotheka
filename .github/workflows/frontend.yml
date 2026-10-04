@@ -69,7 +69,7 @@ jobs:
 
       - id: run_sccache_cache
         name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - id: cache_dependencies
         name: Cache dependencies
@@ -135,7 +135,7 @@ jobs:
 
       - id: run_sccache_cache
         name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - id: cache_dependencies
         name: Cache dependencies
@@ -186,7 +186,7 @@ jobs:
 
       - id: run_sccache_cache
         name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - id: cache_dependencies
         name: Cache dependencies
