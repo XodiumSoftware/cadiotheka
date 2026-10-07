@@ -238,7 +238,7 @@ The static site is placed in `frontend/dist/`.
 [issues_url]: https://github.com/XodiumSoftware/cadiotheka/issues
 [license_shield_url]: https://img.shields.io/github/license/XodiumSoftware/cadiotheka?style=for-the-badge&color=blue
 [license_url]: https://github.com/XodiumSoftware/cadiotheka?tab=AGPL-3.0-1-ov-file
-[deps_shield_url]: https://deps.rs/repo/github/XodiumSoftware/cadiotheka/status.svg
+[deps_shield_url]: https://deps.rs/repo/github/XodiumSoftware/cadiotheka/status.svg?style=for-the-badge
 [deps_url]: https://deps.rs/repo/github/XodiumSoftware/cadiotheka
 [built_with_shield_url]: https://skillicons.dev/icons?i=rust,github,githubactions
 [built_with_url]: https://skillicons.dev
