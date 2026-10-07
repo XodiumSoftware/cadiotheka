@@ -4,7 +4,7 @@ use leptos::prelude::*;
 const DEFAULT_SIBLING_COUNT: usize = 1;
 
 /// A single page number or an ellipsis gap in a pagination bar.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum PageItem {
     Page(usize),
     /// A truncation gap; carries the page it precedes so each gap has a unique
@@ -189,7 +189,7 @@ mod tests {
     #[test]
     fn empty_pagination_when_total_is_zero() {
         let items = pagination_pages(0, 0, 1);
-        assert!(items.is_empty());
+        assert_eq!(items, Vec::<PageItem>::new());
     }
 
     #[test]

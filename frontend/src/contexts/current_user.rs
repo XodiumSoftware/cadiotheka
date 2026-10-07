@@ -295,6 +295,6 @@ mod tests {
     #[test]
     fn context_starts_unauthenticated() {
         let placeholder = AccountData::placeholder();
-        assert!(placeholder.id.is_empty());
+        assert_eq!(placeholder.id, "");
     }
 }

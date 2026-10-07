@@ -198,11 +198,11 @@ mod tests {
         let json = r#"{"id":"acc-1","username":"user","display_name":"User","email":"u@example.com","role":"creator","created_at":"2025-01-01T00:00:00Z"}"#;
         let account: AccountData = serde_json::from_str(json)?;
         assert_eq!(account.id, "acc-1");
-        assert!(account.bio.is_empty());
-        assert!(account.project_ids.is_empty());
+        assert_eq!(account.bio, "");
+        assert_eq!(account.project_ids, Vec::<String>::new());
         assert_eq!(account.verified, 0);
-        assert!(account.provider.is_empty());
-        assert!(account.provider_id.is_empty());
+        assert_eq!(account.provider, "");
+        assert_eq!(account.provider_id, "");
         assert!(account.avatar_url.is_none());
         assert_eq!(account.viewer_preferences, "{}");
         Ok(())
@@ -213,7 +213,7 @@ mod tests {
     {
         let json = r#"{"id":"acc-1","username":"user","display_name":"User","role":"creator","created_at":"2025-01-01T00:00:00Z"}"#;
         let account: AccountData = serde_json::from_str(json)?;
-        assert!(account.email.is_empty());
+        assert_eq!(account.email, "");
         assert_eq!(account.viewer_preferences, "{}");
         Ok(())
     }
@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn placeholder_account_is_empty() {
         let account = AccountData::placeholder();
-        assert!(account.id.is_empty());
-        assert!(account.username.is_empty());
+        assert_eq!(account.id, "");
+        assert_eq!(account.username, "");
     }
 }

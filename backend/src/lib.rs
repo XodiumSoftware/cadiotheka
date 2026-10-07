@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(parsed.role, account.role.to_string());
         assert_eq!(parsed.bio, account.bio);
         assert_eq!(parsed.avatar_url, account.avatar_url);
-        assert!(parsed.project_ids.is_empty());
+        assert_eq!(parsed.project_ids, [] as [String; 0]);
         assert_eq!(parsed.created_at, account.created_at);
         assert_eq!(parsed.verified, account.verified);
         assert_eq!(parsed.viewer_preferences, account.viewer_preferences);
@@ -243,8 +243,8 @@ mod tests {
         assert!(!json.contains("\"provider_id\""));
 
         let parsed: FrontendAccountData = serde_json::from_str(&json)?;
-        assert!(parsed.provider.is_empty());
-        assert!(parsed.provider_id.is_empty());
+        assert_eq!(parsed.provider, "");
+        assert_eq!(parsed.provider_id, "");
         Ok(())
     }
 

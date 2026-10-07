@@ -193,8 +193,8 @@ mod tests {
     #[test]
     fn parse_empty_query() {
         let parsed = parse_query("");
-        assert!(parsed.filter.is_empty());
-        assert!(parsed.filters.is_empty());
+        assert_eq!(parsed.filter, Vec::<&str>::new());
+        assert_eq!(parsed.filters, Vec::<&str>::new());
         assert_eq!(parsed.sort.by, SortBy::Downloads);
         assert_eq!(parsed.sort.order, SortOrder::Descending);
     }
@@ -203,7 +203,7 @@ mod tests {
     fn parse_filter_only() {
         let parsed = parse_query("parametric screw");
         assert_eq!(parsed.filter, vec!["parametric", "screw"]);
-        assert!(parsed.filters.is_empty());
+        assert_eq!(parsed.filters, Vec::<&str>::new());
     }
 
     #[test]
@@ -224,7 +224,7 @@ mod tests {
     #[test]
     fn parse_sort_short_direction() {
         let parsed = parse_query("@sort:newest:asc");
-        assert!(parsed.filter.is_empty());
+        assert_eq!(parsed.filter, Vec::<&str>::new());
         assert_eq!(parsed.sort.by, SortBy::Newest);
         assert_eq!(parsed.sort.order, SortOrder::Ascending);
     }
@@ -233,7 +233,7 @@ mod tests {
     fn invalid_sort_token_ignored() {
         let parsed = parse_query("gear @sort:rating:descending");
         assert_eq!(parsed.filter, vec!["gear"]);
-        assert!(parsed.filters.is_empty());
+        assert_eq!(parsed.filters, Vec::<&str>::new());
         assert_eq!(parsed.sort.by, SortBy::Downloads);
         assert_eq!(parsed.sort.order, SortOrder::Descending);
     }
@@ -242,7 +242,7 @@ mod tests {
     fn incomplete_sort_token_ignored() {
         let parsed = parse_query("gear @sort:downloads:in");
         assert_eq!(parsed.filter, vec!["gear"]);
-        assert!(parsed.filters.is_empty());
+        assert_eq!(parsed.filters, Vec::<&str>::new());
         assert_eq!(parsed.sort.by, SortBy::Downloads);
         assert_eq!(parsed.sort.order, SortOrder::Descending);
     }
@@ -250,8 +250,8 @@ mod tests {
     #[test]
     fn only_first_sort_directive_used() {
         let parsed = parse_query("@sort:favorites:asc @sort:downloads:desc");
-        assert!(parsed.filter.is_empty());
-        assert!(parsed.filters.is_empty());
+        assert_eq!(parsed.filter, Vec::<&str>::new());
+        assert_eq!(parsed.filters, Vec::<&str>::new());
         assert_eq!(parsed.sort.by, SortBy::Favorites);
         assert_eq!(parsed.sort.order, SortOrder::Ascending);
     }

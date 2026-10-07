@@ -299,9 +299,9 @@ mod tests {
         let json = r#"[{"id":"p1","title":"T","author":"A","author_id":"a1","author_username":"a","collaborator_ids":"[]","description":"E","tags":"[]","downloads":0,"favorites":"[]","timestamp":"2026-07-07T14:30:00Z"}]"#;
         let projects: Vec<ProjectData> = serde_json::from_str(json)?;
         assert_eq!(projects.len(), 1);
-        assert!(projects[0].tags.is_empty());
-        assert!(projects[0].favorites.is_empty());
-        assert!(projects[0].collaborator_ids.is_empty());
+        assert_eq!(projects[0].tags, Vec::<String>::new());
+        assert_eq!(projects[0].favorites, Vec::<String>::new());
+        assert_eq!(projects[0].collaborator_ids, Vec::<String>::new());
         Ok(())
     }
 
