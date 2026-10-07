@@ -24,7 +24,7 @@ hex = "0.4"
 oauth2 = { version = "5.0", default-features = false }
 wasm-bindgen = "0.2"
 html-escape = "0.2"
-serde_qs = "0.15"
+serde_qs = "1"
 cookie = "0.18"
 ifc-lite-export = "4.1"
 ifc-lite-core = "4.7"
