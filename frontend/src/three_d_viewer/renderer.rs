@@ -91,7 +91,7 @@ impl Renderer {
             use crate::three_d_viewer::scene::suppress_webgl_debug_renderer_info;
 
             suppress_webgl_debug_renderer_info(&gl_context);
-            let glow_context = glow::Context::from_webgl2_context(gl_context);
+            let glow_context = three_d::context::Context::from_webgl2_context(gl_context);
             #[allow(clippy::arc_with_non_send_sync)]
             let context = ThreeDContext::from_gl_context(Arc::new(glow_context)).ok()?;
 

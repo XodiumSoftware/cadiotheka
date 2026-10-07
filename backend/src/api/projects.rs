@@ -18,7 +18,7 @@ use crate::utils::{
     RateLimitNamespace, assets_bucket, bad_request, check_rate_limit, db, error_response,
     forbidden, list_window, not_found, now_utc, required_param,
 };
-use ifc_lite_export::{GltfOptions, export_glb};
+use ifc_lite_export::{GltfOptions, try_export_glb};
 use shared::accounts::Role;
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, downloads, favorites, timestamp FROM projects";
@@ -1062,13 +1062,11 @@ async fn ensure_glb_assets_cached(
         .ok_or_else(|| worker::Error::RustError("IFC object has no body".into()))?;
     let ifc_bytes = body.bytes().await?;
 
-    let glb_bytes = export_glb(
+    let glb_bytes = try_export_glb(
         &ifc_bytes,
-        &GltfOptions {
-            include_metadata: true,
-            ..GltfOptions::default()
-        },
-    );
+        &GltfOptions::default().with_include_metadata(true),
+    )
+    .map_err(|e| worker::Error::RustError(e.to_string()))?;
     if glb_bytes.len() <= 12 {
         return Ok(Some(GlbConversion::NoGeometry));
     }

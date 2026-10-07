@@ -12,12 +12,12 @@ worker = { version = "0.8.5", features = ["d1"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_urlencoded = "0.7"
-hmac = "0.12"
-sha2 = "0.10"
-rand = "0.8"
-getrandom = { version = "0.2", features = ["js"] }
+hmac = "0.13"
+sha2 = "0.11"
+rand = "0.10"
+getrandom = { version = "0.4", features = ["wasm_js"] }
 uuid = { version = "1.11", features = ["v4", "serde", "js"] }
-base64 = "0.22"
+base64 = "0.23"
 time = { version = "0.3", features = ["formatting", "parsing", "serde"] }
 url = "2.5"
 hex = "0.4"
@@ -26,8 +26,8 @@ wasm-bindgen = "0.2"
 html-escape = "0.2"
 serde_qs = "1"
 cookie = "0.18"
-ifc-lite-export = "4.1"
-ifc-lite-core = "4.7"
+ifc-lite-export = "20.3"
+ifc-lite-core = "20.3"
 shared = { path = "../shared" }
 
 [lints]
