@@ -1334,9 +1334,9 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-export"
-version = "20.3.0"
+version = "20.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0266895f4f1200f2b6a9491c9423fff0abe988fe8005ad6f008265386b7fb4a"
+checksum = "ef5066c21a6ae2ddba84c700673e7a329a3e0fa075c409047c064bf999616efe"
 dependencies = [
  "bytemuck",
  "ifc-lite-core",
@@ -1351,9 +1351,9 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-geometry"
-version = "20.3.0"
+version = "20.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ddeec49c2d3a72eb4dafb13b80c516d9a86ec99365c1be65890eaf1b13938ba"
+checksum = "ecaf1509c5af007e0b42da84acfbdc4c13b16907e660a77067084a40aa698dd0"
 dependencies = [
  "bnum",
  "earcutr",
@@ -1375,9 +1375,9 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-processing"
-version = "20.3.0"
+version = "20.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42bb21e85ca90343eae31fa234bac31a35b3b3c961689f2b6596d97a3ec9c060"
+checksum = "8aa40a0ca0e750d9749840915c3540176bb3efbbcd9a4ec6c7204ade671cf461"
 dependencies = [
  "ifc-lite-core",
  "ifc-lite-geometry",
