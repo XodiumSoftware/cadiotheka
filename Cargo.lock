@@ -1317,9 +1317,9 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-core"
-version = "20.3.0"
+version = "20.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e79cf3d32c96137639f13230bb6c574976556e608e3ec2857fcd62dd0572c3d"
+checksum = "ad276ea751e0320b8d75336d211d6eac72b7dbd4a93141e4d6b7d1926892d46b"
 dependencies = [
  "fast-float2",
  "futures-core",
