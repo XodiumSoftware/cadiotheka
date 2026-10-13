@@ -7,5 +7,7 @@
 pub const MAX_TITLE_LENGTH: usize = 100;
 /// Maximum allowed length for a project description.
 pub const MAX_DESCRIPTION_LENGTH: usize = 5000;
+/// Maximum allowed length for a passkey's user-assigned display name.
+pub const MAX_PASSKEY_NAME_LENGTH: usize = 64;
 /// Maximum allowed size for an uploaded project IFC model, in bytes.
 pub const MAX_IFC_SIZE_BYTES: usize = 25 * 1024 * 1024; // 25 MiB

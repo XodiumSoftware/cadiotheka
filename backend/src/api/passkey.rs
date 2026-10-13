@@ -266,14 +266,14 @@ struct RegisterFinishPayload {
     response: RegisterResponse,
     #[serde(rename = "type")]
     kind: String,
+    #[serde(default)]
+    name: String,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RegisterResponse {
     attestation_object: String,
-    /// `WebAuthn` spec name is `clientDataJSON` (uppercase JSON), which serde's
-    /// `camelCase` would normally emit as `clientDataJson`.
     #[serde(rename = "clientDataJSON")]
     client_data_json: String,
     #[serde(default)]
@@ -336,6 +336,11 @@ pub async fn register_finish(mut req: Request, ctx: RouteContext<()>) -> Result<
 
     let public_key = PublicKey::from_credential(&credential)?;
 
+    let name = payload.name.trim().to_string();
+    if name.chars().count() > shared::validation::MAX_PASSKEY_NAME_LENGTH {
+        return bad_request("passkey name too long");
+    }
+
     let created_at = now_utc()
         .format(&time::format_description::well_known::Rfc3339)
         .map_err(|err| rust_err(format!("failed to format timestamp: {err}")))?;
@@ -353,7 +358,7 @@ pub async fn register_finish(mut req: Request, ctx: RouteContext<()>) -> Result<
             public_key.serialize().into(),
             f64::from(auth_data.sign_count).into(),
             transports.into(),
-            String::new().into(),
+            name.into(),
             created_at.into(),
         ])?
         .run()

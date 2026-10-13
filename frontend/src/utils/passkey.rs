@@ -136,14 +136,15 @@ fn set(target: &Object, key: &str, value: &JsValue) -> Result<(), String> {
 ///
 /// Fetches a challenge from the backend, calls `navigator.credentials.create`,
 /// then submits the resulting attestation back. On success the new passkey is
-/// immediately usable for sign-in.
+/// immediately usable for sign-in. `name` is sent to the backend and stored on
+/// the credential row as the user-facing label.
 ///
 /// # Errors
 ///
 /// Returns a user-friendly message when the browser is unsupported, the
 /// ceremony is cancelled, the backend rejects the credential, or the network
 /// fails.
-pub async fn register_passkey() -> Result<(), String> {
+pub async fn register_passkey(name: &str) -> Result<(), String> {
     let container = credentials_container()
         .ok_or_else(|| "WebAuthn is not available in this context".to_string())?;
 
@@ -244,6 +245,7 @@ pub async fn register_passkey() -> Result<(), String> {
         "id": credential_id,
         "rawId": raw_id,
         "type": "public-key",
+        "name": name,
         "response": {
             "attestationObject": attestation_object_b64,
             "clientDataJSON": client_data_json_b64,
