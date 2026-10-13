@@ -904,7 +904,7 @@ fn ProjectModalContent(
         use gloo_storage::Storage as _;
         let collapsed = sidebar_collapsed.get();
         let _ = gloo_storage::LocalStorage::set(
-            &crate::utils::key("project_modal.sidebar_collapsed"),
+            crate::utils::key("project_modal.sidebar_collapsed"),
             collapsed,
         );
     });

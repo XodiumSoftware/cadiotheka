@@ -193,7 +193,7 @@ pub fn IfcViewer(
                 if *save_generation.borrow() != expected {
                     return;
                 }
-                let _ = LocalStorage::set(&prefixed_storage_key(&key), &state_json);
+                let _ = LocalStorage::set(prefixed_storage_key(&key), &state_json);
             });
         }
     };
@@ -338,7 +338,7 @@ pub fn IfcViewer(
                 .map(|s| s.get())
                 .filter(|k| !k.is_empty())
             {
-                LocalStorage::delete(&prefixed_storage_key(&key));
+                LocalStorage::delete(prefixed_storage_key(&key));
             }
 
             let has_renderer = {
@@ -819,7 +819,7 @@ pub fn IfcViewer(
             ev.prevent_default();
             ev.stop_propagation();
             object_panel_width.set(OBJECT_PANEL_DEFAULT_WIDTH);
-            LocalStorage::delete(&prefixed_storage_key(OBJECT_PANEL_WIDTH_KEY));
+            LocalStorage::delete(prefixed_storage_key(OBJECT_PANEL_WIDTH_KEY));
         }
     };
 
@@ -836,7 +836,7 @@ pub fn IfcViewer(
             ev.prevent_default();
             ev.stop_propagation();
             label_col_width.set(OBJECT_LABEL_COL_DEFAULT);
-            LocalStorage::delete(&prefixed_storage_key(OBJECT_LABEL_COL_KEY));
+            LocalStorage::delete(prefixed_storage_key(OBJECT_LABEL_COL_KEY));
         }
     };
 
@@ -856,7 +856,7 @@ pub fn IfcViewer(
             let up_listener = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
                 object_panel_resizing.set(false);
                 let _ = LocalStorage::set(
-                    &prefixed_storage_key(OBJECT_PANEL_WIDTH_KEY),
+                    prefixed_storage_key(OBJECT_PANEL_WIDTH_KEY),
                     object_panel_width.get_untracked(),
                 );
             }) as Box<dyn FnMut(_)>);
@@ -901,7 +901,7 @@ pub fn IfcViewer(
             let up_listener = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
                 label_col_resizing.set(false);
                 let _ = LocalStorage::set(
-                    &prefixed_storage_key(OBJECT_LABEL_COL_KEY),
+                    prefixed_storage_key(OBJECT_LABEL_COL_KEY),
                     label_col_width.get_untracked(),
                 );
             }) as Box<dyn FnMut(_)>);
