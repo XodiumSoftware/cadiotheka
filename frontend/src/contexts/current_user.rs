@@ -1,11 +1,11 @@
 use crate::data::AccountData;
 use crate::data::error::RequestError;
-use crate::utils::{
-    LAST_LOGIN_METHOD_KEY, PENDING_LOGIN_METHOD_KEY, linked_provider_url, linked_providers_url,
-    local_storage_set, me_url, me_viewer_preferences_url, session_storage_get,
-    session_storage_remove,
+use crate::utils::url::{
+    linked_provider_url, linked_providers_url, me_url, me_viewer_preferences_url,
 };
+use crate::utils::{LAST_LOGIN_METHOD_KEY, PENDING_LOGIN_METHOD_KEY, key as storage_key};
 use gloo_net::http::Request;
+use gloo_storage::{LocalStorage, SessionStorage, Storage as _};
 use leptos::prelude::*;
 use web_sys::RequestCredentials;
 
@@ -37,10 +37,11 @@ impl CurrentUserContext {
             let fetched = fetch_current_user().await.unwrap_or(None);
             set_is_loading.set(false);
             if fetched.is_some()
-                && let Some(pending) = session_storage_get(PENDING_LOGIN_METHOD_KEY)
+                && let Some(pending) =
+                    SessionStorage::get::<String>(&storage_key(PENDING_LOGIN_METHOD_KEY)).ok()
             {
-                local_storage_set(LAST_LOGIN_METHOD_KEY, &pending);
-                session_storage_remove(PENDING_LOGIN_METHOD_KEY);
+                let _ = LocalStorage::set(&storage_key(LAST_LOGIN_METHOD_KEY), pending);
+                SessionStorage::delete(&storage_key(PENDING_LOGIN_METHOD_KEY));
             }
             set_account.set(fetched);
         });

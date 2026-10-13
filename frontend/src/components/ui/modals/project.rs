@@ -891,17 +891,21 @@ fn ProjectModalContent(
     let (is_uploading_ifc, set_is_uploading_ifc) = signal(false);
     let (is_downloading, set_is_downloading) = signal(false);
     let (glb_status, set_glb_status) = signal(GlbConversionStatus::Idle);
-    let (sidebar_collapsed, set_sidebar_collapsed) = signal(
-        crate::utils::local_storage_get("project_modal.sidebar_collapsed")
-            .is_some_and(|v| v == "true"),
-    );
+    let (sidebar_collapsed, set_sidebar_collapsed) = signal({
+        use gloo_storage::Storage as _;
+        gloo_storage::LocalStorage::get::<bool>(&crate::utils::key(
+            "project_modal.sidebar_collapsed",
+        ))
+        .unwrap_or(false)
+    });
     let selected_object: RwSignal<Option<ObjectHit>> = RwSignal::new(None);
 
     Effect::new(move |_| {
+        use gloo_storage::Storage as _;
         let collapsed = sidebar_collapsed.get();
-        crate::utils::local_storage_set(
-            "project_modal.sidebar_collapsed",
-            if collapsed { "true" } else { "false" },
+        let _ = gloo_storage::LocalStorage::set(
+            &crate::utils::key("project_modal.sidebar_collapsed"),
+            collapsed,
         );
     });
 

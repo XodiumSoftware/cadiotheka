@@ -1,10 +1,11 @@
 use crate::contexts::{LoginModalContext, ToastContext};
 use crate::utils::{
     LAST_LOGIN_METHOD_KEY, PENDING_LOGIN_METHOD_KEY, encode_redirect_url, github_login_url,
-    google_login_url, local_storage_get, local_storage_set, login_with_passkey, passkey_supported,
-    session_storage_set, window_event_listener,
+    google_login_url, key as storage_key, login_with_passkey, passkey_supported,
+    window_event_listener,
 };
 use gloo_net::http::Request;
+use gloo_storage::{LocalStorage, SessionStorage, Storage as _};
 use leptos::prelude::*;
 use leptos::web_sys;
 
@@ -47,7 +48,7 @@ async fn start_oauth(provider: &str, toast: ToastContext) {
     };
     match fetch_auth_url(&url).await {
         Ok(target) => {
-            session_storage_set(PENDING_LOGIN_METHOD_KEY, method);
+            let _ = SessionStorage::set(&storage_key(PENDING_LOGIN_METHOD_KEY), method);
             if let Some(window) = leptos::web_sys::window() {
                 let _ = window.location().set_href(&target);
             }
@@ -84,7 +85,8 @@ pub fn LoginModal() -> impl IntoView {
     let (passkey_in_flight, set_passkey_in_flight) = signal(false);
     let can_passkey = passkey_supported();
 
-    let last_method = StoredValue::new(local_storage_get(LAST_LOGIN_METHOD_KEY));
+    let last_method =
+        StoredValue::new(LocalStorage::get::<String>(&storage_key(LAST_LOGIN_METHOD_KEY)).ok());
 
     let start_passkey = move || {
         let toast = toast;
@@ -96,7 +98,7 @@ pub fn LoginModal() -> impl IntoView {
                 .unwrap_or_else(|| "/".to_string());
             match login_with_passkey(&redirect_to).await {
                 Ok(()) => {
-                    local_storage_set(LAST_LOGIN_METHOD_KEY, "passkey");
+                    let _ = LocalStorage::set(&storage_key(LAST_LOGIN_METHOD_KEY), "passkey");
                     modal.close();
                 }
                 Err(err) if err == "Sign-in cancelled" => {

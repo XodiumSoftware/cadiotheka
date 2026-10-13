@@ -8,11 +8,9 @@ use crate::components::ui::view_gizmo::{GizmoPosition, ViewGizmo, ViewGizmoDirec
 use crate::three_d_viewer::{
     ObjectHit, OrbitControls, PrimitiveMetadata, Renderer, ViewState, ViewerTheme, fetch_metadata,
 };
-use crate::utils::{
-    document_event_listener, local_storage_get, local_storage_remove, local_storage_set,
-    window_event_listener,
-};
+use crate::utils::{document_event_listener, key as prefixed_storage_key, window_event_listener};
 use gloo_net::http::Request;
+use gloo_storage::{LocalStorage, Storage as _};
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
@@ -33,8 +31,8 @@ const OBJECT_LABEL_COL_KEY: &str = "three_d_viewer.object_label_col_width";
 
 /// Reads the saved label column width fraction from localStorage.
 fn load_label_col_width() -> f64 {
-    local_storage_get(OBJECT_LABEL_COL_KEY)
-        .and_then(|v| v.parse::<f64>().ok())
+    LocalStorage::get::<f64>(&prefixed_storage_key(OBJECT_LABEL_COL_KEY))
+        .ok()
         .map_or(OBJECT_LABEL_COL_DEFAULT, |w| {
             w.clamp(OBJECT_LABEL_COL_MIN, OBJECT_LABEL_COL_MAX)
         })
@@ -54,8 +52,8 @@ const OBJECT_PANEL_WIDTH_KEY: &str = "three_d_viewer.object_panel_width";
 
 /// Reads the saved object info panel width from localStorage.
 fn load_object_panel_width() -> f64 {
-    local_storage_get(OBJECT_PANEL_WIDTH_KEY)
-        .and_then(|v| v.parse::<f64>().ok())
+    LocalStorage::get::<f64>(&prefixed_storage_key(OBJECT_PANEL_WIDTH_KEY))
+        .ok()
         .map_or(OBJECT_PANEL_DEFAULT_WIDTH, |w| {
             w.clamp(OBJECT_PANEL_MIN_WIDTH, OBJECT_PANEL_MAX_WIDTH)
         })
@@ -195,7 +193,7 @@ pub fn IfcViewer(
                 if *save_generation.borrow() != expected {
                     return;
                 }
-                local_storage_set(&key, &state_json);
+                let _ = LocalStorage::set(&prefixed_storage_key(&key), &state_json);
             });
         }
     };
@@ -340,7 +338,7 @@ pub fn IfcViewer(
                 .map(|s| s.get())
                 .filter(|k| !k.is_empty())
             {
-                local_storage_remove(&key);
+                LocalStorage::delete(&prefixed_storage_key(&key));
             }
 
             let has_renderer = {
@@ -821,7 +819,7 @@ pub fn IfcViewer(
             ev.prevent_default();
             ev.stop_propagation();
             object_panel_width.set(OBJECT_PANEL_DEFAULT_WIDTH);
-            local_storage_remove(OBJECT_PANEL_WIDTH_KEY);
+            LocalStorage::delete(&prefixed_storage_key(OBJECT_PANEL_WIDTH_KEY));
         }
     };
 
@@ -838,7 +836,7 @@ pub fn IfcViewer(
             ev.prevent_default();
             ev.stop_propagation();
             label_col_width.set(OBJECT_LABEL_COL_DEFAULT);
-            local_storage_remove(OBJECT_LABEL_COL_KEY);
+            LocalStorage::delete(&prefixed_storage_key(OBJECT_LABEL_COL_KEY));
         }
     };
 
@@ -857,9 +855,9 @@ pub fn IfcViewer(
             }) as Box<dyn FnMut(_)>);
             let up_listener = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
                 object_panel_resizing.set(false);
-                local_storage_set(
-                    OBJECT_PANEL_WIDTH_KEY,
-                    &format!("{:.0}", object_panel_width.get_untracked()),
+                let _ = LocalStorage::set(
+                    &prefixed_storage_key(OBJECT_PANEL_WIDTH_KEY),
+                    object_panel_width.get_untracked(),
                 );
             }) as Box<dyn FnMut(_)>);
             let move_function: js_sys::Function = move_listener
@@ -902,9 +900,9 @@ pub fn IfcViewer(
             }) as Box<dyn FnMut(_)>);
             let up_listener = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
                 label_col_resizing.set(false);
-                local_storage_set(
-                    OBJECT_LABEL_COL_KEY,
-                    &format!("{:.3}", label_col_width.get_untracked()),
+                let _ = LocalStorage::set(
+                    &prefixed_storage_key(OBJECT_LABEL_COL_KEY),
+                    label_col_width.get_untracked(),
                 );
             }) as Box<dyn FnMut(_)>);
             let move_function: js_sys::Function = move_listener
@@ -1459,7 +1457,7 @@ async fn load_model_bytes(url: &str) -> Option<Vec<u8>> {
 }
 
 fn load_view_state(key: &str) -> Option<ViewState> {
-    let json = local_storage_get(key)?;
+    let json = LocalStorage::get::<String>(&prefixed_storage_key(key)).ok()?;
     ViewState::from_json(&json)
 }
 

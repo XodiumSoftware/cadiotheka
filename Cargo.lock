@@ -900,6 +900,7 @@ dependencies = [
  "derive_more",
  "fuzzy-matcher",
  "gloo-net",
+ "gloo-storage",
  "gloo-timers",
  "human_format",
  "js-sys",
@@ -1105,6 +1106,21 @@ dependencies = [
  "thiserror 2.0.21",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "gloo-storage"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e82ce7d41c6d821640a43726f6ff33c924795cc151b62e5a84d0c988c151c980"
+dependencies = [
+ "gloo-utils",
+ "js-sys",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "wasm-bindgen",
  "web-sys",
 ]
 
