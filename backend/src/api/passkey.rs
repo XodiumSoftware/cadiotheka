@@ -272,6 +272,9 @@ struct RegisterFinishPayload {
 #[serde(rename_all = "camelCase")]
 struct RegisterResponse {
     attestation_object: String,
+    /// `WebAuthn` spec name is `clientDataJSON` (uppercase JSON), which serde's
+    /// `camelCase` would normally emit as `clientDataJson`.
+    #[serde(rename = "clientDataJSON")]
     client_data_json: String,
     #[serde(default)]
     transports: Vec<String>,
@@ -348,7 +351,7 @@ pub async fn register_finish(mut req: Request, ctx: RouteContext<()>) -> Result<
             account.id.into(),
             payload.raw_id.into(),
             public_key.serialize().into(),
-            i64::from(auth_data.sign_count).into(),
+            f64::from(auth_data.sign_count).into(),
             transports.into(),
             String::new().into(),
             created_at.into(),
@@ -863,6 +866,9 @@ struct LoginFinishPayload {
 #[serde(rename_all = "camelCase")]
 struct LoginResponse {
     authenticator_data: String,
+    /// `WebAuthn` spec name is `clientDataJSON` (uppercase JSON), which serde's
+    /// `camelCase` would normally emit as `clientDataJson`.
+    #[serde(rename = "clientDataJSON")]
     client_data_json: String,
     signature: String,
     /// Returned by the authenticator when the credential was created as a
@@ -977,7 +983,7 @@ async fn finish_login(
     db(ctx)?
         .prepare("UPDATE passkeys SET sign_count = ?1, last_used_at = ?2 WHERE id = ?3")
         .bind(&[
-            i64::from(new_sign_count).into(),
+            f64::from(new_sign_count).into(),
             now.into(),
             stored.id.clone().into(),
         ])?
