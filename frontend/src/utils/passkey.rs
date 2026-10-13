@@ -392,6 +392,7 @@ pub async fn login_with_passkey(redirect_to: &str) -> Result<(), String> {
         .ok_or_else(|| "WebAuthn is not available in this context".to_string())?;
 
     let begin_resp = Request::post(&passkey_login_begin_url())
+        .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .body("{}")
         .map_err(|err| format!("failed to build login start request: {err}"))?
@@ -482,6 +483,7 @@ pub async fn login_with_passkey(redirect_to: &str) -> Result<(), String> {
     let finish_url = format!("{}?redirect_to={}", passkey_login_finish_url(), encoded);
 
     let finish = Request::post(&finish_url)
+        .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json")
         .body(body.to_string())
         .map_err(|err| format!("failed to build login finish request: {err}"))?
