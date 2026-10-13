@@ -1,7 +1,8 @@
 use crate::contexts::{LoginModalContext, ToastContext};
 use crate::utils::{
-    encode_redirect_url, github_login_url, google_login_url, login_with_passkey, passkey_supported,
-    window_event_listener,
+    LAST_LOGIN_METHOD_KEY, PENDING_LOGIN_METHOD_KEY, encode_redirect_url, github_login_url,
+    google_login_url, local_storage_get, local_storage_set, login_with_passkey, passkey_supported,
+    session_storage_set, window_event_listener,
 };
 use gloo_net::http::Request;
 use leptos::prelude::*;
@@ -34,6 +35,11 @@ async fn fetch_auth_url(url: &str) -> Result<String, String> {
 /// from the backend and navigating the browser there. Shows a toast when the
 /// flow cannot be started.
 async fn start_oauth(provider: &str, toast: ToastContext) {
+    let method = match provider {
+        "/github" => "github",
+        "/google" => "google",
+        _ => return,
+    };
     let url = match provider {
         "/github" => encode_redirect_url(&github_login_url()),
         "/google" => encode_redirect_url(&google_login_url()),
@@ -41,6 +47,7 @@ async fn start_oauth(provider: &str, toast: ToastContext) {
     };
     match fetch_auth_url(&url).await {
         Ok(target) => {
+            session_storage_set(PENDING_LOGIN_METHOD_KEY, method);
             if let Some(window) = leptos::web_sys::window() {
                 let _ = window.location().set_href(&target);
             }
@@ -49,6 +56,21 @@ async fn start_oauth(provider: &str, toast: ToastContext) {
             leptos::web_sys::console::error_1(&format!("Failed to start login: {err}").into());
             toast.show("Couldn't start login. Please try again.");
         }
+    }
+}
+
+/// Renders a "Last used" chip for the button matching the current
+/// `last_login_method` in `localStorage`. Renders nothing when the value is
+/// missing or refers to a different method.
+#[component]
+fn LastUsedBadge(method: &'static str, last: StoredValue<Option<String>>) -> impl IntoView {
+    let is_match = move || last.get_value().as_deref() == Some(method);
+    view! {
+        <Show when=is_match>
+            <span class="badge badge-xs badge-primary rounded-none font-sans uppercase tracking-wider">
+                "Last used"
+            </span>
+        </Show>
     }
 }
 
@@ -62,6 +84,8 @@ pub fn LoginModal() -> impl IntoView {
     let (passkey_in_flight, set_passkey_in_flight) = signal(false);
     let can_passkey = passkey_supported();
 
+    let last_method = StoredValue::new(local_storage_get(LAST_LOGIN_METHOD_KEY));
+
     let start_passkey = move || {
         let toast = toast;
         let modal = modal;
@@ -72,6 +96,7 @@ pub fn LoginModal() -> impl IntoView {
                 .unwrap_or_else(|| "/".to_string());
             match login_with_passkey(&redirect_to).await {
                 Ok(()) => {
+                    local_storage_set(LAST_LOGIN_METHOD_KEY, "passkey");
                     modal.close();
                 }
                 Err(err) if err == "Sign-in cancelled" => {
@@ -139,9 +164,12 @@ pub fn LoginModal() -> impl IntoView {
                         </svg>
                         "GitHub"
                         <span class="sr-only">"Continue with GitHub"</span>
-                        <kbd class="hidden sm:inline-flex ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
-                            "Alt + 1"
-                        </kbd>
+                        <span class="ml-auto flex items-center gap-2">
+                            <LastUsedBadge method="github" last=last_method />
+                            <kbd class="hidden sm:inline-flex px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
+                                "Alt + 1"
+                            </kbd>
+                        </span>
                     </button>
 
                     <button
@@ -158,9 +186,12 @@ pub fn LoginModal() -> impl IntoView {
                         </svg>
                         "Google"
                         <span class="sr-only">"Continue with Google"</span>
-                        <kbd class="hidden sm:inline-flex ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
-                            "Alt + 2"
-                        </kbd>
+                        <span class="ml-auto flex items-center gap-2">
+                            <LastUsedBadge method="google" last=last_method />
+                            <kbd class="hidden sm:inline-flex px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
+                                "Alt + 2"
+                            </kbd>
+                        </span>
                     </button>
 
                     <Show when=move || can_passkey>
@@ -176,9 +207,12 @@ pub fn LoginModal() -> impl IntoView {
                             </svg>
                             {if passkey_in_flight.get() { "Waiting..." } else { "Passkey" }}
                             <span class="sr-only">"Continue with passkey"</span>
-                            <kbd class="hidden sm:inline-flex ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
-                                "Alt + 3"
-                            </kbd>
+                            <span class="ml-auto flex items-center gap-2">
+                                <LastUsedBadge method="passkey" last=last_method />
+                                <kbd class="hidden sm:inline-flex px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
+                                    "Alt + 3"
+                                </kbd>
+                            </span>
                         </button>
                     </Show>
                 </div>

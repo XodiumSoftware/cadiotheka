@@ -1,6 +1,10 @@
 use crate::data::AccountData;
 use crate::data::error::RequestError;
-use crate::utils::{linked_provider_url, linked_providers_url, me_url, me_viewer_preferences_url};
+use crate::utils::{
+    LAST_LOGIN_METHOD_KEY, PENDING_LOGIN_METHOD_KEY, linked_provider_url, linked_providers_url,
+    local_storage_set, me_url, me_viewer_preferences_url, session_storage_get,
+    session_storage_remove,
+};
 use gloo_net::http::Request;
 use leptos::prelude::*;
 use web_sys::RequestCredentials;
@@ -31,8 +35,14 @@ impl CurrentUserContext {
 
         leptos::task::spawn_local(async move {
             let fetched = fetch_current_user().await.unwrap_or(None);
-            set_account.set(fetched);
             set_is_loading.set(false);
+            if fetched.is_some()
+                && let Some(pending) = session_storage_get(PENDING_LOGIN_METHOD_KEY)
+            {
+                local_storage_set(LAST_LOGIN_METHOD_KEY, &pending);
+                session_storage_remove(PENDING_LOGIN_METHOD_KEY);
+            }
+            set_account.set(fetched);
         });
     }
 
