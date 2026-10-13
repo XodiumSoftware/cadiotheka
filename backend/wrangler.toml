@@ -47,8 +47,4 @@ enabled = true
 
 [vars]
 WEBAUTHN_RP_NAME = "Cadiotheka"
-WEBAUTHN_RP_ID = "localhost"
-
-[env.production]
-name = "cadiotheka"
-vars = { WEBAUTHN_RP_ID = "cadiotheka.com" }
+WEBAUTHN_RP_ID = "cadiotheka.com"
