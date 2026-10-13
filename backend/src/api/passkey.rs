@@ -49,12 +49,21 @@ const KV_REGISTER_PREFIX: &str = "passkey_register:";
 /// KV key prefix for pending authentication challenges.
 const KV_LOGIN_PREFIX: &str = "passkey_login:";
 
-/// Resolves the relying-party ID from the environment.
+/// Resolves the relying-party ID for the current request.
 ///
-/// In production this must be the registrable domain of the frontend origin
-/// (e.g. `cadiotheka.com`). In dev it is `localhost`, which the browser treats
-/// as a valid RP ID on `http://localhost`.
-fn rp_id(ctx: &RouteContext<()>) -> Result<String> {
+/// Requests whose host is `localhost` or `127.0.0.1` (i.e. `wrangler dev`) always
+/// use `localhost` as the RP ID so passkeys work locally regardless of the env
+/// var. All other requests read `WEBAUTHN_RP_ID`, which in production must be
+/// the registrable domain of the frontend origin (e.g. `cadiotheka.com`).
+fn rp_id(req: &Request, ctx: &RouteContext<()>) -> Result<String> {
+    let is_local = req
+        .url()
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_owned))
+        .is_some_and(|host| host == "localhost" || host == "127.0.0.1");
+    if is_local {
+        return Ok(String::from("localhost"));
+    }
     ctx.env
         .var("WEBAUTHN_RP_ID")
         .map(|v| v.to_string())
@@ -214,7 +223,7 @@ pub async fn register_begin(req: Request, ctx: RouteContext<()>) -> Result<Respo
         .execute()
         .await?;
 
-    let rp_id = rp_id(&ctx)?;
+    let rp_id = rp_id(&req, &ctx)?;
     let options = PublicKeyCredentialCreationOptions {
         rp: RpEntity {
             id: rp_id,
@@ -314,7 +323,7 @@ pub async fn register_finish(mut req: Request, ctx: RouteContext<()>) -> Result<
         return bad_request("attestation format not accepted");
     }
 
-    let auth_data = verify_authenticator_data(&attestation.auth_data, &rp_id(&ctx)?, true)?;
+    let auth_data = verify_authenticator_data(&attestation.auth_data, &rp_id(&req, &ctx)?, true)?;
     let Some(credential) = parse_attested_credential_data(&attestation.auth_data)? else {
         return bad_request("missing attested credential data");
     };
@@ -800,7 +809,7 @@ pub async fn login_begin(req: Request, ctx: RouteContext<()>) -> Result<Response
 
     let options = PublicKeyCredentialRequestOptions {
         challenge,
-        rp_id: rp_id(&ctx)?,
+        rp_id: rp_id(&req, &ctx)?,
         timeout: 60_000,
         user_verification: "preferred",
         allow_credentials: Vec::new(),
@@ -922,7 +931,7 @@ pub async fn login_finish(mut req: Request, ctx: RouteContext<()>) -> Result<Res
     let authenticator_data = B64
         .decode(&payload.response.authenticator_data)
         .map_err(|err| rust_err(format!("invalid authenticatorData: {err}")))?;
-    let auth_data = verify_authenticator_data(&authenticator_data, &rp_id(&ctx)?, false)?;
+    let auth_data = verify_authenticator_data(&authenticator_data, &rp_id(&req, &ctx)?, false)?;
     if !auth_data.user_present {
         return unauthorized("user presence flag not set");
     }
