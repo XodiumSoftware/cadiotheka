@@ -2,8 +2,9 @@ use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::modals::base::BaseModal;
 use crate::contexts::{CurrentUserContext, ProfileModalContext, ToastContext};
 use crate::utils::{
-    encode_redirect_url, format_time_full, github_login_url, google_login_url, placeholder_color,
-    placeholder_letter,
+    PasskeyInfo, delete_passkey, encode_redirect_url, fetch_passkeys, format_time_full,
+    github_login_url, google_login_url, passkey_supported, placeholder_color, placeholder_letter,
+    register_passkey,
 };
 use gloo_net::http::Request;
 use leptos::prelude::*;
@@ -110,6 +111,9 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
     };
 
     let (linked_providers, set_linked_providers) = signal::<Vec<String>>(Vec::new());
+    let (passkeys, set_passkeys) = signal::<Vec<PasskeyInfo>>(Vec::new());
+    let (passkey_in_flight, set_passkey_in_flight) = signal(false);
+    let can_passkey = passkey_supported();
 
     Effect::new(move |_| {
         if modal.open.get() && is_editable {
@@ -119,6 +123,14 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                     Err(err) => {
                         leptos::web_sys::console::error_1(
                             &format!("Failed to fetch linked providers: {}", err.message()).into(),
+                        );
+                    }
+                }
+                match crate::utils::fetch_passkeys().await {
+                    Ok(items) => set_passkeys.set(items),
+                    Err(err) => {
+                        leptos::web_sys::console::error_1(
+                            &format!("Failed to fetch passkeys: {}", err.message()).into(),
                         );
                     }
                 }
@@ -176,6 +188,49 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
         move |_| is_connected("github")
     });
     let is_google_connected = Memo::new(move |_| is_connected("google"));
+
+    let start_register_passkey = move || {
+        let toast = ToastContext::use_context();
+        set_passkey_in_flight.set(true);
+        leptos::task::spawn_local(async move {
+            match register_passkey().await {
+                Ok(()) => {
+                    if let Ok(items) = fetch_passkeys().await {
+                        set_passkeys.set(items);
+                    }
+                    toast.show("Passkey added");
+                }
+                Err(err) if err == "Registration cancelled" => {
+                    toast.show("Passkey registration cancelled");
+                }
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to register passkey: {err}").into(),
+                    );
+                    toast.show("Couldn't add passkey. Please try again.");
+                }
+            }
+            set_passkey_in_flight.set(false);
+        });
+    };
+
+    let delete_passkey_at = move |id: String| {
+        let toast = ToastContext::use_context();
+        leptos::task::spawn_local(async move {
+            match delete_passkey(&id).await {
+                Ok(()) => {
+                    set_passkeys.update(|items| items.retain(|p| p.id != id));
+                    toast.show("Passkey removed");
+                }
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Failed to delete passkey: {}", err.message()).into(),
+                    );
+                    toast.show("Couldn't remove passkey. Please try again.");
+                }
+            }
+        });
+    };
 
     view! {
         <div class="space-y-4 flex flex-col min-h-0">
@@ -455,6 +510,80 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                         }.into_any()
                                     }}
                                 </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-stretch gap-2">
+                            <div class="flex-shrink-0 flex bg-surface-light p-1 relative w-8">
+                                <CornerFrame
+                                    style="square"
+                                    black=true
+                                    class="h-full w-full flex items-center justify-center"
+                                >
+                                    <h2 class="text-lg font-bold tracking-tight text-transparent bg-base-100 bg-clip-text flex flex-col items-center justify-center leading-none">
+                                        <span>"P"</span>
+                                        <span>"A"</span>
+                                        <span>"S"</span>
+                                        <span>"S"</span>
+                                    </h2>
+                                </CornerFrame>
+                            </div>
+                            <div class="flex flex-col gap-2 flex-1">
+                                {move || {
+                                    let items = passkeys.get();
+                                    if items.is_empty() {
+                                        view! {
+                                            <p class="text-xs text-base-content/60 border border-dashed border-base-content/20 rounded-none p-2">
+                                                "No passkeys yet. Add one to sign in with your fingerprint, face, or device PIN."
+                                            </p>
+                                        }.into_any()
+                                    } else {
+                                        view! {
+                                            <ul class="flex flex-col gap-1">
+                                                {items.into_iter().map(|pk| {
+                                                    let display = if pk.name.is_empty() {
+                                                        format!("Passkey ({})", format_time_full(pk.created_at))
+                                                    } else {
+                                                        format!("{} ({})", pk.name, format_time_full(pk.created_at))
+                                                    };
+                                                    let last = pk.last_used_at.map(format_time_full);
+                                                    let id = pk.id.clone();
+                                                    view! {
+                                                        <li class="flex items-center justify-between gap-2 border border-base-content/20 p-2 text-xs">
+                                                            <div class="flex flex-col min-w-0">
+                                                                <span class="truncate text-base-content/80">{display}</span>
+                                                                {last.map(|l| view! {
+                                                                    <span class="text-base-content/50">{format!("Last used {l}")}</span>
+                                                                })}
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                class="btn btn-ghost btn-xs text-error"
+                                                                on:click=move |_| delete_passkey_at(id.clone())
+                                                                aria-label="Remove passkey"
+                                                            >
+                                                                "Remove"
+                                                            </button>
+                                                        </li>
+                                                    }
+                                                }).collect::<Vec<_>>()}
+                                            </ul>
+                                        }.into_any()
+                                    }
+                                }}
+                                <Show when=move || can_passkey>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline btn-sm w-full justify-start gap-2 rounded-none"
+                                        prop:disabled=passkey_in_flight.get()
+                                        on:click=move |_| start_register_passkey()
+                                    >
+                                        <svg class="w-4 h-4" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                                            <path d="M216.57,39.43A80,80,0,0,0,83.91,120.78L28.69,176A15.86,15.86,0,0,0,24,187.31V216a16,16,0,0,0,16,16H72a8,8,0,0,0,8-8V208H96a8,8,0,0,0,8-8V184h16a8,8,0,0,0,5.66-2.34l9.56-9.57A79.73,79.73,0,0,0,160,176h.1A80,80,0,0,0,216.57,39.43ZM224,98.1c-1.09,34.09-29.75,61.86-63.89,61.9H160a63.7,63.7,0,0,1-23.65-4.51,8,8,0,0,0-8.84,1.68L116.69,168H96a8,8,0,0,0-8,8v16H72a8,8,0,0,0-8,8v16H40V187.31l58.83-58.82a8,8,0,0,0,1.68-8.84A63.72,63.72,0,0,1,96,95.92c0-34.14,27.81-62.8,61.9-63.89A64,64,0,0,1,224,98.1ZM192,76a12,12,0,1,1-12-12A12,12,0,0,1,192,76Z"/>
+                                        </svg>
+                                        {if passkey_in_flight.get() { "Adding passkey..." } else { "Add passkey" }}
+                                    </button>
+                                </Show>
                             </div>
                         </div>
                     })

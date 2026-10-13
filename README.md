@@ -117,6 +117,7 @@ To create the local D1 database tables:
 cd backend
 npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/account_providers.sql --local
+npx wrangler d1 execute cadiotheka --file=schemas/passkeys.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/project_versions.sql --local
 ```
@@ -208,6 +209,7 @@ The static site is placed in `frontend/dist/`.
     ```bash
     npx wrangler d1 execute cadiotheka --file=backend/schemas/accounts.sql
     npx wrangler d1 execute cadiotheka --file=backend/schemas/account_providers.sql
+    npx wrangler d1 execute cadiotheka --file=backend/schemas/passkeys.sql
     npx wrangler d1 execute cadiotheka --file=backend/schemas/projects.sql
     npx wrangler d1 execute cadiotheka --file=backend/schemas/project_versions.sql
     ```

@@ -1,6 +1,8 @@
 use crate::contexts::{LoginModalContext, ToastContext};
 use crate::utils::{
-    encode_redirect_url, github_login_url, google_login_url, window_event_listener,
+    LAST_LOGIN_METHOD_KEY, PENDING_LOGIN_METHOD_KEY, encode_redirect_url, github_login_url,
+    google_login_url, local_storage_get, local_storage_set, login_with_passkey, passkey_supported,
+    session_storage_set, window_event_listener,
 };
 use gloo_net::http::Request;
 use leptos::prelude::*;
@@ -33,6 +35,11 @@ async fn fetch_auth_url(url: &str) -> Result<String, String> {
 /// from the backend and navigating the browser there. Shows a toast when the
 /// flow cannot be started.
 async fn start_oauth(provider: &str, toast: ToastContext) {
+    let method = match provider {
+        "/github" => "github",
+        "/google" => "google",
+        _ => return,
+    };
     let url = match provider {
         "/github" => encode_redirect_url(&github_login_url()),
         "/google" => encode_redirect_url(&google_login_url()),
@@ -40,6 +47,7 @@ async fn start_oauth(provider: &str, toast: ToastContext) {
     };
     match fetch_auth_url(&url).await {
         Ok(target) => {
+            session_storage_set(PENDING_LOGIN_METHOD_KEY, method);
             if let Some(window) = leptos::web_sys::window() {
                 let _ = window.location().set_href(&target);
             }
@@ -51,12 +59,59 @@ async fn start_oauth(provider: &str, toast: ToastContext) {
     }
 }
 
-/// Modal dialog that offers OAuth login choices.
+/// Renders a "Last used" chip for the button matching the current
+/// `last_login_method` in `localStorage`. Renders nothing when the value is
+/// missing or refers to a different method.
+#[component]
+fn LastUsedBadge(method: &'static str, last: StoredValue<Option<String>>) -> impl IntoView {
+    let is_match = move || last.get_value().as_deref() == Some(method);
+    view! {
+        <Show when=is_match>
+            <span class="badge badge-xs badge-primary rounded-none font-sans uppercase tracking-wider">
+                "Last used"
+            </span>
+        </Show>
+    }
+}
+
+/// Modal dialog that offers OAuth and passkey login choices.
 #[component]
 pub fn LoginModal() -> impl IntoView {
     let modal = LoginModalContext::use_context();
     let toast = ToastContext::use_context();
     let on_close = move |()| modal.close();
+
+    let (passkey_in_flight, set_passkey_in_flight) = signal(false);
+    let can_passkey = passkey_supported();
+
+    let last_method = StoredValue::new(local_storage_get(LAST_LOGIN_METHOD_KEY));
+
+    let start_passkey = move || {
+        let toast = toast;
+        let modal = modal;
+        set_passkey_in_flight.set(true);
+        leptos::task::spawn_local(async move {
+            let redirect_to = leptos::web_sys::window()
+                .and_then(|w| w.location().href().ok())
+                .unwrap_or_else(|| "/".to_string());
+            match login_with_passkey(&redirect_to).await {
+                Ok(()) => {
+                    local_storage_set(LAST_LOGIN_METHOD_KEY, "passkey");
+                    modal.close();
+                }
+                Err(err) if err == "Sign-in cancelled" => {
+                    set_passkey_in_flight.set(false);
+                }
+                Err(err) => {
+                    leptos::web_sys::console::error_1(
+                        &format!("Passkey sign-in failed: {err}").into(),
+                    );
+                    toast.show(&err);
+                    set_passkey_in_flight.set(false);
+                }
+            }
+        });
+    };
 
     Effect::new(move |_| {
         let modal = modal;
@@ -70,6 +125,9 @@ pub fn LoginModal() -> impl IntoView {
             } else if ev.key() == "2" {
                 ev.prevent_default();
                 leptos::task::spawn_local(async move { start_oauth("/google", toast).await });
+            } else if ev.key() == "3" && can_passkey {
+                ev.prevent_default();
+                start_passkey();
             }
         });
     });
@@ -91,27 +149,33 @@ pub fn LoginModal() -> impl IntoView {
                 </div>
 
                 <p class="text-sm text-base-content/80">
-                    "Sign in with your GitHub or Google account to create and manage projects."
+                    "Sign in with your GitHub, Google, or passkey to create and manage projects."
                 </p>
 
                 <div class="flex flex-col gap-3">
                     <button
                         type="button"
                         class="btn btn-outline btn-lift w-full justify-start gap-3"
+                        aria-label="Continue with GitHub"
                         on:click=move |_| leptos::task::spawn_local(async move { start_oauth("/github", toast).await })
                     >
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
                         </svg>
-                        "Continue with GitHub"
-                        <kbd class="hidden sm:inline-flex ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
-                            "Alt + 1"
-                        </kbd>
+                        "GitHub"
+                        <span class="sr-only">"Continue with GitHub"</span>
+                        <span class="ml-auto flex items-center gap-2">
+                            <LastUsedBadge method="github" last=last_method />
+                            <kbd class="hidden sm:inline-flex px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
+                                "Alt + 1"
+                            </kbd>
+                        </span>
                     </button>
 
                     <button
                         type="button"
                         class="btn btn-outline btn-lift w-full justify-start gap-3"
+                        aria-label="Continue with Google"
                         on:click=move |_| leptos::task::spawn_local(async move { start_oauth("/google", toast).await })
                     >
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -120,11 +184,37 @@ pub fn LoginModal() -> impl IntoView {
                             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
-                        "Continue with Google"
-                        <kbd class="hidden sm:inline-flex ml-auto px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
-                            "Alt + 2"
-                        </kbd>
+                        "Google"
+                        <span class="sr-only">"Continue with Google"</span>
+                        <span class="ml-auto flex items-center gap-2">
+                            <LastUsedBadge method="google" last=last_method />
+                            <kbd class="hidden sm:inline-flex px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
+                                "Alt + 2"
+                            </kbd>
+                        </span>
                     </button>
+
+                    <Show when=move || can_passkey>
+                        <button
+                            type="button"
+                            class="btn btn-outline btn-lift w-full justify-start gap-3"
+                            aria-label="Continue with passkey"
+                            prop:disabled=passkey_in_flight.get()
+                            on:click=move |_| start_passkey()
+                        >
+                            <svg class="w-5 h-5" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                                <path d="M216.57,39.43A80,80,0,0,0,83.91,120.78L28.69,176A15.86,15.86,0,0,0,24,187.31V216a16,16,0,0,0,16,16H72a8,8,0,0,0,8-8V208H96a8,8,0,0,0,8-8V184h16a8,8,0,0,0,5.66-2.34l9.56-9.57A79.73,79.73,0,0,0,160,176h.1A80,80,0,0,0,216.57,39.43ZM224,98.1c-1.09,34.09-29.75,61.86-63.89,61.9H160a63.7,63.7,0,0,1-23.65-4.51,8,8,0,0,0-8.84,1.68L116.69,168H96a8,8,0,0,0-8,8v16H72a8,8,0,0,0-8,8v16H40V187.31l58.83-58.82a8,8,0,0,0,1.68-8.84A63.72,63.72,0,0,1,96,95.92c0-34.14,27.81-62.8,61.9-63.89A64,64,0,0,1,224,98.1ZM192,76a12,12,0,1,1-12-12A12,12,0,0,1,192,76Z"/>
+                            </svg>
+                            {if passkey_in_flight.get() { "Waiting..." } else { "Passkey" }}
+                            <span class="sr-only">"Continue with passkey"</span>
+                            <span class="ml-auto flex items-center gap-2">
+                                <LastUsedBadge method="passkey" last=last_method />
+                                <kbd class="hidden sm:inline-flex px-1.5 py-0.5 text-xs font-sans font-semibold text-white bg-black/10 border border-black/30 rounded shadow-kbd">
+                                    "Alt + 3"
+                                </kbd>
+                            </span>
+                        </button>
+                    </Show>
                 </div>
 
                 <p class="text-xs text-base-content/60 text-center">

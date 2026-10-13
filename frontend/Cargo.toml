@@ -22,13 +22,15 @@ timeago = { version = "0.6", default-features = false }
 human_format = "1.2"
 thousands = "0.2"
 shared = { path = "../shared" }
-web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "HtmlDialogElement", "HtmlInputElement", "HtmlCanvasElement", "HtmlButtonElement", "Node", "NodeList", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry", "File", "FileList", "Blob", "Url", "FormData", "Window", "Performance", "Navigator", "Clipboard", "WebGl2RenderingContext", "MouseEvent", "WheelEvent", "UiEvent"] }
+web-sys = { version = "0.3", features = ["Storage", "MediaQueryList", "Document", "Element", "DomRect", "HtmlElement", "HtmlDialogElement", "HtmlInputElement", "HtmlCanvasElement", "HtmlButtonElement", "Node", "NodeList", "console", "IntersectionObserver", "IntersectionObserverInit", "IntersectionObserverEntry", "File", "FileList", "Blob", "Url", "FormData", "Window", "Performance", "Navigator", "Clipboard", "WebGl2RenderingContext", "MouseEvent", "WheelEvent", "UiEvent", "CredentialsContainer", "PublicKeyCredential", "CredentialCreationOptions", "CredentialRequestOptions"] }
 console_error_panic_hook = "0.1"
 urlencoding = "2.1"
 send_wrapper = "0.6"
 three-d = { version = "0.19", default-features = false, features = ["serde", "image"] }
 three-d-asset = { version = "0.10", features = ["gltf", "png", "jpeg"] }
 uuid = { version = "1.11", features = ["v4", "serde", "js"] }
+base64 = "0.23"
+wasm-bindgen-futures = "0.4"
 
 [package.metadata.cargo-machete]
 ignored = ["strum", "derive_more"]
