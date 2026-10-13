@@ -11,6 +11,7 @@ mod materials;
 mod api {
     pub mod accounts;
     pub mod auth;
+    pub mod passkey;
     pub mod projects;
     pub mod session;
     pub mod turnstile;
@@ -82,6 +83,21 @@ pub fn build_router() -> Router<'static, ()> {
             api::session::me_viewer_preferences,
         )
         .get_async(routes::AUTH_LOGOUT, api::session::logout)
+        .post_async(
+            routes::AUTH_PASSKEY_REGISTER_BEGIN,
+            api::passkey::register_begin,
+        )
+        .post_async(
+            routes::AUTH_PASSKEY_REGISTER_FINISH,
+            api::passkey::register_finish,
+        )
+        .post_async(routes::AUTH_PASSKEY_LOGIN_BEGIN, api::passkey::login_begin)
+        .post_async(
+            routes::AUTH_PASSKEY_LOGIN_FINISH,
+            api::passkey::login_finish,
+        )
+        .get_async(routes::AUTH_PASSKEYS, api::passkey::list_passkeys)
+        .delete_async(routes::AUTH_PASSKEY, api::passkey::delete_passkey)
 }
 
 #[event(fetch)]

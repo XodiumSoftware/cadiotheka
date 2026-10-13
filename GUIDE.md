@@ -150,6 +150,7 @@ Apply the schemas to the local D1 database:
 cd backend
 npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/account_providers.sql --local
+npx wrangler d1 execute cadiotheka --file=schemas/passkeys.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/project_versions.sql --local
 ```
@@ -298,6 +299,7 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
     ```bash
     npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql
     npx wrangler d1 execute cadiotheka --file=schemas/account_providers.sql
+    npx wrangler d1 execute cadiotheka --file=schemas/passkeys.sql
     npx wrangler d1 execute cadiotheka --file=schemas/projects.sql
     npx wrangler d1 execute cadiotheka --file=schemas/project_versions.sql
     ```

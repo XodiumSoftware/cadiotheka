@@ -52,3 +52,16 @@ pub const AUTH_ME: &str = "/auth/me";
 pub const AUTH_ME_VIEWER_PREFERENCES: &str = "/auth/me/viewer-preferences";
 /// Logout endpoint.
 pub const AUTH_LOGOUT: &str = "/auth/logout";
+
+/// Passkey registration begin endpoint (authenticated).
+pub const AUTH_PASSKEY_REGISTER_BEGIN: &str = "/auth/passkey/register/begin";
+/// Passkey registration finish endpoint (authenticated).
+pub const AUTH_PASSKEY_REGISTER_FINISH: &str = "/auth/passkey/register/finish";
+/// Passkey login begin endpoint (public).
+pub const AUTH_PASSKEY_LOGIN_BEGIN: &str = "/auth/passkey/login/begin";
+/// Passkey login finish endpoint (public).
+pub const AUTH_PASSKEY_LOGIN_FINISH: &str = "/auth/passkey/login/finish";
+/// Passkey collection endpoint for the authenticated account.
+pub const AUTH_PASSKEYS: &str = "/auth/passkeys";
+/// Single passkey endpoint, with `:id` placeholder.
+pub const AUTH_PASSKEY: &str = "/auth/passkeys/:id";

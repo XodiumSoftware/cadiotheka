@@ -155,6 +155,7 @@ pub mod utils {
     pub mod dom;
     pub mod format;
     pub mod math;
+    pub mod passkey;
     pub mod storage;
     pub mod url;
 
@@ -162,6 +163,10 @@ pub mod utils {
     pub use dom::*;
     pub use format::*;
     pub use math::*;
+    pub use passkey::{
+        PasskeyInfo, delete_passkey, fetch_passkeys, login_with_passkey, passkey_supported,
+        register_passkey,
+    };
     pub use storage::*;
     pub use url::*;
 }

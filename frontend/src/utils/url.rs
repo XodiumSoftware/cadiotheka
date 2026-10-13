@@ -1,8 +1,9 @@
 use shared::routes::{
     ACCOUNTS, AUTH_LINKED_PROVIDER, AUTH_LINKED_PROVIDERS, AUTH_LOGOUT, AUTH_ME,
-    AUTH_ME_VIEWER_PREFERENCES, IFCS, LOGIN_GITHUB, LOGIN_GOOGLE, PROJECT, PROJECT_DOWNLOADS,
-    PROJECT_FAVORITES, PROJECT_GLBS, PROJECT_GLBS_METADATA, PROJECT_IFC, PROJECT_VERSION,
-    PROJECT_VERSIONS, PROJECTS,
+    AUTH_ME_VIEWER_PREFERENCES, AUTH_PASSKEY, AUTH_PASSKEY_LOGIN_BEGIN, AUTH_PASSKEY_LOGIN_FINISH,
+    AUTH_PASSKEY_REGISTER_BEGIN, AUTH_PASSKEY_REGISTER_FINISH, AUTH_PASSKEYS, IFCS, LOGIN_GITHUB,
+    LOGIN_GOOGLE, PROJECT, PROJECT_DOWNLOADS, PROJECT_FAVORITES, PROJECT_GLBS,
+    PROJECT_GLBS_METADATA, PROJECT_IFC, PROJECT_VERSION, PROJECT_VERSIONS, PROJECTS,
 };
 
 /// Backend API origin.
@@ -124,6 +125,36 @@ pub fn logout_url() -> String {
 /// Returns the full URL for a single linked OAuth provider endpoint.
 pub fn linked_provider_url(provider: &str) -> String {
     backend_url(&AUTH_LINKED_PROVIDER.replace(":provider", provider))
+}
+
+/// Returns the full URL for the passkey registration begin endpoint.
+pub fn passkey_register_begin_url() -> String {
+    backend_url(AUTH_PASSKEY_REGISTER_BEGIN)
+}
+
+/// Returns the full URL for the passkey registration finish endpoint.
+pub fn passkey_register_finish_url() -> String {
+    backend_url(AUTH_PASSKEY_REGISTER_FINISH)
+}
+
+/// Returns the full URL for the passkey login begin endpoint.
+pub fn passkey_login_begin_url() -> String {
+    backend_url(AUTH_PASSKEY_LOGIN_BEGIN)
+}
+
+/// Returns the full URL for the passkey login finish endpoint.
+pub fn passkey_login_finish_url() -> String {
+    backend_url(AUTH_PASSKEY_LOGIN_FINISH)
+}
+
+/// Returns the full URL for the passkey collection endpoint.
+pub fn passkeys_url() -> String {
+    backend_url(AUTH_PASSKEYS)
+}
+
+/// Returns the full URL for a single passkey endpoint.
+pub fn passkey_url(id: &str) -> String {
+    backend_url(&AUTH_PASSKEY.replace(":id", id))
 }
 
 /// Returns the full URL for a backend API path (`/data/...`).
