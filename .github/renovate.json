@@ -1,5 +1,6 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "automerge": true,
     "baseBranchPatterns": ["main"],
     "customManagers": [
         {
@@ -14,11 +15,5 @@
     ],
     "dependencyDashboard": false,
     "extends": ["config:recommended"],
-    "packageRules": [
-        {
-            "matchUpdateTypes": ["minor", "patch"],
-            "automerge": true
-        }
-    ],
     "commitMessagePrefix": "🤖"
 }
