@@ -8,6 +8,8 @@ use worker::{Request, Response, Result};
 const ALLOWED_ORIGINS: &[&str] = &[
     "https://cadiotheka.com",
     "https://www.cadiotheka.com",
+    "https://xodium.org",
+    "https://www.xodium.org",
     "http://localhost:8080",
 ];
 
@@ -110,6 +112,14 @@ mod tests {
         assert_eq!(
             select_allowed_origin(Some("https://www.cadiotheka.com")),
             "https://www.cadiotheka.com"
+        );
+        assert_eq!(
+            select_allowed_origin(Some("https://xodium.org")),
+            "https://xodium.org"
+        );
+        assert_eq!(
+            select_allowed_origin(Some("https://www.xodium.org")),
+            "https://www.xodium.org"
         );
     }
 
