@@ -188,13 +188,9 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-backend-${{ hashFiles('**/Cargo.lock') }}
 
-      - id: install_cargo_binstall
-        name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.25.3
-
       - id: install_worker_build
         name: Install worker-build
-        run: cargo binstall worker-build --no-confirm --force
+        run: cargo install worker-build --locked
         shell: bash
 
       - id: build_worker
