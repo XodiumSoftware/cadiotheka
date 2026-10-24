@@ -27,7 +27,7 @@ html-escape = "0.3"
 serde_qs = "1"
 cookie = "0.18"
 ifc-lite-export = "20.3"
-ifc-lite-core = "20.3"
+ifc-lite-core = "21.0"
 shared = { path = "../shared" }
 p256 = { version = "0.14", features = ["ecdsa"] }
 ed25519-dalek = "3"
