@@ -138,7 +138,7 @@ dependencies = [
  "hex",
  "hmac",
  "html-escape",
- "ifc-lite-core 23.6.1",
+ "ifc-lite-core",
  "ifc-lite-export",
  "oauth2",
  "p256",
@@ -1490,23 +1490,6 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-core"
-version = "22.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7778d5d7f0cd8ff1941f9aa640a7a082c563117f65ecaf99c48c304882e6117c"
-dependencies = [
- "bytemuck",
- "fast-float2",
- "futures-core",
- "futures-util",
- "memchr",
- "nom",
- "rustc-hash",
- "thiserror 2.0.21",
- "twox-hash",
-]
-
-[[package]]
-name = "ifc-lite-core"
 version = "23.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e145f4072948f65cd311ce75a8237f6ec514f9bed7317648a624f1ca8ce94ec1"
@@ -1524,16 +1507,17 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-export"
-version = "22.6.0"
+version = "23.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4335d7bed5c79aa5dfdae28f52cca2198e23f6e675f824efe8b7b136b1d74627"
+checksum = "6207ae9ebd71378cf8f4c28349415dd9a9130e3ac1734648012a0471949a23d8"
 dependencies = [
  "bytemuck",
  "geometry-predicates",
- "ifc-lite-core 22.6.0",
+ "ifc-lite-core",
  "ifc-lite-geometry",
  "ifc-lite-processing",
  "nalgebra",
+ "png",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -1541,15 +1525,15 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-geometry"
-version = "22.6.0"
+version = "23.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34f1fbfc98e5d13c8768598747de3a4870177fdd1ee520d41463c07351c8af60"
+checksum = "565d920df9c4b1e9d69a6ee84172c224e25451d43e97ff3ac9d5bc95846e6ea5"
 dependencies = [
  "bnum",
  "earcutr",
  "geometry-predicates",
  "i_overlay",
- "ifc-lite-core 22.6.0",
+ "ifc-lite-core",
  "jpeg-decoder",
  "nalgebra",
  "num-rational",
@@ -1564,11 +1548,11 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-processing"
-version = "22.6.0"
+version = "23.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f018e26ae6179b01370e723fb3c4a522442b87d4efba8e4f8c7e1d59528ac75f"
+checksum = "a72276b29b594f0779836254d20dc1949c44763915c9c436ff5c5b5e912f9e85"
 dependencies = [
- "ifc-lite-core 22.6.0",
+ "ifc-lite-core",
  "ifc-lite-geometry",
  "nalgebra",
  "png",
