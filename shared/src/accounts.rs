@@ -26,6 +26,7 @@ impl std::fmt::Display for Role {
 /// Keeps alphanumeric characters, hyphens, and underscores; replaces all
 /// other characters with underscores. Falls back to `user` when the result
 /// would be all underscores.
+#[must_use]
 pub fn sanitize_username(login: &str) -> String {
     let mut out = String::with_capacity(login.len().min(32));
     for ch in login.chars().take(32) {

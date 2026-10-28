@@ -59,6 +59,7 @@ pub enum Tag {
 
 impl Tag {
     /// Stable wire id stored on project rows.
+    #[must_use]
     pub fn id(&self) -> &'static str {
         match self {
             Tag::ThreeDModel => "3d_model",
@@ -86,6 +87,7 @@ impl Tag {
     }
 
     /// User-facing label.
+    #[must_use]
     pub fn label(&self) -> &'static str {
         match self {
             Tag::ThreeDModel => "3D Model",
@@ -113,6 +115,7 @@ impl Tag {
     }
 
     /// Tailwind inline color style string applied to rendered badges.
+    #[must_use]
     pub fn color(&self) -> &'static str {
         match self {
             Tag::ThreeDModel => "background-color:#1d4ed8;color:#ffffff",
@@ -140,11 +143,13 @@ impl Tag {
     }
 
     /// All defined tags in display order.
+    #[must_use]
     pub fn all() -> Vec<Tag> {
         Tag::iter().collect()
     }
 
     /// Resolves a tag from its wire id, or `None` if the id is unknown.
+    #[must_use]
     pub fn from_id(id: &str) -> Option<Tag> {
         Tag::iter().find(|tag| tag.id() == id)
     }
@@ -157,11 +162,13 @@ impl std::fmt::Display for Tag {
 }
 
 /// Convenience accessor for a tag's user-facing label.
+#[must_use]
 pub fn tag_label(tag: &Tag) -> &'static str {
     tag.label()
 }
 
 /// Convenience accessor for a tag's inline CSS color style.
+#[must_use]
 pub fn tag_color(tag: &Tag) -> &'static str {
     tag.color()
 }

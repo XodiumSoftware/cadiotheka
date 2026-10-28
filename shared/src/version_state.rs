@@ -21,6 +21,7 @@ impl VersionState {
     pub const VARIANTS: &[Self] = &[Self::Undefined, Self::Alpha, Self::Beta, Self::Stable];
 
     /// Returns a text color utility class representing the state's severity.
+    #[must_use]
     pub const fn color_class(self) -> &'static str {
         match self {
             Self::Undefined => "text-base-content/50",
@@ -31,6 +32,7 @@ impl VersionState {
     }
 
     /// Returns the `DaisyUI` badge class used to color the version icon.
+    #[must_use]
     pub const fn badge_class(self) -> &'static str {
         match self {
             Self::Undefined => "badge-ghost",
@@ -41,6 +43,7 @@ impl VersionState {
     }
 
     /// Returns the `DaisyUI` button class used for a filled state button.
+    #[must_use]
     pub const fn button_class(self) -> &'static str {
         match self {
             Self::Undefined => "btn-ghost",
@@ -51,6 +54,7 @@ impl VersionState {
     }
 
     /// Returns a Tailwind border color utility for outlined state buttons.
+    #[must_use]
     pub const fn border_class(self) -> &'static str {
         match self {
             Self::Undefined => "border-base-content/20",
@@ -61,6 +65,7 @@ impl VersionState {
     }
 
     /// Returns the human-readable label for the state.
+    #[must_use]
     pub const fn label(self) -> &'static str {
         match self {
             Self::Undefined => "Undefined",
@@ -71,6 +76,7 @@ impl VersionState {
     }
 
     /// Returns the single-letter abbreviation shown in the versions table.
+    #[must_use]
     pub const fn letter(self) -> &'static str {
         match self {
             Self::Undefined => "-",
@@ -81,6 +87,7 @@ impl VersionState {
     }
 
     /// Returns true if the version is visible to the public.
+    #[must_use]
     pub const fn is_public(self) -> bool {
         !matches!(self, Self::Undefined)
     }

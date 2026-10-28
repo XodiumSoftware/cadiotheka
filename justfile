@@ -6,19 +6,19 @@ _default:
 
 # Lint the frontend for the WASM target (lints configured in workspace Cargo.toml)
 lint-frontend:
-    cd frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
+    cd frontend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -W clippy::pedantic -D warnings -A clippy::must_use_candidate -A clippy::too_many_lines
 
 # Lint the frontend for the native target (lints configured in workspace Cargo.toml)
 lint-frontend-native:
-    cd frontend && cargo clippy --all-targets --all-features
+    cd frontend && cargo clippy --all-targets --all-features -- -W clippy::pedantic -D warnings -A clippy::must_use_candidate -A clippy::too_many_lines
 
 # Lint the backend for the native target (lints configured in workspace Cargo.toml)
 lint-backend:
-    cd backend && cargo clippy --all-targets --all-features
+    cd backend && cargo clippy --all-targets --all-features -- -W clippy::pedantic -D warnings -A clippy::must_use_candidate -A clippy::too_many_lines
 
 # Lint the backend for the WASM target (lints configured in workspace Cargo.toml)
 lint-backend-wasm:
-    cd backend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features
+    cd backend && cargo clippy --target wasm32-unknown-unknown --all-targets --all-features -- -W clippy::pedantic -D warnings -A clippy::must_use_candidate -A clippy::too_many_lines
 
 # Run all lints (native + WASM for both crates)
 lint: lint-frontend lint-frontend-native lint-backend lint-backend-wasm
