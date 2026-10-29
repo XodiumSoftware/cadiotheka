@@ -31,7 +31,7 @@ shared = { path = "../shared" }
 p256 = { version = "0.14", features = ["ecdsa"] }
 ed25519-dalek = "3"
 serde_cbor_2 = "0.13"
-ifc-lite-core = "25"
+ifc-lite-core = "27"
 ifc-lite-export = "25"
 
 [lints]
