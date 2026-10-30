@@ -1490,9 +1490,9 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-core"
-version = "27.0.0"
+version = "27.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08a6299a4cd587a940b740bf89db492b87c3c7d1ccbeb87205b3a4d15d5541e1"
+checksum = "dee5e866cec8b53cfeb9735867a56eaaa1db99867674212617d440bc2cf1acb4"
 dependencies = [
  "bytemuck",
  "fast-float2",
