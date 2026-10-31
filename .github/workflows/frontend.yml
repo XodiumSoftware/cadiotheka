@@ -98,7 +98,7 @@ jobs:
 
       - id: install_cargo_binstall
         name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.26.1
+        uses: cargo-bins/cargo-binstall@v1.26.2
 
       - id: run_cargo_machete
         name: Run cargo-machete
