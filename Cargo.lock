@@ -138,7 +138,7 @@ dependencies = [
  "hex",
  "hmac",
  "html-escape",
- "ifc-lite-core 27.1.0",
+ "ifc-lite-core",
  "ifc-lite-export",
  "oauth2",
  "p256",
@@ -1490,23 +1490,6 @@ dependencies = [
 
 [[package]]
 name = "ifc-lite-core"
-version = "27.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dee5e866cec8b53cfeb9735867a56eaaa1db99867674212617d440bc2cf1acb4"
-dependencies = [
- "bytemuck",
- "fast-float2",
- "futures-core",
- "futures-util",
- "memchr",
- "nom",
- "rustc-hash",
- "thiserror 2.0.21",
- "twox-hash",
-]
-
-[[package]]
-name = "ifc-lite-core"
 version = "28.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc36b16f6867f7252f64780a92771efe25310b8334e113a286ace817f7327ade"
@@ -1530,7 +1513,7 @@ checksum = "c04a06595049736f2804bdf3f063c55844800c719edbb79235ef17bbd0603b69"
 dependencies = [
  "bytemuck",
  "geometry-predicates",
- "ifc-lite-core 28.2.0",
+ "ifc-lite-core",
  "ifc-lite-geometry",
  "ifc-lite-processing",
  "nalgebra",
@@ -1550,7 +1533,7 @@ dependencies = [
  "earcutr",
  "geometry-predicates",
  "i_overlay",
- "ifc-lite-core 28.2.0",
+ "ifc-lite-core",
  "jpeg-decoder",
  "nalgebra",
  "num-rational",
@@ -1569,7 +1552,7 @@ version = "28.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a787fea27c0335cb4e016aeb318cc65a0465e0044aff15ab239388433ae7bf5"
 dependencies = [
- "ifc-lite-core 28.2.0",
+ "ifc-lite-core",
  "ifc-lite-geometry",
  "nalgebra",
  "png",
