@@ -92,14 +92,46 @@ pub fn ifc_url(version_id: &str, filename: &str) -> String {
     )
 }
 
-/// Returns the full URL for a GitHub login endpoint.
+/// Returns the full URL for a GitHub login endpoint in the root browsing
+/// context.
+///
+/// OAuth cannot complete inside a frame: the provider sign-in page and the
+/// callback's `window.location.replace` both refuse to be framed, and the
+/// server-built `redirect_to` would point back into the embedding page's URL.
+/// The frontend navigates the top-level window here.
 pub fn github_login_url() -> String {
-    backend_url(LOGIN_GITHUB)
+    root_context_url(&backend_url(LOGIN_GITHUB))
 }
 
-/// Returns the full URL for a Google login endpoint.
+/// Returns the full URL for a Google login endpoint in the root browsing
+/// context. See [`github_login_url`] for why frames are excluded.
 pub fn google_login_url() -> String {
-    backend_url(LOGIN_GOOGLE)
+    root_context_url(&backend_url(LOGIN_GOOGLE))
+}
+
+/// Returns this site's absolute origin when the app was loaded inside a frame.
+///
+/// The embedded page reads `window.location` to build its own URLs, which inside
+/// a frame is the embedder's URL rather than this site's. An absolute origin is
+/// the only way for those URLs to point at the top-level browsing context.
+fn root_context() -> Option<String> {
+    let window = leptos::web_sys::window()?;
+    let framed = window.top().ok().flatten().is_some_and(|top| {
+        let same_window: &leptos::web_sys::Window = top.as_ref();
+        !std::ptr::eq(same_window, &raw const window)
+    });
+    if !framed {
+        return None;
+    }
+    window.location().origin().ok()
+}
+
+/// Prefixes a same-origin path with this site's origin when framed.
+fn root_context_url(path: &str) -> String {
+    match root_context() {
+        Some(origin) => format!("{origin}{path}"),
+        None => path.to_string(),
+    }
 }
 
 /// Returns the full URL for the linked OAuth providers endpoint.
@@ -118,8 +150,12 @@ pub fn me_viewer_preferences_url() -> String {
 }
 
 /// Returns the full URL for the logout endpoint.
+///
+/// Like the login endpoints, this is resolved against the root context: the
+/// backend redirects after clearing the session, and inside a frame that would
+/// land the embedder's page in the embedder's own URL.
 pub fn logout_url() -> String {
-    backend_url(AUTH_LOGOUT)
+    root_context_url(&backend_url(AUTH_LOGOUT))
 }
 
 /// Returns the full URL for a single linked OAuth provider endpoint.
@@ -175,13 +211,18 @@ pub fn login_url(path: &str) -> String {
     backend_url(&format!("/login/{path}"))
 }
 
-/// Appends a safe `redirect_to` query parameter to a URL, using the current
-/// browser location as the return target. Relative paths are used in release
-/// builds; the full URL is used during local development so the backend can
-/// send the browser back to the Trunk dev server.
+/// Appends a safe `redirect_to` query parameter to a URL, using a safe return
+/// target.
+///
+/// Relative paths are used on top-level views so the backend can send the
+/// browser back to the current route. The absolute origin of this site is used
+/// inside a frame, where the embedder's URL must never be the return target,
+/// and during local development so the backend can send the browser back to the
+/// Trunk dev server.
 pub fn encode_redirect_url(base: &str) -> String {
-    let redirect_to = leptos::web_sys::window()
-        .and_then(|w| w.location().href().ok())
+    let redirect_to = root_context()
+        .map(|origin| format!("{origin}/"))
+        .or_else(|| leptos::web_sys::window().and_then(|w| w.location().href().ok()))
         .unwrap_or_else(|| "/".to_string());
 
     let encoded = urlencoding::encode(&redirect_to);

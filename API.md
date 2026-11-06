@@ -40,6 +40,11 @@ authenticated requests.
 
 `redirect_to` must be a relative path starting with `/` or an allowed origin.
 
+When the frontend runs inside a frame (for example the live demo in the
+xodium.org hero), it starts OAuth against its own absolute origin instead of a
+relative path, because the top-level context belongs to the embedding site. The
+flow therefore leaves the frame and completes on the top-level page.
+
 ## Accounts
 
 Public account responses omit the private `email` and `viewer_preferences`

@@ -5,6 +5,7 @@ on:
     branches: [main, dev]
     paths:
       - "frontend/**"
+      - "frontend/_headers"
       - "shared/**"
       - "Cargo.toml"
       - "Cargo.lock"
@@ -15,6 +16,7 @@ on:
     branches: [main, dev]
     paths:
       - "frontend/**"
+      - "frontend/_headers"
       - "shared/**"
       - "Cargo.toml"
       - "Cargo.lock"
