@@ -3,6 +3,7 @@ use leptos::prelude::*;
 /// Item rendered inside an [`OverflowRow`].
 #[derive(Clone)]
 pub struct OverflowItem {
+    /// Text shown inside the badge, typically a tag label.
     pub label: String,
     /// Inline CSS style string for the item's color, e.g. `"background-color:#1d4ed8;color:#ffffff"`.
     ///
@@ -12,6 +13,7 @@ pub struct OverflowItem {
 }
 
 impl OverflowItem {
+    /// Creates an item from a label and an inline CSS style string for its color.
     pub fn new(label: impl Into<String>, color_style: impl Into<String>) -> Self {
         Self {
             label: label.into(),
@@ -27,9 +29,17 @@ impl OverflowItem {
 /// listing all hidden labels separated by middots.
 #[component]
 pub fn OverflowRow(
-    #[prop(into)] items: Vec<OverflowItem>,
-    #[prop(default = 3)] max_visible: usize,
-    #[prop(optional)] tooltip_position: Option<&'static str>,
+    /// Items to render, in display order; extras are collapsed into the `+N` box.
+    #[prop(into)]
+    items: Vec<OverflowItem>,
+    /// Number of items shown directly before overflowing into the `+N` box.
+    #[prop(default = 3)]
+    max_visible: usize,
+    /// DaisyUI tooltip placement for the overflow box, e.g. `"tooltip-top"`;
+    /// defaults to `"tooltip-bottom"`.
+    #[prop(optional)]
+    tooltip_position: Option<&'static str>,
+    /// Classes shared by every item badge, e.g. size, border, and text styles.
     badge_class: &'static str,
 ) -> impl IntoView {
     let mut items = items;

@@ -199,7 +199,7 @@ struct LoginChallenge {
 ///
 /// Returns a `PublicKeyCredentialCreationOptions` JSON document that the
 /// frontend hands to `navigator.credentials.create`.
-pub async fn register_begin(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn register_begin(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(response) = check_rate_limit(&req, &ctx, RateLimitNamespace::OauthCallback).await? {
         return Ok(response);
     }
@@ -284,7 +284,7 @@ struct RegisterResponse {
 ///
 /// Verifies the signed challenge and persists the new credential. The passkey
 /// only becomes usable for sign-in after this endpoint succeeds.
-pub async fn register_finish(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn register_finish(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(response) = check_rate_limit(&req, &ctx, RateLimitNamespace::OauthCallback).await? {
         return Ok(response);
     }
@@ -792,7 +792,7 @@ struct ExistingPasskeyRow {
 /// offers every passkey registered for this RP. The account is resolved on
 /// `login_finish` from the credential id in the assertion, cross-checked
 /// against the `userHandle` when the authenticator provides one.
-pub async fn login_begin(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn login_begin(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if req.method() != worker::Method::Post {
         return bad_request("method not allowed");
     }
@@ -889,7 +889,7 @@ struct LoginResponse {
 ///
 /// On success this creates a new session and returns an `HttpOnly` session cookie
 /// in a redirect response, mirroring the OAuth callback.
-pub async fn login_finish(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn login_finish(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(response) = check_rate_limit(&req, &ctx, RateLimitNamespace::OauthCallback).await? {
         return Ok(response);
     }
@@ -1042,7 +1042,7 @@ struct PasskeyInfo {
 }
 
 /// Lists the passkeys registered to the currently authenticated account.
-pub async fn list_passkeys(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn list_passkeys(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let Some(account) = read_session(&req, &ctx).await? else {
         return unauthorized("Unauthorized");
     };
@@ -1080,7 +1080,7 @@ struct PasskeyInfoRow {
 
 /// Removes one of the caller's passkeys. Refuses when no passkey matching
 /// `:id` exists for this account.
-pub async fn delete_passkey(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn delete_passkey(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let Some(account) = read_session(&req, &ctx).await? else {
         return unauthorized("Unauthorized");
     };

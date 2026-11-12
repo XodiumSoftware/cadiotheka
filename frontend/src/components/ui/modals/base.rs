@@ -17,9 +17,18 @@ use leptos::web_sys;
 /// A reusable modal dialog built on the native HTML `dialog` element.
 #[component]
 pub fn BaseModal(
-    #[prop(into)] open: Signal<bool>,
-    #[prop(into)] on_close: Callback<()>,
-    #[prop(into, default = Callback::new(|_| {}))] on_inner_click: Callback<()>,
+    /// Whether the dialog is shown; drives the native `showModal`/`close` calls.
+    #[prop(into)]
+    open: Signal<bool>,
+    /// Invoked when the dialog closes, either from `Esc`, the backdrop, or the
+    /// parent setting `open` to `false`.
+    #[prop(into)]
+    on_close: Callback<()>,
+    /// Invoked when the content area is clicked, allowing parents to dismiss
+    /// transient popovers inside the modal.
+    #[prop(into, default = Callback::new(|_| {}))]
+    on_inner_click: Callback<()>,
+    /// Classes for the modal box, controlling its width and height limits.
     #[prop(into, default = Signal::derive(|| "w-full max-w-lg max-h-[80vh] flex flex-col".to_string()))]
     container_class: Signal<String>,
     children: Children,

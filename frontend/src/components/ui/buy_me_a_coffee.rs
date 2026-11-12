@@ -5,7 +5,11 @@ use leptos::prelude::*;
 /// Inlining the mark avoids relying on Trunk-copied static assets, so the
 /// button renders even if the deployment path changes.
 #[component]
-pub fn BuyMeACoffeeLogo(#[prop(default = "")] class: &'static str) -> impl IntoView {
+pub fn BuyMeACoffeeLogo(
+    /// Classes for the root SVG element, typically used to size the logo.
+    #[prop(default = "")]
+    class: &'static str,
+) -> impl IntoView {
     view! {
         <svg
             class={class}

@@ -7,7 +7,9 @@ use leptos::prelude::*;
 /// `true` = wide (5 columns), `false` = narrow (3 columns).
 #[derive(Clone, Copy)]
 pub struct LayoutContext {
+    /// Whether the grid uses the wide layout; `true` means five columns.
     pub wide: Signal<bool>,
+    /// Setter that switches between the wide and narrow layouts.
     pub set_wide: WriteSignal<bool>,
 }
 
@@ -39,6 +41,6 @@ impl LayoutContext {
 
     /// Read the current context, panicking if none was provided.
     pub fn use_context() -> Self {
-        leptos::prelude::expect_context::<Self>()
+        expect_context::<Self>()
     }
 }

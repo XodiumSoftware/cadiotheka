@@ -4,7 +4,9 @@ use leptos::prelude::*;
 /// State for the single global toast notification.
 #[derive(Clone, Copy)]
 pub struct ToastContext {
+    /// The text shown in the toast.
     pub message: Signal<String>,
+    /// Whether the toast is currently displayed.
     pub visible: Signal<bool>,
     set_message: WriteSignal<String>,
     set_visible: WriteSignal<bool>,
@@ -27,7 +29,7 @@ impl ToastContext {
 
     /// Read the current context, panicking if none was provided.
     pub fn use_context() -> Self {
-        leptos::prelude::expect_context::<Self>()
+        expect_context::<Self>()
     }
 
     /// Show a toast with the given message for the default duration.

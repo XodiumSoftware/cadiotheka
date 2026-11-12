@@ -8,8 +8,12 @@ use pulldown_cmark::{Options, Parser, html};
 /// with project-specific Tailwind classes by `ammonia`, which injects the class
 /// attributes during parsing rather than string-matching the rendered markup.
 #[component]
-pub fn MarkdownView(#[prop(into)] source: String) -> impl IntoView {
-    let html = leptos::prelude::Memo::new(move |_| render_markdown(&source));
+pub fn MarkdownView(
+    /// Raw CommonMark source to render; converted and sanitized on each change.
+    #[prop(into)]
+    source: String,
+) -> impl IntoView {
+    let html = Memo::new(move |_| render_markdown(&source));
 
     view! {
         <div class="prose prose-sm max-w-none text-base-content/80" inner_html=move || html.get()></div>

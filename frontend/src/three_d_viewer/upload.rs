@@ -99,9 +99,11 @@ fn choose_lighting_model(cpu_material: &PbrMaterial) -> LightingModel {
     }
 }
 
-/// Returns whether the given material should be rendered unlit.
+/// Decides whether a material can skip the physically based shader.
 #[allow(dead_code)]
 trait UnlitMaterial {
+    /// Returns `true` when the material is diffuse-only and may be uploaded as a
+    /// [`ColorMaterial`] instead of a [`PhysicalMaterial`].
     fn is_unlit(&self) -> bool;
 }
 

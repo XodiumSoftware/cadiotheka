@@ -4,6 +4,8 @@ use leptos::prelude::*;
 const GIT_SHA: &str = env!("GIT_SHA");
 const GITHUB_REPO_URL: &str = "https://github.com/XodiumSoftware/cadiotheka/commit";
 
+/// Site footer showing the copyright line and the deployed build's commit
+/// hash, linked to the commit on GitHub when the hash is known.
 #[component]
 pub fn Footer() -> impl IntoView {
     let current_year = js_sys::Date::new_0().get_full_year();

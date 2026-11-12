@@ -98,7 +98,7 @@ pub fn AddProjectModal() -> impl IntoView {
             && !selected_tags.get().is_empty()
     };
 
-    let on_submit = move |ev: leptos::web_sys::SubmitEvent| {
+    let on_submit = move |ev: web_sys::SubmitEvent| {
         ev.prevent_default();
         set_submit_error.set(None);
 
@@ -124,7 +124,7 @@ pub fn AddProjectModal() -> impl IntoView {
                     match crate::data::fetch_projects().await {
                         Ok(refreshed) => projects_ctx.set_projects.set(refreshed),
                         Err(err) => {
-                            leptos::web_sys::console::error_1(
+                            web_sys::console::error_1(
                                 &format!("Failed to refresh projects: {}", err.message()).into(),
                             );
                         }
@@ -394,16 +394,16 @@ pub fn AddProjectModal() -> impl IntoView {
 }
 
 /// Reads the value from an input/textarea event target.
-fn event_target_value(ev: &leptos::web_sys::Event) -> String {
+fn event_target_value(ev: &web_sys::Event) -> String {
     ev.target()
         .and_then(|t| {
-            t.dyn_into::<leptos::web_sys::HtmlTextAreaElement>()
+            t.dyn_into::<web_sys::HtmlTextAreaElement>()
                 .ok()
                 .map(|textarea| textarea.value())
         })
         .or_else(|| {
             ev.target()
-                .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+                .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
                 .map(|input| input.value())
         })
         .unwrap_or_default()

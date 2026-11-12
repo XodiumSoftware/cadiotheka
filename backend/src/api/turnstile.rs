@@ -28,7 +28,7 @@ struct SiteVerifyResponse {
 ///
 /// This helper should be called early in any handler that needs bot
 /// protection.
-pub async fn verify_turnstile_token(
+pub(crate) async fn verify_turnstile_token(
     req: &mut Request,
     ctx: &worker::RouteContext<()>,
 ) -> Result<Option<Response>> {

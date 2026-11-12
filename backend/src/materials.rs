@@ -27,7 +27,7 @@ const MAX_SELECT_DEPTH: usize = 4;
 /// without a material association are absent from the map. Malformed or
 /// unresolvable references are skipped so a broken model degrades to missing
 /// data instead of an error.
-pub fn extract_material_names(content: &[u8]) -> HashMap<u32, Vec<String>> {
+pub(crate) fn extract_material_names(content: &[u8]) -> HashMap<u32, Vec<String>> {
     let index = build_entity_index(content);
     let mut decoder = EntityDecoder::with_index(content, index);
     let mut scanner = EntityScanner::new(content);

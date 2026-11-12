@@ -52,7 +52,7 @@ fn array_to_b64(value: &JsValue) -> Result<String, String> {
 }
 
 fn credentials_container() -> Option<CredentialsContainer> {
-    let window = leptos::web_sys::window()?;
+    let window = web_sys::window()?;
     let navigator: Navigator = window.navigator();
     Some(navigator.credentials())
 }
@@ -60,7 +60,7 @@ fn credentials_container() -> Option<CredentialsContainer> {
 /// Returns `true` when the browser exposes the `WebAuthn` APIs needed to run a
 /// ceremony. Used to hide the passkey buttons entirely on unsupported clients.
 pub fn passkey_supported() -> bool {
-    let Some(window) = leptos::web_sys::window() else {
+    let Some(window) = web_sys::window() else {
         return false;
     };
     let has_pkc = matches!(
@@ -497,7 +497,7 @@ pub async fn login_with_passkey(redirect_to: &str) -> Result<(), String> {
         return Err(format!("sign-in rejected: {status} {text}"));
     }
 
-    if let Some(window) = leptos::web_sys::window() {
+    if let Some(window) = web_sys::window() {
         let _ = window.location().reload();
     }
     Ok(())
@@ -572,13 +572,22 @@ pub async fn delete_passkey(id: &str) -> Result<(), RequestError> {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PasskeyInfo {
+    /// Server-side row id used by [`delete_passkey`] to address the credential.
     pub id: String,
+    /// Base64url-encoded credential id reported by the authenticator, which the
+    /// backend uses to match assertions to this registration.
     pub credential_id: String,
+    /// User-facing label chosen when the passkey was registered.
     pub name: String,
+    /// Creation timestamp in UTC.
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: time::OffsetDateTime,
+    /// Timestamp of the last successful sign-in with this passkey, or `None` if
+    /// it has never been used.
     #[serde(default, with = "time::serde::rfc3339::option")]
     pub last_used_at: Option<time::OffsetDateTime>,
+    /// Authenticator transports reported at registration (for example
+    /// `"internal"` or `"hybrid"`); empty when the authenticator omitted them.
     pub transports: Vec<String>,
 }
 

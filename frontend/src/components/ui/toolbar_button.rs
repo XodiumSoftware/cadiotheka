@@ -17,13 +17,28 @@ pub enum TooltipPosition {
 /// A small icon-style button with a configurable tooltip and a primary border on hover.
 #[component]
 pub fn ToolbarButton(
+    /// Tooltip text and accessible label for the button.
     label: &'static str,
-    #[prop(into)] on_click: Callback<()>,
-    #[prop(default = TooltipPosition::Top)] tooltip_position: TooltipPosition,
-    #[prop(into, optional)] disabled_overlay: Option<Signal<bool>>,
-    #[prop(default = false)] spin_on_click: bool,
-    #[prop(into, optional)] on_context_menu: Option<Callback<()>>,
-    #[prop(into, optional)] active: Option<Signal<bool>>,
+    /// Called when the button is clicked.
+    #[prop(into)]
+    on_click: Callback<()>,
+    /// Which side of the button the tooltip appears on.
+    #[prop(default = TooltipPosition::Top)]
+    tooltip_position: TooltipPosition,
+    /// When true, draws a diagonal error-colored stripe over the icon to
+    /// indicate the action is unavailable.
+    #[prop(into, optional)]
+    disabled_overlay: Option<Signal<bool>>,
+    /// Plays a one-shot spin animation on the icon when clicked.
+    #[prop(default = false)]
+    spin_on_click: bool,
+    /// Called on right-click instead of the browser context menu, which is
+    /// always suppressed.
+    #[prop(into, optional)]
+    on_context_menu: Option<Callback<()>>,
+    /// Highlights the button as toggled on; usually driven by an active mode.
+    #[prop(into, optional)]
+    active: Option<Signal<bool>>,
     children: Children,
 ) -> impl IntoView {
     let tooltip_class = match tooltip_position {
@@ -42,7 +57,7 @@ pub fn ToolbarButton(
         on_click.run(());
     };
 
-    let on_context_menu_wrapper = move |ev: leptos::web_sys::MouseEvent| {
+    let on_context_menu_wrapper = move |ev: web_sys::MouseEvent| {
         ev.prevent_default();
         if let Some(handler) = &on_context_menu {
             handler.run(());

@@ -115,9 +115,9 @@ pub fn google_login_url() -> String {
 /// a frame is the embedder's URL rather than this site's. An absolute origin is
 /// the only way for those URLs to point at the top-level browsing context.
 fn root_context() -> Option<String> {
-    let window = leptos::web_sys::window()?;
+    let window = web_sys::window()?;
     let framed = window.top().ok().flatten().is_some_and(|top| {
-        let same_window: &leptos::web_sys::Window = top.as_ref();
+        let same_window: &web_sys::Window = top.as_ref();
         !std::ptr::eq(same_window, &raw const window)
     });
     if !framed {
@@ -222,7 +222,7 @@ pub fn login_url(path: &str) -> String {
 pub fn encode_redirect_url(base: &str) -> String {
     let redirect_to = root_context()
         .map(|origin| format!("{origin}/"))
-        .or_else(|| leptos::web_sys::window().and_then(|w| w.location().href().ok()))
+        .or_else(|| web_sys::window().and_then(|w| w.location().href().ok()))
         .unwrap_or_else(|| "/".to_string());
 
     let encoded = urlencoding::encode(&redirect_to);

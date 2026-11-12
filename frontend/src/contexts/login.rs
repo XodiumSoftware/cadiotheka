@@ -3,7 +3,9 @@ use leptos::prelude::*;
 /// Provides and reads the login modal state.
 #[derive(Clone, Copy)]
 pub struct LoginModalContext {
+    /// Whether the login modal is currently visible.
     pub open: Signal<bool>,
+    /// Setter that opens or closes the login modal directly.
     pub set_open: WriteSignal<bool>,
 }
 
@@ -19,7 +21,7 @@ impl LoginModalContext {
 
     /// Read the current context, panicking if none was provided.
     pub fn use_context() -> Self {
-        leptos::prelude::expect_context::<Self>()
+        expect_context::<Self>()
     }
 
     /// Open the login modal.

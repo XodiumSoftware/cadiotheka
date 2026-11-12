@@ -12,7 +12,14 @@ pub enum RequestError {
     Network(String),
     /// The server returned a non-success status.
     #[error("Server error (HTTP {status}): {body}")]
-    Server { status: u16, body: String },
+    Server {
+        /// HTTP status code returned by the backend; `0` when the failure was
+        /// detected before a response arrived (for example, a pagination sweep
+        /// that never terminated).
+        status: u16,
+        /// Response body, used as diagnostic detail in the error message.
+        body: String,
+    },
     /// The response body could not be parsed.
     #[error("Failed to read response: {0}")]
     Parse(String),

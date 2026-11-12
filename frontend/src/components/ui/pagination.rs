@@ -90,10 +90,17 @@ fn chevron_right(class: &'static str) -> impl IntoView {
 /// DaisyUI-styled pagination bar with previous/next arrows and ellipsis gaps.
 #[component]
 pub fn Pagination(
-    #[prop(into)] page: Signal<usize>,
+    /// Index of the currently displayed page, zero-based.
+    #[prop(into)]
+    page: Signal<usize>,
+    /// Setter for the selected page index, called by the arrows and page buttons.
     set_page: WriteSignal<usize>,
-    #[prop(into)] total_pages: Signal<usize>,
-    #[prop(default = DEFAULT_SIBLING_COUNT)] sibling_count: usize,
+    /// Total number of pages; zero disables navigation.
+    #[prop(into)]
+    total_pages: Signal<usize>,
+    /// Number of page buttons shown on each side of the current page.
+    #[prop(default = DEFAULT_SIBLING_COUNT)]
+    sibling_count: usize,
 ) -> impl IntoView {
     let display_page = Memo::new(move |_| {
         let total = total_pages.get();

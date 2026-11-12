@@ -35,34 +35,66 @@ use wasm_bindgen::JsCast;
 
 /// `three-d` renderer for a parsed GLB document.
 pub struct Renderer {
+    /// `three-d` rendering context wrapping the canvas's WebGL2 context.
     pub(crate) context: ThreeDContext,
+    /// Active camera, shared with the orbit controller in `control`.
     pub(crate) camera: ThreeDCamera,
+    /// Orbit/pan/zoom controller driven by the queued input events.
     pub(crate) control: OrbitControl,
+    /// Canvas the renderer draws into.
     pub(crate) canvas: HtmlCanvasElement,
+    /// Axis-aligned world-space bounds of the loaded document as
+    /// `(min, max)`, in scene units.
     pub(crate) scene_bounds: ([f32; 3], [f32; 3]),
+    /// Renderable objects uploaded from the source model, one per primitive;
+    /// indices into this list identify primitives throughout the viewer.
     pub(crate) models: Vec<Box<dyn Object>>,
+    /// Axes gizmo rendered at the world origin, `None` before a model is loaded.
     pub(crate) axes: Option<Box<dyn Object>>,
+    /// Bounding-box outline drawn around the hovered primitive.
     pub(crate) outline: Option<Gm<BoundingBox, ColorMaterial>>,
+    /// Index of the primitive currently outlined on hover.
     pub(crate) hovered_primitive: Option<usize>,
+    /// Indices of primitives hidden by the user; they are neither rendered nor
+    /// pickable.
     pub(crate) hidden_primitives: HashSet<usize>,
+    /// Indices of primitives selected by the user.
     pub(crate) selected_primitives: HashSet<usize>,
+    /// Bounding-box outlines drawn around selected primitives.
     pub(crate) selected_outlines: Vec<Gm<BoundingBox, ColorMaterial>>,
+    /// Color of the hover outline (default opaque yellow).
     pub(crate) highlight_color: Srgba,
+    /// Color of the selection outlines (default opaque blue).
     pub(crate) selection_color: Srgba,
+    /// Tint applied to the background skybox.
     pub(crate) skybox_color: Srgba,
+    /// Background skybox object generated from the procedural HDR sky.
     pub(crate) skybox: Option<Skybox>,
+    /// Whether the axes gizmo is rendered.
     pub(crate) show_axes: bool,
+    /// Total number of vertices uploaded across all rendered primitives.
     pub(crate) total_vertices: usize,
+    /// Total number of triangles uploaded across all rendered primitives.
     pub(crate) total_triangles: usize,
+    /// Key directional light providing the primary shading.
     pub(crate) light: DirectionalLight,
+    /// Image-based ambient light generated from the HDR sky.
     pub(crate) ambient: AmbientLight,
+    /// Input events queued by the canvas handlers and consumed on each render.
     pub(crate) pending_events: Rc<RefCell<Vec<Event>>>,
+    /// Active viewer theme, saved with the view state.
     pub(crate) theme: ViewerTheme,
+    /// Vertical field of view in radians for the perspective camera.
     pub(crate) fov_y: f32,
+    /// Whether the camera uses an orthographic projection.
     pub(crate) orthographic: bool,
+    /// Whether models are rendered as screen-space wireframes.
     pub(crate) wireframe: bool,
+    /// Parsed model retained so `models` can be rebuilt for wireframe toggles.
     pub(crate) source_model: Option<Model>,
+    /// Color of wireframe lines (default opaque black).
     pub(crate) wireframe_color: Srgba,
+    /// Width of wireframe lines in pixels.
     pub(crate) wireframe_width: f32,
 }
 
@@ -343,6 +375,12 @@ impl Renderer {
     }
 
     /// Renders the scene once.
+    ///
+    /// The `trivial_casts` allow covers the `Gm<BoundingBox, _>` outline
+    /// objects: they are inherently `Object` but do not implement `Object`
+    /// themselves, so the cast to `&dyn Object` is required and cannot be
+    /// replaced by the coercion clippy suggests.
+    #[allow(trivial_casts)]
     pub fn render(&mut self) {
         let (width, height) = canvas_size(&self.canvas);
         if width == 0 || height == 0 {
@@ -817,11 +855,7 @@ impl Renderer {
     }
 
     /// Builds a bounding-box outline object around the given primitive.
-    fn build_outline(
-        &self,
-        index: usize,
-        color: Srgba,
-    ) -> Option<Gm<three_d::renderer::geometry::BoundingBox, ColorMaterial>> {
+    fn build_outline(&self, index: usize, color: Srgba) -> Option<Gm<BoundingBox, ColorMaterial>> {
         let model = self.models.get(index)?;
         let aabb = model.aabb();
         let margin = aabb.size().magnitude() * 0.001_f32;

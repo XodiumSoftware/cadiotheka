@@ -1,3 +1,8 @@
+//! Build script that captures the current git revision at compile time.
+//!
+//! The resolved SHA (suffixed with `-dirty` when the worktree changes) is
+//! exposed to the crate through the `GIT_SHA` environment variable.
+
 use std::process::Command;
 
 fn main() {

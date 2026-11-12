@@ -5,9 +5,13 @@ use leptos::prelude::*;
 /// Provides the list of accounts fetched from the backend.
 #[derive(Clone, Copy)]
 pub struct AccountsContext {
+    /// The accounts currently loaded; empty until the first fetch completes.
     pub accounts: Signal<Vec<AccountData>>,
+    /// Setter used to replace the loaded account list, e.g. after a retry.
     pub set_accounts: WriteSignal<Vec<AccountData>>,
+    /// Whether a fetch of `/data/accounts` is currently in flight.
     pub is_loading: Signal<bool>,
+    /// Setter that toggles the network activity indication.
     pub set_is_loading: WriteSignal<bool>,
     /// The last fetch failure, or `None` when the list loaded successfully.
     pub error: Signal<Option<RequestError>>,
@@ -28,7 +32,7 @@ impl AccountsContext {
             match fetch_accounts().await {
                 Ok(fetched) => set_accounts.set(fetched),
                 Err(err) => {
-                    leptos::web_sys::console::error_1(
+                    web_sys::console::error_1(
                         &format!("Failed to load accounts: {}", err.message()).into(),
                     );
                     set_error.set(Some(err));
@@ -62,6 +66,6 @@ impl AccountsContext {
 
     /// Read the current context, panicking if none was provided.
     pub fn use_context() -> Self {
-        leptos::prelude::expect_context::<Self>()
+        expect_context::<Self>()
     }
 }

@@ -16,18 +16,32 @@ const DEFAULT_FOV_DEGREES: f32 = 45.0;
 /// Modal dialog for 3D viewer settings.
 #[component]
 pub fn ViewerSettingsModal(
-    #[prop(into)] open: Signal<bool>,
-    #[prop(into)] on_close: Callback<()>,
-    #[prop(into)] highlight_color: RwSignal<Srgba>,
-    #[prop(into)] selection_color: RwSignal<Srgba>,
-    #[prop(into)] skybox_color: RwSignal<Srgba>,
-    #[prop(into)] show_fps: RwSignal<bool>,
-    #[prop(into)] fov_degrees: RwSignal<f32>,
+    /// Whether the modal is shown.
+    #[prop(into)]
+    open: Signal<bool>,
+    /// Called when the modal is dismissed; parents typically persist the colors here.
+    #[prop(into)]
+    on_close: Callback<()>,
+    /// Color drawn as an outline on the primitive under the cursor.
+    #[prop(into)]
+    highlight_color: RwSignal<Srgba>,
+    /// Color drawn as an outline on the object selected by a click.
+    #[prop(into)]
+    selection_color: RwSignal<Srgba>,
+    /// Background color of the viewer's skybox.
+    #[prop(into)]
+    skybox_color: RwSignal<Srgba>,
+    /// Whether the viewer overlays a frames-per-second counter.
+    #[prop(into)]
+    show_fps: RwSignal<bool>,
+    /// Vertical camera field of view in degrees, clamped to 10–120.
+    #[prop(into)]
+    fov_degrees: RwSignal<f32>,
 ) -> impl IntoView {
-    let on_color_input = move |ev: leptos::web_sys::Event| {
+    let on_color_input = move |ev: web_sys::Event| {
         let value = ev
             .target()
-            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
             .map(|input| input.value())
             .unwrap_or_default();
         if let Some(color) = hex_to_srgba(&value) {
@@ -35,10 +49,10 @@ pub fn ViewerSettingsModal(
         }
     };
 
-    let on_selection_input = move |ev: leptos::web_sys::Event| {
+    let on_selection_input = move |ev: web_sys::Event| {
         let value = ev
             .target()
-            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
             .map(|input| input.value())
             .unwrap_or_default();
         if let Some(color) = hex_to_srgba(&value) {
@@ -46,10 +60,10 @@ pub fn ViewerSettingsModal(
         }
     };
 
-    let on_skybox_input = move |ev: leptos::web_sys::Event| {
+    let on_skybox_input = move |ev: web_sys::Event| {
         let value = ev
             .target()
-            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
             .map(|input| input.value())
             .unwrap_or_default();
         if let Some(color) = hex_to_srgba(&value) {
@@ -57,18 +71,18 @@ pub fn ViewerSettingsModal(
         }
     };
 
-    let on_fps_toggle = move |ev: leptos::web_sys::Event| {
+    let on_fps_toggle = move |ev: web_sys::Event| {
         let checked = ev
             .target()
-            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
             .is_some_and(|input| input.checked());
         show_fps.set(checked);
     };
 
-    let on_fov_input = move |ev: leptos::web_sys::Event| {
+    let on_fov_input = move |ev: web_sys::Event| {
         let value = ev
             .target()
-            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
             .and_then(|input| input.value().parse::<f32>().ok())
             .unwrap_or(45.0);
         fov_degrees.set(value.clamp(10.0, 120.0));

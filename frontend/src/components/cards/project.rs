@@ -6,19 +6,35 @@ use crate::utils::{format_number, format_number_full, format_time_ago, format_ti
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
+/// Snapshot of a project rendered by [`ProjectCard`], decoupled from the
+/// [`ProjectData`] wire type.
 #[derive(Clone)]
 pub struct ProjectCardProperties {
+    /// Unique project identifier, used to look up live data and open the modal.
     pub id: String,
+    /// Project title shown as the card heading.
     pub title: String,
+    /// Author or creator display name shown under the title.
     pub author: String,
+    /// Account identifier of the project author.
     pub author_id: String,
+    /// Author username used for `@author:` links and filtering.
     pub author_username: String,
+    /// Account ids of credited collaborators.
     pub collaborator_ids: Vec<String>,
+    /// Extended markdown description shown in the detail modal.
     pub description: String,
+    /// Wire ids of the tags classifying the project, resolved to labels and
+    /// colors through the metadata context.
     pub tags: Vec<String>,
+    /// Download count shown in the card footer.
     pub downloads: u64,
+    /// Account ids of users who favorited the project, used for the heart state
+    /// and count.
     pub favorites: Vec<String>,
+    /// When the project was published or last updated, shown as relative time.
     pub timestamp: time::OffsetDateTime,
+    /// IFC file versions attached to the project.
     pub versions: Vec<ProjectVersion>,
 }
 
@@ -28,6 +44,8 @@ impl From<ProjectData> for ProjectCardProperties {
     }
 }
 
+/// Converts a fetched [`ProjectData`] row into card properties by copying its
+/// fields one-to-one.
 pub fn project_card_properties_from_project_data(project: ProjectData) -> ProjectCardProperties {
     ProjectCardProperties {
         id: project.id,
@@ -47,6 +65,7 @@ pub fn project_card_properties_from_project_data(project: ProjectData) -> Projec
 
 pub use project_card_properties_from_project_data as from_project_data;
 
+/// Renders the download-arrow glyph used next to the download count.
 #[component]
 pub fn DownloadIcon() -> impl IntoView {
     view! {
@@ -68,8 +87,14 @@ pub fn DownloadIcon() -> impl IntoView {
     }
 }
 
+/// Renders the heart glyph used for the favorite count.
 #[component]
-pub fn HeartIcon(#[prop(optional, into)] filled: Signal<bool>) -> impl IntoView {
+pub fn HeartIcon(
+    /// When true the heart is filled with the current color; otherwise it is
+    /// only outlined.
+    #[prop(optional, into)]
+    filled: Signal<bool>,
+) -> impl IntoView {
     view! {
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -87,6 +112,7 @@ pub fn HeartIcon(#[prop(optional, into)] filled: Signal<bool>) -> impl IntoView 
     }
 }
 
+/// Renders the clock glyph used next to the relative publication time.
 #[component]
 pub fn ClockIcon() -> impl IntoView {
     view! {
@@ -107,14 +133,30 @@ pub fn ClockIcon() -> impl IntoView {
     }
 }
 
+/// Grid card summarizing a project with its title, author, tags, download and
+/// favorite counts, and relative age.
 #[component]
 pub fn ProjectCard(
-    #[prop(into)] props: ProjectCardProperties,
-    #[prop(into)] on_click: Callback<()>,
-    #[prop(into)] on_author_click: Callback<()>,
-    #[prop(into)] selected: Signal<bool>,
-    #[prop(into)] tabbable: Signal<bool>,
-    #[prop(into)] on_pointer_enter: Callback<()>,
+    /// Data shown by the card: title, author, tags, counts, and timestamp.
+    #[prop(into)]
+    props: ProjectCardProperties,
+    /// Called when the card is clicked or activated with `Enter`/`Space`; usually
+    /// opens the project detail modal.
+    #[prop(into)]
+    on_click: Callback<()>,
+    /// Called when the author name is clicked, usually opening the profile modal.
+    #[prop(into)]
+    on_author_click: Callback<()>,
+    /// Highlights the card with a primary border, tracking the selected project.
+    #[prop(into)]
+    selected: Signal<bool>,
+    /// Whether the card is in the tab order; off for cards outside a keyboard
+    /// selection window.
+    #[prop(into)]
+    tabbable: Signal<bool>,
+    /// Called when the pointer enters the card, syncing the hover cursor.
+    #[prop(into)]
+    on_pointer_enter: Callback<()>,
 ) -> impl IntoView {
     let ProjectCardProperties {
         id,
@@ -225,7 +267,7 @@ pub fn ProjectCard(
             }
             on:click=move |_| on_click.run(())
             on:pointerenter=move |_| on_pointer_enter.run(())
-            on:keydown=move |ev: leptos::web_sys::KeyboardEvent| {
+            on:keydown=move |ev: web_sys::KeyboardEvent| {
                 if !matches!(ev.key().as_str(), "Enter" | " ") {
                     return;
                 }
@@ -233,7 +275,7 @@ pub fn ProjectCard(
                     .target()
                     .and_then(|target| {
                         target
-                            .dyn_ref::<leptos::web_sys::HtmlElement>()
+                            .dyn_ref::<web_sys::HtmlElement>()
                             .map(|el| el.tag_name())
                     })
                     .is_some_and(|tag| matches!(tag.as_str(), "BUTTON" | "A" | "INPUT"));
@@ -319,7 +361,7 @@ pub fn ProjectCard(
                                             data-tip=favorite_tooltip
                                             aria-label=favorite_aria_label
                                             aria-pressed=move || if is_favorited.get() { "true" } else { "false" }
-                                            on:click=move |ev: leptos::web_sys::MouseEvent| {
+                                            on:click=move |ev: web_sys::MouseEvent| {
                                                 ev.stop_propagation();
                                                 let project_id = project_id_for_button.clone();
                                                 let set_projects = projects_ctx.set_projects;
@@ -342,7 +384,7 @@ pub fn ProjectCard(
                                                             });
                                                         }
                                                         Err(err) => {
-                                                            leptos::web_sys::console::error_1(
+                                                            web_sys::console::error_1(
                                                                 &format!("Failed to toggle favorite: {}", err.message()).into(),
                                                             );
                                                         }

@@ -9,7 +9,7 @@ use crate::utils::{RateLimitNamespace, check_rate_limit, unauthorized};
 ///
 /// Guards either allow the handler to continue with an authenticated account,
 /// or short-circuit the request with a response (e.g. rate limit exceeded).
-pub enum GuardOutcome {
+pub(crate) enum GuardOutcome {
     /// The guard passed and the caller may proceed with the account.
     Account(Account),
     /// The guard failed; the caller should return this response immediately.
@@ -22,7 +22,7 @@ pub enum GuardOutcome {
 /// Unauthenticated requests short-circuit with a `401 Unauthorized` response
 /// the caller should return immediately. This is used for mutation handlers
 /// that need authentication but no rate limiting.
-pub async fn require_auth(req: &Request, ctx: &RouteContext<()>) -> Result<GuardOutcome> {
+pub(crate) async fn require_auth(req: &Request, ctx: &RouteContext<()>) -> Result<GuardOutcome> {
     Ok(match read_session(req, ctx).await? {
         Some(account) => GuardOutcome::Account(account),
         None => GuardOutcome::Response(unauthorized("Unauthorized")?),
@@ -34,7 +34,7 @@ pub async fn require_auth(req: &Request, ctx: &RouteContext<()>) -> Result<Guard
 ///
 /// This is useful for mutation handlers that should be rate-limited and require
 /// a logged-in user but do not need Turnstile verification.
-pub async fn require_auth_with_rate_limit(
+pub(crate) async fn require_auth_with_rate_limit(
     req: &Request,
     ctx: &RouteContext<()>,
     namespace: RateLimitNamespace,
@@ -50,7 +50,7 @@ pub async fn require_auth_with_rate_limit(
 ///
 /// This is useful for project creation and other high-value mutations that need
 /// bot protection in addition to rate limiting and authentication.
-pub async fn require_auth_with_turnstile_and_rate_limit(
+pub(crate) async fn require_auth_with_turnstile_and_rate_limit(
     req: &mut Request,
     ctx: &RouteContext<()>,
     namespace: RateLimitNamespace,

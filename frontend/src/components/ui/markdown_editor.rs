@@ -12,15 +12,32 @@ enum MarkdownEditorTab {
 
 type SelectionTransform = dyn Fn(&str, usize, usize) -> (String, usize, usize);
 
+/// Markdown rich-text widget with Write/Preview tabs, a formatting toolbar, a
+/// character counter, and optional Cancel/Save actions.
 #[component]
 pub fn MarkdownEditor(
-    #[prop(into)] value: Signal<String>,
-    #[prop(into)] on_input: Callback<String>,
-    #[prop(into, optional)] on_cancel: Option<Callback<()>>,
-    #[prop(into, optional)] on_save: Option<Callback<()>>,
-    #[prop(into, default = false)] hide_actions: bool,
+    /// Current markdown text; kept in sync with the textarea and preview.
+    #[prop(into)]
+    value: Signal<String>,
+    /// Called with the full new text after every edit or toolbar action.
+    #[prop(into)]
+    on_input: Callback<String>,
+    /// Called by the Cancel button; together with `on_save` this enables the
+    /// action row.
+    #[prop(into, optional)]
+    on_cancel: Option<Callback<()>>,
+    /// Called by the Save button; together with `on_cancel` this enables the
+    /// action row.
+    #[prop(into, optional)]
+    on_save: Option<Callback<()>>,
+    /// Hides the Cancel/Save row and only shows the character counter.
+    #[prop(into, default = false)]
+    hide_actions: bool,
+    /// Maximum text length; enforced on the textarea and shown in the counter.
     maxlength: usize,
-    #[prop(into, default = "min-h-[8rem]".to_string())] editor_class: String,
+    /// Extra classes for the textarea and the preview container, e.g. min height.
+    #[prop(into, default = "min-h-[8rem]".to_string())]
+    editor_class: String,
 ) -> impl IntoView {
     let (tab, set_tab) = signal(MarkdownEditorTab::Write);
     let (last_selection, set_last_selection) = signal((0usize, 0usize));
@@ -267,14 +284,12 @@ pub fn MarkdownEditor(
     }
 }
 
-fn event_target_textarea(
-    ev: &leptos::web_sys::Event,
-) -> Option<leptos::web_sys::HtmlTextAreaElement> {
+fn event_target_textarea(ev: &web_sys::Event) -> Option<web_sys::HtmlTextAreaElement> {
     ev.target()
-        .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlTextAreaElement>().ok())
+        .and_then(|t| t.dyn_into::<web_sys::HtmlTextAreaElement>().ok())
 }
 
-fn event_target_value(ev: &leptos::web_sys::Event) -> String {
+fn event_target_value(ev: &web_sys::Event) -> String {
     event_target_textarea(ev)
         .map(|textarea| textarea.value())
         .unwrap_or_default()

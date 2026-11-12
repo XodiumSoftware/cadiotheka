@@ -11,16 +11,16 @@ where
     E: JsCast + 'static,
     F: FnMut(E) + 'static,
 {
-    let document = leptos::web_sys::window()?.document()?;
-    let closure = Closure::wrap(Box::new(move |ev: leptos::web_sys::Event| {
+    let document = web_sys::window()?.document()?;
+    let closure = Closure::wrap(Box::new(move |ev: web_sys::Event| {
         if let Ok(typed) = ev.dyn_into::<E>() {
             handler(typed);
         }
-    }) as Box<dyn FnMut(_)>);
+    }));
 
     let function: js_sys::Function = closure.as_ref().unchecked_ref::<js_sys::Function>().clone();
     if let Err(err) = document.add_event_listener_with_callback(event, &function) {
-        leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(
+        web_sys::console::warn_1(&JsValue::from_str(&format!(
             "Failed to add document '{event}' event listener: {err:?}"
         )));
         return None;
@@ -28,10 +28,10 @@ where
     std::mem::forget(closure);
 
     leptos::prelude::on_cleanup(move || {
-        if let Some(document) = leptos::web_sys::window().and_then(|w| w.document())
+        if let Some(document) = web_sys::window().and_then(|w| w.document())
             && let Err(err) = document.remove_event_listener_with_callback(event, &function)
         {
-            leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(
+            web_sys::console::warn_1(&JsValue::from_str(&format!(
                 "Failed to remove document '{event}' event listener: {err:?}"
             )));
         }
@@ -49,16 +49,16 @@ where
     E: JsCast + 'static,
     F: FnMut(E) + 'static,
 {
-    let window = leptos::web_sys::window()?;
-    let closure = Closure::wrap(Box::new(move |ev: leptos::web_sys::Event| {
+    let window = web_sys::window()?;
+    let closure = Closure::wrap(Box::new(move |ev: web_sys::Event| {
         if let Ok(typed) = ev.dyn_into::<E>() {
             handler(typed);
         }
-    }) as Box<dyn FnMut(_)>);
+    }));
 
     let function: js_sys::Function = closure.as_ref().unchecked_ref::<js_sys::Function>().clone();
     if let Err(err) = window.add_event_listener_with_callback(event, &function) {
-        leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(
+        web_sys::console::warn_1(&JsValue::from_str(&format!(
             "Failed to add window '{event}' event listener: {err:?}"
         )));
         return None;
@@ -66,10 +66,10 @@ where
     std::mem::forget(closure);
 
     leptos::prelude::on_cleanup(move || {
-        if let Some(window) = leptos::web_sys::window()
+        if let Some(window) = web_sys::window()
             && let Err(err) = window.remove_event_listener_with_callback(event, &function)
         {
-            leptos::web_sys::console::warn_1(&JsValue::from_str(&format!(
+            web_sys::console::warn_1(&JsValue::from_str(&format!(
                 "Failed to remove window '{event}' event listener: {err:?}"
             )));
         }

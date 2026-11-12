@@ -15,9 +15,14 @@ use web_sys::RequestCredentials;
 /// the signal holds `None`.
 #[derive(Clone, Copy)]
 pub struct CurrentUserContext {
+    /// Whether the current user is `Some`; `is_loading` is `true` until the
+    /// initial `/auth/me` request settles.
     pub account: Signal<Option<AccountData>>,
+    /// Setter used to swap the authenticated account after login or logout.
     pub set_account: WriteSignal<Option<AccountData>>,
+    /// Whether the initial `/auth/me` request is still in flight.
     pub is_loading: Signal<bool>,
+    /// Setter that toggles the loading indication.
     pub set_is_loading: WriteSignal<bool>,
 }
 
@@ -49,7 +54,7 @@ impl CurrentUserContext {
 
     /// Read the current context, panicking if none was provided.
     pub fn use_context() -> Self {
-        leptos::prelude::expect_context::<Self>()
+        expect_context::<Self>()
     }
 }
 

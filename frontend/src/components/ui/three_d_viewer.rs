@@ -86,26 +86,70 @@ pub enum IfcViewerState {
 /// visibility. When omitted, internal signals are used.
 #[component]
 pub fn IfcViewer(
-    #[prop(into)] url: Signal<Option<String>>,
-    #[prop(into, optional)] storage_key: Option<Signal<String>>,
-    #[prop(optional)] state_signal: Option<RwSignal<IfcViewerState>>,
-    #[prop(optional)] reset_view_signal: Option<RwSignal<bool>>,
-    #[prop(optional)] show_axes_signal: Option<RwSignal<bool>>,
-    #[prop(into, optional)] disabled: Option<Signal<bool>>,
-    #[prop(optional)] show_gizmo_signal: Option<RwSignal<bool>>,
-    #[prop(into, optional)] gizmo_position_signal: Option<RwSignal<GizmoPosition>>,
-    #[prop(into, optional)] gizmo_edit_mode_signal: Option<RwSignal<bool>>,
-    #[prop(into, optional)] highlight_color_signal: Option<Signal<Srgba>>,
-    #[prop(into, optional)] selection_color_signal: Option<Signal<Srgba>>,
-    #[prop(into, optional)] skybox_color_signal: Option<Signal<Srgba>>,
-    #[prop(optional)] show_fps_signal: Option<RwSignal<bool>>,
-    #[prop(optional)] fps_signal: Option<RwSignal<u32>>,
-    #[prop(into, optional)] fov_signal: Option<Signal<f32>>,
-    #[prop(optional)] orthographic_signal: Option<RwSignal<bool>>,
-    #[prop(optional)] wireframe_signal: Option<RwSignal<bool>>,
-    #[prop(into)] metadata_url: Signal<Option<String>>,
-    #[prop(optional)] on_object_hit: Option<Callback<ObjectHit>>,
-    #[prop(optional)] selected_object_signal: Option<RwSignal<Option<ObjectHit>>>,
+    /// URL of the GLB model to load; `None` or empty shows the idle state.
+    #[prop(into)]
+    url: Signal<Option<String>>,
+    /// Local storage key under which the camera view state is persisted; empty
+    /// or omitted disables persistence.
+    #[prop(into, optional)]
+    storage_key: Option<Signal<String>>,
+    /// Externally readable viewer state, letting the parent show load progress.
+    #[prop(optional)]
+    state_signal: Option<RwSignal<IfcViewerState>>,
+    /// Setting this to `true` resets the camera to the default framing and clears
+    /// the saved view; the viewer sets it back to `false` after handling it.
+    #[prop(optional)]
+    reset_view_signal: Option<RwSignal<bool>>,
+    /// Whether the ground axes grid is drawn.
+    #[prop(optional)]
+    show_axes_signal: Option<RwSignal<bool>>,
+    /// When true, the viewer ignores input and skips rendering.
+    #[prop(into, optional)]
+    disabled: Option<Signal<bool>>,
+    /// Whether the view-direction gizmo overlay is shown.
+    #[prop(optional)]
+    show_gizmo_signal: Option<RwSignal<bool>>,
+    /// Corner or edge on which the gizmo is anchored.
+    #[prop(into, optional)]
+    gizmo_position_signal: Option<RwSignal<GizmoPosition>>,
+    /// Whether the gizmo is in reposition mode, suppressing viewer input.
+    #[prop(into, optional)]
+    gizmo_edit_mode_signal: Option<RwSignal<bool>>,
+    /// Outline color for the primitive under the cursor.
+    #[prop(into, optional)]
+    highlight_color_signal: Option<Signal<Srgba>>,
+    /// Outline color for the selected object.
+    #[prop(into, optional)]
+    selection_color_signal: Option<Signal<Srgba>>,
+    /// Background color of the viewer's skybox.
+    #[prop(into, optional)]
+    skybox_color_signal: Option<Signal<Srgba>>,
+    /// Whether the FPS counter setting is enabled; currently stored for the
+    /// parent but not drawn by the viewer itself.
+    #[prop(optional)]
+    show_fps_signal: Option<RwSignal<bool>>,
+    /// Receives the measured frames-per-second value roughly every 100 ms.
+    #[prop(optional)]
+    fps_signal: Option<RwSignal<u32>>,
+    /// Vertical camera field of view in degrees.
+    #[prop(into, optional)]
+    fov_signal: Option<Signal<f32>>,
+    /// Switches the camera between perspective and orthographic projection.
+    #[prop(optional)]
+    orthographic_signal: Option<RwSignal<bool>>,
+    /// Renders meshes as wireframe instead of shaded solids.
+    #[prop(optional)]
+    wireframe_signal: Option<RwSignal<bool>>,
+    /// URL of the primitive metadata JSON used to fill the object info panel.
+    #[prop(into)]
+    metadata_url: Signal<Option<String>>,
+    /// Called with the hit primitive when the user clicks an object in the viewer.
+    #[prop(optional)]
+    on_object_hit: Option<Callback<ObjectHit>>,
+    /// The selected object. Shared with the parent so it can read the current
+    /// selection and clear it, while the viewer updates it on every click.
+    #[prop(optional)]
+    selected_object_signal: Option<RwSignal<Option<ObjectHit>>>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let object_panel_ref: NodeRef<leptos::html::Div> = NodeRef::new();
@@ -126,9 +170,7 @@ pub fn IfcViewer(
         selection_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::new(0, 150, 255, 255)));
     let skybox_color = skybox_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::WHITE));
     let _show_fps = show_fps_signal.unwrap_or_else(|| RwSignal::new(false));
-    let fov = fov_signal.unwrap_or_else(|| {
-        Signal::derive(|| crate::three_d_viewer::renderer::Renderer::DEFAULT_FOV_Y)
-    });
+    let fov = fov_signal.unwrap_or_else(|| Signal::derive(|| Renderer::DEFAULT_FOV_Y));
     let orthographic = orthographic_signal.unwrap_or_else(|| RwSignal::new(false));
     let wireframe = wireframe_signal.unwrap_or_else(|| RwSignal::new(false));
     let metadata: RwSignal<Option<Vec<PrimitiveMetadata>>> = RwSignal::new(None);
@@ -144,7 +186,7 @@ pub fn IfcViewer(
         let fps_value = fps;
         leptos::task::spawn_local(async move {
             loop {
-                gloo_timers::future::TimeoutFuture::new(100).await;
+                TimeoutFuture::new(100).await;
                 if let Some(external) = fps_signal {
                     external.set(fps_value.get_untracked());
                 }
@@ -228,13 +270,13 @@ pub fn IfcViewer(
                     *pending_frame.borrow_mut() = false;
                     *animation_handle.borrow_mut() = None;
                     if *dirty.borrow() && !disabled.get() {
-                        let start = leptos::web_sys::window()
+                        let start = web_sys::window()
                             .and_then(|w| w.performance())
                             .map_or(0.0, |p| p.now());
                         if let Some(renderer) = renderer.borrow_mut().as_mut() {
                             renderer.render();
                         }
-                        let end = leptos::web_sys::window()
+                        let end = web_sys::window()
                             .and_then(|w| w.performance())
                             .map_or(0.0, |p| p.now());
                         let duration = (end - start).max(0.0);
@@ -275,7 +317,7 @@ pub fn IfcViewer(
                 })
             };
 
-            let Some(window) = leptos::web_sys::window() else {
+            let Some(window) = web_sys::window() else {
                 *pending_frame.borrow_mut() = false;
                 return;
             };
@@ -293,7 +335,7 @@ pub fn IfcViewer(
         let renderer = SendWrapper::new(Rc::clone(&renderer));
         move || {
             if let Some(handle) = (*animation_handle).borrow_mut().take()
-                && let Some(window) = leptos::web_sys::window()
+                && let Some(window) = web_sys::window()
             {
                 let _ = window.cancel_animation_frame(handle);
             }
@@ -505,7 +547,7 @@ pub fn IfcViewer(
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         move |_| {
-            window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", {
+            window_event_listener::<web_sys::KeyboardEvent, _>("keydown", {
                 let renderer = Rc::clone(&renderer);
                 let request_render = Rc::clone(&request_render);
                 move |ev| {
@@ -517,7 +559,7 @@ pub fn IfcViewer(
                     }
                     let target = ev.target();
                     let is_input = target
-                        .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlElement>().ok())
+                        .and_then(|t| t.dyn_into::<web_sys::HtmlElement>().ok())
                         .is_some_and(|el| {
                             let tag = el.tag_name().to_lowercase();
                             tag == "input" || tag == "textarea" || el.is_content_editable()
@@ -604,12 +646,12 @@ pub fn IfcViewer(
 
     Effect::new(move || {
         if context_menu.get().is_some() {
-            document_event_listener::<leptos::web_sys::MouseEvent, _>("mousedown", {
+            document_event_listener::<web_sys::MouseEvent, _>("mousedown", {
                 let context_menu = context_menu;
                 move |ev| {
                     let target = ev.target();
                     let is_inside = target
-                        .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlElement>().ok())
+                        .and_then(|t| t.dyn_into::<web_sys::HtmlElement>().ok())
                         .is_some_and(|el| {
                             el.closest(".viewer-context-menu").ok().flatten().is_some()
                         });
@@ -625,7 +667,7 @@ pub fn IfcViewer(
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         let controls = Rc::clone(&controls);
-        move |ev: leptos::web_sys::MouseEvent| {
+        move |ev: web_sys::MouseEvent| {
             if disabled.get() || gizmo_edit_mode.get() {
                 return;
             }
@@ -639,7 +681,7 @@ pub fn IfcViewer(
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         let controls = Rc::clone(&controls);
-        move |ev: leptos::web_sys::MouseEvent| {
+        move |ev: web_sys::MouseEvent| {
             if disabled.get() || gizmo_edit_mode.get() {
                 return;
             }
@@ -682,7 +724,7 @@ pub fn IfcViewer(
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         let controls = Rc::clone(&controls);
-        move |ev: leptos::web_sys::MouseEvent| {
+        move |ev: web_sys::MouseEvent| {
             if disabled.get() || gizmo_edit_mode.get() {
                 return;
             }
@@ -695,7 +737,7 @@ pub fn IfcViewer(
     let on_wheel = {
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
-        move |ev: leptos::web_sys::WheelEvent| {
+        move |ev: web_sys::WheelEvent| {
             if disabled.get() || gizmo_edit_mode.get() {
                 return;
             }
@@ -706,7 +748,7 @@ pub fn IfcViewer(
     };
     let on_context_menu = {
         let renderer = Rc::clone(&renderer);
-        move |ev: leptos::web_sys::MouseEvent| {
+        move |ev: web_sys::MouseEvent| {
             if disabled.get() || gizmo_edit_mode.get() || state.get() != IfcViewerState::Rendering {
                 context_menu.set(None);
                 return;
@@ -733,7 +775,7 @@ pub fn IfcViewer(
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         let controls = Rc::clone(&controls);
-        move |ev: leptos::web_sys::MouseEvent| {
+        move |ev: web_sys::MouseEvent| {
             if disabled.get() || gizmo_edit_mode.get() || object_panel_resizing.get() {
                 return;
             }
@@ -808,14 +850,14 @@ pub fn IfcViewer(
     };
 
     let on_resize_mouse_down = {
-        move |ev: leptos::web_sys::MouseEvent| {
+        move |ev: web_sys::MouseEvent| {
             ev.prevent_default();
             object_panel_resizing.set(true);
         }
     };
 
     let on_resize_double_click = {
-        move |ev: leptos::web_sys::MouseEvent| {
+        move |ev: web_sys::MouseEvent| {
             ev.prevent_default();
             ev.stop_propagation();
             object_panel_width.set(OBJECT_PANEL_DEFAULT_WIDTH);
@@ -824,7 +866,7 @@ pub fn IfcViewer(
     };
 
     let on_label_resize_mouse_down = {
-        move |ev: leptos::web_sys::MouseEvent| {
+        move |ev: web_sys::MouseEvent| {
             ev.prevent_default();
             ev.stop_propagation();
             label_col_resizing.set(true);
@@ -832,7 +874,7 @@ pub fn IfcViewer(
     };
 
     let on_label_resize_double_click = {
-        move |ev: leptos::web_sys::MouseEvent| {
+        move |ev: web_sys::MouseEvent| {
             ev.prevent_default();
             ev.stop_propagation();
             label_col_width.set(OBJECT_LABEL_COL_DEFAULT);
@@ -845,14 +887,16 @@ pub fn IfcViewer(
             if !object_panel_resizing.get() {
                 return;
             }
-            let Some(window) = leptos::web_sys::window() else {
+            let Some(window) = web_sys::window() else {
                 return;
             };
+            #[allow(trivial_casts)]
             let move_listener = Closure::wrap(Box::new(move |ev: web_sys::MouseEvent| {
                 let new_width =
                     f64::from(ev.client_x()).clamp(OBJECT_PANEL_MIN_WIDTH, OBJECT_PANEL_MAX_WIDTH);
                 object_panel_width.set(new_width);
             }) as Box<dyn FnMut(_)>);
+            #[allow(trivial_casts)]
             let up_listener = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
                 object_panel_resizing.set(false);
                 let _ = LocalStorage::set(
@@ -884,13 +928,14 @@ pub fn IfcViewer(
             if !label_col_resizing.get() {
                 return;
             }
-            let Some(window) = leptos::web_sys::window() else {
+            let Some(window) = web_sys::window() else {
                 return;
             };
             let Some(panel) = object_panel_ref.get() else {
                 return;
             };
             let panel_width = f64::from(panel.client_width()).max(1.0);
+            #[allow(trivial_casts)]
             let move_listener = Closure::wrap(Box::new(move |ev: web_sys::MouseEvent| {
                 let panel_rect = panel.get_bounding_client_rect();
                 let relative_x = f64::from(ev.client_x()) - panel_rect.left();
@@ -898,6 +943,7 @@ pub fn IfcViewer(
                     (relative_x / panel_width).clamp(OBJECT_LABEL_COL_MIN, OBJECT_LABEL_COL_MAX);
                 label_col_width.set(fraction);
             }) as Box<dyn FnMut(_)>);
+            #[allow(trivial_casts)]
             let up_listener = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
                 label_col_resizing.set(false);
                 let _ = LocalStorage::set(
@@ -928,7 +974,7 @@ pub fn IfcViewer(
         let renderer = Rc::clone(&renderer);
         let request_render = Rc::clone(&request_render);
         let controls = Rc::clone(&controls);
-        move |_: leptos::web_sys::MouseEvent| {
+        move |_: web_sys::MouseEvent| {
             let mut state = controls.borrow_mut();
             state.on_mouse_leave(&renderer);
             hovered_primitive.set(None);
@@ -1444,13 +1490,13 @@ async fn load_model_bytes(url: &str) -> Option<Vec<u8>> {
     match Request::get(url).send().await {
         Ok(response) if response.ok() => response.binary().await.ok(),
         Ok(response) => {
-            leptos::web_sys::console::error_1(
+            web_sys::console::error_1(
                 &format!("Failed to fetch model: HTTP {}", response.status()).into(),
             );
             None
         }
         Err(err) => {
-            leptos::web_sys::console::error_1(&format!("Failed to fetch model: {err:?}").into());
+            web_sys::console::error_1(&format!("Failed to fetch model: {err:?}").into());
             None
         }
     }

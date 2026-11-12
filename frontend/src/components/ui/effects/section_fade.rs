@@ -1,9 +1,15 @@
 use leptos::prelude::*;
 
 /// Simple fade overlay for any section
+///
+/// Renders non-interactive gradient strips that blend a section's edges into
+/// the page background. Place it inside a `relative` parent.
 #[component]
 pub fn FadeOverlay(
-    #[prop(default = "")] position: &'static str,
+    /// Which edge to fade: `"top"`, `"bottom"`, `"spotlight-top"`, or
+    /// `"spotlight-bottom"`; any other value fades both top and bottom.
+    #[prop(default = "")]
+    position: &'static str,
     /// Height of the fade in tailwind spacing
     #[prop(default = "20")]
     height: &'static str,

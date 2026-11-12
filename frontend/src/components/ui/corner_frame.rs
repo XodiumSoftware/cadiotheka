@@ -1,11 +1,23 @@
 use leptos::prelude::*;
 
+/// Draws decorative box-drawing corner glyphs around its children.
+///
+/// The four corners are absolutely positioned spans outside the content box, so
+/// the wrapper is `relative` and the children fill the remaining space.
 #[component]
 pub fn CornerFrame(
     children: Children,
-    #[prop(default = "angle")] style: &'static str,
-    #[prop(default = "")] class: &'static str,
-    #[prop(default = false)] black: bool,
+    /// Corner glyph family: `"square"`, `"curly"`, or any other value for the
+    /// default angle brackets.
+    #[prop(default = "angle")]
+    style: &'static str,
+    /// Extra classes applied to the relative wrapper element.
+    #[prop(default = "")]
+    class: &'static str,
+    /// Renders the corner glyphs in solid black instead of the translucent
+    /// primary theme color.
+    #[prop(default = false)]
+    black: bool,
 ) -> impl IntoView {
     let (top_left, top_right, bottom_left, bottom_right) = match style {
         "square" => ("┌", "┐", "└", "┘"),

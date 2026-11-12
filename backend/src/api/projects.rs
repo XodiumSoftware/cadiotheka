@@ -25,7 +25,7 @@ const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, autho
 
 /// A single IFC file version attached to a project.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ProjectVersion {
+pub(crate) struct ProjectVersion {
     pub id: String,
     pub project_id: String,
     pub filename: String,
@@ -39,7 +39,7 @@ pub struct ProjectVersion {
 
 /// Payload used to patch a project version.
 #[derive(Deserialize, Debug)]
-pub struct VersionPatch {
+pub(crate) struct VersionPatch {
     pub state: Option<VersionState>,
 }
 
@@ -70,7 +70,7 @@ fn validate_project_payload(payload: &ProjectPayload) -> std::collections::HashM
 
 /// A Cadiotheka project stored in D1.
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Project {
+pub(crate) struct Project {
     pub id: String,
     pub title: String,
     pub author: String,
@@ -93,7 +93,7 @@ pub struct Project {
 /// attribution, `downloads`, `favorites`, `timestamp`) are generated or
 /// preserved by the backend and ignored when present in the request body.
 #[derive(Deserialize, Debug)]
-pub struct ProjectPayload {
+pub(crate) struct ProjectPayload {
     pub title: String,
     #[serde(with = "json_string")]
     pub collaborator_ids: Vec<String>,
@@ -110,11 +110,14 @@ pub struct ProjectPayload {
 mod json_string {
     use serde::{Deserialize, Deserializer, Serializer};
 
-    pub fn serialize<S: Serializer>(value: &Vec<String>, serializer: S) -> Result<S::Ok, S::Error> {
+    pub(crate) fn serialize<S: Serializer>(
+        value: &Vec<String>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
     }
 
-    pub fn deserialize<'de, D: Deserializer<'de>>(
+    pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
         deserializer: D,
     ) -> Result<Vec<String>, D::Error> {
         let s = String::deserialize(deserializer)?;
@@ -127,11 +130,16 @@ mod json_tags {
 
     use super::Tag;
 
-    pub fn serialize<S: Serializer>(value: &Vec<Tag>, serializer: S) -> Result<S::Ok, S::Error> {
+    pub(crate) fn serialize<S: Serializer>(
+        value: &Vec<Tag>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
     }
 
-    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<Tag>, D::Error> {
+    pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Vec<Tag>, D::Error> {
         let s = String::deserialize(deserializer)?;
         serde_json::from_str(&s).map_err(serde::de::Error::custom)
     }
@@ -141,7 +149,7 @@ mod json_tags {
 ///
 /// Accepts `?limit=` and `?offset=` query parameters; the limit defaults to
 /// 100 and is capped at 500 so each D1 query stays bounded.
-pub async fn list_projects(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn list_projects(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let (limit, offset) = list_window(&req.url()?);
     let result = db(&ctx)?
         .prepare(format!(
@@ -155,7 +163,7 @@ pub async fn list_projects(req: Request, ctx: RouteContext<()>) -> Result<Respon
 }
 
 /// Responds with the project matching the `:id` path parameter, or 404 if not found.
-pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let id = required_param(&ctx, "id")?;
     match fetch_project(&ctx, &id).await? {
         Some(project) => Response::from_json(&project),
@@ -165,7 +173,7 @@ pub async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Respon
 
 /// Creates a new project from the request body, attributing it to the
 /// authenticated user.
-pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth_with_turnstile_and_rate_limit(
         &mut req,
         &ctx,
@@ -191,7 +199,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let tags = payload
         .tags
         .iter()
-        .map(std::string::ToString::to_string)
+        .map(ToString::to_string)
         .collect::<Vec<_>>();
     let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
     let collaborator_ids =
@@ -229,7 +237,7 @@ pub async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 /// provided fields are updated.
 #[derive(Deserialize, Debug)]
 #[allow(clippy::option_option)]
-pub struct ProjectPatch {
+pub(crate) struct ProjectPatch {
     title: Option<String>,
     tags: Option<Vec<Tag>>,
     collaborator_ids: Option<Vec<String>>,
@@ -241,7 +249,7 @@ pub struct ProjectPatch {
 ///
 /// All provided fields are validated before any write and applied in a single
 /// D1 batch, so a patch atomically succeeds or fails as a whole.
-pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
@@ -278,10 +286,7 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
     }
 
     if let Some(tags) = patch.tags {
-        let tags = tags
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect::<Vec<_>>();
+        let tags = tags.iter().map(ToString::to_string).collect::<Vec<_>>();
         let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
         statements.push(
             database
@@ -316,7 +321,7 @@ pub async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Result<Re
 }
 
 /// Replaces an existing project, identified by the `:id` path parameter.
-pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
@@ -338,7 +343,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
     let tags = payload
         .tags
         .iter()
-        .map(std::string::ToString::to_string)
+        .map(ToString::to_string)
         .collect::<Vec<_>>();
     let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
     let collaborator_ids =
@@ -374,7 +379,7 @@ pub async fn update_project(mut req: Request, ctx: RouteContext<()>) -> Result<R
 }
 
 /// Deletes the project identified by the `:id` path parameter.
-pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
@@ -398,7 +403,10 @@ pub async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Respo
 
 /// Handles a multipart upload of a project IFC model, stores it in R2,
 /// and creates a new `project_versions` row with state `undefined`.
-pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn upload_project_ifc(
+    mut req: Request,
+    ctx: RouteContext<()>,
+) -> Result<Response> {
     let account =
         match require_auth_with_rate_limit(&req, &ctx, RateLimitNamespace::IfcUpload).await? {
             GuardOutcome::Account(account) => account,
@@ -487,7 +495,7 @@ pub async fn upload_project_ifc(mut req: Request, ctx: RouteContext<()>) -> Resu
 
 /// Deletes all IFC versions for a project from R2 and the `project_versions`
 /// table. Restricted to project editors.
-pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account =
         match require_auth_with_rate_limit(&req, &ctx, RateLimitNamespace::IfcDelete).await? {
             GuardOutcome::Account(account) => account,
@@ -520,7 +528,7 @@ pub async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> Result<R
 
 /// Responds with the IFC versions for a project. Undefined versions are omitted
 /// unless the caller can edit the project.
-pub async fn list_project_versions(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn list_project_versions(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let project_id = required_param(&ctx, "id")?;
     let project = fetch_project(&ctx, &project_id)
         .await?
@@ -536,7 +544,10 @@ pub async fn list_project_versions(req: Request, ctx: RouteContext<()>) -> Resul
 }
 
 /// Patches a single project version (state only). Restricted to project editors.
-pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn update_project_version(
+    mut req: Request,
+    ctx: RouteContext<()>,
+) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
@@ -571,7 +582,10 @@ pub async fn update_project_version(mut req: Request, ctx: RouteContext<()>) -> 
 }
 
 /// Deletes a single project version. Restricted to project editors.
-pub async fn delete_project_version(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn delete_project_version(
+    req: Request,
+    ctx: RouteContext<()>,
+) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
@@ -609,7 +623,7 @@ pub async fn delete_project_version(req: Request, ctx: RouteContext<()>) -> Resu
 }
 
 /// Serves an IFC model from R2 by its version id and filename.
-pub async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let version_id = required_param(&ctx, "version_id")?;
     let filename = required_param(&ctx, "filename")?;
 
@@ -852,7 +866,7 @@ fn visit_gltf_node(
             .and_then(|list: &[serde_json::Value]| list.get(mesh_index))
             .and_then(|m: &serde_json::Value| m.get("primitives"))
             .and_then(serde_json::Value::as_array)
-            .map_or(0, std::vec::Vec::len);
+            .map_or(0, Vec::len);
         for _ in 0..primitive_count {
             out.push(GltfPrimitiveMetadata {
                 express_id,
@@ -877,7 +891,7 @@ fn visit_gltf_node(
 }
 
 /// Serves a project's IFC model converted to a binary GLB for the 3D viewer.
-pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let id = required_param(&ctx, "id")?;
 
     let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
@@ -932,7 +946,10 @@ pub async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<R
 }
 
 /// Serves per-primitive metadata for a project's converted GLB.
-pub async fn serve_project_glb_metadata(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn serve_project_glb_metadata(
+    _req: Request,
+    ctx: RouteContext<()>,
+) -> Result<Response> {
     let id = required_param(&ctx, "id")?;
 
     let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
@@ -991,7 +1008,7 @@ pub async fn serve_project_glb_metadata(_req: Request, ctx: RouteContext<()>) ->
 ///
 /// The caller must be able to edit the project. Returns a JSON body describing
 /// whether the conversion succeeded, failed, or found no renderable geometry.
-pub async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account =
         match require_auth_with_rate_limit(&req, &ctx, RateLimitNamespace::GlbConvert).await? {
             GuardOutcome::Account(account) => account,
@@ -1111,7 +1128,10 @@ fn can_edit_project(account: &Account, project: &Project) -> bool {
         || project.collaborator_ids.contains(&account.id)
 }
 
-pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn toggle_project_favorite(
+    req: Request,
+    ctx: RouteContext<()>,
+) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
@@ -1148,7 +1168,10 @@ pub async fn toggle_project_favorite(req: Request, ctx: RouteContext<()>) -> Res
 ///
 /// This endpoint is rate-limited per client IP to discourage abuse while still
 /// allowing legitimate downloads.
-pub async fn increment_project_downloads(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn increment_project_downloads(
+    req: Request,
+    ctx: RouteContext<()>,
+) -> Result<Response> {
     let id = required_param(&ctx, "id")?;
 
     if let Some(rate_limited) = check_rate_limit(&req, &ctx, RateLimitNamespace::Downloads).await? {

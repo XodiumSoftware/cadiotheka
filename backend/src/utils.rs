@@ -13,22 +13,22 @@ const PROJECT_ASSETS_R2_BINDING: &str = "PROJECT_ASSETS";
 const RATE_LIMIT_BINDING: &str = "RATE_LIMITER";
 
 /// Returns the D1 database binding configured for this worker.
-pub fn db(ctx: &RouteContext<()>) -> Result<D1Database> {
+pub(crate) fn db(ctx: &RouteContext<()>) -> Result<D1Database> {
     ctx.env.d1(DB_BINDING)
 }
 
 /// Returns the KV namespace binding used for session state.
-pub fn kv(ctx: &RouteContext<()>) -> Result<KvStore> {
+pub(crate) fn kv(ctx: &RouteContext<()>) -> Result<KvStore> {
     ctx.env.kv(AUTH_KV_BINDING)
 }
 
 /// Returns the R2 bucket used for project assets.
-pub fn assets_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
+pub(crate) fn assets_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
     ctx.env.bucket(PROJECT_ASSETS_R2_BINDING)
 }
 
 /// Returns the rate limiter binding used to throttle requests.
-pub fn rate_limiter(ctx: &RouteContext<()>) -> Result<RateLimiter> {
+pub(crate) fn rate_limiter(ctx: &RouteContext<()>) -> Result<RateLimiter> {
     ctx.env.rate_limiter(RATE_LIMIT_BINDING)
 }
 
@@ -37,7 +37,7 @@ pub fn rate_limiter(ctx: &RouteContext<()>) -> Result<RateLimiter> {
 /// Each variant produces a stable `snake_case` key so limits are grouped by
 /// feature rather than by raw strings that are easy to mistype.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RateLimitNamespace {
+pub(crate) enum RateLimitNamespace {
     /// OAuth login initiation.
     OauthLogin,
     /// OAuth callback exchange.
@@ -74,12 +74,12 @@ impl std::fmt::Display for RateLimitNamespace {
 /// The response body has the shape `{"error": "message"}`. This is used
 /// instead of `Response::error` so the frontend can reliably parse error
 /// payloads as JSON.
-pub fn error_response(message: &str, status: u16) -> Result<Response> {
+pub(crate) fn error_response(message: &str, status: u16) -> Result<Response> {
     Ok(Response::from_json(&serde_json::json!({ "error": message }))?.with_status(status))
 }
 
 /// Builds a 400 Bad Request error response.
-pub fn bad_request(message: &str) -> Result<Response> {
+pub(crate) fn bad_request(message: &str) -> Result<Response> {
     error_response(message, 400)
 }
 
@@ -88,7 +88,7 @@ pub fn bad_request(message: &str) -> Result<Response> {
 ///
 /// Missing parameters indicate a route registered without its placeholder,
 /// which is a server-side bug rather than a client error.
-pub fn required_param(ctx: &RouteContext<()>, name: &str) -> Result<String> {
+pub(crate) fn required_param(ctx: &RouteContext<()>, name: &str) -> Result<String> {
     match ctx.param(name) {
         Some(value) if !value.is_empty() => Ok(value.clone()),
         _ => Err(worker::Error::RustError(format!(
@@ -98,17 +98,17 @@ pub fn required_param(ctx: &RouteContext<()>, name: &str) -> Result<String> {
 }
 
 /// Builds a 401 Unauthorized error response.
-pub fn unauthorized(message: &str) -> Result<Response> {
+pub(crate) fn unauthorized(message: &str) -> Result<Response> {
     error_response(message, 401)
 }
 
 /// Builds a 403 Forbidden error response.
-pub fn forbidden(message: &str) -> Result<Response> {
+pub(crate) fn forbidden(message: &str) -> Result<Response> {
     error_response(message, 403)
 }
 
 /// Builds a 404 Not Found error response.
-pub fn not_found(message: &str) -> Result<Response> {
+pub(crate) fn not_found(message: &str) -> Result<Response> {
     error_response(message, 404)
 }
 
@@ -132,7 +132,7 @@ fn client_ip(req: &Request) -> String {
 ///
 /// Returns `Ok(None)` when the request may proceed. Returns `Ok(Some(response))`
 /// with a `429 Too Many Requests` response when the limit is exceeded.
-pub async fn check_rate_limit(
+pub(crate) async fn check_rate_limit(
     req: &Request,
     ctx: &RouteContext<()>,
     namespace: RateLimitNamespace,
@@ -149,7 +149,7 @@ pub async fn check_rate_limit(
 }
 
 /// Wraps an error value into a `worker::Error::RustError`.
-pub fn rust_err<E: std::fmt::Display>(err: E) -> worker::Error {
+pub(crate) fn rust_err<E: std::fmt::Display>(err: E) -> worker::Error {
     worker::Error::RustError(err.to_string())
 }
 
@@ -158,7 +158,7 @@ pub fn rust_err<E: std::fmt::Display>(err: E) -> worker::Error {
 /// D1 rejects JavaScript `undefined` values, which is what `Option::into`
 /// currently produces for `None`. This helper emits an explicit SQL `NULL`
 /// (`JsValue::NULL`) instead.
-pub fn js_option(value: Option<String>) -> wasm_bindgen::JsValue {
+pub(crate) fn js_option(value: Option<String>) -> wasm_bindgen::JsValue {
     match value {
         Some(s) => s.into(),
         None => wasm_bindgen::JsValue::NULL,
@@ -169,7 +169,7 @@ pub fn js_option(value: Option<String>) -> wasm_bindgen::JsValue {
 ///
 /// `std::time` is unavailable in the Workers WASM runtime, so this is the
 /// only way to obtain the current time in a Cloudflare Worker.
-pub fn now_utc() -> time::OffsetDateTime {
+pub(crate) fn now_utc() -> time::OffsetDateTime {
     let millis = worker::js_sys::Date::now();
     time::OffsetDateTime::UNIX_EPOCH + time::Duration::seconds_f64(millis / 1_000.0)
 }
@@ -180,7 +180,7 @@ pub fn now_utc() -> time::OffsetDateTime {
 ///
 /// This is used to build OAuth redirect URLs that must match the registered
 /// callback origin.
-pub fn public_origin(req: &Request) -> String {
+pub(crate) fn public_origin(req: &Request) -> String {
     let headers = req.headers();
     let host = headers
         .get("X-Forwarded-Host")
@@ -221,7 +221,7 @@ const MAX_LIST_LIMIT: u32 = 500;
 /// Values that are missing, unparsable, or out of range fall back to safe
 /// defaults instead of failing the request, keeping list endpoints tolerant of
 /// sloppy clients while guaranteeing every query is bounded.
-pub fn list_window(url: &url::Url) -> (u32, u32) {
+pub(crate) fn list_window(url: &url::Url) -> (u32, u32) {
     let limit = query_param(url, "limit")
         .and_then(|value| value.parse::<u32>().ok())
         .map_or(DEFAULT_LIST_LIMIT, |limit| limit.clamp(1, MAX_LIST_LIMIT));
@@ -232,7 +232,7 @@ pub fn list_window(url: &url::Url) -> (u32, u32) {
 }
 
 /// Returns the value of a query parameter from a URL, if present.
-pub fn query_param(url: &url::Url, name: &str) -> Option<String> {
+pub(crate) fn query_param(url: &url::Url, name: &str) -> Option<String> {
     url.query_pairs()
         .find(|(key, _)| key == name)
         .map(|(_, value)| value.into_owned())
@@ -248,7 +248,7 @@ pub fn query_param(url: &url::Url, name: &str) -> Option<String> {
 ///
 /// URLs containing credentials, explicit ports, or protocol-relative URLs
 /// are rejected. Any other value returns `None`.
-pub fn safe_redirect_target(is_https: bool, url: &url::Url, param: &str) -> Option<String> {
+pub(crate) fn safe_redirect_target(is_https: bool, url: &url::Url, param: &str) -> Option<String> {
     let target = query_param(url, param)?;
     if target.starts_with('/') && !target.starts_with("//") {
         return Some(target);
@@ -297,7 +297,7 @@ fn format_port(port: Option<u16>) -> String {
 }
 
 /// Returns whether a request was made over HTTPS based on its URL scheme.
-pub fn is_https_request(req: &Request) -> bool {
+pub(crate) fn is_https_request(req: &Request) -> bool {
     req.url().ok().is_none_or(|u| u.scheme() == "https")
 }
 

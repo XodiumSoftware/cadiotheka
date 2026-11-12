@@ -13,7 +13,15 @@ const TURNSTILE_SITE_KEY: &str = "0x4AAAAAAEA7QaTfmDX0gWZ2";
 /// whenever it becomes visible, because the Turnstile script only implicitly
 /// renders widgets that exist on the initial page load.
 #[component]
-pub fn TurnstileWidget(id: &'static str, #[prop(into)] visible: Signal<bool>) -> impl IntoView {
+pub fn TurnstileWidget(
+    /// Unique container id the Turnstile script renders into; also used to read
+    /// the response token via [`turnstile_response`].
+    id: &'static str,
+    /// Whether the widget is on screen; when it becomes true the widget is
+    /// explicitly rendered if it has not been yet.
+    #[prop(into)]
+    visible: Signal<bool>,
+) -> impl IntoView {
     Effect::new(move |_| {
         if visible.get() {
             render_if_needed(id);

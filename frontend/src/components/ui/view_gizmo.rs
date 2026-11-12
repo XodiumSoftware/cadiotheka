@@ -12,15 +12,25 @@ use leptos::prelude::*;
 /// Direction slice exposed by [`ViewGizmo`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ViewGizmoDirection {
+    /// Looking straight down at the model from above.
     Top,
+    /// Looking straight up at the model from below.
     Bottom,
+    /// Looking at the back of the model (camera in front of +Z).
     North,
+    /// Diagonal view between north and east.
     NorthEast,
+    /// Looking at the right side of the model.
     East,
+    /// Diagonal view between south and east.
     SouthEast,
+    /// Looking at the front of the model.
     South,
+    /// Diagonal view between south and west.
     SouthWest,
+    /// Looking at the left side of the model.
     West,
+    /// Diagonal view between north and west.
     NorthWest,
 }
 
@@ -120,10 +130,19 @@ const DIAMETER: u32 = RADIUS * 2;
 /// Renders a circular view-direction gizmo.
 #[component]
 pub fn ViewGizmo(
-    #[prop(into)] on_direction: Callback<ViewGizmoDirection>,
-    #[prop(into, optional)] disabled: Option<Signal<bool>>,
-    #[prop(into, optional)] position: Option<Signal<GizmoPosition>>,
-    #[prop(into, optional)] editing: Option<Signal<bool>>,
+    /// Called with the chosen direction when a ring slice or inner circle is clicked.
+    #[prop(into)]
+    on_direction: Callback<ViewGizmoDirection>,
+    /// When true, clicks are ignored and slices are rendered inactive.
+    #[prop(into, optional)]
+    disabled: Option<Signal<bool>>,
+    /// Where the gizmo is anchored inside the viewer container.
+    #[prop(into, optional)]
+    position: Option<Signal<GizmoPosition>>,
+    /// Whether the gizmo is in drag-to-reposition mode. While true, clicks are
+    /// ignored, slices are dimmed, and the outer ring turns error-colored.
+    #[prop(into, optional)]
+    editing: Option<Signal<bool>>,
 ) -> impl IntoView {
     let disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
     let position = position.unwrap_or_else(|| Signal::derive(|| GizmoPosition::TopRight));

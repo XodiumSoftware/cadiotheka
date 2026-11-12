@@ -1,3 +1,8 @@
+//! Cloudflare Workers backend for Cadiotheka, serving the D1-backed JSON API.
+//!
+//! Route handlers live under `api`; the worker entry point and router are
+//! defined in this module.
+
 pub(crate) use shared::routes;
 
 mod utils;
@@ -9,12 +14,12 @@ mod guards;
 mod materials;
 
 mod api {
-    pub mod accounts;
-    pub mod auth;
-    pub mod passkey;
-    pub mod projects;
-    pub mod session;
-    pub mod turnstile;
+    pub(crate) mod accounts;
+    pub(crate) mod auth;
+    pub(crate) mod passkey;
+    pub(crate) mod projects;
+    pub(crate) mod session;
+    pub(crate) mod turnstile;
 }
 
 use worker::{Context, Env, Method, Request, Response, Result, Router, event};
@@ -221,7 +226,7 @@ mod tests {
         assert_eq!(parsed.role, account.role.to_string());
         assert_eq!(parsed.bio, account.bio);
         assert_eq!(parsed.avatar_url, account.avatar_url);
-        assert_eq!(parsed.project_ids, [] as [String; 0]);
+        assert_eq!(parsed.project_ids, Vec::<String>::new());
         assert_eq!(parsed.created_at, account.created_at);
         assert_eq!(parsed.verified, account.verified);
         assert_eq!(parsed.viewer_preferences, account.viewer_preferences);

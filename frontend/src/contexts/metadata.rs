@@ -10,7 +10,9 @@ use std::collections::HashMap;
 /// every call site.
 #[derive(Clone, Copy)]
 pub struct MetadataContext {
+    /// All tags known to the app, derived from the hardcoded [`Tag`] enum.
     pub tags: Signal<Vec<Tag>>,
+    /// Whether tags are being loaded; always `false` now that they are static.
     pub is_loading: Signal<bool>,
 }
 
@@ -46,6 +48,6 @@ impl MetadataContext {
 
     /// Read the current context, panicking if none was provided.
     pub fn use_context() -> Self {
-        leptos::prelude::expect_context::<Self>()
+        expect_context::<Self>()
     }
 }

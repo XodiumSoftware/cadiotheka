@@ -8,8 +8,13 @@ use leptos::prelude::*;
 /// its own group so `header.rs` can animate it independently of the ASCII text.
 #[component]
 pub fn Logo(
-    #[prop(default = "")] class: &'static str,
-    #[prop(default = "")] right_half_class: &'static str,
+    /// Classes for the root SVG element, typically used to size the logo.
+    #[prop(default = "")]
+    class: &'static str,
+    /// Classes for the right chevron group only, so the header can animate it
+    /// independently of the rest of the mark.
+    #[prop(default = "")]
+    right_half_class: &'static str,
 ) -> impl IntoView {
     view! {
         <svg

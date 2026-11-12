@@ -60,7 +60,7 @@ pub fn raycast(renderer: &Renderer, x: f32, y: f32) -> Option<RaycastHit> {
         }
         Ok(None) => None,
         Err(err) => {
-            leptos::web_sys::console::error_1(&format!("Raycast failed: {err:?}").into());
+            web_sys::console::error_1(&format!("Raycast failed: {err:?}").into());
             None
         }
     }

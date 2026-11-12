@@ -25,7 +25,7 @@ const OAUTH_STATE_TTL_SECONDS: u64 = 10 * 60;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum Provider {
+pub(crate) enum Provider {
     #[default]
     #[serde(rename = "github")]
     GitHub,
@@ -105,7 +105,7 @@ fn oauth_client(ctx: &RouteContext<()>, provider: Provider) -> Result<BasicClien
     Ok(BasicClient::new(client_id).set_client_secret(client_secret))
 }
 
-pub async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(response) = check_rate_limit(&req, &ctx, RateLimitNamespace::OauthLogin).await? {
         return Ok(response);
     }
@@ -119,7 +119,7 @@ pub async fn github_login(req: Request, ctx: RouteContext<()>) -> Result<Respons
     Response::from_json(&serde_json::json!({ "url": url }))
 }
 
-pub async fn google_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn google_login(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     if let Some(response) = check_rate_limit(&req, &ctx, RateLimitNamespace::OauthLogin).await? {
         return Ok(response);
     }
@@ -186,11 +186,11 @@ async fn login_url(
     Ok(url.to_string())
 }
 
-pub async fn github_callback(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn github_callback(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     callback(req, ctx, Provider::GitHub).await
 }
 
-pub async fn google_callback(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn google_callback(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     callback(req, ctx, Provider::Google).await
 }
 

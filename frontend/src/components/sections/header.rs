@@ -65,10 +65,7 @@ fn group_and_filter_suggestions(suggestions: &[Suggestion]) -> Vec<SuggestionGro
 /// Applies a clicked suggestion to a query, replacing the partial token when
 /// completing a prefixed suggestion.
 fn apply_suggestion(query: &str, text: &str, kind: SuggestionKind) -> String {
-    let mut parts: Vec<String> = query
-        .split_whitespace()
-        .map(std::borrow::ToOwned::to_owned)
-        .collect();
+    let mut parts: Vec<String> = query.split_whitespace().map(ToOwned::to_owned).collect();
 
     match kind {
         SuggestionKind::Sort => {
@@ -108,6 +105,8 @@ fn replace_last_token(parts: &mut Vec<String>, replacement: String) {
     }
 }
 
+/// Top navigation bar with the logo, search box with grouped suggestions,
+/// account menu, and links to the login, profile, and add-project modals.
 #[component]
 pub fn Header() -> impl IntoView {
     const ACCOUNT_MENU_ITEMS: usize = 4;

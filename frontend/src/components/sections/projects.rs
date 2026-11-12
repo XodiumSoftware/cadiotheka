@@ -41,8 +41,14 @@ fn grid_columns(wide: bool, viewport_width: f64) -> usize {
 /// Number of project cards shown per page of the grid.
 const PAGE_SIZE: usize = 24;
 
+/// Paginated, search-filtered grid of project cards with keyboard navigation
+/// and a grid/list layout toggle.
 #[component]
-pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
+pub fn ProjectsSection(
+    /// Extra classes for the outer section wrapper.
+    #[prop(optional)]
+    class: &'static str,
+) -> impl IntoView {
     let layout = LayoutContext::use_context();
     let search = SearchContext::use_context();
     let projects_ctx = ProjectsContext::use_context();
@@ -112,7 +118,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         let Some(container) = grid_ref.get() else {
             return Some(1);
         };
-        let window = leptos::web_sys::window()?;
+        let window = web_sys::window()?;
         let style = window.get_computed_style(&container).ok().flatten()?;
         let template = style.get_property_value("grid-template-columns").ok()?;
         let trimmed = template.trim();
@@ -123,7 +129,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         Some(count.max(1))
     };
 
-    let handle_grid_keydown = Callback::new(move |ev: leptos::web_sys::KeyboardEvent| {
+    let handle_grid_keydown = Callback::new(move |ev: web_sys::KeyboardEvent| {
         let cols = grid_columns().unwrap_or(1);
         if cols == 0 {
             return;
@@ -166,7 +172,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
 
         // Only move browser focus into the grid if focus is already on the page body or
         // inside the grid itself. Otherwise a modal input (e.g. search) keeps focus.
-        let Some(window) = leptos::web_sys::window() else {
+        let Some(window) = web_sys::window() else {
             return;
         };
         let Some(document) = window.document() else {
@@ -177,7 +183,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         };
         let active_inside_grid = container.contains(Some(&active));
         let active_on_body = active
-            .dyn_ref::<leptos::web_sys::HtmlElement>()
+            .dyn_ref::<web_sys::HtmlElement>()
             .is_some_and(|el| el.tag_name().eq_ignore_ascii_case("body"));
         if !active_inside_grid && !active_on_body {
             return;
@@ -185,7 +191,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
 
         let Some(children) = container
             .children()
-            .dyn_into::<leptos::web_sys::HtmlCollection>()
+            .dyn_into::<web_sys::HtmlCollection>()
             .ok()
         else {
             return;
@@ -194,7 +200,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
         let Some(el) = item else {
             return;
         };
-        let Ok(html) = el.dyn_into::<leptos::web_sys::HtmlElement>() else {
+        let Ok(html) = el.dyn_into::<web_sys::HtmlElement>() else {
             return;
         };
 
@@ -210,12 +216,12 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
     Effect::new(move |_| {
         let grid_ref = grid_ref;
         let handle_grid_keydown = handle_grid_keydown;
-        window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", move |ev| {
+        window_event_listener::<web_sys::KeyboardEvent, _>("keydown", move |ev| {
             if ev.default_prevented() {
                 return;
             }
 
-            let Some(window) = leptos::web_sys::window() else {
+            let Some(window) = web_sys::window() else {
                 return;
             };
             let Some(document) = window.document() else {
@@ -229,7 +235,7 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                 .get()
                 .is_some_and(|grid| grid.contains(Some(&active)));
             let on_body = active
-                .dyn_ref::<leptos::web_sys::HtmlElement>()
+                .dyn_ref::<web_sys::HtmlElement>()
                 .is_some_and(|el| el.tag_name().eq_ignore_ascii_case("body"));
 
             if !inside_grid && !on_body {
@@ -339,15 +345,15 @@ pub fn ProjectsSection(#[prop(optional)] class: &'static str) -> impl IntoView {
                                 }
                                 on:focusin=move |ev| {
                                     let Some(target) = ev.target() else { return };
-                                    let Ok(el) = target.dyn_into::<leptos::web_sys::Element>() else { return };
+                                    let Ok(el) = target.dyn_into::<web_sys::Element>() else { return };
                                     let Some(grid) = grid_ref.get() else { return };
-                                    let Some(children) = grid.children().dyn_into::<leptos::web_sys::HtmlCollection>().ok() else { return };
+                                    let Some(children) = grid.children().dyn_into::<web_sys::HtmlCollection>().ok() else { return };
 
                                     // Walk up from the actual focus target until we find the
                                     // direct child of the grid. This keeps selection in sync when
                                     // focus lands on nested controls like the author or favorite
                                     // buttons, preventing two cards from appearing selected.
-                                    let mut maybe_item: Option<leptos::web_sys::Element> = Some(el);
+                                    let mut maybe_item: Option<web_sys::Element> = Some(el);
                                     let mut found_index: Option<usize> = None;
                                     while let Some(item) = maybe_item {
                                         let is_direct_child = item

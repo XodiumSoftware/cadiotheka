@@ -78,7 +78,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                     });
                 }
                 Err(err) => {
-                    leptos::web_sys::console::error_1(
+                    web_sys::console::error_1(
                         &format!("Failed to update bio: {}", err.message()).into(),
                     );
                 }
@@ -123,15 +123,15 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                 match crate::contexts::current_user::fetch_linked_providers().await {
                     Ok(providers) => set_linked_providers.set(providers),
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to fetch linked providers: {}", err.message()).into(),
                         );
                     }
                 }
-                match crate::utils::fetch_passkeys().await {
+                match fetch_passkeys().await {
                     Ok(items) => set_passkeys.set(items),
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to fetch passkeys: {}", err.message()).into(),
                         );
                     }
@@ -150,12 +150,12 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
             };
             match fetch_link_url(&url).await {
                 Ok(target) => {
-                    if let Some(window) = web_sys::window() {
+                    if let Some(window) = window() {
                         let _ = window.location().set_href(&target);
                     }
                 }
                 Err(err) => {
-                    leptos::web_sys::console::error_1(
+                    web_sys::console::error_1(
                         &format!("Failed to start provider linking: {err}").into(),
                     );
                     toast.show("Couldn't start provider linking. Please try again.");
@@ -173,7 +173,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                     });
                 }
                 Err(err) => {
-                    leptos::web_sys::console::error_1(
+                    web_sys::console::error_1(
                         &format!("Failed to unlink provider: {}", err.message()).into(),
                     );
                 }
@@ -216,9 +216,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                     toast.show("Passkey registration cancelled");
                 }
                 Err(err) => {
-                    leptos::web_sys::console::error_1(
-                        &format!("Failed to register passkey: {err}").into(),
-                    );
+                    web_sys::console::error_1(&format!("Failed to register passkey: {err}").into());
                     toast.show("Couldn't add passkey. Please try again.");
                 }
             }
@@ -236,7 +234,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                     toast.show("Passkey removed");
                 }
                 Err(err) => {
-                    leptos::web_sys::console::error_1(
+                    web_sys::console::error_1(
                         &format!("Failed to delete passkey: {}", err.message()).into(),
                     );
                     toast.show("Couldn't remove passkey. Please try again.");

@@ -4,7 +4,9 @@ use leptos::prelude::*;
 /// and the project grid.
 #[derive(Clone, Copy)]
 pub struct SearchContext {
+    /// The current search string typed by the user; empty by default.
     pub query: Signal<String>,
+    /// Setter that updates the search string.
     pub set_query: WriteSignal<String>,
 }
 
@@ -20,6 +22,6 @@ impl SearchContext {
 
     /// Read the current context, panicking if none was provided.
     pub fn use_context() -> Self {
-        leptos::prelude::expect_context::<Self>()
+        expect_context::<Self>()
     }
 }

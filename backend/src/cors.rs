@@ -19,7 +19,7 @@ const ALLOWED_ORIGINS: &[&str] = &[
 /// Returns the original response unchanged if its headers are immutable
 /// (e.g. redirects created with `Response::redirect`). Propagates any other
 /// header error so CORS misconfigurations are not silently ignored.
-pub fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Response> {
+pub(crate) fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Response> {
     let headers = resp.headers_mut();
     if let Err(err) = headers.set("Access-Control-Allow-Origin", origin) {
         if is_immutable_headers_error(&err) {
@@ -49,7 +49,7 @@ fn is_immutable_headers_error(err: &worker::Error) -> bool {
 }
 
 /// Responds to CORS preflight requests.
-pub fn cors_preflight(origin: &str) -> Result<Response> {
+pub(crate) fn cors_preflight(origin: &str) -> Result<Response> {
     let mut resp = Response::empty()?;
     let headers = resp.headers_mut();
     headers.set("Access-Control-Allow-Origin", origin)?;
@@ -67,7 +67,7 @@ pub fn cors_preflight(origin: &str) -> Result<Response> {
 
 /// Returns the request origin if it is in the allowed list, otherwise the
 /// first allowed origin as a safe fallback.
-pub fn allowed_origin(req: &Request) -> String {
+pub(crate) fn allowed_origin(req: &Request) -> String {
     select_allowed_origin(req.headers().get("Origin").ok().flatten().as_deref())
 }
 
@@ -75,7 +75,7 @@ pub fn allowed_origin(req: &Request) -> String {
 ///
 /// If the origin is in [`ALLOWED_ORIGINS`] it is returned verbatim; otherwise
 /// the first allowed origin is returned as a safe default.
-pub fn select_allowed_origin(origin: Option<&str>) -> String {
+pub(crate) fn select_allowed_origin(origin: Option<&str>) -> String {
     origin
         .and_then(|value| {
             ALLOWED_ORIGINS
@@ -93,7 +93,7 @@ pub fn select_allowed_origin(origin: Option<&str>) -> String {
 /// The raw error is logged server-side and never sent to the client: error
 /// strings can contain database details, OAuth response bodies, or other
 /// internals that must not leak to browsers.
-pub fn error_response_with_cors(err: &worker::Error, origin: &str) -> Result<Response> {
+pub(crate) fn error_response_with_cors(err: &worker::Error, origin: &str) -> Result<Response> {
     worker::console_error!("unhandled request error: {err}");
     let resp = crate::utils::error_response("Internal Server Error", 500)?;
     add_cors_headers(resp, origin)

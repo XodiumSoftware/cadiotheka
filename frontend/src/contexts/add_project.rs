@@ -3,7 +3,9 @@ use leptos::prelude::*;
 /// Provides and reads the add-project modal state.
 #[derive(Clone, Copy)]
 pub struct AddProjectModalContext {
+    /// Whether the add-project modal is currently visible.
     pub open: Signal<bool>,
+    /// Setter that opens or closes the modal directly.
     pub set_open: WriteSignal<bool>,
 }
 
@@ -19,7 +21,7 @@ impl AddProjectModalContext {
 
     /// Read the current context, panicking if none was provided.
     pub fn use_context() -> Self {
-        leptos::prelude::expect_context::<Self>()
+        expect_context::<Self>()
     }
 
     /// Open the modal.

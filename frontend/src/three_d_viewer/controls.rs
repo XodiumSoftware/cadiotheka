@@ -22,8 +22,14 @@ use three_d_asset::PixelPoint;
 /// rotation.
 #[derive(Default)]
 pub struct OrbitControls {
+    /// Button held during the current drag, or `None` when no press is active.
     pub last_button: Option<MouseButton>,
+    /// Timestamp of the most recent press in milliseconds from
+    /// `performance.now()`, used to detect a middle-button double click.
     pub last_press_time: f64,
+    /// Accumulated pointer travel in CSS pixels since the last press (sum of
+    /// absolute X and Y movement per `mousemove`), used to tell a click apart
+    /// from an orbit drag.
     pub drag_pixels: f32,
 }
 
@@ -184,7 +190,7 @@ fn renderer_events(renderer: &Rc<RefCell<Option<Renderer>>>) -> Option<Rc<RefCel
 }
 
 fn window_performance_now() -> f64 {
-    leptos::web_sys::window()
+    web_sys::window()
         .and_then(|w| w.performance())
         .map_or(0.0, |p| p.now())
 }

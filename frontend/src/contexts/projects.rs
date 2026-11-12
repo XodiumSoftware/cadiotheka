@@ -4,9 +4,14 @@ use leptos::prelude::*;
 /// Provides the list of projects fetched from the backend.
 #[derive(Clone, Copy)]
 pub struct ProjectsContext {
+    /// The projects currently loaded; empty until the first fetch completes.
     pub projects: Signal<Vec<ProjectData>>,
+    /// Setter used to replace the loaded project list, e.g. after a retry or
+    /// a favorite toggle.
     pub set_projects: WriteSignal<Vec<ProjectData>>,
+    /// Whether a fetch of `/data/projects` is currently in flight.
     pub is_loading: Signal<bool>,
+    /// Setter that toggles the network activity indication.
     pub set_is_loading: WriteSignal<bool>,
     /// The last fetch failure, or `None` when the list loaded successfully.
     pub error: Signal<Option<RequestError>>,
@@ -37,7 +42,7 @@ impl ProjectsContext {
             match fetch_projects().await {
                 Ok(fetched) => set_projects.set(fetched),
                 Err(err) => {
-                    leptos::web_sys::console::error_1(
+                    web_sys::console::error_1(
                         &format!("Failed to load projects: {}", err.message()).into(),
                     );
                     set_error.set(Some(err));
@@ -71,6 +76,6 @@ impl ProjectsContext {
 
     /// Read the current context, panicking if none was provided.
     pub fn use_context() -> Self {
-        leptos::prelude::expect_context::<Self>()
+        expect_context::<Self>()
     }
 }

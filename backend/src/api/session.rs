@@ -106,7 +106,7 @@ fn build_clear_cookie(name: &str, is_https: bool) -> String {
 
 /// Creates a session for the given account and returns a `Set-Cookie` header
 /// value that the caller can attach to a redirect response.
-pub async fn create_session(
+pub(crate) async fn create_session(
     ctx: &RouteContext<()>,
     account: &Account,
     req: &Request,
@@ -141,7 +141,7 @@ pub async fn create_session(
 /// Reads the session cookie from the request, validates its signature, looks it
 /// up in KV, and returns the associated account. Returns `None` if there is
 /// no session or it is invalid/expired.
-pub async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Result<Option<Account>> {
+pub(crate) async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Result<Option<Account>> {
     let Some(cookie_header) = req.headers().get("Cookie")? else {
         console_log!(
             "read_session: no Cookie header present (origin={})",
@@ -216,7 +216,7 @@ const MAX_VIEWER_PREFERENCES_LENGTH: usize = 4_096;
 ///
 /// Accepts a JSON body with the fields the user is allowed to edit themselves.
 /// Currently only `bio` and `viewer_preferences` are supported.
-pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     #[derive(Deserialize)]
     struct UpdatePayload {
         bio: Option<String>,
@@ -268,7 +268,7 @@ pub async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result<Respon
 
 /// Returns the currently authenticated account wrapped in `{ "account": ... }`,
 /// or 401 if the request is not authenticated.
-pub async fn me(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn me(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     match read_session(&req, &ctx).await? {
         Some(account) => Response::from_json(&serde_json::json!({ "account": account })),
         None => unauthorized("Unauthorized"),
@@ -283,7 +283,7 @@ struct PreferencesRow {
 
 /// Returns the viewer preferences for the currently authenticated account,
 /// or 401 if not authenticated.
-pub async fn me_viewer_preferences(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn me_viewer_preferences(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let Some(account) = read_session(&req, &ctx).await? else {
         return unauthorized("Unauthorized");
     };
@@ -308,7 +308,7 @@ pub async fn me_viewer_preferences(req: Request, ctx: RouteContext<()>) -> Resul
 /// The redirect target is read from the `redirect_to` query parameter. If it
 /// is missing or not a safe relative path or allowed origin, the request's
 /// public origin is used as a fallback.
-pub async fn logout(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn logout(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let is_https = is_https_request(&req);
     let cookie_name = session_cookie_name(is_https);
 

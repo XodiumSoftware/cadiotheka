@@ -13,14 +13,21 @@
 /// full SVG markup.
 macro_rules! icon {
     ($name:ident, $const:ident, $svg:literal) => {
+        #[doc = concat!("Inline Phosphor SVG markup for the `", stringify!($name), "` icon.")]
         pub const $const: &str = concat!(
             r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">"#,
             $svg,
             r#"</svg>"#
         );
 
+        /// Renders the icon as an inline SVG span, hidden from assistive tech and
+        /// colored with `currentColor`.
         #[component]
-        pub fn $name(#[prop(default = "w-4 h-4")] class: &'static str) -> impl IntoView {
+        pub fn $name(
+            /// Tailwind size classes for the wrapper span; defaults to `w-4 h-4`
+            /// (a 1rem square).
+            #[prop(default = "w-4 h-4")] class: &'static str
+        ) -> impl IntoView {
             view! {
                 <span class=format!("inline-flex items-center justify-center {class}") inner_html=$const />
             }

@@ -1,42 +1,78 @@
+//! Browser-only WebAssembly frontend for Cadiotheka, built with Leptos (CSR).
+//!
+//! The crate registers every module explicitly; there are no `mod.rs` files.
+
+/// Top-level application component and state.
 pub mod app;
 
+/// Presentation-layer components, grouped by kind (cards, icons, sections, ui).
 pub mod components {
+    /// Card-style presentations of domain entities.
     pub mod cards {
+        /// Project card and its properties.
         pub mod project;
     }
 
+    /// Inline SVG icon set.
     pub mod icons;
 
+    /// Page-level sections that compose the layout.
     pub mod sections {
+        /// Site footer.
         pub mod footer;
+        /// Site header with navigation.
         pub mod header;
+        /// Paginated project listing.
         pub mod projects;
     }
 
+    /// Reusable interface widgets.
     pub mod ui {
+        /// "Buy me a coffee" support link.
         pub mod buy_me_a_coffee;
+        /// Decorative corner bracket frame.
         pub mod corner_frame;
+        /// Transition and fade effects.
         pub mod effects {
+            /// Scroll-triggered section fade overlay.
             pub mod section_fade;
         }
+        /// Project logo.
         pub mod logo;
+        /// Read-only Markdown rendering.
         pub mod markdown;
+        /// Markdown editing widget used in the project modal.
         pub mod markdown_editor;
+        /// Interactive 3D IFC viewer.
         pub mod three_d_viewer;
+        /// Orientation gizmo for the 3D viewer.
         pub mod view_gizmo;
+        /// Dialog-style overlays.
         pub mod modals {
+            /// Modal for creating a new project.
             pub mod add_project;
+            /// Shared modal shell, backdrop, and keyboard handling.
             pub mod base;
+            /// Sign-in modal.
             pub mod login;
+            /// Account profile modal.
             pub mod profile;
+            /// Project details modal.
             pub mod project;
+            /// 3D viewer configuration modal.
             pub mod viewer_settings;
         }
+        /// Row that collapses overflowing children into a menu.
         pub mod overflow_row;
+        /// Page number navigation.
         pub mod pagination;
+        /// Transient notification toast.
         pub mod toast;
+        /// Sliding on/off switch.
         pub mod toggle;
+        /// Icon button used in editor toolbars.
         pub mod toolbar_button;
+        /// Cloudflare Turnstile challenge widget.
         pub mod turnstile;
     }
 
@@ -74,17 +110,29 @@ pub mod components {
     pub use ui::view_gizmo::{GizmoPosition, ViewGizmo, ViewGizmoDirection};
 }
 
+/// Leptos reactive contexts shared across the component tree.
 pub mod contexts {
+    /// Accounts list fetched from the backend.
     pub mod accounts;
+    /// Add-project modal visibility.
     pub mod add_project;
+    /// Signed-in user state.
     pub mod current_user;
+    /// Responsive layout state.
     pub mod layout;
+    /// Login modal visibility.
     pub mod login;
+    /// Content metadata lookup state.
     pub mod metadata;
+    /// Profile modal visibility and target account.
     pub mod profile;
+    /// Project details modal state.
     pub mod project_ctx;
+    /// Project listing state.
     pub mod projects;
+    /// Search query state.
     pub mod search;
+    /// Toast notification state.
     pub mod toast;
 
     pub use accounts::AccountsContext;
@@ -100,10 +148,15 @@ pub mod contexts {
     pub use toast::ToastContext;
 }
 
+/// API data models and fetchers that talk to the backend.
 pub mod data {
+    /// Account records and their roles.
     pub mod account;
+    /// Shared request error type.
     pub mod error;
+    /// Project CRUD and version endpoints.
     pub mod project_api;
+    /// Project domain types and payload helpers.
     pub mod project_types;
 
     pub use account::{AccountData, AccountRole, fetch_accounts};
@@ -115,9 +168,13 @@ pub mod data {
     };
 }
 
+/// Client-side search and suggestion logic.
 pub mod engines {
+    /// Card filtering.
     pub mod filter;
+    /// Search query parsing and sorting.
     pub mod query;
+    /// Search suggestion generation.
     pub mod suggestions;
 
     pub use filter::SearchEngine;
@@ -125,22 +182,34 @@ pub mod engines {
     pub use suggestions::{Suggestion, SuggestionKind, from_cards};
 }
 
+/// Hardcoded tag and version-state metadata.
 pub mod metadata {
+    /// Content tag enum, labels, and colors.
     pub mod tags;
+    /// Version lifecycle states.
     pub mod version_state;
 
     pub use tags::{Tag, tag_color, tag_label};
     pub use version_state::VersionState;
 }
 
+/// Three.js-backed IFC model viewer internals.
 pub mod three_d_viewer {
+    /// Orbit camera controls.
     pub mod controls;
+    /// Scene environment and lighting setup.
     pub mod environment;
+    /// Per-object metadata lookup.
     pub mod primitive_metadata;
+    /// Pointer picking against rendered geometry.
     pub mod raycast;
+    /// Three.js renderer bootstrap.
     pub mod renderer;
+    /// Scene graph construction.
     pub mod scene;
+    /// Viewer view-direction and theme state.
     pub mod state;
+    /// Model upload handling.
     pub mod upload;
 
     pub use controls::OrbitControls;
@@ -150,13 +219,21 @@ pub mod three_d_viewer {
     pub use state::{ViewDirection, ViewState, ViewerTheme};
 }
 
+/// Small shared helpers for browser APIs, formatting, and storage.
 pub mod utils {
+    /// Color parsing and conversion.
     pub mod color;
+    /// DOM querying and event helpers.
     pub mod dom;
+    /// Number, date, and size formatting.
     pub mod format;
+    /// Geometric math helpers.
     pub mod math;
+    /// WebAuthn passkey registration and login.
     pub mod passkey;
+    /// Local and session storage wrappers.
     pub mod storage;
+    /// URL parsing and construction.
     pub mod url;
 
     pub use color::*;

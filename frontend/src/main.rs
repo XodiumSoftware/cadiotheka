@@ -1,3 +1,5 @@
+//! Web entry point that mounts the Cadiotheka app into the page body.
+
 use frontend::App;
 use leptos::prelude::*;
 

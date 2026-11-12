@@ -4,9 +4,13 @@ use leptos::prelude::*;
 /// Provides and reads the profile detail modal state.
 #[derive(Clone, Copy)]
 pub struct ProfileModalContext {
+    /// Whether the profile detail modal is currently visible.
     pub open: Signal<bool>,
+    /// The account whose profile is being displayed.
     pub account: Signal<Option<AccountData>>,
+    /// Setter that opens or closes the modal directly.
     pub set_open: WriteSignal<bool>,
+    /// Setter that swaps the account shown in the modal.
     pub set_account: WriteSignal<Option<AccountData>>,
 }
 
@@ -25,7 +29,7 @@ impl ProfileModalContext {
 
     /// Read the current context, panicking if none was provided.
     pub fn use_context() -> Self {
-        leptos::prelude::expect_context::<Self>()
+        expect_context::<Self>()
     }
 
     /// Open the modal for the given account.

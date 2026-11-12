@@ -4,10 +4,18 @@ use leptos::wasm_bindgen::JsCast;
 /// A Flowbite-style rounded toggle switch with optional labels.
 #[component]
 pub fn ToggleSlider(
-    #[prop(into)] checked: Signal<bool>,
-    #[prop(into)] on_change: Callback<bool>,
-    #[prop(optional)] label_left: Option<&'static str>,
-    #[prop(optional)] label_right: Option<&'static str>,
+    /// Whether the switch is on.
+    #[prop(into)]
+    checked: Signal<bool>,
+    /// Called with the new state when the user flips the switch.
+    #[prop(into)]
+    on_change: Callback<bool>,
+    /// Optional label rendered before the slider, e.g. the "grid" option name.
+    #[prop(optional)]
+    label_left: Option<&'static str>,
+    /// Optional label rendered after the slider, e.g. the "list" option name.
+    #[prop(optional)]
+    label_right: Option<&'static str>,
 ) -> impl IntoView {
     let input_id = "layout-toggle";
 
@@ -45,13 +53,27 @@ pub fn ToggleSlider(
 /// `icon_off` is shown when unchecked, `icon_on` when checked.
 #[component]
 pub fn IconToggle(
-    #[prop(into)] checked: Signal<bool>,
-    #[prop(into)] on_change: Callback<bool>,
-    #[prop(into)] icon_off: String,
-    #[prop(into)] icon_on: String,
-    #[prop(optional)] tooltip_off: Option<&'static str>,
-    #[prop(optional)] tooltip_on: Option<&'static str>,
-    #[prop(optional)] class: Option<&'static str>,
+    /// Whether the "on" icon is shown.
+    #[prop(into)]
+    checked: Signal<bool>,
+    /// Called with the new state when the button is clicked.
+    #[prop(into)]
+    on_change: Callback<bool>,
+    /// SVG markup shown while unchecked.
+    #[prop(into)]
+    icon_off: String,
+    /// SVG markup shown while checked.
+    #[prop(into)]
+    icon_on: String,
+    /// Tooltip and accessible label while unchecked, e.g. "Enable ...".
+    #[prop(optional)]
+    tooltip_off: Option<&'static str>,
+    /// Tooltip and accessible label while checked, e.g. "Disable ...".
+    #[prop(optional)]
+    tooltip_on: Option<&'static str>,
+    /// Extra classes for the button, e.g. size and hover background.
+    #[prop(optional)]
+    class: Option<&'static str>,
 ) -> impl IntoView {
     let aria_label = move || {
         if checked.get() {
@@ -96,8 +118,12 @@ pub fn IconToggle(
 /// A pencil-icon edit toggle. The pencil is muted when edit is off and primary when edit is on.
 #[component]
 pub fn EditToggle(
-    #[prop(into)] checked: Signal<bool>,
-    #[prop(into)] on_change: Callback<bool>,
+    /// Whether edit mode is active.
+    #[prop(into)]
+    checked: Signal<bool>,
+    /// Called with the new edit-mode state when the pencil button is clicked.
+    #[prop(into)]
+    on_change: Callback<bool>,
 ) -> impl IntoView {
     let pencil_icon = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>"#;
 
@@ -119,11 +145,22 @@ pub fn EditToggle(
 /// An optional keyboard shortcut hint can be appended after the slider.
 #[component]
 pub fn ToggleSliderWithSlashLabel(
-    #[prop(into)] checked: Signal<bool>,
-    #[prop(into)] on_change: Callback<bool>,
-    #[prop(into)] label_left: Signal<String>,
-    #[prop(into)] label_right: Signal<String>,
-    #[prop(optional)] shortcut_hint: Option<Signal<String>>,
+    /// Whether the switch is on.
+    #[prop(into)]
+    checked: Signal<bool>,
+    /// Called with the new state when the user flips the switch.
+    #[prop(into)]
+    on_change: Callback<bool>,
+    /// Text for the left side of the slash label, emphasized while unchecked.
+    #[prop(into)]
+    label_left: Signal<String>,
+    /// Text for the right side of the slash label, emphasized while checked.
+    #[prop(into)]
+    label_right: Signal<String>,
+    /// Optional keyboard shortcut rendered as a `kbd` hint after the slider,
+    /// e.g. the key that toggles the same setting.
+    #[prop(optional)]
+    shortcut_hint: Option<Signal<String>>,
 ) -> impl IntoView {
     let input_id = "layout-toggle-slash";
 

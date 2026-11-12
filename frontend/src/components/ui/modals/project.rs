@@ -35,9 +35,12 @@ use three_d_asset::Srgba;
 
 const VERSIONS_PER_PAGE: usize = 20;
 
+/// Tabs offered by the project detail modal.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ProjectDetailsTab {
+    /// 3D viewer tab that renders the IFC model; disabled on mobile.
     Viewer3d,
+    /// Version history tab with uploads, downloads, states, and pagination.
     Versions,
 }
 
@@ -359,7 +362,7 @@ pub fn ProjectModal() -> impl IntoView {
     let (viewer_fullscreen, set_viewer_fullscreen) = signal(false);
     let on_close = Callback::new(move |()| {
         if is_fullscreen_active() {
-            if let Some(document) = leptos::web_sys::window().and_then(|w| w.document()) {
+            if let Some(document) = web_sys::window().and_then(|w| w.document()) {
                 document.exit_fullscreen();
             }
             return;
@@ -388,7 +391,7 @@ pub fn ProjectModal() -> impl IntoView {
     Effect::new(move |_| {
         if !modal.open.get() {
             set_viewer_fullscreen.set(false);
-            if let Some(document) = leptos::web_sys::window().and_then(|w| w.document())
+            if let Some(document) = web_sys::window().and_then(|w| w.document())
                 && document.fullscreen_element().is_some()
             {
                 document.exit_fullscreen();
@@ -435,7 +438,7 @@ pub fn ProjectModal() -> impl IntoView {
 }
 
 fn is_fullscreen_active() -> bool {
-    leptos::web_sys::window()
+    web_sys::window()
         .and_then(|w| w.document())
         .and_then(|d| d.fullscreen_element())
         .is_some()
@@ -910,15 +913,15 @@ fn ProjectModalContent(
     });
 
     let (is_mobile, set_is_mobile) = signal(
-        leptos::web_sys::window()
+        web_sys::window()
             .and_then(|w| w.inner_width().ok())
             .and_then(|w| w.as_f64())
             .is_some_and(|width| width < 768.0),
     );
 
     Effect::new(move |_| {
-        crate::utils::window_event_listener::<leptos::web_sys::Event, _>("resize", move |_| {
-            let mobile = leptos::web_sys::window()
+        crate::utils::window_event_listener::<web_sys::Event, _>("resize", move |_| {
+            let mobile = web_sys::window()
                 .and_then(|w| w.inner_width().ok())
                 .and_then(|w| w.as_f64())
                 .is_some_and(|width| width < 768.0);
@@ -943,7 +946,7 @@ fn ProjectModalContent(
                 match fetch_project_versions(&project_id).await {
                     Ok(fetched) => set_versions.set(fetched),
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to load project versions: {}", err.message()).into(),
                         );
                     }
@@ -957,7 +960,7 @@ fn ProjectModalContent(
             crate::utils::document_event_listener::<web_sys::Event, _>(
                 "fullscreenchange",
                 move |_| {
-                    let active = leptos::web_sys::window()
+                    let active = web_sys::window()
                         .and_then(|w| w.document())
                         .and_then(|d| d.fullscreen_element())
                         .is_some();
@@ -968,12 +971,12 @@ fn ProjectModalContent(
     });
 
     let toggle_fullscreen = Callback::new(move |()| {
-        let active = leptos::web_sys::window()
+        let active = web_sys::window()
             .and_then(|w| w.document())
             .and_then(|d| d.fullscreen_element())
             .is_some();
         if active {
-            if let Some(document) = leptos::web_sys::window().and_then(|w| w.document()) {
+            if let Some(document) = web_sys::window().and_then(|w| w.document()) {
                 document.exit_fullscreen();
             }
             set_viewer_fullscreen.set(false);
@@ -983,7 +986,7 @@ fn ProjectModalContent(
     });
 
     Effect::new(move |_| {
-        crate::utils::window_event_listener::<leptos::web_sys::KeyboardEvent, _>("keydown", {
+        crate::utils::window_event_listener::<web_sys::KeyboardEvent, _>("keydown", {
             let toggle_fullscreen = toggle_fullscreen;
             move |ev| {
                 if active_tab.get() == ProjectDetailsTab::Viewer3d
@@ -1031,10 +1034,10 @@ fn ProjectModalContent(
         set_upload_version.set(String::new());
     };
 
-    let on_upload_file_selected = move |ev: leptos::web_sys::Event| {
+    let on_upload_file_selected = move |ev: web_sys::Event| {
         if let Some(input) = ev
             .target()
-            .and_then(|t| t.dyn_into::<leptos::web_sys::HtmlInputElement>().ok())
+            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
         {
             if let Some(file) = input.files().and_then(|files| files.get(0)) {
                 let is_ifc = std::path::Path::new(&file.name())
@@ -1101,7 +1104,7 @@ fn ProjectModalContent(
                                 show_toast("IFC model has no renderable geometry".to_string());
                             }
                             Err(err) => {
-                                leptos::web_sys::console::error_1(
+                                web_sys::console::error_1(
                                     &format!("Failed to convert IFC model: {}", err.message())
                                         .into(),
                                 );
@@ -1111,7 +1114,7 @@ fn ProjectModalContent(
                         }
                     }
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to upload IFC model: {}", err.message()).into(),
                         );
                         show_toast("Failed to upload IFC model".to_string());
@@ -1163,7 +1166,7 @@ fn ProjectModalContent(
                         show_toast("Version state updated".to_string());
                     }
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to update version state: {}", err.message()).into(),
                         );
                         show_toast("Failed to update version state".to_string());
@@ -1203,7 +1206,7 @@ fn ProjectModalContent(
                         show_toast("Version deleted".to_string());
                     }
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to delete version: {}", err.message()).into(),
                         );
                         show_toast("Failed to delete version".to_string());
@@ -1237,7 +1240,7 @@ fn ProjectModalContent(
                         match fetch_projects().await {
                             Ok(refreshed) => set_projects.set(refreshed),
                             Err(err) => {
-                                leptos::web_sys::console::error_1(
+                                web_sys::console::error_1(
                                     &format!("Failed to refresh projects: {}", err.message())
                                         .into(),
                                 );
@@ -1246,7 +1249,7 @@ fn ProjectModalContent(
                         modal.close();
                     }
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to delete project: {}", err.message()).into(),
                         );
                     }
@@ -1337,7 +1340,7 @@ fn ProjectModalContent(
                         });
                     }
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to update title: {}", err.message()).into(),
                         );
                     }
@@ -1377,7 +1380,7 @@ fn ProjectModalContent(
                         });
                     }
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to update description: {}", err.message()).into(),
                         );
                     }
@@ -1417,7 +1420,7 @@ fn ProjectModalContent(
                         });
                     }
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to update tags: {}", err.message()).into(),
                         );
                     }
@@ -1457,7 +1460,7 @@ fn ProjectModalContent(
                         });
                     }
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to update collaborators: {}", err.message()).into(),
                         );
                     }
@@ -1493,7 +1496,7 @@ fn ProjectModalContent(
                         });
                     }
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to toggle favorite: {}", err.message()).into(),
                         );
                     }
@@ -1558,7 +1561,7 @@ fn ProjectModalContent(
 
                         match fetch_project_versions(&project_id).await {
                             Ok(fetched) => set_versions.set(fetched),
-                            Err(err) => leptos::web_sys::console::error_1(
+                            Err(err) => web_sys::console::error_1(
                                 &format!(
                                     "Failed to refresh versions after download: {}",
                                     err.message()
@@ -1568,7 +1571,7 @@ fn ProjectModalContent(
                         }
                     }
                     Err(err) => {
-                        leptos::web_sys::console::error_1(
+                        web_sys::console::error_1(
                             &format!("Failed to increment downloads: {}", err.message()).into(),
                         );
                     }
@@ -1840,7 +1843,7 @@ fn ProjectModalContent(
                                                                 });
                                                             }
                                                             Err(err) => {
-                                                                leptos::web_sys::console::error_1(
+                                                                web_sys::console::error_1(
                                                                     &format!(
                                                                         "Failed to save viewer preferences: {}",
                                                                         err.message()
@@ -1943,7 +1946,7 @@ fn ProjectModalContent(
                                                                 });
                                                             }
                                                             Err(err) => {
-                                                                leptos::web_sys::console::error_1(
+                                                                web_sys::console::error_1(
                                                                     &format!(
                                                                         "Failed to save viewer preferences: {}",
                                                                         err.message()
@@ -2061,7 +2064,7 @@ fn ProjectModalContent(
                                                                 });
                                                             }
                                                             Err(err) => {
-                                                                leptos::web_sys::console::error_1(
+                                                                web_sys::console::error_1(
                                                                     &format!(
                                                                         "Failed to save viewer preferences: {}",
                                                                         err.message()
@@ -2143,7 +2146,7 @@ fn ProjectModalContent(
                                                                 });
                                                             }
                                                             Err(err) => {
-                                                                leptos::web_sys::console::error_1(
+                                                                web_sys::console::error_1(
                                                                     &format!(
                                                                         "Failed to save viewer preferences: {}",
                                                                         err.message()
@@ -2243,7 +2246,7 @@ fn ProjectModalContent(
                                                                 });
                                                             }
                                                             Err(err) => {
-                                                                leptos::web_sys::console::error_1(
+                                                                web_sys::console::error_1(
                                                                     &format!(
                                                                         "Failed to save viewer preferences: {}",
                                                                         err.message()
@@ -2343,7 +2346,7 @@ fn ProjectModalContent(
                                                                 });
                                                             }
                                                             Err(err) => {
-                                                                leptos::web_sys::console::error_1(
+                                                                web_sys::console::error_1(
                                                                     &format!(
                                                                         "Failed to save viewer preferences: {}",
                                                                         err.message()
@@ -2442,7 +2445,7 @@ fn ProjectModalContent(
                                                                 });
                                                             }
                                                             Err(err) => {
-                                                                leptos::web_sys::console::error_1(
+                                                                web_sys::console::error_1(
                                                                     &format!(
                                                                         "Failed to save viewer preferences: {}",
                                                                         err.message()
@@ -2549,7 +2552,7 @@ fn ProjectModalContent(
                                                                 });
                                                             }
                                                             Err(err) => {
-                                                                leptos::web_sys::console::error_1(
+                                                                web_sys::console::error_1(
                                                                     &format!(
                                                                         "Failed to save viewer preferences: {}",
                                                                         err.message()
@@ -2656,7 +2659,7 @@ fn ProjectModalContent(
                                                                 });
                                                             }
                                                             Err(err) => {
-                                                                leptos::web_sys::console::error_1(
+                                                                web_sys::console::error_1(
                                                                     &format!(
                                                                         "Failed to save viewer preferences: {}",
                                                                         err.message()
@@ -2762,7 +2765,7 @@ fn ProjectModalContent(
                                                                 });
                                                             }
                                                             Err(err) => {
-                                                                leptos::web_sys::console::error_1(
+                                                                web_sys::console::error_1(
                                                                     &format!(
                                                                         "Failed to save viewer preferences: {}",
                                                                         err.message()
@@ -3822,16 +3825,16 @@ fn ProjectModalContent(
         }
 }
 
-fn event_target_value(ev: &leptos::web_sys::Event) -> String {
+fn event_target_value(ev: &web_sys::Event) -> String {
     ev.target()
         .and_then(|t| {
-            t.dyn_into::<leptos::web_sys::HtmlTextAreaElement>()
+            t.dyn_into::<web_sys::HtmlTextAreaElement>()
                 .ok()
                 .map(|textarea| textarea.value())
         })
         .or_else(|| {
             ev.target().and_then(|t| {
-                t.dyn_into::<leptos::web_sys::HtmlInputElement>()
+                t.dyn_into::<web_sys::HtmlInputElement>()
                     .ok()
                     .map(|input| input.value())
             })
@@ -3846,7 +3849,7 @@ fn event_target_value(ev: &leptos::web_sys::Event) -> String {
 /// because removing it immediately can cancel the download request before the
 /// browser has initiated it.
 fn trigger_download(url: &str) {
-    let Some(document) = leptos::web_sys::window().and_then(|w| w.document()) else {
+    let Some(document) = web_sys::window().and_then(|w| w.document()) else {
         return;
     };
     let Ok(anchor) = document.create_element("a") else {
@@ -3861,7 +3864,7 @@ fn trigger_download(url: &str) {
         return;
     };
     let _ = body.append_child(&anchor);
-    if let Some(element) = anchor.dyn_ref::<leptos::web_sys::HtmlElement>() {
+    if let Some(element) = anchor.dyn_ref::<web_sys::HtmlElement>() {
         element.click();
     }
 

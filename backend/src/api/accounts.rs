@@ -17,7 +17,7 @@ const SELECT_PUBLIC_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_
 /// internally. Public endpoints serialize [`PublicAccount`] instead so that
 /// `email` and `viewer_preferences` are never exposed to other users.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Account {
+pub(crate) struct Account {
     pub id: String,
     pub username: String,
     pub display_name: String,
@@ -44,7 +44,7 @@ pub struct Account {
 /// Mirrors [`Account`] without the private `email` and `viewer_preferences`
 /// fields.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct PublicAccount {
+pub(crate) struct PublicAccount {
     pub id: String,
     pub username: String,
     pub display_name: String,
@@ -64,7 +64,7 @@ pub struct PublicAccount {
 
 /// Payload used to create or update an account.
 #[derive(Deserialize, Debug)]
-pub struct AccountPayload {
+pub(crate) struct AccountPayload {
     pub id: String,
     pub username: String,
     pub display_name: String,
@@ -84,7 +84,7 @@ struct ProviderRow {
 }
 
 /// Fetches a single account by id, returning `None` when no row matches.
-pub async fn fetch_account(ctx: &RouteContext<()>, id: &str) -> Result<Option<Account>> {
+pub(crate) async fn fetch_account(ctx: &RouteContext<()>, id: &str) -> Result<Option<Account>> {
     let result = db(ctx)?
         .prepare(format!("{SELECT_ACCOUNT_COLUMNS} WHERE a.id = ?1"))
         .bind(&[id.into()])?
@@ -95,7 +95,7 @@ pub async fn fetch_account(ctx: &RouteContext<()>, id: &str) -> Result<Option<Ac
 }
 
 /// Fetches a single account by its OAuth provider and provider id.
-pub async fn fetch_account_by_provider(
+pub(crate) async fn fetch_account_by_provider(
     ctx: &RouteContext<()>,
     provider: Provider,
     provider_id: &str,
@@ -112,7 +112,7 @@ pub async fn fetch_account_by_provider(
 }
 
 /// Returns the list of provider names linked to the given account.
-pub async fn fetch_linked_providers(
+pub(crate) async fn fetch_linked_providers(
     ctx: &RouteContext<()>,
     account_id: &str,
 ) -> Result<Vec<Provider>> {
@@ -129,7 +129,7 @@ pub async fn fetch_linked_providers(
 ///
 /// Returns an error if the provider identity is already linked to a different
 /// account.
-pub async fn link_oauth_account(
+pub(crate) async fn link_oauth_account(
     ctx: &RouteContext<()>,
     account_id: &str,
     provider: Provider,
@@ -170,7 +170,7 @@ pub async fn link_oauth_account(
 /// The provider that was used to create the account cannot be unlinked if it is
 /// the only remaining provider, otherwise the account would become unaccessible.
 /// Returns an error when the provider is not linked or is the sole provider.
-pub async fn unlink_oauth_account(
+pub(crate) async fn unlink_oauth_account(
     ctx: &RouteContext<()>,
     account_id: &str,
     provider: Provider,
@@ -213,7 +213,7 @@ async fn fetch_account_by_username(
 
 /// Profile information collected from an OAuth provider when creating a new
 /// account.
-pub struct OAuthProfile {
+pub(crate) struct OAuthProfile {
     pub preferred_username: String,
     pub display_name: String,
     pub email: String,
@@ -227,7 +227,7 @@ pub struct OAuthProfile {
 /// provider's preferred login is already taken. The account row and its
 /// provider link are written in a single D1 batch so they are created
 /// atomically: a failure never leaves an account without a sign-in provider.
-pub async fn create_oauth_account(
+pub(crate) async fn create_oauth_account(
     ctx: &RouteContext<()>,
     provider: Provider,
     provider_id: &str,
@@ -317,7 +317,7 @@ fn sanitize_username_local(login: &str) -> String {
 ///
 /// Accepts `?limit=` and `?offset=` query parameters; the limit defaults to
 /// 100 and is capped at 500 so each D1 query stays bounded.
-pub async fn list_accounts(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn list_accounts(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let (limit, offset) = list_window(&req.url()?);
     let result = db(&ctx)?
         .prepare(format!(
@@ -332,7 +332,7 @@ pub async fn list_accounts(req: Request, ctx: RouteContext<()>) -> Result<Respon
 
 /// Responds with the public account matching the `:id` path parameter, or 404
 /// if not found.
-pub async fn read_account(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn read_account(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let id = required_param(&ctx, "id")?;
     let result = db(&ctx)?
         .prepare(format!("{SELECT_PUBLIC_ACCOUNT_COLUMNS} WHERE a.id = ?1"))
@@ -348,7 +348,7 @@ pub async fn read_account(_req: Request, ctx: RouteContext<()>) -> Result<Respon
 
 /// Responds with the OAuth providers linked to the currently authenticated
 /// account as a JSON array of provider names.
-pub async fn list_linked_providers(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn list_linked_providers(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
@@ -359,7 +359,7 @@ pub async fn list_linked_providers(req: Request, ctx: RouteContext<()>) -> Resul
 }
 
 /// Unlinks an OAuth provider from the currently authenticated account.
-pub async fn unlink_provider(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn unlink_provider(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
@@ -370,12 +370,12 @@ pub async fn unlink_provider(req: Request, ctx: RouteContext<()>) -> Result<Resp
     else {
         return bad_request("Invalid provider");
     };
-    crate::api::accounts::unlink_oauth_account(&ctx, &account.id, provider).await?;
+    unlink_oauth_account(&ctx, &account.id, provider).await?;
     Response::empty()
 }
 
 /// Creates a new account from the request body. Restricted to admins.
-pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
@@ -409,7 +409,7 @@ pub async fn create_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
 /// Replaces an existing account, identified by the `:id` path parameter.
 /// Restricted to admins.
-pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
@@ -446,7 +446,7 @@ pub async fn update_account(mut req: Request, ctx: RouteContext<()>) -> Result<R
 
 /// Deletes the account identified by the `:id` path parameter.
 /// Restricted to admins.
-pub async fn delete_account(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub(crate) async fn delete_account(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
