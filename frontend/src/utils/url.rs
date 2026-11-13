@@ -127,8 +127,24 @@ fn root_context() -> Option<String> {
 }
 
 /// Prefixes a same-origin path with this site's origin when framed.
+///
+/// Absolute URLs are returned unchanged: prefixing `https://api.example/x`
+/// with this origin would produce an unparseable concatenation that the
+/// browser resolves as a relative path, so the request silently targets the
+/// wrong host.
 fn root_context_url(path: &str) -> String {
     match root_context() {
+        Some(origin) => join_root_context(path, Some(&origin)),
+        None => join_root_context(path, None),
+    }
+}
+
+/// Joins a path or absolute URL against an optional root origin.
+fn join_root_context(path: &str, origin: Option<&str>) -> String {
+    if path.contains("://") {
+        return path.to_string();
+    }
+    match origin {
         Some(origin) => format!("{origin}{path}"),
         None => path.to_string(),
     }
@@ -219,12 +235,73 @@ pub fn login_url(path: &str) -> String {
 /// inside a frame, where the embedder's URL must never be the return target,
 /// and during local development so the backend can send the browser back to the
 /// Trunk dev server.
+///
+/// The separator is `?` or `&` depending on whether `base` already carries a
+/// query string; appending a second `?` would corrupt the URL.
 pub fn encode_redirect_url(base: &str) -> String {
     let redirect_to = root_context()
         .map(|origin| format!("{origin}/"))
         .or_else(|| web_sys::window().and_then(|w| w.location().href().ok()))
         .unwrap_or_else(|| "/".to_string());
 
-    let encoded = urlencoding::encode(&redirect_to);
-    format!("{base}?redirect_to={encoded}")
+    append_redirect_param(base, &redirect_to)
+}
+
+/// Appends an encoded `redirect_to` parameter to `base`, choosing `?` or `&`
+/// depending on whether `base` already carries a query string. Appending a
+/// second `?` corrupts the URL, which the browser then resolves as a relative
+/// path and fails with a CORS error and no status code.
+fn append_redirect_param(base: &str, redirect_to: &str) -> String {
+    let encoded = urlencoding::encode(redirect_to);
+    let separator = if base.contains('?') { '&' } else { '?' };
+    format!("{base}{separator}redirect_to={encoded}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn join_root_context_leaves_absolute_urls_untouched() {
+        assert_eq!(
+            join_root_context(
+                "https://api.cadiotheka.com/login/github",
+                Some("https://cadiotheka.com")
+            ),
+            "https://api.cadiotheka.com/login/github"
+        );
+    }
+
+    #[test]
+    fn join_root_context_prefixes_relative_paths() {
+        assert_eq!(
+            join_root_context("/login/github", Some("https://cadiotheka.com")),
+            "https://cadiotheka.com/login/github"
+        );
+    }
+
+    #[test]
+    fn append_redirect_param_uses_question_mark_without_query() {
+        assert_eq!(
+            append_redirect_param("https://api.cadiotheka.com/login/github", "/"),
+            "https://api.cadiotheka.com/login/github?redirect_to=%2F"
+        );
+    }
+
+    #[test]
+    fn append_redirect_param_uses_ampersand_when_query_present() {
+        assert_eq!(
+            append_redirect_param(
+                "https://api.cadiotheka.com/login/github?scope=read",
+                "https://cadiotheka.com/"
+            ),
+            "https://api.cadiotheka.com/login/github?scope=read&redirect_to=https%3A%2F%2Fcadiotheka.com%2F"
+        );
+    }
+
+    #[test]
+    fn append_redirect_param_never_produces_a_second_question_mark() {
+        let url = append_redirect_param("https://api.cadiotheka.com/login/github?x=1", "/");
+        assert_eq!(url.matches('?').count(), 1);
+    }
 }
