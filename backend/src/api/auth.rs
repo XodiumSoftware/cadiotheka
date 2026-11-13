@@ -237,7 +237,7 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
         fetch_or_create_account(&ctx, provider, &token).await?
     };
 
-    let cookie = create_session(&ctx, &account, &req).await?;
+    let cookies = create_session(&ctx, &account, &req).await?;
 
     let redirect_to = html_escape::encode_text(&state.redirect_to);
     let html = format!(
@@ -257,7 +257,9 @@ async fn callback(req: Request, ctx: RouteContext<()>, provider: Provider) -> Re
 
     let headers = Headers::new();
     headers.set("Content-Type", "text/html; charset=utf-8")?;
-    headers.set("Set-Cookie", &cookie)?;
+    for value in &cookies {
+        headers.append("Set-Cookie", value)?;
+    }
 
     Ok(ResponseBuilder::new()
         .with_status(200)

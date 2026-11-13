@@ -52,6 +52,12 @@ pub const AUTH_ME: &str = "/auth/me";
 pub const AUTH_ME_VIEWER_PREFERENCES: &str = "/auth/me/viewer-preferences";
 /// Logout endpoint.
 pub const AUTH_LOGOUT: &str = "/auth/logout";
+/// Non-`HttpOnly` companion cookie set alongside the session.
+///
+/// The session cookie itself is `HttpOnly`, so the frontend cannot see whether
+/// a visitor is signed in. This cookie carries only that answer: the frontend
+/// reads it to skip the `/auth/me` request for anonymous visitors.
+pub const AUTH_SESSION_HINT_COOKIE: &str = "__Host-session-hint";
 
 /// Passkey registration begin endpoint (authenticated).
 pub const AUTH_PASSKEY_REGISTER_BEGIN: &str = "/auth/passkey/register/begin";

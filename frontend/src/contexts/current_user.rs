@@ -1,5 +1,6 @@
 use crate::data::AccountData;
 use crate::data::error::RequestError;
+use crate::utils::cookie::has_session_hint;
 use crate::utils::url::{
     linked_provider_url, linked_providers_url, me_url, me_viewer_preferences_url,
 };
@@ -7,12 +8,16 @@ use crate::utils::{LAST_LOGIN_METHOD_KEY, PENDING_LOGIN_METHOD_KEY, key as stora
 use gloo_net::http::Request;
 use gloo_storage::{LocalStorage, SessionStorage, Storage as _};
 use leptos::prelude::*;
+use shared::routes::AUTH_SESSION_HINT_COOKIE;
 use web_sys::RequestCredentials;
 
 /// Provides and reads the currently logged-in user.
 ///
-/// On startup this context fetches `/auth/me`. If the user is not authenticated
-/// the signal holds `None`.
+/// On startup this context fetches `/auth/me`, but only when the backend's
+/// non-`HttpOnly` session hint cookie is present: a visitor who has never
+/// signed in is settled as anonymous without an API round trip. If the hint is
+/// stale (the server-side session expired while the cookie lived on) the fetch
+/// returns 401 and the hint is cleared so the next load skips the request too.
 #[derive(Clone, Copy)]
 pub struct CurrentUserContext {
     /// Whether the current user is `Some`; `is_loading` is `true` until the
@@ -20,7 +25,7 @@ pub struct CurrentUserContext {
     pub account: Signal<Option<AccountData>>,
     /// Setter used to swap the authenticated account after login or logout.
     pub set_account: WriteSignal<Option<AccountData>>,
-    /// Whether the initial `/auth/me` request is still in flight.
+    /// Whether the initial `/auth/me` request is in flight.
     pub is_loading: Signal<bool>,
     /// Setter that toggles the loading indication.
     pub set_is_loading: WriteSignal<bool>,
@@ -39,7 +44,11 @@ impl CurrentUserContext {
         });
 
         leptos::task::spawn_local(async move {
-            let fetched = fetch_current_user().await.unwrap_or(None);
+            let fetched = if has_session_hint() {
+                fetch_current_user().await.unwrap_or(None)
+            } else {
+                None
+            };
             set_is_loading.set(false);
             if fetched.is_some()
                 && let Some(pending) =
@@ -60,7 +69,9 @@ impl CurrentUserContext {
 
 /// Fetch the currently authenticated account from the backend.
 ///
-/// Returns `Ok(None)` when the user is not logged in.
+/// Returns `Ok(None)` when the user is not logged in. A 401 also clears the
+/// backend's session hint cookie, because the server has already rejected the
+/// session it advertised.
 ///
 /// # Errors
 ///
@@ -83,7 +94,10 @@ pub async fn fetch_current_user() -> Result<Option<AccountData>, RequestError> {
             })?;
             Ok(Some(parsed.account))
         }
-        Ok(response) if response.status() == 401 => Ok(None),
+        Ok(response) if response.status() == 401 => {
+            clear_session_hint();
+            Ok(None)
+        }
         Ok(response) => {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
@@ -101,6 +115,18 @@ pub async fn fetch_current_user() -> Result<Option<AccountData>, RequestError> {
 #[derive(serde::Deserialize, Debug)]
 struct MeResponse {
     account: AccountData,
+}
+
+/// Removes the backend's session hint cookie from the browser.
+///
+/// The hint is deliberately redundant with the server-side session: it exists
+/// only so the frontend can skip `/auth/me`. A 401 therefore expires it rather
+/// than leaving a cookie that lies. Only the hint is touched here; the session
+/// cookie is `HttpOnly` and is cleared by the backend on logout.
+fn clear_session_hint() {
+    crate::utils::cookie::set_document_cookie(&format!(
+        "{AUTH_SESSION_HINT_COOKIE}=; Max-Age=0; Path=/; SameSite=None; Secure"
+    ));
 }
 
 /// Fetch the account-scoped viewer preferences JSON blob from the backend.

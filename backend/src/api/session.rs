@@ -10,9 +10,11 @@ use crate::utils::{
     bad_request, db, is_https_request, kv, public_origin, rust_err, safe_redirect_target,
     unauthorized,
 };
+use shared::routes::AUTH_SESSION_HINT_COOKIE;
 
 const SESSION_COOKIE_NAME_PREFIX: &str = "__Host-session";
 const SESSION_COOKIE_NAME_PLAIN: &str = "session";
+const SESSION_COOKIE_NAME_PLAIN_HINT: &str = "session-hint";
 const SESSION_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
 
 /// Stored session metadata, keyed by session id in KV.
@@ -104,13 +106,54 @@ fn build_clear_cookie(name: &str, is_https: bool) -> String {
         .to_string()
 }
 
-/// Creates a session for the given account and returns a `Set-Cookie` header
-/// value that the caller can attach to a redirect response.
+/// Builds the `Set-Cookie` header value for the session hint.
+///
+/// The session cookie is `HttpOnly`, so the frontend cannot tell whether a
+/// visitor is signed in and would have to call `/auth/me` on every page load,
+/// provoking a 401 for anonymous visitors.
+///
+/// The hint is deliberately readable from JavaScript and carries no secret: it
+/// only says "a session cookie exists". It is not accepted as authentication;
+/// every authenticated request is still verified through the signed session
+/// cookie. Anything with access to `document.cookie` could forge it, which at
+/// worst causes one extra `/auth/me` request that returns 401.
+fn build_session_hint_cookie(is_https: bool, is_set: bool) -> String {
+    let same_site = if is_https {
+        SameSite::None
+    } else {
+        SameSite::Lax
+    };
+    let hint_name = if is_https {
+        AUTH_SESSION_HINT_COOKIE
+    } else {
+        SESSION_COOKIE_NAME_PLAIN_HINT
+    };
+    let max_age = if is_set {
+        i64::try_from(SESSION_TTL_SECONDS).unwrap_or(i64::MAX)
+    } else {
+        0
+    };
+    Cookie::build((hint_name, if is_set { "1" } else { "" }))
+        .max_age(time::Duration::seconds(max_age))
+        .path("/")
+        .http_only(false)
+        .secure(is_https)
+        .same_site(same_site)
+        .build()
+        .to_string()
+}
+
+/// Creates a session for the given account and returns the `Set-Cookie` header
+/// values the caller attaches to a redirect response.
+///
+/// The first value is the signed `HttpOnly` session cookie; the second is the
+/// JavaScript-readable session hint ([`build_session_hint_cookie`]) that lets
+/// the frontend skip `/auth/me` for anonymous visitors.
 pub(crate) async fn create_session(
     ctx: &RouteContext<()>,
     account: &Account,
     req: &Request,
-) -> Result<String> {
+) -> Result<Vec<String>> {
     let is_https = is_https_origin(&public_origin(req));
     let cookie_name = session_cookie_name(is_https);
 
@@ -135,7 +178,7 @@ pub(crate) async fn create_session(
         public_origin(req),
         cookie_name
     );
-    Ok(value)
+    Ok(vec![value, build_session_hint_cookie(is_https, true)])
 }
 
 /// Reads the session cookie from the request, validates its signature, looks it
@@ -343,7 +386,8 @@ pub(crate) async fn logout(req: Request, ctx: RouteContext<()>) -> Result<Respon
 #[allow(clippy::needless_pass_by_value)]
 fn build_logout_response(origin: String, cookie_name: &str, is_https: bool) -> Result<Response> {
     let headers = Headers::new();
-    headers.set("Set-Cookie", &build_clear_cookie(cookie_name, is_https))?;
+    headers.append("Set-Cookie", &build_clear_cookie(cookie_name, is_https))?;
+    headers.append("Set-Cookie", &build_session_hint_cookie(is_https, false))?;
     headers.set("Location", &origin)?;
 
     Ok(ResponseBuilder::new()
@@ -419,5 +463,30 @@ mod tests {
         let cookie = build_session_cookie("session", "abc", false);
         assert!(!cookie.contains("Secure"));
         assert!(cookie.contains("SameSite=Lax"));
+    }
+
+    #[test]
+    fn session_hint_is_readable_from_javascript() {
+        let cookie = build_session_hint_cookie(true, true);
+        assert!(
+            !cookie.to_lowercase().contains("httponly"),
+            "the hint must be readable from JavaScript: {cookie}"
+        );
+        assert!(cookie.starts_with(AUTH_SESSION_HINT_COOKIE));
+        assert!(cookie.contains("Secure"));
+        assert!(cookie.contains("SameSite=None"));
+    }
+
+    #[test]
+    fn http_session_hint_drops_the_host_prefix() {
+        let cookie = build_session_hint_cookie(false, true);
+        assert!(cookie.starts_with(SESSION_COOKIE_NAME_PLAIN_HINT));
+        assert!(!cookie.to_lowercase().contains("secure"));
+    }
+
+    #[test]
+    fn clearing_session_hint_expires_it() {
+        let cookie = build_session_hint_cookie(true, false);
+        assert!(cookie.contains("Max-Age=0"));
     }
 }
