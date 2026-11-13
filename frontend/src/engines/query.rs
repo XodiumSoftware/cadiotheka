@@ -160,17 +160,13 @@ pub fn parse_query(query: &str) -> ParsedQuery<'_> {
 /// For prefixed tokens such as `#model` or `@sort:down`, the prefix is stripped
 /// so the matcher can rank the actual label. Plain tokens are returned as-is.
 pub fn active_needle(query: &str) -> String {
-    query
-        .split_whitespace()
-        .last()
-        .map(|token| {
-            if token.starts_with('@') || token.starts_with('#') {
-                token[1..].to_owned()
-            } else {
-                token.to_owned()
-            }
-        })
-        .unwrap_or_default()
+    query.split_whitespace().last().map_or_default(|token| {
+        if token.starts_with('@') || token.starts_with('#') {
+            token[1..].to_owned()
+        } else {
+            token.to_owned()
+        }
+    })
 }
 
 /// Parses a single `@sort:<field>:<direction>` directive.

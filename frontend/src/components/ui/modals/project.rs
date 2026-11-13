@@ -3444,8 +3444,7 @@ fn ProjectModalContent(
                                                     on_item_click=Callback::new(move |id: String| {
                                                         let label = metadata
                                                             .tag_by_id(&id)
-                                                            .map(|tag| tag.label().to_string())
-                                                            .unwrap_or_default();
+                                                            .map_or_default(|tag| tag.label().to_string());
                                                         apply_filter.run(label);
                                                     })
                                                     id_fn=tag_id

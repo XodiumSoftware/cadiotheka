@@ -42,8 +42,7 @@ pub fn ViewerSettingsModal(
         let value = ev
             .target()
             .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
-            .map(|input| input.value())
-            .unwrap_or_default();
+            .map_or_default(|input| input.value());
         if let Some(color) = hex_to_srgba(&value) {
             highlight_color.set(color);
         }
@@ -53,8 +52,7 @@ pub fn ViewerSettingsModal(
         let value = ev
             .target()
             .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
-            .map(|input| input.value())
-            .unwrap_or_default();
+            .map_or_default(|input| input.value());
         if let Some(color) = hex_to_srgba(&value) {
             selection_color.set(color);
         }
@@ -64,8 +62,7 @@ pub fn ViewerSettingsModal(
         let value = ev
             .target()
             .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
-            .map(|input| input.value())
-            .unwrap_or_default();
+            .map_or_default(|input| input.value());
         if let Some(color) = hex_to_srgba(&value) {
             skybox_color.set(color);
         }

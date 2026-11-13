@@ -20,18 +20,12 @@ time = { version = "0.3.55", features = [
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 thiserror = "2.0.21"
-derive_more = { version = "2.1.1", features = [
-    "display",
-    "from",
-    "as_ref",
-    "constructor",
-] }
 fuzzy-matcher = "0.3.7"
 js-sys = "0.3.107"
 pulldown-cmark = { version = "0.13.6", default-features = false, features = [
     "html",
 ] }
-ammonia = "4.2.4"
+ammonia = "4.2.5"
 timeago = { version = "0.6.1", default-features = false }
 human_format = "1.2.1"
 thousands = "0.2.0"
@@ -84,7 +78,7 @@ base64 = "0.23.1"
 wasm-bindgen-futures = "0.4.80"
 
 [package.metadata.cargo-machete]
-ignored = ["strum", "derive_more"]
+ignored = ["strum"]
 
 [lints]
 workspace = true

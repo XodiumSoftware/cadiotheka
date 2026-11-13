@@ -290,7 +290,5 @@ fn event_target_textarea(ev: &web_sys::Event) -> Option<web_sys::HtmlTextAreaEle
 }
 
 fn event_target_value(ev: &web_sys::Event) -> String {
-    event_target_textarea(ev)
-        .map(|textarea| textarea.value())
-        .unwrap_or_default()
+    event_target_textarea(ev).map_or_default(|textarea| textarea.value())
 }

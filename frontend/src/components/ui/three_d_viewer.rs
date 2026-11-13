@@ -218,8 +218,7 @@ pub fn IfcViewer(
             let state_json = renderer
                 .borrow()
                 .as_ref()
-                .map(|r| r.save_view_state().to_json())
-                .unwrap_or_default();
+                .map_or_default(|r| r.save_view_state().to_json());
             if state_json.is_empty() {
                 return;
             }
