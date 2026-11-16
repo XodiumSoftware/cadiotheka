@@ -109,7 +109,7 @@ worker-build
 npx wrangler dev --remote
 ```
 
-That uses the `DB`, `AUTH`, and `PROJECT_ASSETS` bindings from `wrangler.toml`. Be careful: if those bindings point at production, your local app will read and write real production data.
+That uses the `DB`, `AUTH`, `PROJECT_ASSETS`, and `GLB_CONVERSION` bindings from `wrangler.toml`. Be careful: if those bindings point at production, your local app will read and write real production data.
 
 ## Run Backend Locally
 
@@ -125,6 +125,8 @@ npx wrangler dev
 The local API is available at <http://localhost:8787/data/accounts> by default.
 
 Project assets (IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). D1 stores only the generated object key, and the frontend loads assets through backend asset routes.
+
+Uploaded IFC models are converted to GLB asynchronously: the upload handler sends a `GlbConversionJob` to the `GLB_CONVERSION` queue, and the queue consumer (`handle_glb_conversion_queue` in `backend/src/api/projects.rs`) does the CPU-heavy export and caches the result in R2. Failed conversions are retried by the queue; if the queue is unavailable, conversion still happens lazily the first time the viewer requests the GLB.
 
 ### 3D IFC viewer
 
@@ -162,6 +164,7 @@ The backend uses these short Worker bindings:
 - `DB` for the D1 database
 - `AUTH` for the KV namespace used by OAuth state and sessions
 - `PROJECT_ASSETS` for the R2 bucket that stores project assets
+- `GLB_CONVERSION` for the queue that converts IFC models to GLB
 
 For project asset uploads, also ensure `wrangler.toml` includes an R2 bucket binding:
 
@@ -169,6 +172,13 @@ For project asset uploads, also ensure `wrangler.toml` includes an R2 bucket bin
 [[r2_buckets]]
 binding = "PROJECT_ASSETS"
 bucket_name = "cadiotheka-assets"
+```
+
+Create the GLB conversion queue before running with remote bindings:
+
+```bash
+cd backend
+npx wrangler queues create cadiotheka-glb-conversion
 ```
 
 Create accounts and projects through the application UI or API as needed.

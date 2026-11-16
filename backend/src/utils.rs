@@ -1,6 +1,7 @@
 use shared::origins::{ALLOWED_LOCALHOST_ORIGINS, ALLOWED_REDIRECT_ORIGINS};
 use worker::{
-    Bucket, D1Database, KvStore, RateLimiter, Request, Response, Result, RouteContext, wasm_bindgen,
+    Bucket, D1Database, Env, KvStore, Queue, RateLimiter, Request, Response, Result, RouteContext,
+    wasm_bindgen,
 };
 
 /// D1 database binding configured in `wrangler.toml`.
@@ -8,9 +9,11 @@ const DB_BINDING: &str = "DB";
 /// KV namespace binding used for session state.
 const AUTH_KV_BINDING: &str = "AUTH";
 /// R2 bucket binding used for project assets (IFC models, icons, etc.).
-const PROJECT_ASSETS_R2_BINDING: &str = "PROJECT_ASSETS";
+pub(crate) const PROJECT_ASSETS_R2_BINDING: &str = "PROJECT_ASSETS";
 /// Rate Limiting binding used to throttle requests per client and namespace.
 const RATE_LIMIT_BINDING: &str = "RATE_LIMITER";
+/// Queue binding used to offload GLB conversion from request handlers.
+pub(crate) const GLB_CONVERSION_QUEUE_BINDING: &str = "GLB_CONVERSION";
 
 /// Returns the D1 database binding configured for this worker.
 pub(crate) fn db(ctx: &RouteContext<()>) -> Result<D1Database> {
@@ -30,6 +33,11 @@ pub(crate) fn assets_bucket(ctx: &RouteContext<()>) -> Result<Bucket> {
 /// Returns the rate limiter binding used to throttle requests.
 pub(crate) fn rate_limiter(ctx: &RouteContext<()>) -> Result<RateLimiter> {
     ctx.env.rate_limiter(RATE_LIMIT_BINDING)
+}
+
+/// Returns the queue used to schedule GLB conversions.
+pub(crate) fn glb_conversion_queue(env: &Env) -> Result<Queue> {
+    env.queue(GLB_CONVERSION_QUEUE_BINDING)
 }
 
 /// Namespaces used with the rate limiter binding.

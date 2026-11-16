@@ -5,7 +5,7 @@ use shared::{
     version_state::VersionState,
 };
 use worker::{
-    FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext, console_log,
+    Env, FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext, console_log,
 };
 
 use crate::api::accounts::Account;
@@ -15,8 +15,9 @@ use crate::guards::{
     require_auth_with_turnstile_and_rate_limit,
 };
 use crate::utils::{
-    RateLimitNamespace, assets_bucket, bad_request, check_rate_limit, db, error_response,
-    forbidden, list_window, not_found, now_utc, required_param,
+    PROJECT_ASSETS_R2_BINDING, RateLimitNamespace, assets_bucket, bad_request, check_rate_limit,
+    db, error_response, forbidden, glb_conversion_queue, list_window, not_found, now_utc,
+    required_param,
 };
 use ifc_lite_export::{GltfOptions, try_export_glb};
 use shared::accounts::Role;
@@ -41,6 +42,19 @@ pub(crate) struct ProjectVersion {
 #[derive(Deserialize, Debug)]
 pub(crate) struct VersionPatch {
     pub state: Option<VersionState>,
+}
+
+/// Message body queued to convert a newly uploaded IFC version into a cached
+/// GLB.
+///
+/// The conversion is CPU-heavy, so it runs in a queue consumer instead of the
+/// upload request, giving it a larger CPU budget and independent retries.
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct GlbConversionJob {
+    /// Project whose IFC model should be converted.
+    pub project_id: String,
+    /// R2 key of the specific IFC version to convert.
+    pub ifc_key: String,
 }
 
 /// Row shape used when looking up an IFC key by version id.
@@ -483,6 +497,8 @@ pub(crate) async fn upload_project_ifc(
     let glb_cache_key = glb_key_for_project(&project_id);
     let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
 
+    enqueue_glb_conversion(&ctx.env, &project_id, &key).await;
+
     Response::from_json(&serde_json::json!({
         "ifc_key": key,
         "version_id": version_id,
@@ -913,7 +929,7 @@ pub(crate) async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> R
         return Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers));
     }
 
-    match ensure_glb_assets_cached(&ctx, &id, &key).await? {
+    match ensure_glb_assets_cached(&ctx.env, &id, &key).await? {
         Some(GlbConversion::Success(bytes)) => {
             let headers = Headers::new();
             headers.set("Content-Type", "model/gltf-binary")?;
@@ -975,7 +991,7 @@ pub(crate) async fn serve_project_glb_metadata(
         return Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers));
     }
 
-    match ensure_glb_assets_cached(&ctx, &id, &key).await? {
+    match ensure_glb_assets_cached(&ctx.env, &id, &key).await? {
         Some(GlbConversion::Success(_)) | None => {
             let cached = assets_bucket(&ctx)?
                 .get(glb_metadata_key_for_project(&id))
@@ -1026,7 +1042,7 @@ pub(crate) async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> 
         return not_found("No IFC model uploaded for this project");
     };
 
-    match ensure_glb_assets_cached(&ctx, &id, &key).await? {
+    match ensure_glb_assets_cached(&ctx.env, &id, &key).await? {
         Some(GlbConversion::Success(_)) | None => {
             Response::from_json(&serde_json::json!({ "status": "ready" }))
         }
@@ -1048,28 +1064,21 @@ enum GlbConversion {
 /// per-primitive metadata file, and returns the outcome. Cache hits return
 /// `None` so callers can serve the cached body directly.
 async fn ensure_glb_assets_cached(
-    ctx: &RouteContext<()>,
+    env: &Env,
     id: &str,
     ifc_key: &str,
 ) -> Result<Option<GlbConversion>> {
+    let bucket = env.bucket(PROJECT_ASSETS_R2_BINDING)?;
     let glb_cache_key = glb_key_for_project(id);
     let metadata_cache_key = glb_metadata_key_for_project(id);
-    let glb_cached = assets_bucket(ctx)?
-        .get(&glb_cache_key)
-        .execute()
-        .await?
-        .is_some();
-    let metadata_cached = assets_bucket(ctx)?
-        .get(&metadata_cache_key)
-        .execute()
-        .await?
-        .is_some();
+    let glb_cached = bucket.get(&glb_cache_key).execute().await?.is_some();
+    let metadata_cached = bucket.get(&metadata_cache_key).execute().await?.is_some();
 
     if glb_cached && metadata_cached {
         return Ok(None);
     }
 
-    let object = assets_bucket(ctx)?
+    let object = bucket
         .get(ifc_key)
         .execute()
         .await?
@@ -1107,18 +1116,89 @@ async fn ensure_glb_assets_cached(
         ..Default::default()
     };
 
-    assets_bucket(ctx)?
+    bucket
         .put(&glb_cache_key, glb_bytes.clone())
         .http_metadata(glb_http_metadata)
         .execute()
         .await?;
-    assets_bucket(ctx)?
+    bucket
         .put(&metadata_cache_key, metadata_json)
         .http_metadata(metadata_http_metadata)
         .execute()
         .await?;
 
     Ok(Some(GlbConversion::Success(glb_bytes)))
+}
+
+/// Queues a GLB conversion for a newly uploaded IFC version.
+///
+/// Enqueue failures are logged and swallowed: the conversion also runs lazily
+/// the first time the viewer requests the GLB, so a dropped message only costs
+/// latency, not correctness.
+async fn enqueue_glb_conversion(env: &Env, project_id: &str, ifc_key: &str) {
+    let job = GlbConversionJob {
+        project_id: project_id.to_string(),
+        ifc_key: ifc_key.to_string(),
+    };
+    if let Err(err) = enqueue_job(env, job).await {
+        console_log!("enqueue_glb_conversion: failed for project {project_id}: {err:?}");
+    }
+}
+
+/// Sends a [`GlbConversionJob`] to the conversion queue.
+async fn enqueue_job(env: &Env, job: GlbConversionJob) -> Result<()> {
+    glb_conversion_queue(env)?.send(job).await
+}
+
+/// Converts a queued IFC version to GLB, retrying the message when the
+/// conversion fails for a transient reason (for example, R2 read errors).
+///
+/// A batch is acknowledged once every message has been processed; messages that
+/// failed transiently are retried together in the next batch delivery.
+async fn run_glb_conversion_job(env: &Env, job: &GlbConversionJob) -> Result<()> {
+    match ensure_glb_assets_cached(env, &job.project_id, &job.ifc_key).await {
+        Ok(_) => Ok(()),
+        Err(err) => {
+            console_log!(
+                "run_glb_conversion_job: conversion failed for project {}: {err:?}",
+                job.project_id
+            );
+            Err(err)
+        }
+    }
+}
+
+/// Queue consumer entry point for GLB conversion jobs.
+///
+/// Messages that fail are retried via [`MessageBatch::retry_all`]; the rest are
+/// acknowledged. Returning `Ok(())` lets the runtime discard the batch only
+/// after it has been fully processed.
+pub(crate) async fn handle_glb_conversion_queue(
+    batch: worker::MessageBatch<GlbConversionJob>,
+    env: Env,
+    _ctx: worker::Context,
+) -> Result<()> {
+    let messages = match batch.messages() {
+        Ok(messages) => messages,
+        Err(err) => {
+            console_log!("handle_glb_conversion_queue: failed to decode batch: {err:?}");
+            return Err(err);
+        }
+    };
+
+    let mut saw_failure = false;
+    for message in &messages {
+        if run_glb_conversion_job(&env, message.body()).await.is_err() {
+            saw_failure = true;
+        }
+    }
+
+    if saw_failure {
+        batch.retry_all();
+    } else {
+        batch.ack_all();
+    }
+    Ok(())
 }
 
 /// Whether the given account may edit or delete the project.

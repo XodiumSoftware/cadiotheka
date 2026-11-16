@@ -28,6 +28,19 @@ binding = "PROJECT_ASSETS"
 bucket_name = "cadiotheka-assets"
 remote = true
 
+[[queues.producers]]
+binding = "GLB_CONVERSION"
+queue = "cadiotheka-glb-conversion"
+remote = true
+
+[[queues.consumers]]
+queue = "cadiotheka-glb-conversion"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+max_concurrency = 2
+remote = true
+
 [secrets]
 required = [
     "SESSION_SECRET",

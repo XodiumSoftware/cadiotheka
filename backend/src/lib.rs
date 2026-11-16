@@ -136,6 +136,20 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     }
 }
 
+/// Queue consumer for GLB conversion jobs.
+///
+/// Delegates to the projects API so uploads can return immediately and the
+/// CPU-heavy IFC-to-GLB conversion runs with the queue's larger CPU budget and
+/// independent retries.
+#[event(queue)]
+async fn queue(
+    batch: worker::MessageBatch<api::projects::GlbConversionJob>,
+    env: Env,
+    ctx: Context,
+) -> Result<()> {
+    api::projects::handle_glb_conversion_queue(batch, env, ctx).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

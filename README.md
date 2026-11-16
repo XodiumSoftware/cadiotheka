@@ -108,6 +108,7 @@ This uses the bindings configured in `backend/wrangler.toml`:
 - `DB` for D1
 - `AUTH` for KV
 - `PROJECT_ASSETS` for R2
+- `GLB_CONVERSION` for Queues
 
 Be careful: `--remote` reads and writes real data in those bound resources, including production data if your bindings point at production.
 
@@ -131,6 +132,15 @@ For asset uploads, also create or bind an R2 bucket in `wrangler.toml`:
 binding = "PROJECT_ASSETS"
 bucket_name = "cadiotheka-assets"
 ```
+
+IFC models are converted to GLB asynchronously by a queue consumer. Create the queue before deploying:
+
+```bash
+cd backend
+npx wrangler queues create cadiotheka-glb-conversion
+```
+
+The `GLB_CONVERSION` producer and consumer bindings in `wrangler.toml` reference this queue. Uploads enqueue a conversion job and return immediately; if the queue is unavailable the conversion still runs lazily the first time the viewer requests the GLB.
 
 Create accounts and projects through the application UI or API as needed.
 
@@ -176,6 +186,7 @@ The static site is placed in `frontend/dist/`.
     - `DB` for the D1 database
     - `AUTH` for the KV namespace used by OAuth state and sessions
     - `PROJECT_ASSETS` for the R2 bucket that stores project assets
+    - `GLB_CONVERSION` for the queue that converts IFC models to GLB
 
 3. Create a KV namespace for OAuth state and sessions:
 
@@ -184,6 +195,12 @@ The static site is placed in `frontend/dist/`.
     ```
 
     Then copy the resulting ID into `backend/wrangler.toml` under `[[kv_namespaces]]`.
+
+    Also create the GLB conversion queue:
+
+    ```bash
+    npx wrangler queues create cadiotheka-glb-conversion
+    ```
 
 4. Configure secrets for OAuth, session signing, and Turnstile:
 
