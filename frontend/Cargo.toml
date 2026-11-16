@@ -7,9 +7,9 @@ publish = false
 [dependencies]
 leptos = { version = "0.9.0-rc1", features = ["csr"] }
 wasm-bindgen = "0.2.130"
-gloo-timers = { version = "0.4.0", features = ["futures"] }
-gloo-net = "0.7.0"
-gloo-storage = "0.4.0"
+gloo-timers = { version = "0.4.1", features = ["futures"] }
+gloo-net = "0.8.0"
+gloo-storage = "0.4.1"
 time = { version = "0.3.55", features = [
     "serde",
     "wasm-bindgen",

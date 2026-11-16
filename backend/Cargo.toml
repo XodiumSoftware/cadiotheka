@@ -14,7 +14,7 @@ serde_json = "1.0.154"
 serde_urlencoded = "0.7.1"
 hmac = "0.13.0"
 sha2 = "0.11.1"
-rand = "0.10.3"
+rand = "0.10.4"
 getrandom = { version = "0.4.3", features = ["wasm_js"] }
 uuid = { version = "1.29.2", features = ["v4", "serde", "js"] }
 base64 = "0.23.1"
