@@ -13,6 +13,8 @@ mod guards;
 
 mod materials;
 
+mod maintenance;
+
 mod api {
     pub(crate) mod accounts;
     pub(crate) mod auth;
@@ -148,6 +150,23 @@ async fn queue(
     ctx: Context,
 ) -> Result<()> {
     api::projects::handle_glb_conversion_queue(batch, env, ctx).await
+}
+
+/// Scheduled maintenance sweep run by the daily cron trigger.
+///
+/// Keeps the KV namespace tidy by deleting expired tombstones and entries whose
+/// account no longer exists. See [`maintenance::run_sweep`].
+#[event(scheduled)]
+async fn scheduled(_event: worker::ScheduledEvent, env: Env, _ctx: worker::ScheduleContext) {
+    match maintenance::run_sweep(&env).await {
+        Ok(summary) => worker::console_log!(
+            "maintenance sweep: expired={} orphaned={} failures={}",
+            summary.expired_deleted,
+            summary.orphaned_deleted,
+            summary.failures
+        ),
+        Err(err) => worker::console_log!("maintenance sweep failed: {err:?}"),
+    }
 }
 
 #[cfg(test)]

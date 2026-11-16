@@ -128,6 +128,8 @@ Project assets (IFC models) are uploaded through the backend and stored in the `
 
 Uploaded IFC models are converted to GLB asynchronously: the upload handler sends a `GlbConversionJob` to the `GLB_CONVERSION` queue, and the queue consumer (`handle_glb_conversion_queue` in `backend/src/api/projects.rs`) does the CPU-heavy export and caches the result in R2. Failed conversions are retried by the queue; if the queue is unavailable, conversion still happens lazily the first time the viewer requests the GLB.
 
+A daily cron trigger (`[triggers] crons = ["0 3 * * *"]` in `wrangler.toml`) runs the KV maintenance sweep in `backend/src/maintenance.rs`. It deletes expired KV tombstones and `passkey_register:` challenges whose account no longer exists in D1, keeping KV listing costs from growing over time.
+
 ### 3D IFC viewer
 
 The project details modal includes a built-in IFC/GLB viewer built on `three-d`. Once an IFC model has been uploaded and converted, the viewer offers:

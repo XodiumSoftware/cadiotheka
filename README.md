@@ -142,6 +142,8 @@ npx wrangler queues create cadiotheka-glb-conversion
 
 The `GLB_CONVERSION` producer and consumer bindings in `wrangler.toml` reference this queue. Uploads enqueue a conversion job and return immediately; if the queue is unavailable the conversion still runs lazily the first time the viewer requests the GLB.
 
+A daily cron trigger (`[triggers] crons = ["0 3 * * *"]`) runs `maintenance::run_sweep`, which deletes expired KV tombstones and WebAuthn registration challenges whose account no longer exists. No extra setup is required; the trigger is deployed with the Worker.
+
 Create accounts and projects through the application UI or API as needed.
 
 ### Tests & Linting

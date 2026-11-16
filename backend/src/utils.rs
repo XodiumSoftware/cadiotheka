@@ -17,12 +17,22 @@ pub(crate) const GLB_CONVERSION_QUEUE_BINDING: &str = "GLB_CONVERSION";
 
 /// Returns the D1 database binding configured for this worker.
 pub(crate) fn db(ctx: &RouteContext<()>) -> Result<D1Database> {
-    ctx.env.d1(DB_BINDING)
+    db_env(&ctx.env)
+}
+
+/// Returns the D1 database binding from an [`Env`], for use outside a request.
+pub(crate) fn db_env(env: &Env) -> Result<D1Database> {
+    env.d1(DB_BINDING)
 }
 
 /// Returns the KV namespace binding used for session state.
 pub(crate) fn kv(ctx: &RouteContext<()>) -> Result<KvStore> {
-    ctx.env.kv(AUTH_KV_BINDING)
+    kv_env(&ctx.env)
+}
+
+/// Returns the KV namespace binding from an [`Env`], for use outside a request.
+pub(crate) fn kv_env(env: &Env) -> Result<KvStore> {
+    env.kv(AUTH_KV_BINDING)
 }
 
 /// Returns the R2 bucket used for project assets.

@@ -41,6 +41,9 @@ max_retries = 3
 max_concurrency = 2
 remote = true
 
+[triggers]
+crons = ["0 3 * * *"]
+
 [secrets]
 required = [
     "SESSION_SECRET",
