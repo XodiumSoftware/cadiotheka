@@ -130,6 +130,8 @@ Uploaded IFC models are converted to GLB asynchronously: the upload handler send
 
 A daily cron trigger (`[triggers] crons = ["0 3 * * *"]` in `wrangler.toml`) runs the KV maintenance sweep in `backend/src/maintenance.rs`. It deletes expired KV tombstones and `passkey_register:` challenges whose account no longer exists in D1, keeping KV listing costs from growing over time.
 
+The public JSON listings (`GET /data/projects` and `GET /data/accounts`) are served from the edge cache when warm, via `backend/src/cache.rs`. Each page is cached under its request URL with the requesting origin's CORS headers baked in, for 60 seconds. Project and account writes purge the listing so changes appear on the next request; if a purge fails, the short TTL limits how long stale data stays visible.
+
 ### 3D IFC viewer
 
 The project details modal includes a built-in IFC/GLB viewer built on `three-d`. Once an IFC model has been uploaded and converted, the viewer offers:

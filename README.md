@@ -144,6 +144,8 @@ The `GLB_CONVERSION` producer and consumer bindings in `wrangler.toml` reference
 
 A daily cron trigger (`[triggers] crons = ["0 3 * * *"]`) runs `maintenance::run_sweep`, which deletes expired KV tombstones and WebAuthn registration challenges whose account no longer exists. No extra setup is required; the trigger is deployed with the Worker.
 
+The public listings at `/data/projects` and `/data/accounts` are cached at the edge for 60 seconds. Writes that change a listing purge it, so changes normally appear immediately; the short TTL bounds staleness if a purge fails.
+
 Create accounts and projects through the application UI or API as needed.
 
 ### Tests & Linting

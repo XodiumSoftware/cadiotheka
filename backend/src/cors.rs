@@ -21,12 +21,19 @@ const ALLOWED_ORIGINS: &[&str] = &[
 /// header error so CORS misconfigurations are not silently ignored.
 pub(crate) fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Response> {
     let headers = resp.headers_mut();
-    if let Err(err) = headers.set("Access-Control-Allow-Origin", origin) {
-        if is_immutable_headers_error(&err) {
-            return Ok(resp);
-        }
-        return Err(err);
+    match apply_cors_headers(headers, origin) {
+        Ok(()) => Ok(resp),
+        Err(err) if is_immutable_headers_error(&err) => Ok(resp),
+        Err(err) => Err(err),
     }
+}
+
+/// Writes the CORS response headers for `origin` into `headers`.
+///
+/// Split out from [`add_cors_headers`] so responses built for the edge cache
+/// can carry the same headers at write time.
+pub(crate) fn apply_cors_headers(headers: &worker::Headers, origin: &str) -> Result<()> {
+    headers.set("Access-Control-Allow-Origin", origin)?;
     headers.set(
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, PATCH, DELETE, OPTIONS",
@@ -36,7 +43,7 @@ pub(crate) fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Respo
         "Content-Type, X-Turnstile-Token",
     )?;
     headers.set("Access-Control-Allow-Credentials", "true")?;
-    Ok(resp)
+    Ok(())
 }
 
 /// Heuristic to detect the immutable-headers error returned by `web_sys` when

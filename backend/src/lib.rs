@@ -9,6 +9,8 @@ mod utils;
 
 mod cors;
 
+mod cache;
+
 mod guards;
 
 mod materials;

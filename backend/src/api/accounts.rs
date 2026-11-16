@@ -318,7 +318,17 @@ fn sanitize_username_local(login: &str) -> String {
 /// Accepts `?limit=` and `?offset=` query parameters; the limit defaults to
 /// 100 and is capped at 500 so each D1 query stays bounded.
 pub(crate) async fn list_accounts(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let (limit, offset) = list_window(&req.url()?);
+    let url = req.url()?;
+    let cache_key = crate::cache::list_cache_key(
+        &crate::utils::public_origin(&req),
+        crate::cache::ACCOUNTS_LIST_PATH,
+        url.query(),
+    );
+    if let Some(cached) = crate::cache::get(&cache_key).await {
+        return Ok(cached);
+    }
+
+    let (limit, offset) = list_window(&url);
     let result = db(&ctx)?
         .prepare(format!(
             "{SELECT_PUBLIC_ACCOUNT_COLUMNS} ORDER BY a.created_at ASC, a.id ASC LIMIT ?1 OFFSET ?2"
@@ -327,7 +337,24 @@ pub(crate) async fn list_accounts(req: Request, ctx: RouteContext<()>) -> Result
         .all()
         .await?;
     let accounts: Vec<PublicAccount> = result.results::<PublicAccount>()?;
-    Response::from_json(&accounts)
+    let body = serde_json::to_string(&accounts)?;
+    let response = Response::ok(&body)?.with_headers(crate::cache::cache_headers());
+    crate::cache::store(&cache_key, &body, &crate::utils::public_origin(&req)).await;
+    Ok(response)
+}
+
+/// Purges the cached public account listing after a write.
+///
+/// Listings are cached per page under their request URL, so invalidation is
+/// best-effort: a failed purge leaves stale data visible until the short TTL
+/// expires.
+async fn invalidate_account_list(req: &Request) {
+    crate::cache::delete(&crate::cache::list_cache_key(
+        &crate::utils::public_origin(req),
+        crate::cache::ACCOUNTS_LIST_PATH,
+        None,
+    ))
+    .await;
 }
 
 /// Responds with the public account matching the `:id` path parameter, or 404
@@ -371,6 +398,7 @@ pub(crate) async fn unlink_provider(req: Request, ctx: RouteContext<()>) -> Resu
         return bad_request("Invalid provider");
     };
     unlink_oauth_account(&ctx, &account.id, provider).await?;
+    invalidate_account_list(&req).await;
     Response::empty()
 }
 
@@ -404,6 +432,7 @@ pub(crate) async fn create_account(mut req: Request, ctx: RouteContext<()>) -> R
         ])?
         .run()
         .await?;
+    invalidate_account_list(&req).await;
     Response::empty()
 }
 
@@ -441,6 +470,7 @@ pub(crate) async fn update_account(mut req: Request, ctx: RouteContext<()>) -> R
             ])?
         .run()
         .await?;
+    invalidate_account_list(&req).await;
     Response::empty()
 }
 
@@ -460,6 +490,7 @@ pub(crate) async fn delete_account(req: Request, ctx: RouteContext<()>) -> Resul
         .bind(&[id.into()])?
         .run()
         .await?;
+    invalidate_account_list(&req).await;
     Response::empty()
 }
 

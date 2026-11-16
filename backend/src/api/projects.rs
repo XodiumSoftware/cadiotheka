@@ -163,8 +163,21 @@ mod json_tags {
 ///
 /// Accepts `?limit=` and `?offset=` query parameters; the limit defaults to
 /// 100 and is capped at 500 so each D1 query stays bounded.
+///
+/// The listing is identical for every visitor, so it is served from the edge
+/// cache when available. Each page is cached under its own URL.
 pub(crate) async fn list_projects(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let (limit, offset) = list_window(&req.url()?);
+    let url = req.url()?;
+    let cache_key = crate::cache::list_cache_key(
+        &crate::utils::public_origin(&req),
+        crate::cache::PROJECTS_LIST_PATH,
+        url.query(),
+    );
+    if let Some(cached) = crate::cache::get(&cache_key).await {
+        return Ok(cached);
+    }
+
+    let (limit, offset) = list_window(&url);
     let result = db(&ctx)?
         .prepare(format!(
             "{SELECT_PROJECT_COLUMNS} ORDER BY timestamp DESC, id DESC LIMIT ?1 OFFSET ?2"
@@ -173,7 +186,29 @@ pub(crate) async fn list_projects(req: Request, ctx: RouteContext<()>) -> Result
         .all()
         .await?;
     let projects: Vec<Project> = result.results::<Project>()?;
-    Response::from_json(&projects)
+    let body = serde_json::to_string(&projects)?;
+    let response = json_list_response(&body)?;
+    crate::cache::store(&cache_key, &body, &crate::utils::public_origin(&req)).await;
+    Ok(response)
+}
+
+/// Builds a JSON response carrying the cache headers used for public listings.
+fn json_list_response(body: &str) -> Result<Response> {
+    Response::ok(body).map(|response| response.with_headers(crate::cache::cache_headers()))
+}
+
+/// Purges the cached public project listing after a write.
+///
+/// Listings are cached per page under their request URL, so invalidation is
+/// best-effort: a failed purge leaves stale data visible until the short TTL
+/// expires.
+async fn invalidate_project_list(req: &Request) {
+    crate::cache::delete(&crate::cache::list_cache_key(
+        &crate::utils::public_origin(req),
+        crate::cache::PROJECTS_LIST_PATH,
+        None,
+    ))
+    .await;
 }
 
 /// Responds with the project matching the `:id` path parameter, or 404 if not found.
@@ -244,6 +279,7 @@ pub(crate) async fn create_project(mut req: Request, ctx: RouteContext<()>) -> R
     let created = fetch_project(&ctx, &project_id)
         .await?
         .ok_or_else(|| worker::Error::RustError("created project not found".into()))?;
+    invalidate_project_list(&req).await;
     Response::from_json(&created)
 }
 
@@ -329,6 +365,7 @@ pub(crate) async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Re
 
     if !statements.is_empty() {
         database.batch(statements).await?;
+        invalidate_project_list(&req).await;
     }
 
     Response::empty()
@@ -389,6 +426,7 @@ pub(crate) async fn update_project(mut req: Request, ctx: RouteContext<()>) -> R
             ])?
         .run()
         .await?;
+    invalidate_project_list(&req).await;
     Response::empty()
 }
 
@@ -412,6 +450,7 @@ pub(crate) async fn delete_project(req: Request, ctx: RouteContext<()>) -> Resul
         .run()
         .await?;
 
+    invalidate_project_list(&req).await;
     Response::empty()
 }
 
@@ -1241,6 +1280,7 @@ pub(crate) async fn toggle_project_favorite(
     let updated = fetch_project(&ctx, &project.id)
         .await?
         .ok_or_else(|| worker::Error::RustError("updated project not found".into()))?;
+    invalidate_project_list(&req).await;
     Response::from_json(&updated)
 }
 
@@ -1276,6 +1316,7 @@ pub(crate) async fn increment_project_downloads(
         .await?
         .ok_or_else(|| worker::Error::RustError("updated project not found".into()))?;
     console_log!("increment_project_downloads: returning updated project {id}");
+    invalidate_project_list(&req).await;
     Response::from_json(&updated)
 }
 
