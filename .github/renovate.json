@@ -13,7 +13,6 @@
             "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
         }
     ],
-    "dependencyDashboard": false,
-    "extends": ["config:recommended"],
+    "extends": ["config:recommended", ":disableDependencyDashboard"],
     "commitMessagePrefix": "🤖"
 }
