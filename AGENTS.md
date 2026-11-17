@@ -144,24 +144,7 @@ GitHub Actions workflows in `.github/workflows/` handle building, testing, and r
 
 - **frontend.yml** — Lint, test, Trunk build, deploy to Cloudflare Pages (path-filtered)
 - **backend.yml** — Backend lint and deploy
-- **docs.yml** — Builds rustdoc for all three workspace crates and deploys it to GitHub Pages on push to `main` (PRs build only)
 - **enforce_pr_title.yml** — Validates PR titles follow conventional commits
-
-## API Docs
-
-Published at <https://xodiumsoftware.github.io/cadiotheka/>, deployed from a
-workflow, so nothing generated is committed and the repository's Pages source
-must stay set to **GitHub Actions**.
-
-- `docs/index.html` is the only hand-written piece: a landing page linking each
-  crate. `--enable-index-page` would generate one, but it is nightly-only and
-  this workspace builds on stable. Add a crate to `Cargo.toml` and it needs a
-  line here.
-- A workspace has no root search index, so the docs.rs-style cross-crate search
-  is unavailable; each crate's own search still works.
-- The build runs with `RUSTDOCFLAGS="-D warnings"`, so a broken intra-doc link
-  fails CI. Links to another crate's items (e.g. `three_d`) must name the path
-  explicitly: `[`Skybox`](three_d::renderer::Skybox)`.
 
 ## Adding Components
 

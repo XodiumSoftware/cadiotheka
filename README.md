@@ -19,14 +19,12 @@
 [![Issues][issues_shield_url]][issues_url]
 [![License][license_shield_url]][license_url]
 [![Dependencies][deps_shield_url]][deps_url]
-[![Docs][docs_shield_url]][docs_url]
 </div>
 
 ## Table of Contents
 
 - [About](#about)
 - [Usage](#usage)
-- [API Docs][docs_url]
 - [Built With](#built-with)
 - [Code of Conduct][code_of_conduct_url]
 - [Contributing][contributing_url]
@@ -265,8 +263,6 @@ The static site is placed in `frontend/dist/`.
 [license_url]: https://github.com/XodiumSoftware/cadiotheka?tab=AGPL-3.0-1-ov-file
 [deps_shield_url]: https://deps.rs/repo/github/XodiumSoftware/cadiotheka/status.svg?style=for-the-badge
 [deps_url]: https://deps.rs/repo/github/XodiumSoftware/cadiotheka
-[docs_shield_url]: https://img.shields.io/badge/docs-rustdoc-blue?style=for-the-badge
-[docs_url]: https://xodiumsoftware.github.io/cadiotheka/
 [built_with_shield_url]: https://skillicons.dev/icons?i=rust,github,githubactions
 [built_with_url]: https://skillicons.dev
 [security_url]: https://github.com/XodiumSoftware/cadiotheka?tab=security-ov-file
