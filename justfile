@@ -74,6 +74,15 @@ test-backend:
 machete:
     cargo machete
 
+# Build the rustdoc site locally, exactly as the docs workflow does
+[unix]
+docs:
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --target wasm32-unknown-unknown
+
+[windows]
+docs:
+    $env:RUSTDOCFLAGS = "-D warnings"; cargo doc --no-deps --workspace --target wasm32-unknown-unknown
+
 # Run the full validation suite used in CI
 validate: lint fmt-check test machete
 

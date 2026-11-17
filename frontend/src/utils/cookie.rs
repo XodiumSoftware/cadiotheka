@@ -1,9 +1,9 @@
 //! Browser cookie reading for non-`HttpOnly` cookies set by the backend.
 //!
 //! The session cookie is `HttpOnly` and therefore invisible to the frontend.
-//! The backend also sets [`AUTH_SESSION_HINT_COOKIE`], a JavaScript-readable
-//! cookie that only states whether a session exists, so the app can skip the
-//! `/auth/me` request for anonymous visitors.
+//! The backend also sets [`AUTH_SESSION_HINT_COOKIE`](shared::routes::AUTH_SESSION_HINT_COOKIE),
+//! a JavaScript-readable cookie that only states whether a session exists, so the
+//! app can skip the `/auth/me` request for anonymous visitors.
 
 use shared::routes::AUTH_SESSION_HINT_COOKIE;
 use wasm_bindgen::JsCast;

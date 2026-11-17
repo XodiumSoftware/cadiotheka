@@ -1,8 +1,9 @@
 //! Procedural HDR environment (skybox) for image-based lighting.
 //!
 //! An equirectangular HDR map is generated in code and converted into an IBL
-//! environment used by [`AmbientLight`]. A matching [`Skybox`] object can be
-//! rendered as the background.
+//! environment used by [`AmbientLight`](three_d::renderer::AmbientLight). A
+//! matching [`Skybox`](three_d::renderer::Skybox) object can be rendered as the
+//! background.
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
