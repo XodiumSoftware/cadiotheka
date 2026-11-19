@@ -1,10 +1,5 @@
 use thousands::Separable;
 
-/// Strip a `-dirty` suffix from a Git SHA, if present.
-pub fn clean_sha(sha: &str) -> &str {
-    sha.strip_suffix("-dirty").unwrap_or(sha)
-}
-
 /// Returns the uppercase first letter of a string, or `?` if empty.
 pub fn placeholder_letter(title: &str) -> String {
     title
@@ -199,20 +194,6 @@ mod tests {
         assert_eq!(format_duration_ago(time::Duration::weeks(1)), "1 week ago");
         assert_eq!(format_duration_ago(time::Duration::days(31)), "1 month ago");
         assert_eq!(format_duration_ago(time::Duration::days(366)), "1 year ago");
-    }
-
-    #[test]
-    fn clean_sha_only_strips_trailing_dirty() {
-        assert_eq!(clean_sha("abc123-dirty-foo"), "abc123-dirty-foo");
-        assert_eq!(clean_sha(""), "");
-        assert_eq!(clean_sha("-dirty"), "");
-        assert_eq!(clean_sha("abc123-dirty-dirty"), "abc123-dirty");
-    }
-
-    #[test]
-    fn clean_sha_removes_dirty_suffix() {
-        assert_eq!(clean_sha("abc123-dirty"), "abc123");
-        assert_eq!(clean_sha("abc123"), "abc123");
     }
 
     #[test]
