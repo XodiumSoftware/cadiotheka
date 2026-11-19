@@ -74,7 +74,7 @@ three-d = { version = "0.19.0", default-features = false, features = [
     "image",
 ] }
 three-d-asset = { version = "0.10.0", features = ["gltf", "png", "jpeg"] }
-uuid = { version = "1.29.2", features = ["v4", "serde", "js"] }
+uuid = { version = "1.29.3", features = ["v4", "serde", "js"] }
 base64 = "0.23.1"
 cookie = "0.18.2"
 wasm-bindgen-futures = "0.4.80"

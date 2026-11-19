@@ -16,7 +16,7 @@ hmac = "0.13.0"
 sha2 = "0.11.1"
 rand = "0.10.4"
 getrandom = { version = "0.4.3", features = ["wasm_js"] }
-uuid = { version = "1.29.2", features = ["v4", "serde", "js"] }
+uuid = { version = "1.29.3", features = ["v4", "serde", "js"] }
 base64 = "0.23.1"
 time = { version = "0.3.55", features = ["formatting", "parsing", "serde"] }
 url = "2.5.8"
@@ -30,8 +30,8 @@ shared = { path = "../shared" }
 p256 = { version = "0.14.0", features = ["ecdsa"] }
 ed25519-dalek = "3.0.0"
 serde_cbor_2 = "0.13.0"
-ifc-lite-core = "28.2.0"
-ifc-lite-export = "28.2.0"
+ifc-lite-core = "28.3.0"
+ifc-lite-export = "28.3.0"
 
 [lints]
 workspace = true
