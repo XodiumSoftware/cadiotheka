@@ -28,8 +28,6 @@ pub mod components {
 
     /// Reusable interface widgets.
     pub mod ui {
-        /// "Buy me a coffee" support link.
-        pub mod buy_me_a_coffee;
         /// Decorative corner bracket frame.
         pub mod corner_frame;
         /// Transition and fade effects.
@@ -88,7 +86,6 @@ pub mod components {
         ICON_HEADING, ICON_ITALIC, ICON_LINK, ICON_LIST_BULLET, ICON_LIST_NUMBERED, ICON_RESET,
         ICON_TASK,
     };
-    pub use ui::buy_me_a_coffee::BuyMeACoffeeLogo;
     pub use ui::corner_frame::CornerFrame;
     pub use ui::effects::section_fade::FadeOverlay;
     pub use ui::logo::Logo;

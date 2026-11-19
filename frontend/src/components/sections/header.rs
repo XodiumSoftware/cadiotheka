@@ -1,4 +1,3 @@
-use crate::components::ui::buy_me_a_coffee::BuyMeACoffeeLogo;
 use crate::components::ui::logo::Logo;
 use crate::components::ui::modals::base::BaseModal;
 use crate::contexts::{
@@ -480,17 +479,6 @@ pub fn Header() -> impl IntoView {
                 </div>
 
                 <div class="navbar-end flex items-center gap-3" node_ref=account_menu_ref>
-                    <a
-                        href="https://buymeacoffee.com/illyrius"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="btn btn-primary btn-lift flex items-center justify-center w-10 min-w-0 px-0 tooltip tooltip-bottom"
-                        data-tip="Buy Me A Coffee"
-                        aria-label="Buy me a coffee"
-                    >
-                        <BuyMeACoffeeLogo class="w-6 h-6" />
-                    </a>
-
                     <button
                         type="button"
                         class="btn btn-primary hover:btn-warning btn-lift tooltip tooltip-bottom"
