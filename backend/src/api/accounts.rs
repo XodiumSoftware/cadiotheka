@@ -324,8 +324,8 @@ pub(crate) async fn list_accounts(req: Request, ctx: RouteContext<()>) -> Result
         crate::cache::ACCOUNTS_LIST_PATH,
         url.query(),
     );
-    if let Some(cached) = crate::cache::get(&cache_key).await {
-        return Ok(cached);
+    if let Some(body) = crate::cache::get(&cache_key).await {
+        return crate::cache::list_response(&body);
     }
 
     let (limit, offset) = list_window(&url);
@@ -338,23 +338,21 @@ pub(crate) async fn list_accounts(req: Request, ctx: RouteContext<()>) -> Result
         .await?;
     let accounts: Vec<PublicAccount> = result.results::<PublicAccount>()?;
     let body = serde_json::to_string(&accounts)?;
-    let response = Response::ok(&body)?.with_headers(crate::cache::cache_headers());
-    crate::cache::store(&cache_key, &body, &crate::utils::public_origin(&req)).await;
-    Ok(response)
+    crate::cache::put(&cache_key, &body).await?;
+    crate::cache::list_response(&body)
 }
 
 /// Purges the cached public account listing after a write.
 ///
-/// Listings are cached per page under their request URL, so invalidation is
-/// best-effort: a failed purge leaves stale data visible until the short TTL
-/// expires.
+/// Entries are keyed per page, so only the unpaged listing is purged here; the
+/// short TTL bounds how long a paged entry can stay stale.
 async fn invalidate_account_list(req: &Request) {
-    crate::cache::delete(&crate::cache::list_cache_key(
+    let key = crate::cache::list_cache_key(
         &crate::utils::public_origin(req),
         crate::cache::ACCOUNTS_LIST_PATH,
         None,
-    ))
-    .await;
+    );
+    crate::cache::delete(&key).await;
 }
 
 /// Responds with the public account matching the `:id` path parameter, or 404

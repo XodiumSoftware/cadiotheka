@@ -1,10 +1,9 @@
 use worker::{Request, Response, Result};
 
-/// Origins allowed to call the API from a browser.
+/// Fallback origin used when a request carries no usable `Origin` header.
 ///
-/// `http://localhost:8080` is included so developers can hit the local backend
-/// directly (not only through Trunk's proxy) during local development. It is
-/// never sent by a production deployment.
+/// This is the production site, not an allowlist of the only sites permitted
+/// to call the API: see [`select_allowed_origin`].
 const ALLOWED_ORIGINS: &[&str] = &[
     "https://cadiotheka.com",
     "https://www.cadiotheka.com",
@@ -13,8 +12,14 @@ const ALLOWED_ORIGINS: &[&str] = &[
     "http://localhost:8080",
 ];
 
-/// Adds CORS headers to a response so the frontend (served from a different
-/// origin) can read the JSON body.
+/// Adds CORS headers to a response so a frontend served from a different
+/// origin can read the JSON body.
+///
+/// `origin` is the requesting page's own origin, which is echoed back. On its
+/// own, an echoed origin grants no more than `*` would; together with
+/// `Access-Control-Allow-Credentials`, though, it lets that origin read a
+/// signed-in response. This is not an allowlist: treat any endpoint that acts
+/// with the caller's session as reachable from any origin that calls it.
 ///
 /// Returns the original response unchanged if its headers are immutable
 /// (e.g. redirects created with `Response::redirect`). Propagates any other
@@ -29,9 +34,6 @@ pub(crate) fn add_cors_headers(mut resp: Response, origin: &str) -> Result<Respo
 }
 
 /// Writes the CORS response headers for `origin` into `headers`.
-///
-/// Split out from [`add_cors_headers`] so responses built for the edge cache
-/// can carry the same headers at write time.
 pub(crate) fn apply_cors_headers(headers: &worker::Headers, origin: &str) -> Result<()> {
     headers.set("Access-Control-Allow-Origin", origin)?;
     headers.set(
@@ -72,26 +74,41 @@ pub(crate) fn cors_preflight(origin: &str) -> Result<Response> {
     Ok(resp)
 }
 
-/// Returns the request origin if it is in the allowed list, otherwise the
-/// first allowed origin as a safe fallback.
+/// Returns the origin to echo in CORS headers for `req`.
+///
+/// The browser's `Origin` header is echoed back so any frontend can read the
+/// public API, including a preview deployment or a local Trunk server. A
+/// missing header (non-browser clients) falls back to the first entry of
+/// [`ALLOWED_ORIGINS`], which is only ever read by clients that ignore CORS.
 pub(crate) fn allowed_origin(req: &Request) -> String {
     select_allowed_origin(req.headers().get("Origin").ok().flatten().as_deref())
 }
 
-/// Selects an allowed origin from an optional request origin header value.
+/// Selects the origin to echo from an optional request origin header value.
 ///
-/// If the origin is in [`ALLOWED_ORIGINS`] it is returned verbatim; otherwise
-/// the first allowed origin is returned as a safe default.
+/// Only a syntactically valid `origin` (a scheme and a host, no path) is
+/// echoed; anything else — a missing header, or a crafted value that would
+/// produce a malformed header — falls back to the first allowed origin.
 pub(crate) fn select_allowed_origin(origin: Option<&str>) -> String {
     origin
-        .and_then(|value| {
-            ALLOWED_ORIGINS
-                .iter()
-                .find(|&&allowed| allowed == value)
-                .map(|_| value)
-        })
-        .unwrap_or_else(|| ALLOWED_ORIGINS[0])
+        .filter(|value| is_valid_origin(value))
+        .unwrap_or(ALLOWED_ORIGINS[0])
         .to_string()
+}
+
+/// Whether `value` is shaped like a browser origin: `scheme://host[:port]`
+/// with nothing after it.
+fn is_valid_origin(value: &str) -> bool {
+    let Ok(url) = url::Url::parse(value) else {
+        return false;
+    };
+    matches!(url.scheme(), "http" | "https")
+        && url.host_str().is_some_and(|host| !host.is_empty())
+        && url.path() == "/"
+        && url.query().is_none()
+        && url.fragment().is_none()
+        && url.username().is_empty()
+        && url.password().is_none()
 }
 
 /// Builds a generic 500 response with CORS headers so frontend error handlers
@@ -139,10 +156,34 @@ mod tests {
     }
 
     #[test]
-    fn allowed_origin_falls_back_for_missing_or_unknown_origin() {
+    fn allowed_origin_falls_back_for_missing_origin() {
         assert_eq!(select_allowed_origin(None), "https://cadiotheka.com");
+    }
+
+    #[test]
+    fn allowed_origin_echoes_any_well_formed_origin() {
         assert_eq!(
-            select_allowed_origin(Some("https://evil.com")),
+            select_allowed_origin(Some("https://preview.cadiotheka.pages.dev")),
+            "https://preview.cadiotheka.pages.dev"
+        );
+        assert_eq!(
+            select_allowed_origin(Some("http://192.168.1.10:8080")),
+            "http://192.168.1.10:8080"
+        );
+    }
+
+    #[test]
+    fn allowed_origin_rejects_malformed_values() {
+        assert_eq!(
+            select_allowed_origin(Some("https://evil.example/path")),
+            "https://cadiotheka.com"
+        );
+        assert_eq!(
+            select_allowed_origin(Some("https://evil.example, https://cadiotheka.com")),
+            "https://cadiotheka.com"
+        );
+        assert_eq!(
+            select_allowed_origin(Some("null")),
             "https://cadiotheka.com"
         );
     }

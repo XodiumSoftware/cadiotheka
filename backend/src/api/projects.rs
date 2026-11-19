@@ -173,8 +173,8 @@ pub(crate) async fn list_projects(req: Request, ctx: RouteContext<()>) -> Result
         crate::cache::PROJECTS_LIST_PATH,
         url.query(),
     );
-    if let Some(cached) = crate::cache::get(&cache_key).await {
-        return Ok(cached);
+    if let Some(body) = crate::cache::get(&cache_key).await {
+        return crate::cache::list_response(&body);
     }
 
     let (limit, offset) = list_window(&url);
@@ -187,28 +187,21 @@ pub(crate) async fn list_projects(req: Request, ctx: RouteContext<()>) -> Result
         .await?;
     let projects: Vec<Project> = result.results::<Project>()?;
     let body = serde_json::to_string(&projects)?;
-    let response = json_list_response(&body)?;
-    crate::cache::store(&cache_key, &body, &crate::utils::public_origin(&req)).await;
-    Ok(response)
-}
-
-/// Builds a JSON response carrying the cache headers used for public listings.
-fn json_list_response(body: &str) -> Result<Response> {
-    Response::ok(body).map(|response| response.with_headers(crate::cache::cache_headers()))
+    crate::cache::put(&cache_key, &body).await?;
+    crate::cache::list_response(&body)
 }
 
 /// Purges the cached public project listing after a write.
 ///
-/// Listings are cached per page under their request URL, so invalidation is
-/// best-effort: a failed purge leaves stale data visible until the short TTL
-/// expires.
+/// Entries are keyed per page, so only the unpaged listing is purged here; the
+/// short TTL bounds how long a paged entry can stay stale.
 async fn invalidate_project_list(req: &Request) {
-    crate::cache::delete(&crate::cache::list_cache_key(
+    let key = crate::cache::list_cache_key(
         &crate::utils::public_origin(req),
         crate::cache::PROJECTS_LIST_PATH,
         None,
-    ))
-    .await;
+    );
+    crate::cache::delete(&key).await;
 }
 
 /// Responds with the project matching the `:id` path parameter, or 404 if not found.

@@ -306,12 +306,9 @@ pub(crate) async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result
         (None, None) => {}
     }
 
-    crate::cache::delete(&crate::cache::list_cache_key(
-        &public_origin(&req),
-        crate::cache::ACCOUNTS_LIST_PATH,
-        None,
-    ))
-    .await;
+    let key =
+        crate::cache::list_cache_key(&public_origin(&req), crate::cache::ACCOUNTS_LIST_PATH, None);
+    crate::cache::delete(&key).await;
 
     Response::empty()
 }
