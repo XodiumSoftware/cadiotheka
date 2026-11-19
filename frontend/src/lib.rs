@@ -35,6 +35,13 @@ pub mod components {
             /// Scroll-triggered section fade overlay.
             pub mod section_fade;
         }
+        /// Brand marks for outbound links.
+        pub mod icons {
+            /// Buy Me a Coffee cup.
+            pub mod buy_me_a_coffee;
+            /// GitHub Octocat.
+            pub mod github;
+        }
         /// Project logo.
         pub mod logo;
         /// Read-only Markdown rendering.
@@ -88,6 +95,7 @@ pub mod components {
     };
     pub use ui::corner_frame::CornerFrame;
     pub use ui::effects::section_fade::FadeOverlay;
+    pub use ui::icons::{buy_me_a_coffee::BuyMeACoffeeIcon, github::GitHubIcon};
     pub use ui::logo::Logo;
     pub use ui::markdown::MarkdownView;
     pub use ui::markdown_editor::MarkdownEditor;
