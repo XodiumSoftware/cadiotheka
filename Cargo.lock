@@ -853,7 +853,6 @@ dependencies = [
  "ammonia",
  "base64 0.23.1",
  "console_error_panic_hook",
- "cookie",
  "fuzzy-matcher",
  "gloo-net 0.8.0",
  "gloo-storage",

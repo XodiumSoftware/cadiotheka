@@ -223,8 +223,6 @@ pub mod three_d_viewer {
 pub mod utils {
     /// Color parsing and conversion.
     pub mod color;
-    /// Non-`HttpOnly` cookie reading.
-    pub mod cookie;
     /// DOM querying and event helpers.
     pub mod dom;
     /// Number, date, and size formatting.
@@ -239,7 +237,6 @@ pub mod utils {
     pub mod url;
 
     pub use color::*;
-    pub use cookie::{cookie_value, has_session_hint};
     pub use dom::*;
     pub use format::*;
     pub use math::*;

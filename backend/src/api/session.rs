@@ -10,11 +10,9 @@ use crate::utils::{
     bad_request, db, is_https_request, kv, public_origin, rust_err, safe_redirect_target,
     unauthorized,
 };
-use shared::routes::AUTH_SESSION_HINT_COOKIE;
 
 const SESSION_COOKIE_NAME_PREFIX: &str = "__Host-session";
 const SESSION_COOKIE_NAME_PLAIN: &str = "session";
-const SESSION_COOKIE_NAME_PLAIN_HINT: &str = "session-hint";
 const SESSION_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
 
 /// Stored session metadata, keyed by session id in KV.
@@ -106,49 +104,8 @@ fn build_clear_cookie(name: &str, is_https: bool) -> String {
         .to_string()
 }
 
-/// Builds the `Set-Cookie` header value for the session hint.
-///
-/// The session cookie is `HttpOnly`, so the frontend cannot tell whether a
-/// visitor is signed in and would have to call `/auth/me` on every page load,
-/// provoking a 401 for anonymous visitors.
-///
-/// The hint is deliberately readable from JavaScript and carries no secret: it
-/// only says "a session cookie exists". It is not accepted as authentication;
-/// every authenticated request is still verified through the signed session
-/// cookie. Anything with access to `document.cookie` could forge it, which at
-/// worst causes one extra `/auth/me` request that returns 401.
-fn build_session_hint_cookie(is_https: bool, is_set: bool) -> String {
-    let same_site = if is_https {
-        SameSite::None
-    } else {
-        SameSite::Lax
-    };
-    let hint_name = if is_https {
-        AUTH_SESSION_HINT_COOKIE
-    } else {
-        SESSION_COOKIE_NAME_PLAIN_HINT
-    };
-    let max_age = if is_set {
-        i64::try_from(SESSION_TTL_SECONDS).unwrap_or(i64::MAX)
-    } else {
-        0
-    };
-    Cookie::build((hint_name, if is_set { "1" } else { "" }))
-        .max_age(time::Duration::seconds(max_age))
-        .path("/")
-        .http_only(false)
-        .secure(is_https)
-        .same_site(same_site)
-        .build()
-        .to_string()
-}
-
 /// Creates a session for the given account and returns the `Set-Cookie` header
-/// values the caller attaches to a redirect response.
-///
-/// The first value is the signed `HttpOnly` session cookie; the second is the
-/// JavaScript-readable session hint ([`build_session_hint_cookie`]) that lets
-/// the frontend skip `/auth/me` for anonymous visitors.
+/// value the caller attaches to a redirect response.
 pub(crate) async fn create_session(
     ctx: &RouteContext<()>,
     account: &Account,
@@ -178,7 +135,7 @@ pub(crate) async fn create_session(
         public_origin(req),
         cookie_name
     );
-    Ok(vec![value, build_session_hint_cookie(is_https, true)])
+    Ok(vec![value])
 }
 
 /// Reads the session cookie from the request, validates its signature, looks it
@@ -313,6 +270,17 @@ pub(crate) async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result
     Response::empty()
 }
 
+/// Reports whether the request carries a valid session.
+///
+/// Returns only a boolean: the session cookie is `HttpOnly`, and the frontend
+/// runs on a different origin from the API, so a page has no other way to find
+/// out. Nothing about the account is returned, and the endpoint is safe to
+/// call for anonymous visitors — it answers `401` to nobody.
+pub(crate) async fn session_status(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let authenticated = read_session(&req, &ctx).await?.is_some();
+    Response::from_json(&serde_json::json!({ "authenticated": authenticated }))
+}
+
 /// Returns the currently authenticated account wrapped in `{ "account": ... }`,
 /// or 401 if the request is not authenticated.
 pub(crate) async fn me(req: Request, ctx: RouteContext<()>) -> Result<Response> {
@@ -391,7 +359,6 @@ pub(crate) async fn logout(req: Request, ctx: RouteContext<()>) -> Result<Respon
 fn build_logout_response(origin: String, cookie_name: &str, is_https: bool) -> Result<Response> {
     let headers = Headers::new();
     headers.append("Set-Cookie", &build_clear_cookie(cookie_name, is_https))?;
-    headers.append("Set-Cookie", &build_session_hint_cookie(is_https, false))?;
     headers.set("Location", &origin)?;
 
     Ok(ResponseBuilder::new()
@@ -470,27 +437,11 @@ mod tests {
     }
 
     #[test]
-    fn session_hint_is_readable_from_javascript() {
-        let cookie = build_session_hint_cookie(true, true);
+    fn session_cookie_is_httponly_on_https() {
+        let cookie = build_session_cookie("__Host-session", "abc", true);
         assert!(
-            !cookie.to_lowercase().contains("httponly"),
-            "the hint must be readable from JavaScript: {cookie}"
+            cookie.to_lowercase().contains("httponly"),
+            "the session cookie must never be readable from JavaScript: {cookie}"
         );
-        assert!(cookie.starts_with(AUTH_SESSION_HINT_COOKIE));
-        assert!(cookie.contains("Secure"));
-        assert!(cookie.contains("SameSite=None"));
-    }
-
-    #[test]
-    fn http_session_hint_drops_the_host_prefix() {
-        let cookie = build_session_hint_cookie(false, true);
-        assert!(cookie.starts_with(SESSION_COOKIE_NAME_PLAIN_HINT));
-        assert!(!cookie.to_lowercase().contains("secure"));
-    }
-
-    #[test]
-    fn clearing_session_hint_expires_it() {
-        let cookie = build_session_hint_cookie(true, false);
-        assert!(cookie.contains("Max-Age=0"));
     }
 }

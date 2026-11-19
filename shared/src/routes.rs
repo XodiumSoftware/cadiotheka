@@ -52,12 +52,14 @@ pub const AUTH_ME: &str = "/auth/me";
 pub const AUTH_ME_VIEWER_PREFERENCES: &str = "/auth/me/viewer-preferences";
 /// Logout endpoint.
 pub const AUTH_LOGOUT: &str = "/auth/logout";
-/// Non-`HttpOnly` companion cookie set alongside the session.
+/// Session status endpoint.
 ///
-/// The session cookie itself is `HttpOnly`, so the frontend cannot see whether
-/// a visitor is signed in. This cookie carries only that answer: the frontend
-/// reads it to skip the `/auth/me` request for anonymous visitors.
-pub const AUTH_SESSION_HINT_COOKIE: &str = "__Host-session-hint";
+/// Answers only whether a valid session cookie accompanied the request. The
+/// session cookie is `HttpOnly`, so the frontend cannot read it, and it is
+/// host-only on the API origin, so a page on another origin cannot see it
+/// either. The app calls this before `/auth/me` to avoid provoking a 401 for
+/// anonymous visitors.
+pub const AUTH_SESSION: &str = "/auth/session";
 
 /// Passkey registration begin endpoint (authenticated).
 pub const AUTH_PASSKEY_REGISTER_BEGIN: &str = "/auth/passkey/register/begin";

@@ -1,8 +1,8 @@
 use shared::routes::{
     ACCOUNTS, AUTH_LINKED_PROVIDER, AUTH_LINKED_PROVIDERS, AUTH_LOGOUT, AUTH_ME,
     AUTH_ME_VIEWER_PREFERENCES, AUTH_PASSKEY, AUTH_PASSKEY_LOGIN_BEGIN, AUTH_PASSKEY_LOGIN_FINISH,
-    AUTH_PASSKEY_REGISTER_BEGIN, AUTH_PASSKEY_REGISTER_FINISH, AUTH_PASSKEYS, IFCS, LOGIN_GITHUB,
-    LOGIN_GOOGLE, PROJECT, PROJECT_DOWNLOADS, PROJECT_FAVORITES, PROJECT_GLBS,
+    AUTH_PASSKEY_REGISTER_BEGIN, AUTH_PASSKEY_REGISTER_FINISH, AUTH_PASSKEYS, AUTH_SESSION, IFCS,
+    LOGIN_GITHUB, LOGIN_GOOGLE, PROJECT, PROJECT_DOWNLOADS, PROJECT_FAVORITES, PROJECT_GLBS,
     PROJECT_GLBS_METADATA, PROJECT_IFC, PROJECT_VERSION, PROJECT_VERSIONS, PROJECTS,
 };
 
@@ -153,6 +153,15 @@ fn join_root_context(path: &str, origin: Option<&str>) -> String {
 /// Returns the full URL for the linked OAuth providers endpoint.
 pub fn linked_providers_url() -> String {
     backend_url(AUTH_LINKED_PROVIDERS)
+}
+
+/// Returns the full URL for the session status endpoint.
+///
+/// The app calls this before `/auth/me` to avoid a 401 for anonymous visitors;
+/// the session cookie is `HttpOnly` and host-only on this origin, so the page
+/// cannot answer the question itself.
+pub fn session_url() -> String {
+    backend_url(AUTH_SESSION)
 }
 
 /// Returns the full URL for the current authenticated account endpoint.

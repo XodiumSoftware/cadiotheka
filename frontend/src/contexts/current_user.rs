@@ -1,23 +1,21 @@
 use crate::data::AccountData;
 use crate::data::error::RequestError;
-use crate::utils::cookie::has_session_hint;
 use crate::utils::url::{
-    linked_provider_url, linked_providers_url, me_url, me_viewer_preferences_url,
+    linked_provider_url, linked_providers_url, me_url, me_viewer_preferences_url, session_url,
 };
 use crate::utils::{LAST_LOGIN_METHOD_KEY, PENDING_LOGIN_METHOD_KEY, key as storage_key};
 use gloo_net::http::Request;
 use gloo_storage::{LocalStorage, SessionStorage, Storage as _};
 use leptos::prelude::*;
-use shared::routes::AUTH_SESSION_HINT_COOKIE;
 use web_sys::RequestCredentials;
 
 /// Provides and reads the currently logged-in user.
 ///
-/// On startup this context fetches `/auth/me`, but only when the backend's
-/// non-`HttpOnly` session hint cookie is present: a visitor who has never
-/// signed in is settled as anonymous without an API round trip. If the hint is
-/// stale (the server-side session expired while the cookie lived on) the fetch
-/// returns 401 and the hint is cleared so the next load skips the request too.
+/// On startup this context asks the backend whether a session exists, and only
+/// then fetches `/auth/me`: a visitor who has never signed in is settled as
+/// anonymous without provoking a 401. The question cannot be answered from
+/// `document.cookie`, because the session cookie is `HttpOnly` and host-only on
+/// the API origin while this page runs on the site origin.
 #[derive(Clone, Copy)]
 pub struct CurrentUserContext {
     /// Whether the current user is `Some`; `is_loading` is `true` until the
@@ -44,7 +42,7 @@ impl CurrentUserContext {
         });
 
         leptos::task::spawn_local(async move {
-            let fetched = if has_session_hint() {
+            let fetched = if fetch_session_status(&session_url()).await {
                 fetch_current_user().await.unwrap_or(None)
             } else {
                 None
@@ -69,9 +67,7 @@ impl CurrentUserContext {
 
 /// Fetch the currently authenticated account from the backend.
 ///
-/// Returns `Ok(None)` when the user is not logged in. A 401 also clears the
-/// backend's session hint cookie, because the server has already rejected the
-/// session it advertised.
+/// Returns `Ok(None)` when the user is not logged in.
 ///
 /// # Errors
 ///
@@ -94,10 +90,7 @@ pub async fn fetch_current_user() -> Result<Option<AccountData>, RequestError> {
             })?;
             Ok(Some(parsed.account))
         }
-        Ok(response) if response.status() == 401 => {
-            clear_session_hint();
-            Ok(None)
-        }
+        Ok(response) if response.status() == 401 => Ok(None),
         Ok(response) => {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
@@ -117,16 +110,40 @@ struct MeResponse {
     account: AccountData,
 }
 
-/// Removes the backend's session hint cookie from the browser.
+/// Fetches whether the browser holds a session, so the app can skip `/auth/me`
+/// for anonymous visitors.
 ///
-/// The hint is deliberately redundant with the server-side session: it exists
-/// only so the frontend can skip `/auth/me`. A 401 therefore expires it rather
-/// than leaving a cookie that lies. Only the hint is touched here; the session
-/// cookie is `HttpOnly` and is cleared by the backend on logout.
-fn clear_session_hint() {
-    crate::utils::cookie::set_document_cookie(&format!(
-        "{AUTH_SESSION_HINT_COOKIE}=; Max-Age=0; Path=/; SameSite=None; Secure"
-    ));
+/// This cannot be answered from `document.cookie`: the session cookie is
+/// `HttpOnly`, and any JavaScript-readable companion would live on the API
+/// origin, where this page cannot see it. The endpoint returns only a boolean
+/// and is safe to call when signed out.
+///
+/// A failed status request reports `false`, which leaves a signed-in visitor
+/// rendered as anonymous for that page load. That is the deliberate tradeoff:
+/// the alternative is a 401 on every page load for visitors who never signed
+/// in.
+async fn fetch_session_status(url: &str) -> bool {
+    let Ok(response) = Request::get(url)
+        .credentials(RequestCredentials::Include)
+        .send()
+        .await
+    else {
+        return false;
+    };
+    if !response.ok() {
+        return false;
+    }
+    response
+        .text()
+        .await
+        .ok()
+        .and_then(|body| serde_json::from_str::<SessionStatusResponse>(&body).ok())
+        .is_some_and(|status| status.authenticated)
+}
+
+#[derive(serde::Deserialize)]
+struct SessionStatusResponse {
+    authenticated: bool,
 }
 
 /// Fetch the account-scoped viewer preferences JSON blob from the backend.

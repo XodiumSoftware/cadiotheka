@@ -85,6 +85,7 @@ pub fn build_router() -> Router<'static, ()> {
             api::accounts::list_linked_providers,
         )
         .delete_async(routes::AUTH_LINKED_PROVIDER, api::accounts::unlink_provider)
+        .get_async(routes::AUTH_SESSION, api::session::session_status)
         .get_async(routes::AUTH_ME, api::session::me)
         .put_async(routes::AUTH_ME, api::session::update_me)
         .get_async(
