@@ -31,7 +31,7 @@ p256 = { version = "0.14.0", features = ["ecdsa"] }
 ed25519-dalek = "3.0.0"
 serde_cbor_2 = "0.13.0"
 ifc-lite-core = "30.0.0"
-ifc-lite-export = "28.3.0"
+ifc-lite-export = "30.0.0"
 
 [lints]
 workspace = true
