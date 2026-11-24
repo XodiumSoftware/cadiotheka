@@ -729,47 +729,6 @@ fn asset_headers(content_type: &str) -> Result<Headers> {
     Ok(headers)
 }
 
-/// Serves a binary asset stored in R2, reusing an edge-cached body when one
-/// exists.
-///
-/// Cache hits are checked first so a model viewed repeatedly never pays for an
-/// R2 read. Misses stream the object straight through rather than buffering it;
-/// the entry is populated elsewhere, either by the GLB conversion (which holds
-/// the bytes in memory anyway) or by a request that already has them in hand.
-async fn serve_asset(
-    req: &Request,
-    ctx: &RouteContext<()>,
-    bucket_key: &str,
-    default_content_type: &str,
-    disposition: Option<&str>,
-) -> Result<Response> {
-    if let Some(key) = crate::cache::asset_cache_key(req)
-        && let Some(mut cached) = crate::cache::get_asset(&key).await
-        && let Ok(bytes) = cached.bytes().await
-    {
-        return Ok(Response::from_bytes(bytes)?.with_headers(cached_asset_headers(&cached)?));
-    }
-
-    let Some(object) = assets_bucket(ctx)?.get(bucket_key).execute().await? else {
-        return not_found("Not found");
-    };
-
-    let content_type = object
-        .http_metadata()
-        .content_type
-        .unwrap_or_else(|| default_content_type.to_string());
-    let headers = asset_headers(&content_type)?;
-    if let Some(disposition) = disposition {
-        headers.set("Content-Disposition", disposition)?;
-    }
-
-    let Some(body) = object.body() else {
-        return Err(worker::Error::RustError("asset object has no body".into()));
-    };
-
-    Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
-}
-
 /// Rebuilds the headers of a cached asset body.
 ///
 /// Stored entries carry the headers they were written with, but CORS has not
@@ -786,18 +745,20 @@ fn cached_asset_headers(cached: &Response) -> Result<Headers> {
     Ok(headers)
 }
 
-/// Serves an IFC model from R2 by its version id and filename.
+/// Redirects a legacy IFC download link to the public R2 object.
 ///
-/// The version download counter is bumped before the response is returned but
-/// after the cached body has been located, so repeat downloads skip the R2 read
-/// that used to dominate this handler.
-pub(crate) async fn serve_ifc(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+/// IFC files used to stream through this Worker, which cost an invocation, a D1
+/// lookup, and a full copy of the body for every download. The frontend now
+/// links straight at the asset domain, so this route only has to keep old links
+/// (and a browser following a cached page) working. Downloads are counted by
+/// the authenticated `PROJECT_DOWNLOADS` call the frontend makes, not here.
+pub(crate) async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let version_id = required_param(&ctx, "version_id")?;
     let filename = required_param(&ctx, "filename")?;
 
     let result = db(&ctx)?
         .prepare("SELECT ifc_key FROM project_versions WHERE id = ?1 AND filename = ?2")
-        .bind(&[version_id.clone().into(), filename.clone().into()])?
+        .bind(&[version_id.into(), filename.into()])?
         .all()
         .await?;
     let keys: Vec<VersionKey> = result.results::<VersionKey>()?;
@@ -805,84 +766,17 @@ pub(crate) async fn serve_ifc(req: Request, ctx: RouteContext<()>) -> Result<Res
         return not_found("Not found");
     };
 
-    let disposition = attachment_content_disposition(&filename);
-    let response = serve_asset(
-        &req,
-        &ctx,
-        &key.ifc_key,
-        "application/octet-stream",
-        Some(&disposition),
-    )
-    .await?;
+    let origin = ctx.env.var("ASSET_ORIGIN").map(|var| var.to_string())?;
+    let location = format!("{}/{}", origin.trim_end_matches('/'), key.ifc_key);
 
-    let _ = db(&ctx)?
-        .prepare("UPDATE project_versions SET downloads = downloads + 1 WHERE id = ?1")
-        .bind(&[version_id.into()])?
-        .run()
-        .await;
-
-    Ok(response)
+    let headers = Headers::new();
+    headers.set("Location", &location)?;
+    Ok(Response::empty()?.with_status(302).with_headers(headers))
 }
 
 /// Returns the R2 key used to cache a project's converted GLB.
 fn glb_key_for_project(id: &str) -> String {
     format!("ifcs/{id}/model.glb")
-}
-
-/// Builds a `Content-Disposition: attachment` header value for a
-/// user-controlled filename.
-///
-/// The quoted `filename` fallback is restricted to printable ASCII with `"`
-/// and `\` replaced, so the name cannot break out of the quoted string or
-/// inject extra header content. When sanitization changed the name, an
-/// RFC 5987 `filename*` parameter carries the full percent-encoded UTF-8 name.
-fn attachment_content_disposition(filename: &str) -> String {
-    let ascii_filename: String = filename
-        .chars()
-        .map(|c| match c {
-            '"' | '\\' => '_',
-            c if c.is_ascii() && !c.is_ascii_control() => c,
-            _ => '_',
-        })
-        .collect();
-    if ascii_filename == filename {
-        format!("attachment; filename=\"{ascii_filename}\"")
-    } else {
-        format!(
-            "attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{}",
-            rfc5987_encode(filename)
-        )
-    }
-}
-
-/// Percent-encodes a value for an RFC 5987 `filename*` parameter, keeping the
-/// `attr-char` set unencoded as required by the grammar.
-fn rfc5987_encode(value: &str) -> String {
-    use std::fmt::Write as _;
-    let mut out = String::with_capacity(value.len());
-    for byte in value.bytes() {
-        match byte {
-            b'0'..=b'9'
-            | b'a'..=b'z'
-            | b'A'..=b'Z'
-            | b'!'
-            | b'#'
-            | b'$'
-            | b'&'
-            | b'+'
-            | b'-'
-            | b'.'
-            | b'^'
-            | b'_'
-            | b'`'
-            | b'|'
-            | b'~' => out.push(char::from(byte)),
-            _ => {
-                let _ = write!(out, "%{byte:02X}");
-            }
-        }
-    }
-    out
 }
 
 /// Returns the R2 key used to cache per-primitive metadata for the GLB.
@@ -1525,38 +1419,6 @@ mod tests {
             description: String::new(),
             tags: vec![],
         }
-    }
-
-    #[test]
-    fn content_disposition_keeps_plain_ascii_filename() {
-        assert_eq!(
-            attachment_content_disposition("mountain-bike.ifc"),
-            "attachment; filename=\"mountain-bike.ifc\""
-        );
-    }
-
-    #[test]
-    fn content_disposition_neutralizes_quotes_and_backslashes() {
-        assert_eq!(
-            attachment_content_disposition("evil\".ifc \\ x\".ifc"),
-            "attachment; filename=\"evil_.ifc _ x_.ifc\"; filename*=UTF-8''evil%22.ifc%20%5C%20x%22.ifc"
-        );
-    }
-
-    #[test]
-    fn content_disposition_adds_rfc5987_parameter_for_utf8_names() {
-        assert_eq!(
-            attachment_content_disposition("Schéma v2.ifc"),
-            "attachment; filename=\"Sch_ma v2.ifc\"; filename*=UTF-8''Sch%C3%A9ma%20v2.ifc"
-        );
-    }
-
-    #[test]
-    fn content_disposition_strips_control_characters() {
-        assert_eq!(
-            attachment_content_disposition("a\rb\n.ifc"),
-            "attachment; filename=\"a_b_.ifc\"; filename*=UTF-8''a%0Db%0A.ifc"
-        );
     }
 
     #[test]

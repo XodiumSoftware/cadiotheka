@@ -63,3 +63,5 @@ enabled = true
 [vars]
 WEBAUTHN_RP_NAME = "Cadiotheka"
 WEBAUTHN_RP_ID = "cadiotheka.com"
+# Public R2 domain serving project assets, used by the legacy IFC redirect.
+ASSET_ORIGIN = "https://assets.cadiotheka.com"

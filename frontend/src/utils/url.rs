@@ -1,7 +1,7 @@
 use shared::routes::{
     ACCOUNTS, AUTH_LINKED_PROVIDER, AUTH_LINKED_PROVIDERS, AUTH_LOGOUT, AUTH_ME,
     AUTH_ME_VIEWER_PREFERENCES, AUTH_PASSKEY, AUTH_PASSKEY_LOGIN_BEGIN, AUTH_PASSKEY_LOGIN_FINISH,
-    AUTH_PASSKEY_REGISTER_BEGIN, AUTH_PASSKEY_REGISTER_FINISH, AUTH_PASSKEYS, AUTH_SESSION, IFCS,
+    AUTH_PASSKEY_REGISTER_BEGIN, AUTH_PASSKEY_REGISTER_FINISH, AUTH_PASSKEYS, AUTH_SESSION,
     LOGIN_GITHUB, LOGIN_GOOGLE, PROJECT, PROJECT_DOWNLOADS, PROJECT_FAVORITES, PROJECT_GLBS,
     PROJECT_GLBS_METADATA, PROJECT_IFC, PROJECT_VERSION, PROJECT_VERSIONS, PROJECTS,
 };
@@ -18,6 +18,10 @@ const fn backend_origin() -> &'static str {
         "https://api.cadiotheka.com"
     }
 }
+
+/// Public R2 domain that serves project assets without going through the
+/// backend Worker. Set this once the bucket has a custom domain attached.
+const IFC_ASSET_ORIGIN: &str = "https://assets.cadiotheka.com";
 
 /// Builds a full backend URL from a route path.
 fn backend_url(path: &str) -> String {
@@ -84,12 +88,19 @@ pub fn project_glb_metadata_url(id: &str) -> String {
 }
 
 /// Returns the full URL for an IFC file download endpoint.
-pub fn ifc_url(version_id: &str, filename: &str) -> String {
-    backend_url(
-        &IFCS
-            .replace(":version_id", version_id)
-            .replace(":filename", filename),
-    )
+///
+/// IFC files are served straight from the public `PROJECT_ASSETS` R2 domain
+/// rather than through the Worker. The object key is stored on the version row,
+/// so downloads skip a Worker invocation, a D1 lookup, and the streaming copy
+/// through the isolate. The download counter is bumped separately by the
+/// authenticated `PROJECT_DOWNLOADS` call.
+pub fn ifc_url(object_key: &str) -> String {
+    let base = if cfg!(debug_assertions) {
+        ""
+    } else {
+        IFC_ASSET_ORIGIN
+    };
+    format!("{base}/{}", object_key.trim_start_matches('/'))
 }
 
 /// Returns the full URL for a GitHub login endpoint in the root browsing

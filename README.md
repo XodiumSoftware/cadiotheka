@@ -91,7 +91,7 @@ npx wrangler dev
 
 The backend API is available at <http://localhost:8787/data/accounts> by default.
 
-Project assets (IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). The database stores only the generated R2 object key, and the frontend loads assets through backend asset routes.
+Project assets (IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). The database stores only the generated R2 object key, and the frontend downloads IFC files straight from the bucket's public domain (`ASSET_ORIGIN`) rather than through the Worker. The `/data/ifcs/:version_id/:filename` route remains only as a redirect for older links.
 
 The project details modal includes a built-in 3D IFC/GLB viewer with orbit controls, a ground grid, an axes gizmo, view reset, fullscreen, and a debug overlay. Uploaded IFC models are converted to GLB with a visible pipeline status. Camera state is persisted per project in `localStorage` and restored on the next visit.
 
@@ -225,7 +225,15 @@ The static site is placed in `frontend/dist/`.
     - Use callback URLs `https://api.cadiotheka.com/auth/github/callback` and `https://api.cadiotheka.com/auth/google/callback`.
     - If your backend is served from the same origin as the frontend (e.g. via a Cloudflare Pages Function or a zone route), use `https://cadiotheka.com/auth/...` instead.
 
-5. Apply the schemas:
+5. Attach a public domain to the `cadiotheka-assets` bucket and point `ASSET_ORIGIN` at it. The frontend links IFC downloads straight at this host, so without it downloads fail even though uploads succeed.
+
+    ```bash
+    npx wrangler r2 bucket domain add cadiotheka-assets --domain assets.cadiotheka.com
+    ```
+
+    Keep `ASSET_ORIGIN` in `backend/wrangler.toml` and `IFC_ASSET_ORIGIN` in `frontend/src/utils/url.rs` in sync with that hostname.
+
+6. Apply the schemas:
 
     ```bash
     npx wrangler d1 execute cadiotheka --file=backend/schemas/accounts.sql
@@ -237,7 +245,7 @@ The static site is placed in `frontend/dist/`.
 
     Create the first accounts and projects through the deployed application UI or API.
 
-6. Build and deploy:
+7. Build and deploy:
     ```bash
     npx wrangler deploy
     ```

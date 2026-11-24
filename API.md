@@ -73,25 +73,25 @@ and preserves them on replacement; values for those fields in request bodies
 are ignored. `POST /data/projects` additionally requires a Cloudflare Turnstile
 token in the `X-Turnstile-Token` header.
 
-| Method | Path                                      | Auth                | Description                                                                                                                                  |
-| ------ | ----------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/data/projects`                          | -                   | List projects, newest first. Accepts `?limit=` (default 100, max 500) and `?offset=`.                                                        |
-| POST   | `/data/projects`                          | session + Turnstile | Create a project. Returns the created project.                                                                                               |
-| GET    | `/data/projects/:id`                      | -                   | Read a single project.                                                                                                                       |
-| PUT    | `/data/projects/:id`                      | session owner/admin | Replace a project's editable fields.                                                                                                         |
-| PATCH  | `/data/projects/:id`                      | session owner/admin | Partially update a project (`title`, `tags`, `collaborator_ids`, `description`).                                                             |
-| DELETE | `/data/projects/:id`                      | session owner/admin | Delete a project.                                                                                                                            |
-| POST   | `/data/projects/:id/favorites`            | session             | Toggle favorite status for the current user. Returns the updated project.                                                                    |
-| POST   | `/data/projects/:id/downloads`            | -                   | Increment the project's download counter and return the updated project.                                                                     |
-| POST   | `/data/projects/:id/ifc`                  | session owner/admin | Upload an IFC model (`multipart/form-data`, field `ifc`; optional field `version`, default `1.0.0`). Creates a version in state `undefined`. |
-| DELETE | `/data/projects/:id/ifc`                  | session owner/admin | Delete all IFC versions of the project. Returns `{ "deleted": true }`.                                                                       |
-| GET    | `/data/projects/:id/versions`             | -                   | List the project's versions. Versions in state `undefined` are only included for project editors.                                            |
-| PATCH  | `/data/projects/:id/versions/:version_id` | session owner/admin | Update a version's state. Body: `{ "state": "undefined" \| "alpha" \| "beta" \| "stable" }`.                                                 |
-| DELETE | `/data/projects/:id/versions/:version_id` | session owner/admin | Delete a single version.                                                                                                                     |
-| GET    | `/data/projects/:id/glb`                  | -                   | Serve the project's converted GLB (`model/gltf-binary`). Converts on demand when not cached.                                                 |
-| POST   | `/data/projects/:id/glb`                  | session owner/admin | Convert the latest IFC version to GLB. Returns `{ "status": "ready" }`, or 422 when the model has no renderable geometry.                    |
-| GET    | `/data/projects/:id/glb-metadata`         | -                   | Serve per-primitive metadata (JSON) mapping GLB primitives to IFC entities: express id, GlobalId, name, IFC type, and IFC material names.      |
-| GET    | `/data/ifcs/:version_id/:filename`        | -                   | Download a project IFC model as an attachment and increment its version download counter.                                                    |
+| Method | Path                                      | Auth                | Description                                                                                                                                        |
+| ------ | ----------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/data/projects`                          | -                   | List projects, newest first. Accepts `?limit=` (default 100, max 500) and `?offset=`.                                                              |
+| POST   | `/data/projects`                          | session + Turnstile | Create a project. Returns the created project.                                                                                                     |
+| GET    | `/data/projects/:id`                      | -                   | Read a single project.                                                                                                                             |
+| PUT    | `/data/projects/:id`                      | session owner/admin | Replace a project's editable fields.                                                                                                               |
+| PATCH  | `/data/projects/:id`                      | session owner/admin | Partially update a project (`title`, `tags`, `collaborator_ids`, `description`).                                                                   |
+| DELETE | `/data/projects/:id`                      | session owner/admin | Delete a project.                                                                                                                                  |
+| POST   | `/data/projects/:id/favorites`            | session             | Toggle favorite status for the current user. Returns the updated project.                                                                          |
+| POST   | `/data/projects/:id/downloads`            | -                   | Increment the project's download counter and return the updated project.                                                                           |
+| POST   | `/data/projects/:id/ifc`                  | session owner/admin | Upload an IFC model (`multipart/form-data`, field `ifc`; optional field `version`, default `1.0.0`). Creates a version in state `undefined`.       |
+| DELETE | `/data/projects/:id/ifc`                  | session owner/admin | Delete all IFC versions of the project. Returns `{ "deleted": true }`.                                                                             |
+| GET    | `/data/projects/:id/versions`             | -                   | List the project's versions. Versions in state `undefined` are only included for project editors.                                                  |
+| PATCH  | `/data/projects/:id/versions/:version_id` | session owner/admin | Update a version's state. Body: `{ "state": "undefined" \| "alpha" \| "beta" \| "stable" }`.                                                       |
+| DELETE | `/data/projects/:id/versions/:version_id` | session owner/admin | Delete a single version.                                                                                                                           |
+| GET    | `/data/projects/:id/glb`                  | -                   | Serve the project's converted GLB (`model/gltf-binary`). Converts on demand when not cached.                                                       |
+| POST   | `/data/projects/:id/glb`                  | session owner/admin | Convert the latest IFC version to GLB. Returns `{ "status": "ready" }`, or 422 when the model has no renderable geometry.                          |
+| GET    | `/data/projects/:id/glb-metadata`         | -                   | Serve per-primitive metadata (JSON) mapping GLB primitives to IFC entities: express id, GlobalId, name, IFC type, and IFC material names.          |
+| GET    | `/data/ifcs/:version_id/:filename`        | -                   | 302 redirect to the public R2 object (`ASSET_ORIGIN`). The frontend links to the asset domain directly; this route only keeps older links working. |
 
 ### Project payload limits
 

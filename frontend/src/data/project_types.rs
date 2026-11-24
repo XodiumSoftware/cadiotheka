@@ -121,13 +121,14 @@ pub struct ProjectData {
     pub versions: Vec<ProjectVersion>,
 }
 
-/// Builds the frontend download URL for an IFC version using its own id and filename.
+/// Builds the frontend download URL for an IFC version.
 ///
-/// The URL is `/data/ifcs/{version_id}/{filename}`, which the backend resolves to the
-/// actual R2 object key stored on the version row. This avoids assuming the second
-/// segment of `ifc_key` is the version id, which is not true for legacy migrations.
+/// Uses the version's stored R2 object key (`ifcs/{id}/{filename}`) so the
+/// browser can fetch the file from the public asset domain directly. Deriving
+/// the key from `id` and `filename` instead would break legacy versions whose
+/// key does not follow that pattern.
 pub fn ifc_download_url(version: &ProjectVersion) -> String {
-    ifc_url(&version.id, &version.filename)
+    ifc_url(&version.ifc_key)
 }
 
 /// Returns the public download URL for the latest visible IFC version, if any.
@@ -238,7 +239,7 @@ mod tests {
         ];
         assert_eq!(
             latest_visible_ifc_url(&versions),
-            Some(ifc_url("v2", "b.ifc"))
+            Some(ifc_url("ifcs/v2/b.ifc"))
         );
     }
 
@@ -311,10 +312,10 @@ mod tests {
         Ok(())
     }
 
-    /// Tags are stored as wire-id strings resolved against the hardcoded enum
-    /// in `frontend/src/metadata/tags.rs`.
+    /// The URL points at the stored R2 object key, so legacy versions whose key
+    /// does not match `ifcs/{id}/{filename}` still resolve correctly.
     #[test]
-    fn ifc_download_url_uses_version_id_and_filename() {
+    fn ifc_download_url_uses_stored_object_key() {
         let version = ProjectVersion {
             id: "vid-123".to_owned(),
             project_id: "p1".to_owned(),
@@ -326,9 +327,14 @@ mod tests {
             version: "1.0.0".to_owned(),
             downloads: 0,
         };
-        assert_eq!(ifc_download_url(&version), ifc_url("vid-123", "model.ifc"));
+        assert_eq!(
+            ifc_download_url(&version),
+            ifc_url("ifcs/legacy-project-id/model.ifc")
+        );
     }
 
+    /// Tags are stored as wire-id strings resolved against the hardcoded enum
+    /// in `frontend/src/metadata/tags.rs`.
     #[test]
     fn project_uses_known_tags() {
         let project = sample_project();

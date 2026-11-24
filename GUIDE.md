@@ -124,7 +124,7 @@ npx wrangler dev
 
 The local API is available at <http://localhost:8787/data/accounts> by default.
 
-Project assets (IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). D1 stores only the generated object key, and the frontend loads assets through backend asset routes.
+Project assets (IFC models) are uploaded through the backend and stored in the `PROJECT_ASSETS` R2 binding (backed by the `cadiotheka-assets` bucket). D1 stores only the generated object key, and the frontend downloads IFC files straight from the bucket's public domain (`ASSET_ORIGIN`) rather than through the Worker. The `/data/ifcs/:version_id/:filename` route remains only as a redirect for older links.
 
 Uploaded IFC models are converted to GLB asynchronously: the upload handler sends a `GlbConversionJob` to the `GLB_CONVERSION` queue, and the queue consumer (`handle_glb_conversion_queue` in `backend/src/api/projects.rs`) does the CPU-heavy export and caches the result in R2. Failed conversions are retried by the queue; if the queue is unavailable, conversion still happens lazily the first time the viewer requests the GLB.
 
@@ -310,7 +310,24 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
     bucket_name = "cadiotheka-assets"
     ```
 
-4. Apply the schemas:
+4. Attach a public domain to the bucket and point `ASSET_ORIGIN` at it. The
+   frontend links IFC downloads straight at this host, so without it downloads
+   fail even though uploads succeed. Either use the free `r2.dev` subdomain or a
+   custom domain on the Cloudflare zone:
+
+    ```bash
+    npx wrangler r2 bucket domain add cadiotheka-assets --domain assets.cadiotheka.com
+    ```
+
+    Then set the matching origin in `wrangler.toml` and in
+    `frontend/src/utils/url.rs` (`IFC_ASSET_ORIGIN`):
+
+    ```toml
+    [vars]
+    ASSET_ORIGIN = "https://assets.cadiotheka.com"
+    ```
+
+5. Apply the schemas:
 
     ```bash
     npx wrangler d1 execute cadiotheka --file=schemas/accounts.sql
@@ -322,7 +339,7 @@ cargo test && cargo clippy --target wasm32-unknown-unknown -- -D warnings
 
     When upgrading an existing database, apply any pending files from `migrations/` in order instead.
 
-5. Build and deploy:
+6. Build and deploy:
     ```bash
     npx wrangler deploy
     ```

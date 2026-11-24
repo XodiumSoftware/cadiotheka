@@ -31,7 +31,9 @@ pub const PROJECT_VERSION: &str = "/data/projects/:id/versions/:version_id";
 pub const PROJECT_GLBS: &str = "/data/projects/:id/glb";
 /// Per-primitive GLB metadata endpoint.
 pub const PROJECT_GLBS_METADATA: &str = "/data/projects/:id/glb-metadata";
-/// IFC file download endpoint, with `:version_id` and `:filename` placeholders.
+/// Legacy IFC file download endpoint, with `:version_id` and `:filename`
+/// placeholders. Redirects to the public asset domain; the frontend does not
+/// use it.
 pub const IFCS: &str = "/data/ifcs/:version_id/:filename";
 
 /// GitHub login initiation endpoint.
