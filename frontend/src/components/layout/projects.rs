@@ -80,13 +80,11 @@ pub fn ProjectsSection(
     });
 
     Effect::new(move |_| {
-        // Return to the first page whenever the search query changes.
         search.query.track();
         set_page.set(0);
     });
 
     Effect::new(move |_| {
-        // Clear any stale card selection when the visible page changes.
         current_page.track();
         set_focused_index.set(None);
         set_hovered_index.set(None);
@@ -203,7 +201,6 @@ pub fn ProjectsSection(
             return;
         };
 
-        // Avoid re-firing focus events if the target is already focused.
         let already_focused = document
             .active_element()
             .is_some_and(|active| active.is_same_node(Some(&html)));

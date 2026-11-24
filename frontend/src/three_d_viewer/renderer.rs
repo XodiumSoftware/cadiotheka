@@ -7,6 +7,7 @@ use crate::three_d_viewer::scene::{build_axes, build_framing_camera, canvas_size
 use crate::three_d_viewer::state::{ViewDirection, ViewState, ViewerTheme};
 use crate::three_d_viewer::upload::upload_primitive;
 use leptos::web_sys::HtmlCanvasElement;
+#[cfg(target_arch = "wasm32")]
 use leptos::web_sys::WebGl2RenderingContext;
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -27,11 +28,39 @@ use three_d::renderer::Skybox;
 use three_d::renderer::Wireframe;
 use three_d::renderer::control::{Event, OrbitControl};
 use three_d_asset::Model;
-#[cfg(target_arch = "wasm32")]
 use three_d_asset::Scene;
 use three_d_asset::Srgba;
 use three_d_asset::vec3;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
+
+/// Builds the `three-d` rendering context from a canvas's WebGL2 context.
+///
+/// WebGL2 context construction only exists on the browser target: the `glow`
+/// dependency exposes `from_webgl2_context` solely in its wasm build. The host
+/// target compiles this function only so the crate's host-runnable tests build;
+/// it is never called there.
+#[cfg(target_arch = "wasm32")]
+fn create_context(canvas: &HtmlCanvasElement) -> Option<ThreeDContext> {
+    use crate::three_d_viewer::scene::suppress_webgl_debug_renderer_info;
+
+    let gl_context = canvas
+        .get_context("webgl2")
+        .ok()??
+        .dyn_into::<WebGl2RenderingContext>()
+        .ok()?;
+
+    suppress_webgl_debug_renderer_info(&gl_context);
+    let glow_context = three_d::context::Context::from_webgl2_context(gl_context);
+    #[allow(clippy::arc_with_non_send_sync)]
+    ThreeDContext::from_gl_context(Arc::new(glow_context)).ok()
+}
+
+/// Host-target stub: WebGL2 contexts cannot be created outside the browser.
+#[cfg(not(target_arch = "wasm32"))]
+fn create_context(_canvas: &HtmlCanvasElement) -> Option<ThreeDContext> {
+    None
+}
 
 /// `three-d` renderer for a parsed GLB document.
 pub struct Renderer {
@@ -105,80 +134,60 @@ impl Renderer {
     /// [`Self::load_model`] to load GLB data into the renderer afterwards.
     /// Returns `None` if WebGL2 is unavailable.
     pub fn new(canvas: &HtmlCanvasElement) -> Option<Self> {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            None
-        }
+        use crate::three_d_viewer::environment::build_ibl_ambient;
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            use crate::three_d_viewer::environment::build_ibl_ambient;
-            use crate::three_d_viewer::scene::suppress_webgl_debug_renderer_info;
+        let context = create_context(canvas)?;
 
-            let gl_context = canvas
-                .get_context("webgl2")
-                .ok()??
-                .dyn_into::<WebGl2RenderingContext>()
-                .ok()?;
+        let light = DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(0.3_f32, -0.8, -0.5));
+        let ambient = build_ibl_ambient(&context);
+        let skybox_color = Srgba::WHITE;
+        let skybox = Some(build_skybox(&context, skybox_color));
 
-            suppress_webgl_debug_renderer_info(&gl_context);
-            let glow_context = three_d::context::Context::from_webgl2_context(gl_context);
-            #[allow(clippy::arc_with_non_send_sync)]
-            let context = ThreeDContext::from_gl_context(Arc::new(glow_context)).ok()?;
+        let (camera, control) = build_framing_camera(
+            [0.0, 0.0, 0.0],
+            [1.0, 1.0, 1.0],
+            canvas,
+            Self::DEFAULT_FOV_Y,
+            false,
+        );
 
-            let light =
-                DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(0.3_f32, -0.8, -0.5));
-            let ambient = build_ibl_ambient(&context);
-            let skybox_color = Srgba::WHITE;
-            let skybox = Some(build_skybox(&context, skybox_color));
-
-            let (camera, control) = build_framing_camera(
-                [0.0, 0.0, 0.0],
-                [1.0, 1.0, 1.0],
-                canvas,
-                Self::DEFAULT_FOV_Y,
-                false,
-            );
-
-            Some(Self {
-                context,
-                camera,
-                control,
-                canvas: canvas.clone(),
-                scene_bounds: ([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]),
-                models: Vec::new(),
-                axes: None,
-                outline: None,
-                hovered_primitive: None,
-                hidden_primitives: HashSet::new(),
-                selected_primitives: HashSet::new(),
-                selected_outlines: Vec::new(),
-                highlight_color: Srgba::new(255, 200, 0, 255),
-                selection_color: Srgba::new(0, 150, 255, 255),
-                skybox_color,
-                skybox,
-                show_axes: true,
-                total_vertices: 0,
-                total_triangles: 0,
-                light,
-                ambient,
-                pending_events: Rc::new(RefCell::new(Vec::new())),
-                theme: ViewerTheme::default(),
-                fov_y: Self::DEFAULT_FOV_Y,
-                orthographic: false,
-                wireframe: false,
-                source_model: None,
-                wireframe_color: Srgba::new(0, 0, 0, 255),
-                wireframe_width: 1.0,
-            })
-        }
+        Some(Self {
+            context,
+            camera,
+            control,
+            canvas: canvas.clone(),
+            scene_bounds: ([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]),
+            models: Vec::new(),
+            axes: None,
+            outline: None,
+            hovered_primitive: None,
+            hidden_primitives: HashSet::new(),
+            selected_primitives: HashSet::new(),
+            selected_outlines: Vec::new(),
+            highlight_color: Srgba::new(255, 200, 0, 255),
+            selection_color: Srgba::new(0, 150, 255, 255),
+            skybox_color,
+            skybox,
+            show_axes: true,
+            total_vertices: 0,
+            total_triangles: 0,
+            light,
+            ambient,
+            pending_events: Rc::new(RefCell::new(Vec::new())),
+            theme: ViewerTheme::default(),
+            fov_y: Self::DEFAULT_FOV_Y,
+            orthographic: false,
+            wireframe: false,
+            source_model: None,
+            wireframe_color: Srgba::new(0, 0, 0, 255),
+            wireframe_width: 1.0,
+        })
     }
 
     /// Loads a GLB model into the existing renderer.
     ///
     /// Replaces any previously loaded model, rebuilds the camera and axes to
     /// match the new scene bounds, and returns `true` on success.
-    #[cfg(target_arch = "wasm32")]
     pub fn load_model(&mut self, glb_bytes: &[u8]) -> bool {
         use crate::three_d_viewer::scene::scene_bounds_from_model;
         let mut raw_assets = three_d_asset::io::RawAssets::new();
@@ -213,12 +222,6 @@ impl Renderer {
 
         self.rebuild_axes(self.show_axes);
         true
-    }
-
-    /// Non-WASM stub: loading models is not supported outside the browser.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn load_model(&mut self, _glb_bytes: &[u8]) -> bool {
-        false
     }
 
     /// Creates a renderer for the given canvas and GLB bytes.

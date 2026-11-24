@@ -3,17 +3,14 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
 use crate::utils::math::vec3_to_array;
+use js_sys::{Function, Reflect};
 use leptos::web_sys::HtmlCanvasElement;
-#[cfg(target_arch = "wasm32")]
 use leptos::web_sys::WebGl2RenderingContext;
 use three_d::core::Context as ThreeDContext;
 use three_d::renderer::Camera as ThreeDCamera;
 use three_d::renderer::Object;
 use three_d::renderer::control::OrbitControl;
 use three_d_asset::{Viewport, radians, vec3};
-
-#[cfg(target_arch = "wasm32")]
-use js_sys::{Function, Reflect};
 
 /// Returns the canvas backing store size in physical pixels.
 pub fn canvas_size(canvas: &HtmlCanvasElement) -> (u32, u32) {
@@ -28,7 +25,6 @@ pub fn canvas_size(canvas: &HtmlCanvasElement) -> (u32, u32) {
 /// `glow` 0.17 eagerly queries this extension during context creation, but it
 /// is deprecated in Firefox. Returning `null` for it is safe because neither
 /// `glow` nor `three-d` consume the extension object.
-#[cfg(target_arch = "wasm32")]
 pub fn suppress_webgl_debug_renderer_info(context: &WebGl2RenderingContext) {
     let Ok(original) = Reflect::get(context, &"getExtension".into())
         .and_then(wasm_bindgen::JsCast::dyn_into::<Function>)

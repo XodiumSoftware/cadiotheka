@@ -24,7 +24,6 @@ pub struct RaycastHit {
 ///
 /// `x` and `y` are in physical pixels with the origin at the bottom-left of
 /// the canvas, matching `three-d`'s coordinate convention.
-#[cfg(target_arch = "wasm32")]
 pub fn raycast(renderer: &Renderer, x: f32, y: f32) -> Option<RaycastHit> {
     use three_d::core::render_states::Cull;
     use three_d::renderer::pick;
@@ -64,10 +63,4 @@ pub fn raycast(renderer: &Renderer, x: f32, y: f32) -> Option<RaycastHit> {
             None
         }
     }
-}
-
-/// Non-WASM stub: raycasting is not supported outside the browser.
-#[cfg(not(target_arch = "wasm32"))]
-pub fn raycast(_renderer: &Renderer, _x: f32, _y: f32) -> Option<RaycastHit> {
-    None
 }

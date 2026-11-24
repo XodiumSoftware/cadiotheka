@@ -1027,7 +1027,6 @@ fn ProjectModalContent(
                             }
                         });
 
-                        // Trigger the IFC-to-GLB conversion and surface its status.
                         set_glb_status.set(GlbConversionStatus::Converting);
                         match convert_project_glb(&project_id).await {
                             Ok(true) => {

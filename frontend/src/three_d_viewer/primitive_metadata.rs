@@ -50,7 +50,6 @@ pub struct ObjectHit {
 }
 
 /// Fetches primitive metadata for the given URL.
-#[cfg(target_arch = "wasm32")]
 pub async fn fetch_metadata(url: &str) -> Option<Vec<PrimitiveMetadata>> {
     use gloo_net::http::Request;
 
@@ -61,10 +60,4 @@ pub async fn fetch_metadata(url: &str) -> Option<Vec<PrimitiveMetadata>> {
     let text = response.text().await.ok()?;
     let file: MetadataFile = serde_json::from_str(&text).ok()?;
     Some(file.primitives)
-}
-
-/// Non-WASM stub: metadata fetching is not supported outside the browser.
-#[cfg(not(target_arch = "wasm32"))]
-pub async fn fetch_metadata(_url: &str) -> Option<Vec<PrimitiveMetadata>> {
-    None
 }
