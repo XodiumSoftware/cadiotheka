@@ -30,12 +30,4 @@ impl RequestError {
     pub fn message(&self) -> String {
         self.to_string()
     }
-
-    /// Returns `true` when the backend reported that the resource is absent.
-    ///
-    /// A delete that races another tab, or repeats an operation that already
-    /// succeeded, ends up here: the caller wanted the resource gone, and it is.
-    pub fn is_not_found(&self) -> bool {
-        matches!(self, Self::Server { status: 404, .. })
-    }
 }
