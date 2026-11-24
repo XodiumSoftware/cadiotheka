@@ -75,7 +75,3 @@ pub const AUTH_PASSKEY_LOGIN_FINISH: &str = "/auth/passkey/login/finish";
 pub const AUTH_PASSKEYS: &str = "/auth/passkeys";
 /// Single passkey endpoint, with `:id` placeholder.
 pub const AUTH_PASSKEY: &str = "/auth/passkeys/:id";
-
-/// One-shot admin endpoint that rewrites IFC objects with a download
-/// disposition. Existed to migrate objects uploaded before the header was set.
-pub const ADMIN_BACKFILL_IFC_HEADERS: &str = "/admin/backfill-ifc-headers";
