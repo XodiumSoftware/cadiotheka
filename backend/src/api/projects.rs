@@ -16,7 +16,7 @@ use crate::api::session::read_session;
 use crate::guards::{GuardOutcome, require_auth, require_auth_with_rate_limit};
 use crate::utils::{
     PROJECT_ASSETS_R2_BINDING, RateLimitNamespace, assets_bucket, bad_request, check_rate_limit,
-    db, error_response, forbidden, glb_conversion_queue, list_window, not_found, now_utc,
+    db, error_response, forbidden, glb_conversion_queue, kv, list_window, not_found, now_utc,
     required_param,
 };
 use ifc_lite_export::{GltfOptions, try_export_glb};
@@ -67,9 +67,12 @@ fn validate_project_payload(payload: &ProjectPayload) -> ValidationErrorResponse
 /// cache when available. Each page is cached under its own URL.
 pub(crate) async fn list_projects(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let url = req.url()?;
+    let kv_store = kv(&ctx)?;
+    let generation = crate::cache::generation(&kv_store, crate::cache::PROJECTS_LIST_PATH).await;
     let cache_key = crate::cache::list_cache_key(
         &crate::utils::public_origin(&req),
         crate::cache::PROJECTS_LIST_PATH,
+        generation,
         url.query(),
     );
     if let Some(body) = crate::cache::get(&cache_key).await {
@@ -90,17 +93,16 @@ pub(crate) async fn list_projects(req: Request, ctx: RouteContext<()>) -> Result
     crate::cache::list_response(&body)
 }
 
-/// Purges the cached public project listing after a write.
+/// Purges the cached public project listings after a write.
 ///
-/// Entries are keyed per page, so only the unpaged listing is purged here; the
-/// short TTL bounds how long a paged entry can stay stale.
-async fn invalidate_project_list(req: &Request) {
-    let key = crate::cache::list_cache_key(
-        &crate::utils::public_origin(req),
-        crate::cache::PROJECTS_LIST_PATH,
-        None,
-    );
-    crate::cache::delete(&key).await;
+/// Bumping the listing's generation retires every cached page at once, so a
+/// client that asked for a specific `limit`/`offset` cannot keep seeing a
+/// project that has already been deleted.
+async fn invalidate_project_list(ctx: &RouteContext<()>) {
+    match kv(ctx) {
+        Ok(kv) => crate::cache::invalidate_list(&kv, crate::cache::PROJECTS_LIST_PATH).await,
+        Err(err) => console_log!("invalidate_project_list: no KV binding: {err:?}"),
+    }
 }
 
 /// Removes an object from the project assets bucket, ignoring failures.
@@ -219,7 +221,7 @@ pub(crate) async fn create_project(mut req: Request, ctx: RouteContext<()>) -> R
     let created = fetch_project(&ctx, &project_id)
         .await?
         .ok_or_else(|| worker::Error::RustError("created project not found".into()))?;
-    invalidate_project_list(&req).await;
+    invalidate_project_list(&ctx).await;
     Response::from_json(&created)
 }
 
@@ -300,7 +302,7 @@ pub(crate) async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Re
 
     if !statements.is_empty() {
         database.batch(statements).await?;
-        invalidate_project_list(&req).await;
+        invalidate_project_list(&ctx).await;
     }
 
     Response::empty()
@@ -394,7 +396,7 @@ pub(crate) async fn update_project(mut req: Request, ctx: RouteContext<()>) -> R
             ])?
         .run()
         .await?;
-    invalidate_project_list(&req).await;
+    invalidate_project_list(&ctx).await;
     Response::empty()
 }
 
@@ -421,7 +423,7 @@ pub(crate) async fn delete_project(req: Request, ctx: RouteContext<()>) -> Resul
         .run()
         .await?;
 
-    invalidate_project_list(&req).await;
+    invalidate_project_list(&ctx).await;
     Response::empty()
 }
 
@@ -1319,7 +1321,7 @@ pub(crate) async fn toggle_project_favorite(
     let updated = fetch_project(&ctx, &project.id)
         .await?
         .ok_or_else(|| worker::Error::RustError("updated project not found".into()))?;
-    invalidate_project_list(&req).await;
+    invalidate_project_list(&ctx).await;
     Response::from_json(&updated)
 }
 
@@ -1356,7 +1358,7 @@ pub(crate) async fn increment_project_downloads(
         .await?
         .ok_or_else(|| worker::Error::RustError("updated project not found".into()))?;
     console_log!("increment_project_downloads: returning updated project {id}");
-    invalidate_project_list(&req).await;
+    invalidate_project_list(&ctx).await;
     Response::from_json(&updated)
 }
 

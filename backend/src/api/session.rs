@@ -265,9 +265,10 @@ pub(crate) async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result
         (None, None) => {}
     }
 
-    let key =
-        crate::cache::list_cache_key(&public_origin(&req), crate::cache::ACCOUNTS_LIST_PATH, None);
-    crate::cache::delete(&key).await;
+    match kv(&ctx) {
+        Ok(kv) => crate::cache::invalidate_list(&kv, crate::cache::ACCOUNTS_LIST_PATH).await,
+        Err(err) => worker::console_log!("update_me: no KV binding: {err:?}"),
+    }
 
     Response::empty()
 }

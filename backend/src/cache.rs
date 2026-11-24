@@ -2,8 +2,14 @@
 //!
 //! The project and account listings are identical for every visitor, so they
 //! can be served straight from the Cloudflare cache instead of reading D1 on
-//! every request. Writes purge the affected listing so the change is visible
-//! on the next request.
+//! every request.
+//!
+//! Cache keys carry a per-listing generation stored in KV, and every write
+//! advances it. A single KV write therefore retires every cached page of a
+//! listing at once, including the `?limit=`/`?offset=` variants the frontend
+//! actually requests. Purging page keys one by one was both incomplete, since
+//! only the unpaged key was ever deleted, and unbounded, since a client can ask
+//! for any page size.
 //!
 //! Only bodies are cached, never headers. The Cache API matches a plain fetch
 //! of the request URL as readily as a Worker lookup, and Cloudflare's own
@@ -44,10 +50,21 @@ pub(crate) const LIST_CACHE_MAX_AGE_SECONDS: u32 = 60;
 /// entry rather than every `?limit=`/`?offset=` combination sharing one
 /// response. The origin scopes the entry to the visitor's public origin, which
 /// keeps local development from colliding with production.
-pub(crate) fn list_cache_key(origin: &str, path: &str, query: Option<&str>) -> String {
+///
+/// `generation` namespaces every page of a listing. It is bumped on writes, so
+/// invalidating a listing is a single write rather than an attempt to
+/// enumerate every page size and offset a client might have requested.
+pub(crate) fn list_cache_key(
+    origin: &str,
+    path: &str,
+    generation: u64,
+    query: Option<&str>,
+) -> String {
     match query {
-        Some(query) if !query.is_empty() => format!("{origin}{path}?{query}"),
-        _ => format!("{origin}{path}"),
+        Some(query) if !query.is_empty() => {
+            format!("{origin}{path}?gen={generation}&{query}")
+        }
+        _ => format!("{origin}{path}?gen={generation}"),
     }
 }
 
@@ -74,11 +91,42 @@ pub(crate) async fn put(key: &str, body: &str) -> Result<()> {
     cache.put(key.to_string(), Response::ok(body)?).await
 }
 
-/// Removes a single cached entry, logging and ignoring failures.
-pub(crate) async fn delete(key: &str) {
-    let cache = Cache::open(CACHE_NAME.to_string()).await;
-    if let Err(err) = cache.delete(key.to_string(), true).await {
-        console_log!("cache: delete failed for {key}: {err:?}");
+/// KV key holding the current generation of a listing.
+fn generation_key(path: &str) -> String {
+    format!("list_generation:{path}")
+}
+
+/// Returns the current generation of a listing, or `0` when it was never
+/// bumped.
+///
+/// A missing value is not an error: it simply means no write has invalidated
+/// the listing yet, so every page shares generation zero.
+pub(crate) async fn generation(kv: &worker::KvStore, path: &str) -> u64 {
+    match kv.get(&generation_key(path)).text().await {
+        Ok(Some(value)) => value.trim().parse().unwrap_or(0),
+        Ok(None) => 0,
+        Err(err) => {
+            console_log!("cache: generation read failed for {path}: {err:?}");
+            0
+        }
+    }
+}
+
+/// Advances the generation of a listing, invalidating every cached page of it.
+///
+/// This replaces deleting pages one by one: a single KV write retires every
+/// `?limit=`/`?offset=` variant at once, including pages that were never
+/// purged before. The old entries are left to expire under their `max-age`
+/// rather than being enumerated.
+pub(crate) async fn invalidate_list(kv: &worker::KvStore, path: &str) {
+    let next = generation(kv, path).await.saturating_add(1);
+    match kv.put(&generation_key(path), next.to_string()) {
+        Ok(builder) => {
+            if let Err(err) = builder.execute().await {
+                console_log!("cache: generation bump failed for {path}: {err:?}");
+            }
+        }
+        Err(err) => console_log!("cache: generation bump failed for {path}: {err:?}"),
     }
 }
 
@@ -209,31 +257,48 @@ mod tests {
         let key = list_cache_key(
             "https://api.cadiotheka.com",
             PROJECTS_LIST_PATH,
+            0,
             Some("limit=10&offset=20"),
         );
         assert_eq!(
             key,
-            "https://api.cadiotheka.com/data/projects?limit=10&offset=20"
+            "https://api.cadiotheka.com/data/projects?gen=0&limit=10&offset=20"
         );
     }
 
     #[test]
     fn list_cache_key_omits_empty_query() {
         assert_eq!(
-            list_cache_key("https://api.cadiotheka.com", ACCOUNTS_LIST_PATH, None),
-            "https://api.cadiotheka.com/data/accounts"
+            list_cache_key("https://api.cadiotheka.com", ACCOUNTS_LIST_PATH, 0, None),
+            "https://api.cadiotheka.com/data/accounts?gen=0"
         );
         assert_eq!(
-            list_cache_key("https://api.cadiotheka.com", ACCOUNTS_LIST_PATH, Some("")),
-            "https://api.cadiotheka.com/data/accounts"
+            list_cache_key(
+                "https://api.cadiotheka.com",
+                ACCOUNTS_LIST_PATH,
+                0,
+                Some("")
+            ),
+            "https://api.cadiotheka.com/data/accounts?gen=0"
         );
     }
 
     #[test]
     fn list_cache_key_differs_between_pages() {
         assert_ne!(
-            list_cache_key("https://a", PROJECTS_LIST_PATH, None),
-            list_cache_key("https://a", PROJECTS_LIST_PATH, Some("offset=100"))
+            list_cache_key("https://a", PROJECTS_LIST_PATH, 0, None),
+            list_cache_key("https://a", PROJECTS_LIST_PATH, 0, Some("offset=100"))
+        );
+    }
+
+    /// A generation bump must retire every page of a listing at once, which is
+    /// what makes a delete visible to a client that asked for a specific page.
+    #[test]
+    fn generations_never_share_a_key() {
+        let page = Some("limit=500&offset=0");
+        assert_ne!(
+            list_cache_key("https://a", PROJECTS_LIST_PATH, 1, page),
+            list_cache_key("https://a", PROJECTS_LIST_PATH, 2, page)
         );
     }
 }

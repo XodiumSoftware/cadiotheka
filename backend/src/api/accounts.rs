@@ -5,7 +5,7 @@ use worker::{Request, Response, Result, RouteContext};
 use crate::api::auth::Provider;
 use crate::guards::{GuardOutcome, require_auth};
 use crate::utils::{
-    bad_request, db, forbidden, js_option, list_window, not_found, now_utc, required_param,
+    bad_request, db, forbidden, js_option, kv, list_window, not_found, now_utc, required_param,
 };
 
 /// Column list for the full account record.
@@ -328,9 +328,11 @@ fn sanitize_username_local(login: &str) -> String {
 /// 100 and is capped at 500 so each D1 query stays bounded.
 pub(crate) async fn list_accounts(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let url = req.url()?;
+    let generation = crate::cache::generation(&kv(&ctx)?, crate::cache::ACCOUNTS_LIST_PATH).await;
     let cache_key = crate::cache::list_cache_key(
         &crate::utils::public_origin(&req),
         crate::cache::ACCOUNTS_LIST_PATH,
+        generation,
         url.query(),
     );
     if let Some(body) = crate::cache::get(&cache_key).await {
@@ -351,17 +353,12 @@ pub(crate) async fn list_accounts(req: Request, ctx: RouteContext<()>) -> Result
     crate::cache::list_response(&body)
 }
 
-/// Purges the cached public account listing after a write.
-///
-/// Entries are keyed per page, so only the unpaged listing is purged here; the
-/// short TTL bounds how long a paged entry can stay stale.
-async fn invalidate_account_list(req: &Request) {
-    let key = crate::cache::list_cache_key(
-        &crate::utils::public_origin(req),
-        crate::cache::ACCOUNTS_LIST_PATH,
-        None,
-    );
-    crate::cache::delete(&key).await;
+/// Purges the cached public account listings after a write.
+async fn invalidate_account_list(ctx: &RouteContext<()>) {
+    match kv(ctx) {
+        Ok(kv) => crate::cache::invalidate_list(&kv, crate::cache::ACCOUNTS_LIST_PATH).await,
+        Err(err) => worker::console_log!("invalidate_account_list: no KV binding: {err:?}"),
+    }
 }
 
 /// Responds with the public account matching the `:id` path parameter, or 404
@@ -405,7 +402,7 @@ pub(crate) async fn unlink_provider(req: Request, ctx: RouteContext<()>) -> Resu
         return bad_request("Invalid provider");
     };
     unlink_oauth_account(&ctx, &account.id, provider).await?;
-    invalidate_account_list(&req).await;
+    invalidate_account_list(&ctx).await;
     Response::empty()
 }
 
@@ -439,7 +436,7 @@ pub(crate) async fn create_account(mut req: Request, ctx: RouteContext<()>) -> R
         ])?
         .run()
         .await?;
-    invalidate_account_list(&req).await;
+    invalidate_account_list(&ctx).await;
     Response::empty()
 }
 
@@ -477,7 +474,7 @@ pub(crate) async fn update_account(mut req: Request, ctx: RouteContext<()>) -> R
             ])?
         .run()
         .await?;
-    invalidate_account_list(&req).await;
+    invalidate_account_list(&ctx).await;
     Response::empty()
 }
 
@@ -497,7 +494,7 @@ pub(crate) async fn delete_account(req: Request, ctx: RouteContext<()>) -> Resul
         .bind(&[id.into()])?
         .run()
         .await?;
-    invalidate_account_list(&req).await;
+    invalidate_account_list(&ctx).await;
     Response::empty()
 }
 
