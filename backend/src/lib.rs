@@ -126,6 +126,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let path = req.path();
     let is_data_route = path.starts_with("/data/");
     let is_login_route = path.starts_with("/login/");
+    let is_admin_route = path.starts_with("/admin/");
 
     let result = router.run(req, env).await;
 
@@ -134,6 +135,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let is_redirect = (300..400).contains(&resp.status_code());
             if is_data_route
                 || is_login_route
+                || is_admin_route
                 || (!is_redirect && path.starts_with(routes::AUTH_PREFIX))
             {
                 Ok(add_cors_headers(resp, &origin)?)
