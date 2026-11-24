@@ -8,8 +8,17 @@ use crate::utils::{
     bad_request, db, forbidden, js_option, list_window, not_found, now_utc, required_param,
 };
 
-const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences, (SELECT provider FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider, (SELECT provider_id FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider_id FROM accounts a";
-const SELECT_PUBLIC_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.role, a.bio, a.avatar_url, a.created_at, a.verified, (SELECT provider FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider, (SELECT provider_id FROM account_providers WHERE account_id = a.id ORDER BY created_at LIMIT 1) as provider_id FROM accounts a";
+/// Column list for the full account record.
+///
+/// The provider columns come from a single left join onto the account's earliest
+/// linked provider, rather than a correlated subquery per column: the original
+/// form ran the same lookup twice for every row, which D1 bills as rows read.
+/// Both columns come from the same joined row, so `provider` and `provider_id`
+/// always describe one provider instead of two independently chosen ones.
+const SELECT_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.email, a.role, a.bio, a.avatar_url, a.created_at, a.verified, a.viewer_preferences, first_provider.provider as provider, first_provider.provider_id as provider_id FROM accounts a LEFT JOIN account_providers first_provider ON first_provider.account_id = a.id AND first_provider.created_at = (SELECT MIN(created_at) FROM account_providers WHERE account_id = a.id)";
+
+/// Column list for the public account record, which omits private fields.
+const SELECT_PUBLIC_ACCOUNT_COLUMNS: &str = "SELECT a.id, a.username, a.display_name, a.role, a.bio, a.avatar_url, a.created_at, a.verified, first_provider.provider as provider, first_provider.provider_id as provider_id FROM accounts a LEFT JOIN account_providers first_provider ON first_provider.account_id = a.id AND first_provider.created_at = (SELECT MIN(created_at) FROM account_providers WHERE account_id = a.id)";
 
 /// Full account record including private fields.
 ///
@@ -102,7 +111,7 @@ pub(crate) async fn fetch_account_by_provider(
 ) -> Result<Option<Account>> {
     let result = db(ctx)?
         .prepare(format!(
-            "{SELECT_ACCOUNT_COLUMNS} JOIN account_providers ap ON a.id = ap.account_id WHERE ap.provider = ?1 AND ap.provider_id = ?2"
+            "{SELECT_ACCOUNT_COLUMNS} WHERE EXISTS (SELECT 1 FROM account_providers WHERE account_id = a.id AND provider = ?1 AND provider_id = ?2)"
         ))
         .bind(&[provider.to_string().into(), provider_id.into()])?
         .all()
