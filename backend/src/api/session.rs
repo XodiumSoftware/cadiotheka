@@ -214,12 +214,6 @@ pub(crate) async fn read_session(req: &Request, ctx: &RouteContext<()>) -> Resul
     Ok(account)
 }
 
-/// Maximum length for a user-written bio, matching GitHub's profile bio limit.
-const MAX_BIO_LENGTH: usize = 160;
-
-/// Maximum size for the `viewer_preferences` JSON blob, in bytes.
-const MAX_VIEWER_PREFERENCES_LENGTH: usize = 4_096;
-
 /// Updates the currently authenticated account.
 ///
 /// Accepts a JSON body with the fields the user is allowed to edit themselves.
@@ -237,15 +231,15 @@ pub(crate) async fn update_me(mut req: Request, ctx: RouteContext<()>) -> Result
     let payload: UpdatePayload = req.json().await?;
 
     if let Some(bio) = &payload.bio
-        && bio.len() > MAX_BIO_LENGTH
+        && shared::validation::exceeds(bio, shared::validation::MAX_BIO_LENGTH)
     {
-        return bad_request("Bio must be 160 characters or fewer");
+        return bad_request(&shared::validation::bio_too_long_message());
     }
 
     if let Some(prefs) = &payload.viewer_preferences
-        && prefs.len() > MAX_VIEWER_PREFERENCES_LENGTH
+        && prefs.len() > shared::validation::MAX_VIEWER_PREFERENCES_BYTES
     {
-        return bad_request("Viewer preferences must be 4096 characters or fewer");
+        return bad_request(&shared::validation::viewer_preferences_too_large_message());
     }
 
     let db = db(&ctx)?;

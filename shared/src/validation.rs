@@ -19,10 +19,19 @@ pub const MAX_TITLE_LENGTH: usize = 100;
 pub const MAX_DESCRIPTION_LENGTH: usize = 5000;
 /// Maximum allowed length for a passkey's user-assigned display name.
 pub const MAX_PASSKEY_NAME_LENGTH: usize = 64;
+/// Maximum length for a user-written bio, in characters.
+///
+/// Matches GitHub's profile bio limit, which users compare against.
+pub const MAX_BIO_LENGTH: usize = 160;
 /// Maximum number of credited collaborators a project may list.
 pub const MAX_COLLABORATORS: usize = 50;
 /// Maximum allowed size for an uploaded project IFC model, in bytes.
 pub const MAX_IFC_SIZE_BYTES: usize = 25 * 1024 * 1024; // 25 MiB
+/// Maximum size for the stored `viewer_preferences` JSON blob, in bytes.
+///
+/// This is machine-written JSON rather than user-facing text, so it is bounded
+/// by encoded size instead of character count.
+pub const MAX_VIEWER_PREFERENCES_BYTES: usize = 4_096;
 
 /// Returns the number of characters in `text`.
 ///
@@ -73,6 +82,19 @@ pub fn too_many_collaborators_message() -> String {
 #[must_use]
 pub fn unknown_tag_message() -> &'static str {
     "One or more selected tags are no longer available"
+}
+
+/// Message returned when a bio exceeds [`MAX_BIO_LENGTH`].
+#[must_use]
+pub fn bio_too_long_message() -> String {
+    format!("Bio must be {MAX_BIO_LENGTH} characters or fewer")
+}
+
+/// Message returned when viewer preferences exceed
+/// [`MAX_VIEWER_PREFERENCES_BYTES`].
+#[must_use]
+pub fn viewer_preferences_too_large_message() -> String {
+    format!("Viewer preferences must be {MAX_VIEWER_PREFERENCES_BYTES} bytes or fewer")
 }
 
 /// The client-editable fields of a project, as far as validation is concerned.
@@ -187,6 +209,24 @@ mod tests {
             description_too_long_message(),
             "Description must be 5000 characters or fewer"
         );
+        assert_eq!(
+            bio_too_long_message(),
+            "Bio must be 160 characters or fewer"
+        );
+        assert_eq!(
+            viewer_preferences_too_large_message(),
+            "Viewer preferences must be 4096 bytes or fewer"
+        );
+    }
+
+    /// The bio limit counts characters, so a non-ASCII bio of the same visual
+    /// length is not rejected for its byte size.
+    #[test]
+    fn non_ascii_bios_are_measured_in_characters() {
+        let bio = "é".repeat(MAX_BIO_LENGTH);
+        assert!(bio.len() > MAX_BIO_LENGTH, "the byte length is larger");
+        assert!(!exceeds(&bio, MAX_BIO_LENGTH));
+        assert!(exceeds(&"é".repeat(MAX_BIO_LENGTH + 1), MAX_BIO_LENGTH));
     }
 
     #[test]

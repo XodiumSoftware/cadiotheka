@@ -12,8 +12,8 @@ use crate::utils::{
 };
 use gloo_net::http::Request;
 use leptos::prelude::*;
+use shared::validation::{MAX_BIO_LENGTH, input_len};
 use web_sys::window;
-const MAX_BIO_LENGTH: usize = 160;
 
 /// Modal dialog that displays profile information for a selected account.
 #[component]
@@ -327,7 +327,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                 <div class="space-y-2 flex-1">
                                     <textarea
                                         class=move || {
-                                            let at_max = draft.get().len() >= MAX_BIO_LENGTH;
+                                            let at_max = input_len(&draft.get()) >= MAX_BIO_LENGTH;
                                             format!(
                                                 "textarea w-full min-h-[5rem] rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {}",
                                                 if at_max { "hover:border-error" } else { "" }
@@ -345,13 +345,13 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                     ></textarea>
                                     <div class="flex items-center justify-between">
                                         <span class=move || {
-                                            if draft.get().len() >= MAX_BIO_LENGTH {
+                                            if input_len(&draft.get()) >= MAX_BIO_LENGTH {
                                                 "text-xs text-error"
                                             } else {
                                                 "text-xs text-base-content/50"
                                             }
                                         }>
-                                            {move || format!("{}/{}", draft.get().len(), MAX_BIO_LENGTH)}
+                                            {move || format!("{}/{}", input_len(&draft.get()), MAX_BIO_LENGTH)}
                                         </span>
                                         <div class="flex gap-2">
                                             <button

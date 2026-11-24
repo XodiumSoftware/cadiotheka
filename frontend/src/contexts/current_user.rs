@@ -7,6 +7,7 @@ use crate::utils::{LAST_LOGIN_METHOD_KEY, PENDING_LOGIN_METHOD_KEY, key as stora
 use gloo_net::http::Request;
 use gloo_storage::{LocalStorage, SessionStorage, Storage as _};
 use leptos::prelude::*;
+use shared::validation::{MAX_BIO_LENGTH, bio_too_long_message, exceeds};
 use web_sys::RequestCredentials;
 
 /// Provides and reads the currently logged-in user.
@@ -304,9 +305,6 @@ struct LinkedProvidersResponse {
     providers: Vec<String>,
 }
 
-/// Maximum length for a user-written bio, matching GitHub's profile bio limit.
-const MAX_BIO_LENGTH: usize = 160;
-
 /// Updates the current user's bio on the backend.
 ///
 /// On success it returns the new bio.
@@ -316,10 +314,8 @@ const MAX_BIO_LENGTH: usize = 160;
 /// Returns a [`RequestError`] when the bio is too long, the request cannot be
 /// built, the network fails, or the backend rejects the request.
 pub async fn update_bio(new_bio: String) -> Result<String, RequestError> {
-    if new_bio.len() > MAX_BIO_LENGTH {
-        return Err(RequestError::Serialize(format!(
-            "Bio must be {MAX_BIO_LENGTH} characters or fewer"
-        )));
+    if exceeds(&new_bio, MAX_BIO_LENGTH) {
+        return Err(RequestError::Serialize(bio_too_long_message()));
     }
 
     let url = me_url();
