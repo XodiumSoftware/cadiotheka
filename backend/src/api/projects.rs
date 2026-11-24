@@ -10,10 +10,7 @@ use worker::{
 
 use crate::api::accounts::Account;
 use crate::api::session::read_session;
-use crate::guards::{
-    GuardOutcome, require_auth, require_auth_with_rate_limit,
-    require_auth_with_turnstile_and_rate_limit,
-};
+use crate::guards::{GuardOutcome, require_auth, require_auth_with_rate_limit};
 use crate::utils::{
     PROJECT_ASSETS_R2_BINDING, RateLimitNamespace, assets_bucket, bad_request, check_rate_limit,
     db, error_response, forbidden, glb_conversion_queue, list_window, not_found, now_utc,
@@ -270,16 +267,11 @@ pub(crate) async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result
 /// Creates a new project from the request body, attributing it to the
 /// authenticated user.
 pub(crate) async fn create_project(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let account = match require_auth_with_turnstile_and_rate_limit(
-        &mut req,
-        &ctx,
-        RateLimitNamespace::ProjectCreate,
-    )
-    .await?
-    {
-        GuardOutcome::Account(account) => account,
-        GuardOutcome::Response(resp) => return Ok(resp),
-    };
+    let account =
+        match require_auth_with_rate_limit(&req, &ctx, RateLimitNamespace::ProjectCreate).await? {
+            GuardOutcome::Account(account) => account,
+            GuardOutcome::Response(resp) => return Ok(resp),
+        };
     let payload: ProjectPayload = req.json().await?;
     let validation_errors = validate_project_payload(&payload);
     if !validation_errors.is_empty() {

@@ -94,7 +94,7 @@ cadiotheka/
 │   └── src/
 │       ├── lib.rs                     # Router (build_router), fetch entry point
 │       ├── cors.rs                    # CORS headers and preflight handling
-│       ├── guards.rs                  # Auth/rate-limit/Turnstile guard helpers
+│       ├── guards.rs                  # Auth/rate-limit guard helpers
 │       ├── utils.rs                   # Bindings (DB_BINDING etc.), error response helpers
 │       └── api/                       # Route handlers (accounts.rs, projects.rs, ...)
 ├── shared/

@@ -70,13 +70,12 @@ from the enum.
 
 The server assigns `id`, `timestamp`, `downloads`, and `favorites` on creation
 and preserves them on replacement; values for those fields in request bodies
-are ignored. `POST /data/projects` additionally requires a Cloudflare Turnstile
-token in the `X-Turnstile-Token` header.
+are ignored.
 
 | Method | Path                                      | Auth                | Description                                                                                                                                        |
 | ------ | ----------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/data/projects`                          | -                   | List projects, newest first. Accepts `?limit=` (default 100, max 500) and `?offset=`.                                                              |
-| POST   | `/data/projects`                          | session + Turnstile | Create a project. Returns the created project.                                                                                                     |
+| POST   | `/data/projects`                          | session             | Create a project. Returns the created project.                                                                                                     |
 | GET    | `/data/projects/:id`                      | -                   | Read a single project.                                                                                                                             |
 | PUT    | `/data/projects/:id`                      | session owner/admin | Replace a project's editable fields.                                                                                                               |
 | PATCH  | `/data/projects/:id`                      | session owner/admin | Partially update a project (`title`, `tags`, `collaborator_ids`, `description`).                                                                   |

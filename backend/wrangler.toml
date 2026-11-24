@@ -57,7 +57,6 @@ crons = ["0 3 * * *"]
 [secrets]
 required = [
     "SESSION_SECRET",
-    "TURNSTILE_SECRET",
     "GITHUB_CLIENT_ID",
     "GITHUB_CLIENT_SECRET",
     "GOOGLE_CLIENT_ID",

@@ -200,8 +200,6 @@ pub mod components {
         pub mod toggle;
         /// Icon button used in editor toolbars.
         pub mod toolbar_button;
-        /// Cloudflare Turnstile challenge widget.
-        pub mod turnstile;
     }
 
     pub use layout::footer::Footer;
@@ -226,7 +224,6 @@ pub mod components {
     pub use ui::toast::Toast;
     pub use ui::toggle::{ToggleSlider, ToggleSliderWithSlashLabel};
     pub use ui::toolbar_button::ToolbarButton;
-    pub use ui::turnstile::{TurnstileWidget, reset_turnstile, turnstile_response};
     pub use ui::view_gizmo::{GizmoPosition, ViewGizmo, ViewGizmoDirection};
 }
 

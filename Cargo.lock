@@ -147,7 +147,6 @@ dependencies = [
  "serde_cbor_2",
  "serde_json",
  "serde_qs",
- "serde_urlencoded",
  "sha2 0.11.1",
  "shared",
  "time",

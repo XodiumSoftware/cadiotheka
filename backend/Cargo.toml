@@ -11,7 +11,6 @@ crate-type = ["cdylib"]
 worker = { version = "0.9.0", features = ["d1", "queue"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
-serde_urlencoded = "0.7.1"
 hmac = "0.13.0"
 sha2 = "0.11.1"
 rand = "0.10.4"

@@ -10,17 +10,13 @@ use gloo_net::http::Request;
 use serde::Deserialize;
 use web_sys::RequestCredentials;
 
-/// Creates a new project on the backend, including a Turnstile token if one
-/// is available.
+/// Creates a new project on the backend.
 ///
 /// Returns [`ProjectCreationResult::Created`] on success,
 /// [`ProjectCreationResult::ValidationErrors`] when the backend reports field
 /// validation failures, and [`ProjectCreationResult::Failed`] for all other
 /// errors.
-pub async fn create_project(
-    project: &ProjectData,
-    turnstile_token: Option<String>,
-) -> ProjectCreationResult {
+pub async fn create_project(project: &ProjectData) -> ProjectCreationResult {
     let url = projects_url();
     let body = match serde_json::to_string(project) {
         Ok(json) => json,
@@ -29,12 +25,9 @@ pub async fn create_project(
         }
     };
 
-    let mut builder = Request::post(&url)
+    let builder = Request::post(&url)
         .credentials(RequestCredentials::Include)
         .header("Content-Type", "application/json");
-    if let Some(token) = turnstile_token {
-        builder = builder.header("X-Turnstile-Token", &token);
-    }
 
     let request = match builder.body(body) {
         Ok(req) => req,

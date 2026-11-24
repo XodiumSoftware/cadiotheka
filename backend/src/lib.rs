@@ -23,7 +23,6 @@ mod api {
     pub(crate) mod passkey;
     pub(crate) mod projects;
     pub(crate) mod session;
-    pub(crate) mod turnstile;
 }
 
 use worker::{Context, Env, Method, Request, Response, Result, Router, event};

@@ -2,7 +2,6 @@ use worker::{Request, Response, Result, RouteContext};
 
 use crate::api::accounts::Account;
 use crate::api::session::read_session;
-use crate::api::turnstile::verify_turnstile_token;
 use crate::utils::{RateLimitNamespace, check_rate_limit, unauthorized};
 
 /// Outcome of running authentication guards.
@@ -33,32 +32,13 @@ pub(crate) async fn require_auth(req: &Request, ctx: &RouteContext<()>) -> Resul
 /// both pass.
 ///
 /// This is useful for mutation handlers that should be rate-limited and require
-/// a logged-in user but do not need Turnstile verification.
+/// a logged-in user.
 pub(crate) async fn require_auth_with_rate_limit(
     req: &Request,
     ctx: &RouteContext<()>,
     namespace: RateLimitNamespace,
 ) -> Result<GuardOutcome> {
     if let Some(response) = check_rate_limit(req, ctx, namespace).await? {
-        return Ok(GuardOutcome::Response(response));
-    }
-    require_auth(req, ctx).await
-}
-
-/// Verifies rate limit, Turnstile token, and session, returning the
-/// authenticated account when all pass.
-///
-/// This is useful for project creation and other high-value mutations that need
-/// bot protection in addition to rate limiting and authentication.
-pub(crate) async fn require_auth_with_turnstile_and_rate_limit(
-    req: &mut Request,
-    ctx: &RouteContext<()>,
-    namespace: RateLimitNamespace,
-) -> Result<GuardOutcome> {
-    if let Some(response) = check_rate_limit(req, ctx, namespace).await? {
-        return Ok(GuardOutcome::Response(response));
-    }
-    if let Some(response) = verify_turnstile_token(req, ctx).await? {
         return Ok(GuardOutcome::Response(response));
     }
     require_auth(req, ctx).await

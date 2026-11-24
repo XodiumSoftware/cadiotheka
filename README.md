@@ -210,7 +210,7 @@ The static site is placed in `frontend/dist/`.
     npx wrangler queues create cadiotheka-glb-conversion-dlq
     ```
 
-4. Configure secrets for OAuth, session signing, and Turnstile:
+4. Configure secrets for OAuth and session signing:
 
     ```bash
     npx wrangler secret put SESSION_SECRET
@@ -218,11 +218,9 @@ The static site is placed in `frontend/dist/`.
     npx wrangler secret put GITHUB_CLIENT_SECRET
     npx wrangler secret put GOOGLE_CLIENT_ID
     npx wrangler secret put GOOGLE_CLIENT_SECRET
-    npx wrangler secret put TURNSTILE_SECRET
     ```
 
     - `SESSION_SECRET` can be any long random string.
-    - `TURNSTILE_SECRET` is the secret for the existing Cloudflare Turnstile widget.
     - GitHub and Google credentials come from OAuth apps registered at:
         - GitHub: `https://github.com/settings/developers`
         - Google: `https://console.cloud.google.com/apis/credentials`

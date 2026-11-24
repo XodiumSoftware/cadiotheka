@@ -40,10 +40,7 @@ pub(crate) fn apply_cors_headers(headers: &worker::Headers, origin: &str) -> Res
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     )?;
-    headers.set(
-        "Access-Control-Allow-Headers",
-        "Content-Type, X-Turnstile-Token",
-    )?;
+    headers.set("Access-Control-Allow-Headers", "Content-Type")?;
     headers.set("Access-Control-Allow-Credentials", "true")?;
     Ok(())
 }
@@ -66,10 +63,7 @@ pub(crate) fn cors_preflight(origin: &str) -> Result<Response> {
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     )?;
-    headers.set(
-        "Access-Control-Allow-Headers",
-        "Content-Type, X-Turnstile-Token",
-    )?;
+    headers.set("Access-Control-Allow-Headers", "Content-Type")?;
     headers.set("Access-Control-Allow-Credentials", "true")?;
     Ok(resp)
 }
