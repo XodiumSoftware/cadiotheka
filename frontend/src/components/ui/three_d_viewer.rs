@@ -186,9 +186,16 @@ pub fn IfcViewer(
         leptos::task::spawn_local(async move {
             loop {
                 TimeoutFuture::new(100).await;
-                if let Some(external) = fps_signal {
-                    external.set(fps_value.get_untracked());
+                let Some(external) = fps_signal else {
+                    return;
+                };
+                // The parent owns `fps_signal`, so switching away from the tab
+                // that rendered this viewer disposes both signals while this
+                // loop is still scheduled to fire.
+                if !crate::utils::scope_alive(&[&fps_value, &external]) {
+                    return;
                 }
+                external.set(fps_value.get_untracked());
             }
         });
     }
@@ -514,7 +521,9 @@ pub fn IfcViewer(
             return;
         };
         leptos::task::spawn_local(async move {
-            if let Some(fetched) = fetch_metadata(&url).await {
+            if let Some(fetched) = fetch_metadata(&url).await
+                && crate::utils::scope_alive(&[&metadata])
+            {
                 metadata.set(Some(fetched));
             }
         });
@@ -1010,6 +1019,8 @@ pub fn IfcViewer(
         let request_render = Rc::clone(&request_render);
         let load_generation = Rc::clone(&load_generation);
         let loaded_url = Rc::clone(&loaded_url);
+        let show_axes = show_axes;
+        let wireframe = wireframe;
 
         let expected = {
             let mut generation = load_generation.borrow_mut();
@@ -1020,6 +1031,11 @@ pub fn IfcViewer(
         leptos::task::spawn_local(async move {
             let loaded = load_model_bytes(&url).await;
             if *load_generation.borrow() != expected {
+                return;
+            }
+            // Leaving the tab that hosts the viewer disposes these signals while
+            // the model is still downloading, and every read below would panic.
+            if !crate::utils::scope_alive(&[&state, &show_axes, &wireframe]) {
                 return;
             }
             let Some(glb_bytes) = loaded else {
