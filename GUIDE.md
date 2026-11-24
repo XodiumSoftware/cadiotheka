@@ -165,6 +165,15 @@ npx wrangler d1 execute cadiotheka --file=schemas/project_versions.sql --local
 
 Schemas describe the current table layout for fresh databases. When upgrading an existing database, apply any pending files from `migrations/` in order instead (e.g. `0006_add_viewer_preferences_to_accounts.sql` and `0007_add_query_indexes.sql`).
 
+IFC objects uploaded before the upload path began setting `Content-Disposition` are stored without it, so their download links navigate to the raw file instead of saving it. After deploying, run the one-shot backfill once as an admin (R2 has no metadata-only update, so this re-uploads each object with the same body):
+
+```bash
+curl -X POST https://api.cadiotheka.com/admin/backfill-ifc-headers \
+  -H "Cookie: __Host-session=<session cookie>"
+```
+
+The endpoint is idempotent and reports which version ids it rewrote plus any whose R2 object was missing.
+
 The backend uses these short Worker bindings:
 
 - `DB` for the D1 database

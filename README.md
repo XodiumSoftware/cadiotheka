@@ -125,6 +125,15 @@ npx wrangler d1 execute cadiotheka --file=schemas/project_versions.sql --local
 
 When upgrading an existing database, apply any pending files from `backend/migrations/` in order instead.
 
+IFC objects uploaded before the upload path began setting `Content-Disposition` are stored without it, so their download links navigate to the raw file instead of saving it. After deploying, run the one-shot backfill once as an admin:
+
+```bash
+curl -X POST https://api.cadiotheka.com/admin/backfill-ifc-headers \
+  -H "Cookie: __Host-session=<session cookie>"
+```
+
+The endpoint is idempotent, so re-running it is harmless. It returns the ids it rewrote and any whose R2 object was missing.
+
 For asset uploads, also create or bind an R2 bucket in `wrangler.toml`:
 
 ```toml

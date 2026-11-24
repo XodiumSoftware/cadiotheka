@@ -100,3 +100,9 @@ token in the `X-Turnstile-Token` header.
 | `title`       | 100 characters                    |
 | `description` | 5000 characters                   |
 | IFC upload    | 25 MiB, `.ifc` extension required |
+
+## Admin
+
+| Method | Path                          | Auth  | Description                                                                                                                                                                                                                                 |
+| ------ | ----------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/admin/backfill-ifc-headers` | admin | Re-writes every stored IFC object with `Content-Disposition: attachment`. One-shot migration for objects uploaded before the upload path set that header. Idempotent. Returns `{ "rewritten": [<version id>], "missing": [<version id>] }`. |
