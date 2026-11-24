@@ -1,7 +1,7 @@
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::icons::{
-    ClockIcon, EyeIcon, EyeOffIcon, GitHubMarkIcon, GoogleBadgeIcon, MailIcon, MinusIcon,
-    PasskeyIcon, PencilIcon, PlusIcon,
+    ClockIcon, GitHubMarkIcon, GoogleBadgeIcon, MailIcon, MinusIcon, PasskeyIcon, PencilIcon,
+    PlusIcon,
 };
 use crate::components::ui::modals::base::BaseModal;
 use crate::contexts::{CurrentUserContext, ProfileModalContext, ToastContext};
@@ -96,18 +96,6 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
     let display_name = account.display_name.clone();
     let username = account.username.clone();
     let email = account.email.clone();
-    let (email_visible, set_email_visible) = signal(false);
-    let toggle_email_visible = move |_| set_email_visible.update(|visible| *visible = !*visible);
-    let email_display = {
-        let email = email.clone();
-        move || {
-            if email_visible.get() {
-                email.clone()
-            } else {
-                "•".repeat(email.chars().count())
-            }
-        }
-    };
     let avatar_alt = format!("{display_name}'s avatar");
     let role_label = move || account.role.to_string();
 
@@ -304,36 +292,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             view! {
                                 <span class="inline-flex items-center gap-1">
                                     <MailIcon class="w-3.5 h-3.5 flex-shrink-0" />
-                                    <span
-                                        class="leading-none break-all"
-                                        aria-live="polite"
-                                        title=move || if email_visible.get() { String::new() } else { "Email hidden".to_string() }
-                                    >
-                                        {email_display}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center justify-center cursor-pointer text-base-content/60 hover:text-base-content transition-colors"
-                                        aria-label=move || {
-                                            if email_visible.get() { "Hide email" } else { "Show email" }
-                                        }
-                                        aria-pressed=move || email_visible.get().to_string()
-                                        on:click=toggle_email_visible
-                                    >
-                                        {move || {
-                                            if email_visible.get() {
-                                                view! {
-                                                    <EyeOffIcon class="w-3.5 h-3.5" />
-                                                }
-                                                    .into_any()
-                                            } else {
-                                                view! {
-                                                    <EyeIcon class="w-3.5 h-3.5" />
-                                                }
-                                                    .into_any()
-                                            }
-                                        }}
-                                    </button>
+                                    <span class="leading-none break-all">{email.clone()}</span>
                                 </span>
                             }
                         })}

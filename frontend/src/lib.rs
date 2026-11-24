@@ -61,10 +61,6 @@ pub mod components {
             pub mod disabled_stripe;
             /// Download arrow with its tray.
             pub mod download_arrow;
-            /// Open eye, for revealing a hidden value.
-            pub mod eye;
-            /// Crossed-out eye, for hiding a value.
-            pub mod eye_off;
             /// File with a plus, standing in for an IFC document.
             pub mod file_plus;
             /// Enter-fullscreen corners.
@@ -139,8 +135,6 @@ pub mod components {
             pub use cube::CubeIcon;
             pub use disabled_stripe::DisabledStripeIcon;
             pub use download_arrow::DownloadArrowIcon;
-            pub use eye::EyeIcon;
-            pub use eye_off::EyeOffIcon;
             pub use file_plus::FilePlusIcon;
             pub use fullscreen_enter::FullscreenEnterIcon;
             pub use fullscreen_exit::FullscreenExitIcon;
