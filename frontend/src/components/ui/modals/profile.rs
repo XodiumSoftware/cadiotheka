@@ -107,7 +107,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
             let toast = toast;
             leptos::task::spawn_local(async move {
                 if let Some(clipboard) = window().map(|w| w.navigator().clipboard()) {
-                    let _ = clipboard.write_text(&username).await;
+                    crate::utils::await_promise(clipboard.write_text(&username)).await;
                 }
                 toast.show("Copied username to clipboard");
             });
@@ -154,9 +154,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
             };
             match fetch_link_url(&url).await {
                 Ok(target) => {
-                    if let Some(window) = window() {
-                        let _ = window.location().set_href(&target);
-                    }
+                    crate::utils::navigate_to(&target);
                 }
                 Err(err) => {
                     web_sys::console::error_1(

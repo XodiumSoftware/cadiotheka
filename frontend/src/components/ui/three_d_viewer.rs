@@ -237,7 +237,7 @@ pub fn IfcViewer(
                 if *save_generation.borrow() != expected {
                     return;
                 }
-                let _ = LocalStorage::set(prefixed_storage_key(&key), &state_json);
+                crate::utils::save::<LocalStorage>(&prefixed_storage_key(&key), &state_json);
             });
         }
     };
@@ -338,8 +338,9 @@ pub fn IfcViewer(
         move || {
             if let Some(handle) = (*animation_handle).borrow_mut().take()
                 && let Some(window) = web_sys::window()
+                && let Err(err) = window.cancel_animation_frame(handle)
             {
-                let _ = window.cancel_animation_frame(handle);
+                leptos::logging::warn!("failed to cancel animation frame: {err:?}");
             }
             *(*renderer).borrow_mut() = None;
         }
@@ -540,7 +541,7 @@ pub fn IfcViewer(
     Effect::new({
         let request_render = Rc::clone(&request_render);
         move |_| {
-            let _ = hovered_primitive.get();
+            hovered_primitive.track();
             request_render.borrow_mut()();
         }
     });
@@ -641,7 +642,7 @@ pub fn IfcViewer(
     Effect::new({
         let request_render = Rc::clone(&request_render);
         move |_| {
-            let _ = show_gizmo.get();
+            show_gizmo.track();
             request_render.borrow_mut()();
         }
     });
@@ -901,9 +902,9 @@ pub fn IfcViewer(
             #[allow(trivial_casts)]
             let up_listener = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
                 object_panel_resizing.set(false);
-                let _ = LocalStorage::set(
-                    prefixed_storage_key(OBJECT_PANEL_WIDTH_KEY),
-                    object_panel_width.get_untracked(),
+                crate::utils::save::<LocalStorage>(
+                    &prefixed_storage_key(OBJECT_PANEL_WIDTH_KEY),
+                    &object_panel_width.get_untracked(),
                 );
             }) as Box<dyn FnMut(_)>);
             let move_function: js_sys::Function = move_listener
@@ -914,11 +915,15 @@ pub fn IfcViewer(
                 .as_ref()
                 .unchecked_ref::<js_sys::Function>()
                 .clone();
-            let _ = window.add_event_listener_with_callback("mousemove", &move_function);
-            let _ = window.add_event_listener_with_callback("mouseup", &up_function);
+            if let Err(err) = window.add_event_listener_with_callback("mousemove", &move_function) {
+                leptos::logging::warn!("failed to add mousemove listener: {err:?}");
+            }
+            if let Err(err) = window.add_event_listener_with_callback("mouseup", &up_function) {
+                leptos::logging::warn!("failed to add mouseup listener: {err:?}");
+            }
             on_cleanup(move || {
-                let _ = window.remove_event_listener_with_callback("mousemove", &move_function);
-                let _ = window.remove_event_listener_with_callback("mouseup", &up_function);
+                crate::utils::remove_window_listener(&window, "mousemove", &move_function);
+                crate::utils::remove_window_listener(&window, "mouseup", &up_function);
             });
             std::mem::forget(move_listener);
             std::mem::forget(up_listener);
@@ -927,9 +932,6 @@ pub fn IfcViewer(
 
     Effect::new({
         move |_| {
-            if !label_col_resizing.get() {
-                return;
-            }
             let Some(window) = web_sys::window() else {
                 return;
             };
@@ -948,9 +950,9 @@ pub fn IfcViewer(
             #[allow(trivial_casts)]
             let up_listener = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
                 label_col_resizing.set(false);
-                let _ = LocalStorage::set(
-                    prefixed_storage_key(OBJECT_LABEL_COL_KEY),
-                    label_col_width.get_untracked(),
+                crate::utils::save::<LocalStorage>(
+                    &prefixed_storage_key(OBJECT_LABEL_COL_KEY),
+                    &label_col_width.get_untracked(),
                 );
             }) as Box<dyn FnMut(_)>);
             let move_function: js_sys::Function = move_listener
@@ -961,11 +963,15 @@ pub fn IfcViewer(
                 .as_ref()
                 .unchecked_ref::<js_sys::Function>()
                 .clone();
-            let _ = window.add_event_listener_with_callback("mousemove", &move_function);
-            let _ = window.add_event_listener_with_callback("mouseup", &up_function);
+            if let Err(err) = window.add_event_listener_with_callback("mousemove", &move_function) {
+                leptos::logging::warn!("failed to add mousemove listener: {err:?}");
+            }
+            if let Err(err) = window.add_event_listener_with_callback("mouseup", &up_function) {
+                leptos::logging::warn!("failed to add mouseup listener: {err:?}");
+            }
             on_cleanup(move || {
-                let _ = window.remove_event_listener_with_callback("mousemove", &move_function);
-                let _ = window.remove_event_listener_with_callback("mouseup", &up_function);
+                crate::utils::remove_window_listener(&window, "mousemove", &move_function);
+                crate::utils::remove_window_listener(&window, "mouseup", &up_function);
             });
             std::mem::forget(move_listener);
             std::mem::forget(up_listener);

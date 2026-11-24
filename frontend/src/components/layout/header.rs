@@ -162,7 +162,7 @@ pub fn Header() -> impl IntoView {
 
     let focus_avatar = Callback::new(move |()| {
         if let Some(btn) = avatar_button_ref.get() {
-            let _ = btn.focus();
+            crate::utils::focus(&btn);
         }
     });
 
@@ -182,11 +182,7 @@ pub fn Header() -> impl IntoView {
                 search.set_query.set(favorites_query);
             }
             3 => {
-                if let Some(window) = leptos::web_sys::window() {
-                    let _ = window
-                        .location()
-                        .set_href(&encode_redirect_url(&logout_url()));
-                }
+                crate::utils::navigate_to(&encode_redirect_url(&logout_url()));
             }
             _ => {}
         }
@@ -275,7 +271,7 @@ pub fn Header() -> impl IntoView {
 
     Effect::new(move |_| {
         let menu = account_menu_ref.get();
-        let listener = window_event_listener::<web_sys::MouseEvent, _>("click", move |ev| {
+        window_event_listener::<web_sys::MouseEvent, _>("click", move |ev| {
             let target = ev.target();
             let menu = menu.clone();
             let should_close = target
@@ -291,7 +287,6 @@ pub fn Header() -> impl IntoView {
                 }
             }
         });
-        let _ = listener;
     });
 
     Effect::new(move |_| {
@@ -317,7 +312,7 @@ pub fn Header() -> impl IntoView {
                 _ => None,
             };
             if let Some(el) = target {
-                let _ = el.focus();
+                crate::utils::focus(&el);
             }
         });
     });
@@ -374,7 +369,7 @@ pub fn Header() -> impl IntoView {
         spawn_local(async move {
             gloo_timers::future::sleep(Duration::from_millis(50)).await;
             if let Some(input) = input_ref.get() {
-                let _ = input.focus();
+                crate::utils::focus(&input);
                 input.select();
             }
         });

@@ -22,3 +22,18 @@ pub const LAST_LOGIN_METHOD_KEY: &str = "last_login_method";
 /// the current-user context promotes it to [`LAST_LOGIN_METHOD_KEY`] and clears
 /// this marker.
 pub const PENDING_LOGIN_METHOD_KEY: &str = "pending_login_method";
+
+/// Persists a value to browser storage, logging instead of failing.
+///
+/// Preferences are conveniences, so a failed write (Safari private mode, a
+/// full quota, or a serialization error) must not break the interaction that
+/// triggered it. The failure is surfaced in the console rather than discarded
+/// so a silently non-persisting preference stays diagnosable.
+pub fn save<S>(key: &str, value: &impl serde::Serialize)
+where
+    S: gloo_storage::Storage,
+{
+    if let Err(err) = S::set(key, value) {
+        leptos::logging::error!("failed to persist {key}: {err}");
+    }
+}

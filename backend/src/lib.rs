@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn router_builds_without_conflicting_routes() {
-        let _ = build_router();
+        let _router = build_router();
     }
 
     #[test]

@@ -28,11 +28,6 @@ impl MetadataContext {
         set_is_loading.set(false);
     }
 
-    /// Refetch is a no-op because tags are hardcoded. Kept for API compatibility.
-    pub fn refresh(&self) {
-        let _ = self;
-    }
-
     /// Returns the tag matching an id, or `None` if the id is unknown.
     pub fn tag_by_id(&self, id: &str) -> Option<Tag> {
         Tag::from_id(id)

@@ -21,7 +21,7 @@ impl LayoutContext {
     }
 
     fn save(wide: bool) {
-        let _ = LocalStorage::set(storage_key(Self::KEY), wide);
+        crate::utils::save::<LocalStorage>(&storage_key(Self::KEY), &wide);
     }
 
     /// Create a provider context, reading any persisted preference from

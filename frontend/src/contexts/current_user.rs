@@ -52,7 +52,7 @@ impl CurrentUserContext {
                 && let Some(pending) =
                     SessionStorage::get::<String>(&storage_key(PENDING_LOGIN_METHOD_KEY)).ok()
             {
-                let _ = LocalStorage::set(storage_key(LAST_LOGIN_METHOD_KEY), pending);
+                crate::utils::save::<LocalStorage>(&storage_key(LAST_LOGIN_METHOD_KEY), &pending);
                 SessionStorage::delete(storage_key(PENDING_LOGIN_METHOD_KEY));
             }
             set_account.set(fetched);

@@ -49,10 +49,8 @@ async fn start_oauth(provider: &str, toast: ToastContext) {
     };
     match fetch_auth_url(&url).await {
         Ok(target) => {
-            let _ = SessionStorage::set(storage_key(PENDING_LOGIN_METHOD_KEY), method);
-            if let Some(window) = leptos::web_sys::window() {
-                let _ = window.location().set_href(&target);
-            }
+            crate::utils::save::<SessionStorage>(&storage_key(PENDING_LOGIN_METHOD_KEY), &method);
+            crate::utils::navigate_to(&target);
         }
         Err(err) => {
             leptos::web_sys::console::error_1(&format!("Failed to start login: {err}").into());
@@ -99,7 +97,10 @@ pub fn LoginModal() -> impl IntoView {
                 .unwrap_or_else(|| "/".to_string());
             match login_with_passkey(&redirect_to).await {
                 Ok(()) => {
-                    let _ = LocalStorage::set(storage_key(LAST_LOGIN_METHOD_KEY), "passkey");
+                    crate::utils::save::<LocalStorage>(
+                        &storage_key(LAST_LOGIN_METHOD_KEY),
+                        &"passkey",
+                    );
                     modal.close();
                 }
                 Err(err) if err == "Sign-in cancelled" => {

@@ -204,6 +204,22 @@ async fn invalidate_project_list(req: &Request) {
     crate::cache::delete(&key).await;
 }
 
+/// Removes an object from the project assets bucket, ignoring failures.
+///
+/// Asset deletion is best-effort: a missing or already-deleted object is not an
+/// error, and a transient R2 failure must not fail a database write that has
+/// already succeeded. Failures are logged so they stay diagnosable instead of
+/// being discarded silently.
+async fn delete_asset(ctx: &RouteContext<()>, key: &str) {
+    let Ok(bucket) = assets_bucket(ctx) else {
+        console_log!("delete_asset: no bucket binding for {key}");
+        return;
+    };
+    if let Err(err) = bucket.delete(key).await {
+        console_log!("delete_asset: failed to delete {key}: {err:?}");
+    }
+}
+
 /// Drops a project's derived assets from R2 and the edge, so the next viewer
 /// gets a fresh conversion of the version that is now current.
 ///
@@ -212,12 +228,8 @@ async fn invalidate_project_list(req: &Request) {
 /// be cleared by name whenever the bytes behind them change. Missing the edge
 /// purge would leave viewers rendering a stale model for up to a year.
 async fn invalidate_project_assets(ctx: &RouteContext<()>, req: &Request, project_id: &str) {
-    if let Ok(bucket) = assets_bucket(ctx) {
-        let _ = bucket.delete(&glb_key_for_project(project_id)).await;
-        let _ = bucket
-            .delete(&glb_metadata_key_for_project(project_id))
-            .await;
-    }
+    delete_asset(ctx, &glb_key_for_project(project_id)).await;
+    delete_asset(ctx, &glb_metadata_key_for_project(project_id)).await;
     crate::cache::purge_asset(&crate::cache::project_asset_url(req, project_id, "glb")).await;
     crate::cache::purge_asset(&crate::cache::project_asset_url(
         req,
@@ -600,7 +612,7 @@ pub(crate) async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> R
 
     let versions = fetch_project_versions(&ctx, &project_id, true).await?;
     for version in versions {
-        let _ = assets_bucket(&ctx)?.delete(&version.ifc_key).await;
+        delete_asset(&ctx, &version.ifc_key).await;
     }
 
     db(&ctx)?
@@ -699,7 +711,7 @@ pub(crate) async fn delete_project_version(
         .await?;
 
     for key in keys {
-        let _ = assets_bucket(&ctx)?.delete(&key.ifc_key).await;
+        delete_asset(&ctx, &key.ifc_key).await;
     }
 
     invalidate_project_assets(&ctx, &req, &project_id).await;
@@ -804,7 +816,6 @@ fn attachment_content_disposition(filename: &str) -> String {
 /// Percent-encodes a value for an RFC 5987 `filename*` parameter, keeping the
 /// `attr-char` set unencoded as required by the grammar.
 fn rfc5987_encode(value: &str) -> String {
-    use std::fmt::Write as _;
     let mut out = String::with_capacity(value.len());
     for byte in value.bytes() {
         match byte {
@@ -824,7 +835,10 @@ fn rfc5987_encode(value: &str) -> String {
             | b'|'
             | b'~' => out.push(char::from(byte)),
             _ => {
-                let _ = write!(out, "%{byte:02X}");
+                const HEX: &[u8; 16] = b"0123456789ABCDEF";
+                out.push('%');
+                out.push(char::from(HEX[usize::from(byte >> 4)]));
+                out.push(char::from(HEX[usize::from(byte & 0x0F)]));
             }
         }
     }

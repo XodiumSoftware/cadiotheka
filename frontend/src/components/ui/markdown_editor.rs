@@ -72,8 +72,15 @@ pub fn MarkdownEditor(
         on_input.run(next.clone());
         set_last_selection.set((new_start.min(next.len()), new_end.min(next.len())));
         if let Some(textarea) = textarea_ref.get() {
-            let _ = textarea.set_selection_start(Some(u32::try_from(new_start).unwrap_or(0)));
-            let _ = textarea.set_selection_end(Some(u32::try_from(new_end).unwrap_or(0)));
+            if let Err(err) =
+                textarea.set_selection_start(Some(u32::try_from(new_start).unwrap_or(0)))
+            {
+                leptos::logging::warn!("failed to restore selection start: {err:?}");
+            }
+            if let Err(err) = textarea.set_selection_end(Some(u32::try_from(new_end).unwrap_or(0)))
+            {
+                leptos::logging::warn!("failed to restore selection end: {err:?}");
+            }
         }
     };
 

@@ -355,8 +355,10 @@ pub(crate) async fn logout(req: Request, ctx: RouteContext<()>) -> Result<Respon
         && let Ok(cookie) = serde_json::from_slice::<SessionCookie>(&decoded)
     {
         let secret = session_secret(&ctx)?;
-        if verify_signature(&secret, &cookie.id, &cookie.sig)? {
-            let _ = kv(&ctx)?.delete(&cookie.id).await;
+        if verify_signature(&secret, &cookie.id, &cookie.sig)?
+            && let Err(err) = kv(&ctx)?.delete(&cookie.id).await
+        {
+            console_log!("logout: failed to delete session {}: {err:?}", cookie.id);
         }
     }
 

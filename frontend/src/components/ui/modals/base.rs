@@ -41,8 +41,10 @@ pub fn BaseModal(
             return;
         };
         if open.get() {
-            if !dialog.open() {
-                let _ = dialog.show_modal();
+            if !dialog.open()
+                && let Err(err) = dialog.show_modal()
+            {
+                leptos::logging::warn!("failed to open modal: {err:?}");
             }
         } else if dialog.open() {
             dialog.close();

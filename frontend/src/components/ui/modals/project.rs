@@ -838,11 +838,10 @@ fn ProjectModalContent(
     let selected_object: RwSignal<Option<ObjectHit>> = RwSignal::new(None);
 
     Effect::new(move |_| {
-        use gloo_storage::Storage as _;
         let collapsed = sidebar_collapsed.get();
-        let _ = gloo_storage::LocalStorage::set(
-            crate::utils::key("project_modal.sidebar_collapsed"),
-            collapsed,
+        crate::utils::save::<gloo_storage::LocalStorage>(
+            &crate::utils::key("project_modal.sidebar_collapsed"),
+            &collapsed,
         );
     });
 
@@ -914,8 +913,10 @@ fn ProjectModalContent(
                 document.exit_fullscreen();
             }
             set_viewer_fullscreen.set(false);
-        } else if let Some(element) = viewer_ref.get() {
-            let _ = element.request_fullscreen();
+        } else if let Some(element) = viewer_ref.get()
+            && let Err(err) = element.request_fullscreen()
+        {
+            leptos::logging::warn!("failed to enter fullscreen: {err:?}");
         }
     });
 
@@ -3758,6 +3759,17 @@ fn event_target_value(ev: &web_sys::Event) -> String {
         .unwrap_or_default()
 }
 
+/// Sets an attribute on an element.
+///
+/// `set_attribute` only fails on an invalid attribute name, which is a compile-
+/// time constant at every call site here, so the result is infallible in
+/// practice and checked only to keep the failure visible.
+fn set_attribute(element: &web_sys::Element, name: &str, value: &str) {
+    if let Err(err) = element.set_attribute(name, value) {
+        leptos::logging::error!("failed to set attribute {name}: {err:?}");
+    }
+}
+
 /// Programmatically starts a file download from the given URL.
 ///
 /// A temporary anchor element with the `download` attribute is created and
@@ -3772,22 +3784,27 @@ fn trigger_download(url: &str) {
         return;
     };
     let filename = url.rsplit_once('/').map_or("model.ifc", |(_, name)| name);
-    let _ = anchor.set_attribute("href", url);
-    let _ = anchor.set_attribute("download", filename);
-    let _ = anchor.set_attribute("style", "display:none");
-    let _ = anchor.set_attribute("aria-hidden", "true");
+    set_attribute(&anchor, "href", url);
+    set_attribute(&anchor, "download", filename);
+    set_attribute(&anchor, "style", "display:none");
+    set_attribute(&anchor, "aria-hidden", "true");
     let Some(body) = document.body() else {
         return;
     };
-    let _ = body.append_child(&anchor);
+    if let Err(err) = body.append_child(&anchor) {
+        leptos::logging::error!("failed to attach download anchor: {err:?}");
+        return;
+    }
     if let Some(element) = anchor.dyn_ref::<web_sys::HtmlElement>() {
         element.click();
     }
 
     leptos::task::spawn_local(async move {
         gloo_timers::future::TimeoutFuture::new(1000).await;
-        if let Some(parent) = anchor.parent_node() {
-            let _ = parent.remove_child(&anchor);
+        if let Some(parent) = anchor.parent_node()
+            && let Err(err) = parent.remove_child(&anchor)
+        {
+            leptos::logging::error!("failed to detach download anchor: {err:?}");
         }
     });
 }

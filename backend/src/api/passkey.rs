@@ -33,9 +33,7 @@ const COSE_ALG_EDDSA: i64 = -8;
 
 /// `WebAuthn` `authenticatorData` flags.
 const AUTH_FLAG_USER_PRESENT: u8 = 0x01;
-const AUTH_FLAG_USER_VERIFIED: u8 = 0x04;
 const AUTH_FLAG_ATTESTED_CREDENTIAL_DATA: u8 = 0x40;
-const AUTH_FLAG_EXTENSION_DATA: u8 = 0x80;
 
 const AUTH_DATA_RP_ID_HASH_LEN: usize = 32;
 const AUTH_DATA_FLAGS_OFFSET: usize = 32;
@@ -106,7 +104,9 @@ fn generate_challenge() -> String {
     };
     let mut bytes = [0u8; CHALLENGE_LENGTH];
     let array = worker::js_sys::Uint8Array::new_with_length(len);
-    let _ = func.call1(&crypto, &array);
+    if func.call1(&crypto, &array).is_err() {
+        return B64.encode([0u8; CHALLENGE_LENGTH]);
+    }
     array.copy_to(&mut bytes[..]);
     B64.encode(bytes)
 }
@@ -466,9 +466,7 @@ fn verify_authenticator_data(
 
     let flags = bytes[AUTH_DATA_FLAGS_OFFSET];
     let user_present = flags & AUTH_FLAG_USER_PRESENT != 0;
-    let user_verified = flags & AUTH_FLAG_USER_VERIFIED != 0;
     let has_attested_credential_data = flags & AUTH_FLAG_ATTESTED_CREDENTIAL_DATA != 0;
-    let has_extension_data = flags & AUTH_FLAG_EXTENSION_DATA != 0;
 
     if !user_present {
         return Err(rust_err("user presence flag not set"));
@@ -479,8 +477,6 @@ fn verify_authenticator_data(
     if !require_attested_credential && has_attested_credential_data {
         return Err(rust_err("unexpected attested credential data"));
     }
-    let _ = has_extension_data;
-    let _ = user_verified;
 
     let sign_count = u32::from_be_bytes([
         bytes[AUTH_DATA_COUNTER_OFFSET],

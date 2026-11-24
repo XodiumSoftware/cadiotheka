@@ -47,7 +47,10 @@ pub fn suppress_webgl_debug_renderer_info(context: &WebGl2RenderingContext) {
             return this.getExtensionOriginal(name);
         "#,
     );
-    let _ = Reflect::set(context, &"getExtension".into(), &wrapper);
+    let Ok(true) = Reflect::set(context, &"getExtension".into(), &wrapper) else {
+        leptos::logging::warn!("failed to install getExtension wrapper");
+        return;
+    };
 }
 
 /// Builds a camera and orbit controller that frame the given bounds.

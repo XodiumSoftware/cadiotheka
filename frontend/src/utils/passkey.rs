@@ -497,8 +497,10 @@ pub async fn login_with_passkey(redirect_to: &str) -> Result<(), String> {
         return Err(format!("sign-in rejected: {status} {text}"));
     }
 
-    if let Some(window) = web_sys::window() {
-        let _ = window.location().reload();
+    if let Some(window) = web_sys::window()
+        && let Err(err) = window.location().reload()
+    {
+        leptos::logging::warn!("failed to reload after passkey login: {err:?}");
     }
     Ok(())
 }

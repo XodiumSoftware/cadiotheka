@@ -60,7 +60,9 @@ fn reset_turnstile_internal() {
     let function = js_sys::Function::new_no_args(
         "if (typeof window !== 'undefined' && window.turnstile && typeof window.turnstile.reset === 'function') { try { window.turnstile.reset(); } catch (e) { /* widget not ready yet */ } }",
     );
-    let _ = function.call0(&JsValue::undefined());
+    if let Err(err) = function.call0(&JsValue::undefined()) {
+        leptos::logging::warn!("failed to reset Turnstile widget: {err:?}");
+    }
 }
 
 /// Explicitly renders the Turnstile widget into the given container if it has
@@ -88,5 +90,7 @@ fn render_if_needed(id: &str) {
         }})();",
     );
     let function = js_sys::Function::new_no_args(&script);
-    let _ = function.call0(&JsValue::undefined());
+    if let Err(err) = function.call0(&JsValue::undefined()) {
+        leptos::logging::warn!("failed to render Turnstile widget {id}: {err:?}");
+    }
 }

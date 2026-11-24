@@ -81,19 +81,19 @@ pub fn ProjectsSection(
 
     Effect::new(move |_| {
         // Return to the first page whenever the search query changes.
-        let _ = search.query.get();
+        search.query.track();
         set_page.set(0);
     });
 
     Effect::new(move |_| {
         // Clear any stale card selection when the visible page changes.
-        let _ = current_page.get();
+        current_page.track();
         set_focused_index.set(None);
         set_hovered_index.set(None);
     });
 
     Effect::new(move |_| {
-        let _ = filtered.get();
+        filtered.track();
         let has_clear_button = !search.query.get().is_empty();
         set_focused_index.update(|idx| {
             let next = idx.and_then(|i| {
@@ -208,7 +208,7 @@ pub fn ProjectsSection(
             .active_element()
             .is_some_and(|active| active.is_same_node(Some(&html)));
         if !already_focused {
-            let _ = html.focus();
+            crate::utils::focus(&html);
         }
     });
 

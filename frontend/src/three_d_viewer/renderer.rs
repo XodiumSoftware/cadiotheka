@@ -105,15 +105,8 @@ impl Renderer {
     /// [`Self::load_model`] to load GLB data into the renderer afterwards.
     /// Returns `None` if WebGL2 is unavailable.
     pub fn new(canvas: &HtmlCanvasElement) -> Option<Self> {
-        let gl_context = canvas
-            .get_context("webgl2")
-            .ok()??
-            .dyn_into::<WebGl2RenderingContext>()
-            .ok()?;
-
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let _ = gl_context;
             None
         }
 
@@ -121,6 +114,12 @@ impl Renderer {
         {
             use crate::three_d_viewer::environment::build_ibl_ambient;
             use crate::three_d_viewer::scene::suppress_webgl_debug_renderer_info;
+
+            let gl_context = canvas
+                .get_context("webgl2")
+                .ok()??
+                .dyn_into::<WebGl2RenderingContext>()
+                .ok()?;
 
             suppress_webgl_debug_renderer_info(&gl_context);
             let glow_context = three_d::context::Context::from_webgl2_context(gl_context);
