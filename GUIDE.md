@@ -163,7 +163,15 @@ npx wrangler d1 execute cadiotheka --file=schemas/projects.sql --local
 npx wrangler d1 execute cadiotheka --file=schemas/project_versions.sql --local
 ```
 
-Schemas describe the current table layout for fresh databases. When upgrading an existing database, apply any pending files from `migrations/` in order instead (e.g. `0006_add_viewer_preferences_to_accounts.sql` and `0007_add_query_indexes.sql`).
+Schemas describe the current table layout for fresh databases. When upgrading an existing database, apply any pending files from `migrations/` in order (e.g. `0007_add_query_indexes.sql`, then `0008_remove_orthographic_viewer_preference.sql`). Files are not tracked as applied, so run only the ones your database is missing.
+
+Migration `0008` drops the retired `orthographic` camera flag from every account's `viewer_preferences` blob. It is idempotent, so it is safe to re-run:
+
+```bash
+cd backend
+npx wrangler d1 execute cadiotheka --file=migrations/0008_remove_orthographic_viewer_preference.sql          # remote
+npx wrangler d1 execute cadiotheka --file=migrations/0008_remove_orthographic_viewer_preference.sql --local  # local
+```
 
 The backend uses these short Worker bindings:
 
