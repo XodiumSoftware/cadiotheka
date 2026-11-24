@@ -165,12 +165,8 @@ mod tests {
     fn mat4_to_array_roundtrips_identity() {
         let m = mat4_identity();
         let flat = mat4_to_array(&m);
-        // Column-major layout: each contiguous group of four values is a column.
         let expected: [f32; 16] = [
-            1.0, 0.0, 0.0, 0.0, // column 0
-            0.0, 1.0, 0.0, 0.0, // column 1
-            0.0, 0.0, 1.0, 0.0, // column 2
-            0.0, 0.0, 0.0, 1.0, // column 3
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ];
         assert_eq!(flat, expected);
     }
@@ -181,15 +177,12 @@ mod tests {
         assert_eq!(p.len(), 16);
         let expected_f = 1.0 / ((std::f32::consts::FRAC_PI_4 / 2.0).tan());
         assert!((p[0] - expected_f).abs() < f32::EPSILON);
-        // The perspective matrix stores -1 in the column-major index that maps
-        // the view-space Z component to clip-space W.
         assert!((p[11] - (-1.0)).abs() < f32::EPSILON);
     }
 
     #[test]
     fn look_at_oriented_along_negative_z() {
         let m = look_at_matrix([0.0, 0.0, 1.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]);
-        // Forward axis in camera space should point along -Z.
         let forward = [-m[0][2], -m[1][2], -m[2][2]];
         let expected = normalize_vec3([0.0, 0.0, -1.0]);
         assert!((forward[0] - expected[0]).abs() < 1e-6);

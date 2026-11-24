@@ -73,9 +73,6 @@ pub fn build_framing_camera(
     ];
     let max_size = size[0].max(size[1]).max(size[2]).max(1.0);
 
-    // Fit the scene's largest extent into the viewport using the smaller of the
-    // horizontal and vertical fields of view, with a small padding margin so the
-    // model does not touch the edges of the canvas.
     let (width, height) = canvas_size(canvas);
     let aspect = if height == 0 {
         1.0
@@ -102,8 +99,6 @@ pub fn build_framing_camera(
     let viewport = Viewport::new_at_origo(width, height);
 
     let camera = if orthographic {
-        // Match the perspective framing distance, then derive an orthographic
-        // height that shows the same visible region at that distance.
         let ortho_height = 2.0 * distance * (limiting_fov * 0.5).tan();
         ThreeDCamera::new_orthographic(
             viewport,

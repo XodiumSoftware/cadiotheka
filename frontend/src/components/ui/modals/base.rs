@@ -35,7 +35,6 @@ pub fn BaseModal(
 ) -> impl IntoView {
     let dialog_ref: NodeRef<leptos::html::Dialog> = NodeRef::new();
 
-    // Keep the dialog's native open/closed state in sync with the signal.
     Effect::new(move |_| {
         let Some(dialog) = dialog_ref.get() else {
             return;

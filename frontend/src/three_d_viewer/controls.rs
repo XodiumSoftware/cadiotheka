@@ -90,7 +90,6 @@ impl OrbitControls {
         let delta = (ev.movement_x() as f32, ev.movement_y() as f32);
         self.drag_pixels += delta.0.abs() + delta.1.abs();
         let button = self.last_button;
-        // Holding the middle mouse button behaves like shift: pan instead of orbit.
         let modifiers = if button == Some(MouseButton::Middle) {
             three_d::renderer::control::Modifiers {
                 shift: true,

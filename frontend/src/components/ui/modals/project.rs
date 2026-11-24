@@ -374,9 +374,6 @@ pub fn ProjectModal() -> impl IntoView {
         modal.close();
     });
 
-    // Keep a stable card for the lifetime of the open modal so that updates to
-    // the context card (e.g. added/removed versions) do not remount the whole
-    // modal content and reset the active tab.
     let stable_card = RwSignal::new(None::<ProjectCardProperties>);
     Effect::new(move |_| {
         let maybe_card = modal.card.get();

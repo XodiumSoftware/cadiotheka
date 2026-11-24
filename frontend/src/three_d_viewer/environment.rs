@@ -14,9 +14,12 @@ use three_d::renderer::Skybox;
 use three_d_asset::{Srgba, Texture2D, TextureData, vec3};
 
 /// Width of the generated equirectangular sky map in pixels.
-const SKY_WIDTH: u32 = 512;
+///
+/// Kept small because the map is regenerated on the CPU whenever the skybox
+/// tint changes; the cube map derived from it is a quarter of this width.
+const SKY_WIDTH: u32 = 256;
 /// Height of the generated equirectangular sky map in pixels.
-const SKY_HEIGHT: u32 = 256;
+const SKY_HEIGHT: u32 = 128;
 /// HDR intensity of the horizon/sun region, above white so PBR materials pick
 /// up strong specular highlights.
 const HORIZON_INTENSITY: f32 = 2.2;
@@ -52,18 +55,14 @@ fn sky_color(elevation: f32, azimuth: f32) -> [f32; 3] {
     let zenith = elevation.sin().clamp(0.0, 1.0);
     let horizon = (1.0 - zenith * zenith).sqrt();
 
-    // Blue sky with a warm band near the horizon and a cooler zenith.
     let sky = vec3(0.25, 0.55, 1.0).normalize();
     let horizon_tint = vec3(1.0, 0.85, 0.6);
     let base = sky * (0.25 + 0.55 * horizon) + horizon_tint * (0.18 * horizon);
 
-    // A soft warm "sun" highlight whose direction rotates with the azimuth so
-    // metallic surfaces receive a directional specular reflection.
     let sun_direction = vec3(azimuth.cos() * 0.6, 0.25, -azimuth.sin() * 0.6);
     let intensity = sun_direction.dot(sky).max(0.0).powi(24) * HORIZON_INTENSITY;
     let color = base * (0.35 + 0.65 * zenith) + vec3(1.0, 0.9, 0.7) * intensity;
 
-    // Clamp the low end but keep HDR peaks above 1.0.
     [
         color.x.clamp(0.0, 4.0),
         color.y.clamp(0.0, 4.0),

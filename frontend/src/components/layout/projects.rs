@@ -167,8 +167,6 @@ pub fn ProjectsSection(
             return;
         };
 
-        // Only move browser focus into the grid if focus is already on the page body or
-        // inside the grid itself. Otherwise a modal input (e.g. search) keeps focus.
         let Some(window) = web_sys::window() else {
             return;
         };
@@ -342,10 +340,6 @@ pub fn ProjectsSection(
                                     let Some(grid) = grid_ref.get() else { return };
                                     let Some(children) = grid.children().dyn_into::<web_sys::HtmlCollection>().ok() else { return };
 
-                                    // Walk up from the actual focus target until we find the
-                                    // direct child of the grid. This keeps selection in sync when
-                                    // focus lands on nested controls like the author or favorite
-                                    // buttons, preventing two cards from appearing selected.
                                     let mut maybe_item: Option<web_sys::Element> = Some(el);
                                     let mut found_index: Option<usize> = None;
                                     while let Some(item) = maybe_item {
@@ -369,8 +363,6 @@ pub fn ProjectsSection(
                                     }
                                 }
                                 on:pointerleave=move |_ev| {
-                                    // Mouse hover highlight is tied to the pointer being over the grid.
-                                    // Keyboard focus remains untouched so arrow-key selection persists.
                                     set_hovered_index.set(None);
                                 }
                             >
