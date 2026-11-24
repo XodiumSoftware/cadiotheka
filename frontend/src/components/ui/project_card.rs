@@ -2,13 +2,13 @@ use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::icons::{ClockIcon, DownloadArrowIcon, HeartIcon};
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::contexts::{CurrentUserContext, MetadataContext, ProjectModalContext, ProjectsContext};
-use crate::data::{ProjectData, ProjectVersion};
+use crate::data::{Project, ProjectVersion};
 use crate::utils::{format_number, format_number_full, format_time_ago, format_time_full};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
 /// Snapshot of a project rendered by [`ProjectCard`], decoupled from the
-/// [`ProjectData`] wire type.
+/// [`Project`] wire type.
 #[derive(Clone)]
 pub struct ProjectCardProperties {
     /// Unique project identifier, used to look up live data and open the modal.
@@ -39,15 +39,15 @@ pub struct ProjectCardProperties {
     pub versions: Vec<ProjectVersion>,
 }
 
-impl From<ProjectData> for ProjectCardProperties {
-    fn from(project: ProjectData) -> Self {
+impl From<Project> for ProjectCardProperties {
+    fn from(project: Project) -> Self {
         project_card_properties_from_project_data(project)
     }
 }
 
-/// Converts a fetched [`ProjectData`] row into card properties by copying its
+/// Converts a fetched [`Project`] row into card properties by copying its
 /// fields one-to-one.
-pub fn project_card_properties_from_project_data(project: ProjectData) -> ProjectCardProperties {
+pub fn project_card_properties_from_project_data(project: Project) -> ProjectCardProperties {
     ProjectCardProperties {
         id: project.id,
         title: project.title,
@@ -59,9 +59,18 @@ pub fn project_card_properties_from_project_data(project: ProjectData) -> Projec
         tags: project.tags,
         downloads: project.downloads,
         favorites: project.favorites,
-        timestamp: project.timestamp,
+        timestamp: parse_rfc3339(&project.timestamp),
         versions: project.versions,
     }
+}
+
+/// Parses a project's RFC 3339 timestamp, falling back to the Unix epoch.
+///
+/// Cards format and sort by this value, so a malformed timestamp degrades to
+/// the oldest possible date instead of failing the whole listing.
+fn parse_rfc3339(timestamp: &str) -> time::OffsetDateTime {
+    time::OffsetDateTime::parse(timestamp, &time::format_description::well_known::Rfc3339)
+        .unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
 }
 
 pub use project_card_properties_from_project_data as from_project_data;
@@ -364,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_project_card_properties_from_project_data() {
-        let project = ProjectData {
+        let project = Project {
             id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890".to_owned(),
             title: "Gear".to_owned(),
             author: "Author".to_owned(),
@@ -375,7 +384,7 @@ mod tests {
             tags: vec!["3d_model".to_owned()],
             downloads: 1234,
             favorites: vec!["user-1".to_owned(), "user-2".to_owned()],
-            timestamp: time::macros::datetime!(2024-01-01 00:00:00 UTC),
+            timestamp: "2024-01-01T00:00:00Z".to_owned(),
             versions: vec![],
         };
         let props: ProjectCardProperties = project.into();

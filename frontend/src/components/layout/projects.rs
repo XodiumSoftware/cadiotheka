@@ -6,7 +6,7 @@ use crate::contexts::{
     AccountsContext, LayoutContext, MetadataContext, ProfileModalContext, ProjectModalContext,
     ProjectsContext, SearchContext, ToastContext,
 };
-use crate::data::ProjectData;
+use crate::data::Project;
 use crate::engines::SearchEngine;
 use crate::utils::window_event_listener;
 use leptos::prelude::*;
@@ -401,7 +401,7 @@ pub fn ProjectsSection(
                                 {cards
                                     .into_iter()
                                     .enumerate()
-                                    .map(|(card_index, project): (usize, ProjectData)| {
+                                    .map(|(card_index, project): (usize, Project)| {
                                         let project_for_modal = project.clone();
                                         let project_for_profile = project.clone();
                                         let props: ProjectCardProperties = project.into();

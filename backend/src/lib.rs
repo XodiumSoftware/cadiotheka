@@ -182,16 +182,16 @@ mod tests {
     use super::*;
     use api::accounts::Account;
     use api::auth::Provider;
-    use api::projects::Project;
     use serde::Deserialize;
-    use shared::{accounts::Role, tags::Tag};
+    use shared::accounts::Role;
+    use shared::projects::Project;
 
     /// Frontend-compatible representation of an account response.
     ///
-    /// The backend `Account` struct omits `project_ids`, `provider`, and
-    /// `provider_id`, which the frontend supplies via `#[serde(default)]`. This
-    /// struct mirrors the frontend contract so we can verify the JSON shape
-    /// round-trips correctly.
+    /// The backend `Account` struct omits `project_ids` and serializes
+    /// `provider`/`provider_id` as `Option`s, which the frontend supplies via
+    /// `#[serde(default)]`. This struct mirrors the frontend contract so we can
+    /// verify the JSON shape round-trips correctly.
     #[derive(Debug, Deserialize)]
     struct FrontendAccountData {
         id: String,
@@ -211,28 +211,6 @@ mod tests {
         provider: String,
         #[serde(default)]
         provider_id: String,
-    }
-
-    /// Frontend-compatible representation of a project response.
-    ///
-    /// The backend serializes the JSON-string columns exactly as the frontend
-    /// expects to deserialize them. This struct confirms the contract without
-    /// importing the frontend crate into the backend tests.
-    #[derive(Debug, Deserialize)]
-    struct FrontendProjectData {
-        id: String,
-        title: String,
-        author: String,
-        author_id: String,
-        author_username: String,
-        #[serde(default)]
-        collaborator_ids: String,
-        description: String,
-        tags: String,
-        downloads: u64,
-        #[serde(default)]
-        favorites: String,
-        timestamp: String,
     }
 
     #[test]
@@ -320,26 +298,27 @@ mod tests {
             author_username: "trailblazer".to_string(),
             collaborator_ids: vec!["acc-2".to_string()],
             description: "Extended description.".to_string(),
-            tags: vec![Tag::ThreeDModel, Tag::Vehicle],
+            tags: vec!["3d_model".to_string(), "vehicle".to_string()],
             downloads: 1200,
             favorites: vec!["fav-1".to_string()],
             timestamp: "2026-07-07T14:30:00Z".to_string(),
+            versions: Vec::new(),
         };
 
         let json = serde_json::to_string(&project)?;
-        let parsed: FrontendProjectData = serde_json::from_str(&json)?;
 
-        assert_eq!(parsed.id, project.id);
-        assert_eq!(parsed.title, project.title);
-        assert_eq!(parsed.author, project.author);
-        assert_eq!(parsed.author_id, project.author_id);
-        assert_eq!(parsed.author_username, project.author_username);
-        assert_eq!(parsed.collaborator_ids, "[\"acc-2\"]");
-        assert_eq!(parsed.description, project.description);
-        assert_eq!(parsed.tags, "[\"3d_model\",\"vehicle\"]");
-        assert_eq!(parsed.downloads, project.downloads);
-        assert_eq!(parsed.favorites, "[\"fav-1\"]");
-        assert_eq!(parsed.timestamp, project.timestamp);
+        let wire: serde_json::Value = serde_json::from_str(&json)?;
+        for field in ["tags", "favorites", "collaborator_ids"] {
+            let value = wire
+                .get(field)
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default();
+            assert!(value.starts_with('['), "{field} must be JSON text");
+        }
+        assert!(wire.get("versions").is_none(), "empty versions are omitted");
+
+        let decoded: Project = serde_json::from_str(&json)?;
+        assert_eq!(decoded, project);
         Ok(())
     }
 }

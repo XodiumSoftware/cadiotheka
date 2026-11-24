@@ -1,6 +1,6 @@
 //! Fuzzy matching and card filtering for the Cadiotheka search engine.
 
-use crate::data::ProjectData;
+use crate::data::Project;
 use crate::engines::query::{ParsedQuery, SortBy, SortOrder, active_needle, parse_query};
 use crate::engines::suggestions::{Suggestion, from_cards};
 use fuzzy_matcher::FuzzyMatcher;
@@ -13,7 +13,7 @@ use std::collections::HashMap;
 /// (built from the hardcoded `Tag` enum) to resolve user-facing labels for
 /// filtering and searchable text.
 pub struct SearchEngine {
-    cards: Vec<ProjectData>,
+    cards: Vec<Project>,
     matcher: SkimMatcherV2,
     tag_labels: HashMap<String, String>,
 }
@@ -21,7 +21,7 @@ pub struct SearchEngine {
 impl SearchEngine {
     /// Creates a new search engine from a list of projects and an id-to-label map
     /// for tags.
-    pub fn new(cards: Vec<ProjectData>, tag_labels: HashMap<String, String>) -> Self {
+    pub fn new(cards: Vec<Project>, tag_labels: HashMap<String, String>) -> Self {
         Self {
             cards,
             matcher: SkimMatcherV2::default(),
@@ -33,19 +33,19 @@ impl SearchEngine {
     ///
     /// Useful when results need to escape the borrow scope of the engine,
     /// such as in reactive Leptos memos.
-    pub fn search_owned(&self, parsed: &ParsedQuery) -> Vec<ProjectData> {
+    pub fn search_owned(&self, parsed: &ParsedQuery) -> Vec<Project> {
         self.search(parsed).into_iter().cloned().collect()
     }
 
     /// Returns references to projects matching the parsed query, ranked or sorted
     /// as requested.
     ///
-    /// Returning `&ProjectData` avoids cloning the owned project data on every
+    /// Returning `&Project` avoids cloning the owned project data on every
     /// search, which matters as the catalog grows.
-    pub fn search<'a>(&'a self, parsed: &ParsedQuery) -> Vec<&'a ProjectData> {
+    pub fn search<'a>(&'a self, parsed: &ParsedQuery) -> Vec<&'a Project> {
         let query = parsed.filter.clone().join(" ").to_lowercase();
 
-        let mut scored: Vec<(i64, &ProjectData)> = self
+        let mut scored: Vec<(i64, &Project)> = self
             .cards
             .iter()
             .filter_map(|card| {
@@ -87,7 +87,7 @@ impl SearchEngine {
     /// Returns a fuzzy match score for a project, or `None` if it does not match.
     fn score(
         &self,
-        card: &ProjectData,
+        card: &Project,
         query: &str,
         filters: &[&str],
         author: Option<&str>,
@@ -165,7 +165,7 @@ impl SearchEngine {
     }
 
     /// Combines all searchable project fields into a single lowercase string.
-    fn searchable_text(card: &ProjectData, tag_labels: &HashMap<String, String>) -> String {
+    fn searchable_text(card: &Project, tag_labels: &HashMap<String, String>) -> String {
         let tags = card
             .tags
             .iter()
@@ -180,10 +180,9 @@ impl SearchEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::data::ProjectData;
+    use crate::data::Project;
     use crate::engines::query::parse_query;
     use crate::engines::suggestions::SuggestionKind;
-    use time::macros::datetime;
 
     fn tag_labels() -> HashMap<String, String> {
         HashMap::from([
@@ -204,11 +203,11 @@ mod tests {
         tags: &[&str],
         downloads: u64,
         favorites: u64,
-    ) -> ProjectData {
+    ) -> Project {
         let downloads_trunc = usize::try_from(downloads).unwrap_or(0);
         let favorites_trunc = usize::try_from(favorites).unwrap_or(0);
 
-        ProjectData {
+        Project {
             id: format!(
                 "{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}",
                 title.len() + 0x1000,
@@ -233,7 +232,7 @@ mod tests {
             tags: tags.iter().map(|s| (*s).to_owned()).collect(),
             downloads,
             favorites: vec!["favorite-user".to_owned(); favorites_trunc],
-            timestamp: datetime!(2024-01-15 12:00:00 UTC),
+            timestamp: "2024-01-15T12:00:00Z".to_owned(),
             versions: vec![],
         }
     }

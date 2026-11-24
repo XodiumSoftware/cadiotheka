@@ -1,14 +1,14 @@
-use crate::data::{ProjectData, RequestError, fetch_projects, toggle_project_favorite};
+use crate::data::{Project, RequestError, fetch_projects, toggle_project_favorite};
 use leptos::prelude::*;
 
 /// Provides the list of projects fetched from the backend.
 #[derive(Clone, Copy)]
 pub struct ProjectsContext {
     /// The projects currently loaded; empty until the first fetch completes.
-    pub projects: Signal<Vec<ProjectData>>,
+    pub projects: Signal<Vec<Project>>,
     /// Setter used to replace the loaded project list, e.g. after a retry or
     /// a favorite toggle.
-    pub set_projects: WriteSignal<Vec<ProjectData>>,
+    pub set_projects: WriteSignal<Vec<Project>>,
     /// Whether a fetch of `/data/projects` is currently in flight.
     pub is_loading: Signal<bool>,
     /// Setter that toggles the network activity indication.
@@ -25,14 +25,14 @@ impl ProjectsContext {
     /// # Errors
     ///
     /// Returns a [`RequestError`] when the backend request fails.
-    pub async fn toggle_favorite(id: &str) -> Result<ProjectData, RequestError> {
+    pub async fn toggle_favorite(id: &str) -> Result<Project, RequestError> {
         toggle_project_favorite(id).await
     }
 
     /// Spawns a fetch of `/data/projects` that updates the list, loading flag,
     /// and error state on completion.
     fn spawn_fetch(
-        set_projects: WriteSignal<Vec<ProjectData>>,
+        set_projects: WriteSignal<Vec<Project>>,
         set_is_loading: WriteSignal<bool>,
         set_error: WriteSignal<Option<RequestError>>,
     ) {

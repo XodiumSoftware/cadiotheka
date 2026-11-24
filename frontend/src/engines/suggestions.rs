@@ -1,6 +1,6 @@
 //! Autocomplete suggestion generation for the Cadiotheka search engine.
 
-use crate::data::ProjectData;
+use crate::data::Project;
 use crate::engines::query::{SortBy, SortOrder};
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -70,7 +70,7 @@ impl Suggestion {
 /// Tag wire ids are resolved to labels via the provided map.
 #[allow(clippy::implicit_hasher)]
 pub fn from_cards(
-    cards: &[ProjectData],
+    cards: &[Project],
     include_sort: bool,
     needle: &str,
     tag_labels: &HashMap<String, String>,
@@ -180,8 +180,7 @@ fn default_sort_suggestions() -> Vec<Suggestion> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::data::ProjectData;
-    use time::macros::datetime;
+    use crate::data::Project;
 
     fn label_map() -> HashMap<String, String> {
         HashMap::from([
@@ -190,8 +189,8 @@ mod tests {
         ])
     }
 
-    fn sample_card() -> ProjectData {
-        ProjectData {
+    fn sample_card() -> Project {
+        Project {
             id: "c3d4e5f6-a7b8-9012-cdef-123456789012".to_owned(),
             title: "Sample Gear".to_owned(),
             author: "Test Author".to_owned(),
@@ -202,7 +201,7 @@ mod tests {
             tags: vec!["parametric".to_owned(), "3d_model".to_owned()],
             downloads: 100,
             favorites: vec!["favorite-user".to_owned(); 10],
-            timestamp: datetime!(2024-06-01 10:00:00 UTC),
+            timestamp: "2024-06-01T10:00:00Z".to_owned(),
             versions: vec![],
         }
     }

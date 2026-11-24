@@ -1,5 +1,5 @@
 use crate::data::error::RequestError;
-use crate::data::project_types::{ProjectCreationResult, ProjectData, ProjectVersion};
+use crate::data::project_types::{Project, ProjectCreationResult, ProjectVersion};
 use crate::utils::{
     project_downloads_url, project_favorites_url, project_glb_url, project_ifc_url, project_url,
     project_version_url, project_versions_url, projects_url,
@@ -15,7 +15,7 @@ use web_sys::RequestCredentials;
 /// [`ProjectCreationResult::ValidationErrors`] when the backend reports field
 /// validation failures, and [`ProjectCreationResult::Failed`] for all other
 /// errors.
-pub async fn create_project(project: &ProjectData) -> ProjectCreationResult {
+pub async fn create_project(project: &Project) -> ProjectCreationResult {
     let url = projects_url();
     let body = match serde_json::to_string(project) {
         Ok(json) => json,
@@ -56,7 +56,7 @@ pub async fn create_project(project: &ProjectData) -> ProjectCreationResult {
                 ));
             }
 
-            match serde_json::from_str::<ProjectData>(&text) {
+            match serde_json::from_str::<Project>(&text) {
                 Ok(data) => ProjectCreationResult::Created(data),
                 Err(err) => ProjectCreationResult::Failed(format!(
                     "Project was created, but the response could not be read: {err}"
@@ -154,7 +154,7 @@ pub async fn update_project_collaborators(
 ///
 /// Returns a [`RequestError`] when the request cannot be built, the network
 /// fails, or the backend rejects the request.
-pub async fn toggle_project_favorite(id: &str) -> Result<ProjectData, RequestError> {
+pub async fn toggle_project_favorite(id: &str) -> Result<Project, RequestError> {
     let url = project_favorites_url(id);
     let request = Request::post(&url)
         .credentials(RequestCredentials::Include)
@@ -167,7 +167,7 @@ pub async fn toggle_project_favorite(id: &str) -> Result<ProjectData, RequestErr
         Ok(response) if response.ok() => {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            serde_json::from_str::<ProjectData>(&text).map_err(|err| {
+            serde_json::from_str::<Project>(&text).map_err(|err| {
                 RequestError::Parse(format!(
                     "Failed to parse toggled favorite response (status={status}): {err}\n{text}"
                 ))
@@ -195,7 +195,7 @@ pub async fn toggle_project_favorite(id: &str) -> Result<ProjectData, RequestErr
 ///
 /// Returns a [`RequestError`] when the request cannot be built, the network
 /// fails, or the backend rejects the request.
-pub async fn increment_project_downloads(id: &str) -> Result<ProjectData, RequestError> {
+pub async fn increment_project_downloads(id: &str) -> Result<Project, RequestError> {
     let url = project_downloads_url(id);
     let request = Request::post(&url)
         .credentials(RequestCredentials::Include)
@@ -208,7 +208,7 @@ pub async fn increment_project_downloads(id: &str) -> Result<ProjectData, Reques
         Ok(response) if response.ok() => {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            serde_json::from_str::<ProjectData>(&text).map_err(|err| {
+            serde_json::from_str::<Project>(&text).map_err(|err| {
                 RequestError::Parse(format!(
                     "Failed to parse download increment response (status={status}): {err}\n{text}"
                 ))
@@ -547,7 +547,7 @@ const MAX_SWEEP_PAGES: usize = 200;
 ///
 /// Returns a [`RequestError`] when the network fails, the backend rejects the
 /// request, or the response cannot be parsed.
-pub async fn fetch_projects() -> Result<Vec<ProjectData>, RequestError> {
+pub async fn fetch_projects() -> Result<Vec<Project>, RequestError> {
     let mut all = Vec::new();
     let mut pages = 0;
     let mut offset = 0;
@@ -570,7 +570,7 @@ pub async fn fetch_projects() -> Result<Vec<ProjectData>, RequestError> {
 }
 
 /// Fetches a single bounded window of the project list starting at `offset`.
-async fn fetch_projects_window(offset: usize) -> Result<Vec<ProjectData>, RequestError> {
+async fn fetch_projects_window(offset: usize) -> Result<Vec<Project>, RequestError> {
     let url = format!(
         "{}?limit={PROJECTS_PAGE_SIZE}&offset={offset}",
         projects_url()
@@ -578,7 +578,7 @@ async fn fetch_projects_window(offset: usize) -> Result<Vec<ProjectData>, Reques
     match Request::get(&url).send().await {
         Ok(response) if response.ok() => {
             let text = response.text().await.unwrap_or_default();
-            serde_json::from_str::<Vec<ProjectData>>(&text).map_err(|err| {
+            serde_json::from_str::<Vec<Project>>(&text).map_err(|err| {
                 RequestError::Parse(format!("Failed to parse projects JSON: {err}\n{text}"))
             })
         }

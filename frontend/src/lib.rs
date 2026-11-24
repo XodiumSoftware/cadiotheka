@@ -280,7 +280,7 @@ pub mod data {
     pub use error::RequestError;
     pub use project_api::*;
     pub use project_types::{
-        ProjectCreationResult, ProjectData, ProjectVersion, VersionState, VersionUploadResponse,
+        Project, ProjectCreationResult, ProjectVersion, VersionState, VersionUploadResponse,
         ifc_download_url, latest_visible_ifc_url, new_project_payload,
     };
 }

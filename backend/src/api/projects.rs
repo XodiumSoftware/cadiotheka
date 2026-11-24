@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use shared::{
-    tags::Tag,
+    accounts::ProjectPermission,
+    projects::{Project, ProjectPatch, ProjectPayload, ProjectVersion},
     validation::{
         MAX_IFC_SIZE_BYTES, ProjectFields, ValidationErrorResponse, validate_project_fields,
     },
@@ -19,23 +20,8 @@ use crate::utils::{
     required_param,
 };
 use ifc_lite_export::{GltfOptions, try_export_glb};
-use shared::accounts::ProjectPermission;
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, downloads, favorites, timestamp FROM projects";
-
-/// A single IFC file version attached to a project.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct ProjectVersion {
-    pub id: String,
-    pub project_id: String,
-    pub filename: String,
-    pub ifc_key: String,
-    pub state: VersionState,
-    pub created_at: String,
-    pub file_size: i64,
-    pub version: String,
-    pub downloads: i64,
-}
 
 /// Payload used to patch a project version.
 #[derive(Deserialize, Debug)]
@@ -68,79 +54,8 @@ fn validate_project_payload(payload: &ProjectPayload) -> ValidationErrorResponse
         &payload.title,
         &payload.description,
         &payload.collaborator_ids,
+        &payload.tags,
     ))
-}
-
-/// A Cadiotheka project stored in D1.
-#[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct Project {
-    pub id: String,
-    pub title: String,
-    pub author: String,
-    pub author_id: String,
-    pub author_username: String,
-    #[serde(with = "json_column")]
-    pub collaborator_ids: Vec<String>,
-    pub description: String,
-    #[serde(with = "json_tags")]
-    pub tags: Vec<Tag>,
-    pub downloads: u64,
-    #[serde(with = "json_column")]
-    pub favorites: Vec<String>,
-    pub timestamp: String,
-}
-
-/// Payload used to create or update a project.
-///
-/// Only carries client-editable fields. Server-owned fields (`id`, author
-/// attribution, `downloads`, `favorites`, `timestamp`) are generated or
-/// preserved by the backend and ignored when present in the request body.
-#[derive(Deserialize, Debug)]
-pub(crate) struct ProjectPayload {
-    pub title: String,
-    #[serde(with = "json_column")]
-    pub collaborator_ids: Vec<String>,
-    pub description: String,
-    #[serde(with = "json_tags")]
-    pub tags: Vec<Tag>,
-}
-
-/// Serde adapter that stores a `Vec<String>` as a single JSON string column,
-/// matching the frontend's project payload.
-mod json_column {
-    use serde::{Deserializer, Serializer};
-
-    pub(crate) fn serialize<S: Serializer>(
-        value: &[String],
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        shared::json_column::serialize(value, serializer)
-    }
-
-    pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
-        deserializer: D,
-    ) -> Result<Vec<String>, D::Error> {
-        shared::json_column::deserialize(deserializer)
-    }
-}
-
-mod json_tags {
-    use serde::{Deserializer, Serializer};
-
-    use super::Tag;
-
-    pub(crate) fn serialize<S: Serializer>(
-        value: &[Tag],
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        shared::tags::serde_tags::serialize(value, serializer)
-    }
-
-    pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
-        deserializer: D,
-    ) -> Result<Vec<Tag>, D::Error> {
-        shared::tags::serde_tags::deserialize(deserializer)
-    }
 }
 
 /// Responds with a JSON array of projects, newest first.
@@ -308,17 +223,6 @@ pub(crate) async fn create_project(mut req: Request, ctx: RouteContext<()>) -> R
     Response::from_json(&created)
 }
 
-/// Partial payload for patching a project. All fields are optional; only the
-/// provided fields are updated.
-#[derive(Deserialize, Debug)]
-#[allow(clippy::option_option)]
-pub(crate) struct ProjectPatch {
-    title: Option<String>,
-    tags: Option<Vec<Tag>>,
-    collaborator_ids: Option<Vec<String>>,
-    description: Option<String>,
-}
-
 /// Partially updates an existing project, identified by the `:id` path parameter.
 /// Only the project owner or an admin may edit it.
 ///
@@ -343,6 +247,7 @@ pub(crate) async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Re
         title: patch.title.as_deref(),
         description: patch.description.as_deref(),
         collaborator_ids: collaborator_update,
+        tags: patch.tags.as_deref(),
     });
     if !validation_errors.is_empty() {
         return Ok(Response::from_json(&validation_errors)?.with_status(400));
@@ -1544,6 +1449,7 @@ mod tests {
             downloads: 0,
             favorites: vec![],
             timestamp: "2025-01-01T00:00:00Z".into(),
+            versions: vec![],
         }
     }
 

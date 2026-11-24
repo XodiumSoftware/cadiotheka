@@ -11,6 +11,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::tags::Tag;
+
 /// Maximum allowed length for a project title, in characters.
 pub const MAX_TITLE_LENGTH: usize = 100;
 /// Maximum allowed length for a project description, in characters.
@@ -67,6 +69,12 @@ pub fn too_many_collaborators_message() -> String {
     format!("A project can have at most {MAX_COLLABORATORS} collaborators")
 }
 
+/// Message returned when a project carries a tag id the server does not know.
+#[must_use]
+pub fn unknown_tag_message() -> &'static str {
+    "One or more selected tags are no longer available"
+}
+
 /// The client-editable fields of a project, as far as validation is concerned.
 ///
 /// Both the create and patch endpoints validate through this shape, so a field
@@ -79,16 +87,24 @@ pub struct ProjectFields<'a> {
     pub description: Option<&'a str>,
     /// Account ids of credited collaborators.
     pub collaborator_ids: Option<&'a [String]>,
+    /// Wire ids of the tags categorizing the project.
+    pub tags: Option<&'a [String]>,
 }
 
 impl<'a> ProjectFields<'a> {
     /// Returns the fields present in a create payload.
     #[must_use]
-    pub const fn new(title: &'a str, description: &'a str, collaborator_ids: &'a [String]) -> Self {
+    pub const fn new(
+        title: &'a str,
+        description: &'a str,
+        collaborator_ids: &'a [String],
+        tags: &'a [String],
+    ) -> Self {
         Self {
             title: Some(title),
             description: Some(description),
             collaborator_ids: Some(collaborator_ids),
+            tags: Some(tags),
         }
     }
 }
@@ -123,6 +139,12 @@ pub fn validate_project_fields(fields: ProjectFields<'_>) -> ValidationErrorResp
             "collaborator_ids".to_owned(),
             too_many_collaborators_message(),
         );
+    }
+    if fields
+        .tags
+        .is_some_and(|tags| tags.iter().any(|id| Tag::from_id(id).is_none()))
+    {
+        errors.insert("tags".to_owned(), unknown_tag_message().to_owned());
     }
     ValidationErrorResponse::new(errors)
 }
@@ -195,14 +217,14 @@ mod tests {
     #[test]
     fn a_title_over_the_character_limit_is_rejected() {
         let title = "ü".repeat(MAX_TITLE_LENGTH + 1);
-        let errors = validate_project_fields(ProjectFields::new(&title, "", &[]));
+        let errors = validate_project_fields(ProjectFields::new(&title, "", &[], &[]));
         assert_eq!(errors.errors.get("title"), Some(&title_too_long_message()));
         assert!(!errors.errors.contains_key("description"));
     }
 
     #[test]
     fn valid_fields_produce_no_errors() {
-        let errors = validate_project_fields(ProjectFields::new("Bike", "Nice model", &[]));
+        let errors = validate_project_fields(ProjectFields::new("Bike", "Nice model", &[], &[]));
         assert!(errors.is_empty());
     }
 
@@ -212,6 +234,7 @@ mod tests {
             title: None,
             description: None,
             collaborator_ids: None,
+            tags: None,
         });
         assert!(errors.is_empty());
     }
@@ -219,7 +242,7 @@ mod tests {
     #[test]
     fn long_descriptions_are_rejected() {
         let description = "a".repeat(MAX_DESCRIPTION_LENGTH + 1);
-        let errors = validate_project_fields(ProjectFields::new("Bike", &description, &[]));
+        let errors = validate_project_fields(ProjectFields::new("Bike", &description, &[], &[]));
         assert_eq!(
             errors.errors.get("description"),
             Some(&description_too_long_message())
@@ -230,7 +253,8 @@ mod tests {
     #[test]
     fn too_many_collaborators_are_rejected() {
         let collaborators = vec!["acc".to_owned(); MAX_COLLABORATORS + 1];
-        let errors = validate_project_fields(ProjectFields::new("Bike", "Model", &collaborators));
+        let errors =
+            validate_project_fields(ProjectFields::new("Bike", "Model", &collaborators, &[]));
         assert_eq!(
             errors.errors.get("collaborator_ids"),
             Some(&too_many_collaborators_message())
@@ -240,7 +264,25 @@ mod tests {
     #[test]
     fn the_collaborator_limit_itself_is_accepted() {
         let collaborators = vec!["acc".to_owned(); MAX_COLLABORATORS];
-        let errors = validate_project_fields(ProjectFields::new("Bike", "Model", &collaborators));
+        let errors =
+            validate_project_fields(ProjectFields::new("Bike", "Model", &collaborators, &[]));
+        assert!(errors.is_empty());
+    }
+
+    #[test]
+    fn unknown_tag_ids_are_rejected() {
+        let tags = vec!["vehicle".to_owned(), "retired_tag".to_owned()];
+        let errors = validate_project_fields(ProjectFields::new("Bike", "Model", &[], &tags));
+        assert_eq!(
+            errors.errors.get("tags"),
+            Some(&unknown_tag_message().to_owned())
+        );
+    }
+
+    #[test]
+    fn known_tag_ids_are_accepted() {
+        let tags = vec!["vehicle".to_owned(), "3d_model".to_owned()];
+        let errors = validate_project_fields(ProjectFields::new("Bike", "Model", &[], &tags));
         assert!(errors.is_empty());
     }
 
