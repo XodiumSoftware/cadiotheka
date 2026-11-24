@@ -76,9 +76,9 @@ impl AccountData {
     }
 }
 
-/// Page size used when sweeping the account list from the backend. Matches the
+/// Page size used when sweeping the account list from the backend. Uses the
 /// maximum limit the backend accepts, minimizing the number of round trips.
-const ACCOUNTS_PAGE_SIZE: usize = 500;
+const ACCOUNTS_PAGE_SIZE: usize = shared::pagination::MAX_LIST_LIMIT as usize;
 /// Safety cap on the number of pages fetched in one sweep, guarding against a
 /// misbehaving or misconfigured backend returning full pages forever.
 const MAX_SWEEP_PAGES: usize = 200;

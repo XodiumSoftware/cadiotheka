@@ -570,7 +570,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                                         type="text"
                                                         class="input input-sm w-full rounded-none"
                                                         placeholder="Name this passkey"
-                                                        maxlength="64"
+                                                        maxlength=shared::validation::MAX_PASSKEY_NAME_LENGTH.to_string()
                                                         prop:disabled=passkey_in_flight.get()
                                                         prop:value=passkey_name
                                                         on:input=move |ev| set_passkey_name.set(event_target_value(&ev))

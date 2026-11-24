@@ -2,46 +2,21 @@ use crate::utils::ifc_url;
 use serde::{Deserialize, Serialize};
 pub use shared::version_state::VersionState;
 
-/// Serde adapter for a JSON-text column holding an array of strings.
-///
-/// D1 stores tags, favorites, and collaborators as TEXT containing a JSON array,
-/// so the frontend parses that JSON string into a `Vec<String>`. Tags store
-/// the wire ids of records in the `tags` table; their labels and colors are
-/// resolved from metadata.
-mod string_array_json {
-    use serde::{Deserialize, Deserializer, Serializer};
+/// Serde adapters for the JSON-text columns shared with the backend.
+mod json_column {
+    use serde::{Deserializer, Serializer};
 
     pub(super) fn serialize<S: Serializer>(
         value: &[String],
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
+        shared::json_column::serialize(value, serializer)
     }
 
     pub(super) fn deserialize<'de, D: Deserializer<'de>>(
         deserializer: D,
     ) -> Result<Vec<String>, D::Error> {
-        let s = String::deserialize(deserializer)?;
-        serde_json::from_str(&s).map_err(serde::de::Error::custom)
-    }
-}
-
-/// Serde adapter for favorites stored as a JSON-text column.
-mod favorites_json_string {
-    use serde::{Deserialize, Deserializer, Serializer};
-
-    pub(super) fn serialize<S: Serializer>(
-        value: &[String],
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
-    }
-
-    pub(super) fn deserialize<'de, D: Deserializer<'de>>(
-        deserializer: D,
-    ) -> Result<Vec<String>, D::Error> {
-        let s = String::deserialize(deserializer)?;
-        serde_json::from_str(&s).map_err(serde::de::Error::custom)
+        shared::json_column::deserialize(deserializer)
     }
 }
 
@@ -100,18 +75,18 @@ pub struct ProjectData {
     /// Author username (used for `@author:` filtering and links).
     pub author_username: String,
     /// Account ids of credited collaborators for this project.
-    #[serde(default, with = "favorites_json_string")]
+    #[serde(default, with = "json_column")]
     pub collaborator_ids: Vec<String>,
     /// Extended markdown description shown in the project detail modal.
     #[serde(default)]
     pub description: String,
     /// Wire ids of the tags categorizing this content.
-    #[serde(with = "string_array_json")]
+    #[serde(with = "json_column")]
     pub tags: Vec<String>,
     /// Download count.
     pub downloads: u64,
     /// Account ids of users who have favorited the project.
-    #[serde(default, with = "favorites_json_string")]
+    #[serde(default, with = "json_column")]
     pub favorites: Vec<String>,
     /// Official timestamp for when the project was published or updated.
     #[serde(with = "time::serde::rfc3339")]
@@ -141,8 +116,7 @@ pub fn latest_visible_ifc_url(versions: &[ProjectVersion]) -> Option<String> {
 
 /// Returns the current UTC time using the JavaScript `Date` API.
 pub fn now_utc() -> time::OffsetDateTime {
-    let millis = js_sys::Date::now();
-    time::OffsetDateTime::UNIX_EPOCH + time::Duration::seconds_f64(millis / 1_000.0)
+    shared::time::now_utc()
 }
 
 /// Creates a new project payload for submission to the backend.
@@ -180,12 +154,7 @@ pub enum ProjectCreationResult {
     Failed(String),
 }
 
-/// Response body returned by the backend when project validation fails.
-#[derive(Debug, Deserialize)]
-pub(crate) struct ValidationErrorResponse {
-    pub(crate) errors: std::collections::HashMap<String, String>,
-}
-
+/// A single IFC file version returned by the backend after an upload.
 #[cfg(test)]
 mod tests {
     use super::*;

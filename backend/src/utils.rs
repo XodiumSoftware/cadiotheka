@@ -1,4 +1,5 @@
 use shared::origins::{ALLOWED_LOCALHOST_ORIGINS, ALLOWED_REDIRECT_ORIGINS};
+use shared::pagination::{DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT};
 use worker::{
     Bucket, D1Database, Env, KvStore, Queue, RateLimiter, Request, Response, Result, RouteContext,
     wasm_bindgen,
@@ -185,11 +186,10 @@ pub(crate) fn js_option(value: Option<String>) -> wasm_bindgen::JsValue {
 
 /// Returns the current UTC time using the JavaScript `Date` API.
 ///
-/// `std::time` is unavailable in the Workers WASM runtime, so this is the
-/// only way to obtain the current time in a Cloudflare Worker.
+/// `std::time` is unavailable in the Workers WASM runtime, so this delegates to
+/// the shared helper both crates use.
 pub(crate) fn now_utc() -> time::OffsetDateTime {
-    let millis = worker::js_sys::Date::now();
-    time::OffsetDateTime::UNIX_EPOCH + time::Duration::seconds_f64(millis / 1_000.0)
+    shared::time::now_utc()
 }
 
 /// Returns a public origin for the request, preferring the `X-Forwarded-Host`
@@ -226,12 +226,6 @@ pub(crate) fn public_origin(req: &Request) -> String {
         });
     format!("{proto}://{host}")
 }
-
-/// Default page size for list endpoints when no `limit` query parameter is given.
-const DEFAULT_LIST_LIMIT: u32 = 100;
-/// Maximum page size accepted by list endpoints. Bounds each D1 query so a
-/// single request can never scan the whole table.
-const MAX_LIST_LIMIT: u32 = 500;
 
 /// Resolves the `limit` and `offset` query parameters of a list request into a
 /// bounded D1 window.

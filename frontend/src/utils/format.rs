@@ -92,8 +92,7 @@ pub fn format_version_timestamp(timestamp: &str) -> String {
 
 /// Returns the current UTC time using the JavaScript `Date` API.
 fn now_utc() -> time::OffsetDateTime {
-    let millis = js_sys::Date::now();
-    time::OffsetDateTime::UNIX_EPOCH + time::Duration::seconds_f64(millis / 1_000.0)
+    shared::time::now_utc()
 }
 
 #[cfg(test)]

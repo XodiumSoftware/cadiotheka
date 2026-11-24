@@ -6,6 +6,10 @@ use crate::contexts::{
 use crate::data::{ProjectCreationResult, create_project, new_project_payload};
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
+use shared::validation::{
+    MAX_DESCRIPTION_LENGTH, MAX_TITLE_LENGTH, description_too_long_message, exceeds, input_len,
+    title_too_long_message,
+};
 
 /// Client-side validation result for the add-project form.
 #[derive(Debug, Default, Clone)]
@@ -61,15 +65,15 @@ pub fn AddProjectModal() -> impl IntoView {
         let t = title.get();
         if t.trim().is_empty() {
             e.title = Some("A project title is required.".to_string());
-        } else if t.trim().len() > 100 {
-            e.title = Some("Title must be 100 characters or fewer.".to_string());
+        } else if exceeds(t.trim(), MAX_TITLE_LENGTH) {
+            e.title = Some(title_too_long_message());
         }
 
         let d = description.get();
         if d.trim().is_empty() {
             e.description = Some("A project description is required.".to_string());
-        } else if d.trim().len() > 100 {
-            e.description = Some("Description must be 100 characters or fewer.".to_string());
+        } else if exceeds(d.trim(), MAX_DESCRIPTION_LENGTH) {
+            e.description = Some(description_too_long_message());
         }
 
         if selected_tags.get().is_empty() {
@@ -204,7 +208,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                             class=move || {
                                                 if errors.get().title.is_some() {
                                                     "block text-sm font-medium text-error mb-1"
-                                                } else if title.get().len() >= 100 {
+                                                } else if input_len(&title.get()) >= MAX_TITLE_LENGTH {
                                                     "block text-sm font-medium text-warning mb-1"
                                                 } else {
                                                     "block text-sm font-medium text-base-content mb-1"
@@ -214,8 +218,8 @@ pub fn AddProjectModal() -> impl IntoView {
                                         >
                                                 <span class="text-error mr-1">"*"</span>
                                                 {move || {
-                                                    let count = title.get().len();
-                                                    format!("Title ({count}/100)")
+                                                    let count = input_len(&title.get());
+                                                    format!("Title ({count}/{MAX_TITLE_LENGTH})")
                                                 }}
                                         </label>
                                             <input
@@ -224,7 +228,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                                 type="text"
                                                 class="input w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none validator"
                                                 required
-                                                maxlength="100"
+                                                maxlength=MAX_TITLE_LENGTH.to_string()
                                                 placeholder="Project title"
                                                 on:input=move |ev| {
                                                     set_title.set(event_target_value(&ev));
@@ -239,9 +243,9 @@ pub fn AddProjectModal() -> impl IntoView {
                                                     Some(view! {
                                                         <p class=base>{msg}</p>
                                                     })
-                                                } else if title.get().len() >= 100 {
+                                                } else if input_len(&title.get()) >= MAX_TITLE_LENGTH {
                                                     Some(view! {
-                                                        <p class=base>{"Title must be 100 characters or fewer.".to_string()}</p>
+                                                        <p class=base>{title_too_long_message()}</p>
                                                     })
                                                 } else {
                                                     None
@@ -255,7 +259,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                     <label class=move || {
                                         if errors.get().description.is_some() {
                                             "block text-sm font-medium text-error mb-1"
-                                        } else if description.get().len() >= 100 {
+                                        } else if input_len(&description.get()) >= MAX_DESCRIPTION_LENGTH {
                                             "block text-sm font-medium text-warning mb-1"
                                         } else {
                                             "block text-sm font-medium text-base-content mb-1"
@@ -263,8 +267,8 @@ pub fn AddProjectModal() -> impl IntoView {
                                     }>
                                         <span class="text-error mr-1">"*"</span>
                                         {move || {
-                                            let count = description.get().len();
-                                            format!("Description ({count}/100)")
+                                            let count = input_len(&description.get());
+                                            format!("Description ({count}/{MAX_DESCRIPTION_LENGTH})")
                                         }}
                                     </label>
                                     <MarkdownEditor
@@ -273,7 +277,7 @@ pub fn AddProjectModal() -> impl IntoView {
                                             set_description.set(value);
                                             set_errors.update(|errs| errs.description = None);
                                         })
-                                        maxlength=100
+                                        maxlength=MAX_DESCRIPTION_LENGTH
                                         editor_class="min-h-[12rem] font-mono text-sm"
                                     />
                                     {move || {
@@ -283,9 +287,9 @@ pub fn AddProjectModal() -> impl IntoView {
                                             Some(view! {
                                                 <p class=base>{msg}</p>
                                             })
-                                        } else if description.get().len() >= 100 {
+                                        } else if input_len(&description.get()) >= MAX_DESCRIPTION_LENGTH {
                                             Some(view! {
-                                                <p class=base>{"Description must be 100 characters or fewer.".to_string()}</p>
+                                                <p class=base>{description_too_long_message()}</p>
                                             })
                                         } else {
                                             None

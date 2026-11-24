@@ -4,18 +4,21 @@
 //! frontend and backend. Project rows still store tag wire ids as JSON arrays,
 //! so both crates resolve labels and colors through the helpers below.
 
-use serde::{Deserialize, Serialize};
+use serde::de::{self, Deserializer, Visitor};
+use serde::{Deserialize, Serialize, Serializer};
+use std::fmt;
 use strum::{EnumIter, IntoEnumIterator};
 
 /// Content tag variants with stable wire ids, labels, and Tailwind color styles.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+///
+/// Serde is implemented by hand (see below) so that an unknown wire id decodes
+/// to `None` instead of failing the whole row. Tags are also `PartialOrd` /
+/// `Ord` so deserialized collections can be normalized back into display order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, EnumIter)]
 pub enum Tag {
     /// Three-dimensional models and assets.
-    #[serde(rename = "3d_model")]
     ThreeDModel,
     /// Two-dimensional drawings and diagrams.
-    #[serde(rename = "2d_drawing")]
     TwoDDrawing,
     /// Parametric or algorithmically defined designs.
     Parametric,
@@ -155,10 +158,47 @@ impl Tag {
     }
 }
 
-impl std::fmt::Display for Tag {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Tag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.id())
     }
+}
+
+impl Serialize for Tag {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.id())
+    }
+}
+
+impl<'de> Deserialize<'de> for Tag {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct TagVisitor;
+
+        impl Visitor<'_> for TagVisitor {
+            type Value = Tag;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a tag wire id")
+            }
+
+            fn visit_str<E: de::Error>(self, value: &str) -> Result<Tag, E> {
+                Tag::from_id(value).ok_or_else(|| E::custom(format!("unknown tag id: {value:?}")))
+            }
+        }
+
+        deserializer.deserialize_str(TagVisitor)
+    }
+}
+
+/// Collects tags into a de-duplicated list in enum display order.
+///
+/// Decoding skips unknown ids, so this is what keeps a stored set stable
+/// regardless of the order it was originally written in.
+fn normalize(tags: &[Tag]) -> Vec<Tag> {
+    let mut tags = tags.to_vec();
+    tags.sort_unstable();
+    tags.dedup();
+    tags
 }
 
 /// Convenience accessor for a tag's user-facing label.
@@ -171,6 +211,72 @@ pub fn tag_label(tag: &Tag) -> &'static str {
 #[must_use]
 pub fn tag_color(tag: &Tag) -> &'static str {
     tag.color()
+}
+
+/// Serde adapter for a project's tag list.
+///
+/// D1 stores tags as a JSON array in a TEXT column. Ids the enum no longer
+/// knows are skipped rather than failing the row: the tag set evolves faster
+/// than stored rows, and a project referencing a retired tag must still load.
+pub mod serde_tags {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    use super::{Tag, normalize};
+
+    /// Writes a tag list as a JSON array in a TEXT column.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer's error when the list cannot be encoded as JSON
+    /// or written.
+    pub fn serialize<S: Serializer>(value: &[Tag], serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
+    }
+
+    /// Reads a tag list from a JSON array in a TEXT column.
+    ///
+    /// Ids are decoded through [`Tag::from_id`] so an unrecognized one is
+    /// dropped instead of failing the whole row.
+    ///
+    /// # Errors
+    ///
+    /// Returns a deserialization error when the value is not a string or does
+    /// not hold a JSON array of strings.
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<Tag>, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        let ids = serde_json::from_str::<Vec<String>>(&text).map_err(serde::de::Error::custom)?;
+        Ok(normalize(
+            &ids.iter()
+                .filter_map(|id| Tag::from_id(id))
+                .collect::<Vec<_>>(),
+        ))
+    }
+}
+
+/// Serde adapter for a tag list carried as a comma-separated query parameter.
+///
+/// Unknown ids are skipped silently so a stale bookmark or link still returns
+/// the tags the server does recognise.
+pub mod tag_ids {
+    use serde::{Deserialize, Deserializer};
+
+    use super::Tag;
+
+    /// Decodes a comma-separated list of tag wire ids, skipping unknown ids so
+    /// one stale id cannot discard the others.
+    ///
+    /// # Errors
+    ///
+    /// Returns a deserialization error when the value is not a string.
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<Tag>, D::Error> {
+        let raw = String::deserialize(deserializer)?;
+        Ok(raw
+            .split(',')
+            .map(str::trim)
+            .filter(|id| !id.is_empty())
+            .filter_map(Tag::from_id)
+            .collect())
+    }
 }
 
 #[cfg(test)]
@@ -201,6 +307,12 @@ mod tests {
     }
 
     #[test]
+    fn deserializing_an_unknown_wire_id_reports_it() {
+        let error = serde_json::from_str::<Tag>("\"retired_tag\"");
+        assert!(error.is_err());
+    }
+
+    #[test]
     fn tag_all_includes_every_variant() {
         let all = Tag::all();
         assert_eq!(all.len(), Tag::iter().count());
@@ -212,5 +324,65 @@ mod tests {
         let tag = Tag::ThreeDModel;
         assert_eq!(tag_label(&tag), "3D Model");
         assert_eq!(tag_color(&tag), tag.color());
+    }
+
+    #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+    struct TagRow {
+        #[serde(with = "super::serde_tags")]
+        tags: Vec<Tag>,
+    }
+
+    #[test]
+    fn tag_column_skips_retired_ids_instead_of_failing_the_row() -> Result<(), serde_json::Error> {
+        let row: TagRow =
+            serde_json::from_str(r#"{"tags":"[\"vehicle\",\"retired_tag\",\"art\"]"}"#)?;
+        assert_eq!(row.tags, vec![Tag::Vehicle, Tag::Art]);
+        Ok(())
+    }
+
+    #[test]
+    fn tag_column_normalizes_order_and_duplicates() -> Result<(), serde_json::Error> {
+        let row: TagRow =
+            serde_json::from_str(r#"{"tags":"[\"wip\",\"3d_model\",\"wip\",\"decor\"]"}"#)?;
+        assert_eq!(row.tags, vec![Tag::ThreeDModel, Tag::Decor, Tag::Wip]);
+        Ok(())
+    }
+
+    #[test]
+    fn tag_column_roundtrips_as_a_json_string() -> Result<(), serde_json::Error> {
+        let row = TagRow {
+            tags: vec![Tag::ThreeDModel, Tag::Vehicle],
+        };
+        let json = serde_json::to_string(&row)?;
+        assert_eq!(json, r#"{"tags":"[\"3d_model\",\"vehicle\"]"}"#);
+        assert_eq!(serde_json::from_str::<TagRow>(&json)?, row);
+        Ok(())
+    }
+
+    #[test]
+    fn tag_column_defaults_to_empty_when_null() -> Result<(), serde_json::Error> {
+        let row: TagRow = serde_json::from_str(r#"{"tags":"[]"}"#)?;
+        assert_eq!(row.tags, Vec::<Tag>::new());
+        Ok(())
+    }
+
+    #[derive(Debug, PartialEq, serde::Deserialize)]
+    struct TagQuery {
+        #[serde(default, with = "super::tag_ids")]
+        tags: Vec<Tag>,
+    }
+
+    #[test]
+    fn tag_query_ids_skip_blanks_and_unknowns() -> Result<(), serde_json::Error> {
+        let query: TagQuery = serde_json::from_str(r#"{"tags":" vehicle, , retired_tag,art "}"#)?;
+        assert_eq!(query.tags, vec![Tag::Vehicle, Tag::Art]);
+        Ok(())
+    }
+
+    #[test]
+    fn tag_query_ids_default_to_empty() -> Result<(), serde_json::Error> {
+        let query: TagQuery = serde_json::from_str("{}")?;
+        assert_eq!(query.tags, Vec::<Tag>::new());
+        Ok(())
     }
 }

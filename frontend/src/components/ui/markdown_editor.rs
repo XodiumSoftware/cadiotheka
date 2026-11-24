@@ -6,6 +6,7 @@ use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::toolbar_button::ToolbarButton;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
+use shared::validation::input_len;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum MarkdownEditorTab {
@@ -47,7 +48,7 @@ pub fn MarkdownEditor(
     let textarea_class = Signal::derive({
         let editor_class = editor_class.clone();
         move || {
-            let at_max = value.get().len() >= maxlength;
+            let at_max = input_len(&value.get()) >= maxlength;
             format!(
                 "textarea w-full rounded-none bg-transparent border-base-content/20 focus:border-primary focus:outline-none {} {}",
                 editor_class,
@@ -241,13 +242,13 @@ pub fn MarkdownEditor(
                         view! {
                             <div class="flex items-center justify-between gap-2">
                                 <span class=move || {
-                                    if value.get().len() >= maxlength {
+                                    if input_len(&value.get()) >= maxlength {
                                         "text-xs text-error"
                                     } else {
                                         "text-xs text-base-content/50"
                                     }
                                 }>
-                                    {move || format!("{}/{}", value.get().len(), maxlength)}
+                                    {move || format!("{}/{}", input_len(&value.get()), maxlength)}
                                 </span>
                                 <div class="flex gap-2">
                                     <button
@@ -276,13 +277,13 @@ pub fn MarkdownEditor(
                         view! {
                             <div class="flex items-center justify-between gap-2">
                                 <span class=move || {
-                                    if value.get().len() >= maxlength {
+                                    if input_len(&value.get()) >= maxlength {
                                         "text-xs text-error"
                                     } else {
                                         "text-xs text-base-content/50"
                                     }
                                 }>
-                                    {move || format!("{}/{}", value.get().len(), maxlength)}
+                                    {move || format!("{}/{}", input_len(&value.get()), maxlength)}
                                 </span>
                             </div>
                         }

@@ -1,14 +1,16 @@
 use serde::{Deserialize, Serialize};
 use shared::{
     tags::Tag,
-    validation::{MAX_DESCRIPTION_LENGTH, MAX_IFC_SIZE_BYTES, MAX_TITLE_LENGTH},
+    validation::{
+        MAX_IFC_SIZE_BYTES, ProjectFields, ValidationErrorResponse, validate_project_fields,
+    },
     version_state::VersionState,
 };
 use worker::{
     Env, FormEntry, Headers, HttpMetadata, Request, Response, Result, RouteContext, console_log,
 };
 
-use crate::api::accounts::Account;
+use crate::api::accounts::{Account, fetch_account};
 use crate::api::session::read_session;
 use crate::guards::{GuardOutcome, require_auth, require_auth_with_rate_limit};
 use crate::utils::{
@@ -17,7 +19,7 @@ use crate::utils::{
     required_param,
 };
 use ifc_lite_export::{GltfOptions, try_export_glb};
-use shared::accounts::Role;
+use shared::accounts::ProjectPermission;
 
 const SELECT_PROJECT_COLUMNS: &str = "SELECT id, title, author, author_id, author_username, collaborator_ids, description, tags, downloads, favorites, timestamp FROM projects";
 
@@ -60,23 +62,13 @@ struct VersionKey {
     ifc_key: String,
 }
 
-/// Validates the project payload and returns a map of field names to error
-/// messages. An empty map means the payload is valid.
-fn validate_project_payload(payload: &ProjectPayload) -> std::collections::HashMap<String, String> {
-    let mut errors = std::collections::HashMap::new();
-    if payload.title.len() > MAX_TITLE_LENGTH {
-        errors.insert(
-            "title".to_string(),
-            "Title must be 100 characters or fewer".to_string(),
-        );
-    }
-    if payload.description.len() > MAX_DESCRIPTION_LENGTH {
-        errors.insert(
-            "description".to_string(),
-            "Description must be 5000 characters or fewer".to_string(),
-        );
-    }
-    errors
+/// Validates the project payload, returning one message per invalid field.
+fn validate_project_payload(payload: &ProjectPayload) -> ValidationErrorResponse {
+    validate_project_fields(ProjectFields::new(
+        &payload.title,
+        &payload.description,
+        &payload.collaborator_ids,
+    ))
 }
 
 /// A Cadiotheka project stored in D1.
@@ -87,13 +79,13 @@ pub(crate) struct Project {
     pub author: String,
     pub author_id: String,
     pub author_username: String,
-    #[serde(with = "json_string")]
+    #[serde(with = "json_column")]
     pub collaborator_ids: Vec<String>,
     pub description: String,
     #[serde(with = "json_tags")]
     pub tags: Vec<Tag>,
     pub downloads: u64,
-    #[serde(with = "json_string")]
+    #[serde(with = "json_column")]
     pub favorites: Vec<String>,
     pub timestamp: String,
 }
@@ -106,53 +98,48 @@ pub(crate) struct Project {
 #[derive(Deserialize, Debug)]
 pub(crate) struct ProjectPayload {
     pub title: String,
-    #[serde(with = "json_string")]
+    #[serde(with = "json_column")]
     pub collaborator_ids: Vec<String>,
     pub description: String,
     #[serde(with = "json_tags")]
     pub tags: Vec<Tag>,
 }
 
-/// Serde adapter that stores a `Vec<String>` as a single JSON string column.
-///
-/// D1 stores tags, favorites, and collaborators as TEXT containing a JSON
-/// array, so we serialize to a JSON string on the way in and parse that JSON
-/// string on the way out.
-mod json_string {
-    use serde::{Deserialize, Deserializer, Serializer};
+/// Serde adapter that stores a `Vec<String>` as a single JSON string column,
+/// matching the frontend's project payload.
+mod json_column {
+    use serde::{Deserializer, Serializer};
 
     pub(crate) fn serialize<S: Serializer>(
-        value: &Vec<String>,
+        value: &[String],
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
+        shared::json_column::serialize(value, serializer)
     }
 
     pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
         deserializer: D,
     ) -> Result<Vec<String>, D::Error> {
-        let s = String::deserialize(deserializer)?;
-        serde_json::from_str(&s).map_err(serde::de::Error::custom)
+        shared::json_column::deserialize(deserializer)
     }
 }
 
 mod json_tags {
-    use serde::{Deserialize, Deserializer, Serializer};
+    use serde::{Deserializer, Serializer};
 
     use super::Tag;
 
     pub(crate) fn serialize<S: Serializer>(
-        value: &Vec<Tag>,
+        value: &[Tag],
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&serde_json::to_string(value).map_err(serde::ser::Error::custom)?)
+        shared::tags::serde_tags::serialize(value, serializer)
     }
 
     pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
         deserializer: D,
     ) -> Result<Vec<Tag>, D::Error> {
-        let s = String::deserialize(deserializer)?;
-        serde_json::from_str(&s).map_err(serde::de::Error::custom)
+        shared::tags::serde_tags::deserialize(deserializer)
     }
 }
 
@@ -274,9 +261,8 @@ pub(crate) async fn create_project(mut req: Request, ctx: RouteContext<()>) -> R
         };
     let payload: ProjectPayload = req.json().await?;
     let validation_errors = validate_project_payload(&payload);
-    if !validation_errors.is_empty() {
-        let body = serde_json::json!({ "errors": validation_errors });
-        return Ok(Response::from_json(&body)?.with_status(400));
+    if !validation_errors.errors.is_empty() {
+        return Ok(Response::from_json(&validation_errors)?.with_status(400));
     }
 
     let project_id = uuid::Uuid::new_v4().to_string();
@@ -352,15 +338,19 @@ pub(crate) async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Re
     }
 
     let patch: ProjectPatch = req.json().await?;
-    if let Some(title) = &patch.title
-        && title.len() > MAX_TITLE_LENGTH
-    {
-        return bad_request("Title must be 100 characters or fewer");
+    let collaborator_update = patch.collaborator_ids.as_deref();
+    let validation_errors = validate_project_fields(ProjectFields {
+        title: patch.title.as_deref(),
+        description: patch.description.as_deref(),
+        collaborator_ids: collaborator_update,
+    });
+    if !validation_errors.is_empty() {
+        return Ok(Response::from_json(&validation_errors)?.with_status(400));
     }
-    if let Some(description) = &patch.description
-        && description.len() > MAX_DESCRIPTION_LENGTH
+    if collaborator_update.is_some()
+        && !project_permission(&account, &project).can_edit_collaborators()
     {
-        return bad_request("Description must be 5000 characters or fewer");
+        return forbidden("Only the project owner can change collaborators");
     }
 
     let database = db(&ctx)?;
@@ -425,19 +415,51 @@ pub(crate) async fn update_project(mut req: Request, ctx: RouteContext<()>) -> R
     }
 
     let payload: ProjectPayload = req.json().await?;
+    let collaborators_provided = !payload.collaborator_ids.is_empty();
     let validation_errors = validate_project_payload(&payload);
     if !validation_errors.is_empty() {
-        let body = serde_json::json!({ "errors": validation_errors });
-        return Ok(Response::from_json(&body)?.with_status(400));
+        return Ok(Response::from_json(&validation_errors)?.with_status(400));
     }
+    if collaborators_provided && !project_permission(&account, &project).can_edit_collaborators() {
+        return forbidden("Only the project owner can change collaborators");
+    }
+
     let tags = payload
         .tags
         .iter()
         .map(ToString::to_string)
         .collect::<Vec<_>>();
     let tags = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
+
+    // A full replacement leaves fields the payload omits untouched rather than
+    // clearing them, so a client that sends an empty collaborator list cannot
+    // silently detach everyone credited on the project.
+    let collaborator_ids = if collaborators_provided {
+        &payload.collaborator_ids
+    } else {
+        &project.collaborator_ids
+    };
     let collaborator_ids =
-        serde_json::to_string(&project.collaborator_ids).unwrap_or_else(|_| "[]".to_string());
+        serde_json::to_string(collaborator_ids).unwrap_or_else(|_| "[]".to_string());
+
+    // Attribution is re-derived from the author's current account row, which
+    // keeps `author_username` in step with renames. Falling back to the stored
+    // values means an account lookup failure cannot rewrite attribution to
+    // something that was never true.
+    let (author, author_id, author_username) = match fetch_account(&ctx, &project.author_id).await?
+    {
+        Some(author_account) => (
+            author_account.display_name,
+            author_account.id,
+            author_account.username,
+        ),
+        None => (
+            project.author.clone(),
+            project.author_id.clone(),
+            project.author_username.clone(),
+        ),
+    };
+
     let favorites = serde_json::to_string(&project.favorites).unwrap_or_else(|_| "[]".to_string());
 
     #[allow(clippy::cast_precision_loss)]
@@ -452,9 +474,9 @@ pub(crate) async fn update_project(mut req: Request, ctx: RouteContext<()>) -> R
         .bind(
             &[
                 payload.title.into(),
-                project.author.into(),
-                project.author_id.into(),
-                project.author_username.into(),
+                author.into(),
+                author_id.into(),
+                author_username.into(),
                 collaborator_ids.into(),
                 payload.description.into(),
                 tags.into(),
@@ -1330,9 +1352,21 @@ pub(crate) fn handle_glb_dead_letter_queue(
 
 /// Whether the given account may edit or delete the project.
 fn can_edit_project(account: &Account, project: &Project) -> bool {
-    account.role == Role::Admin
-        || account.id == project.author_id
-        || project.collaborator_ids.contains(&account.id)
+    project_permission(account, project).can_edit_content()
+}
+
+/// Resolves what the account may change on the project.
+///
+/// The rule lives in [`shared::accounts::ProjectPermission`] so the frontend
+/// can hide editing controls using the exact same decision the backend
+/// enforces here.
+fn project_permission(account: &Account, project: &Project) -> ProjectPermission {
+    ProjectPermission::project(
+        account.role,
+        &account.id,
+        &project.author_id,
+        &project.collaborator_ids,
+    )
 }
 
 pub(crate) async fn toggle_project_favorite(
@@ -1474,6 +1508,11 @@ async fn fetch_project(ctx: &RouteContext<()>, id: &str) -> Result<Option<Projec
 #[cfg(test)]
 mod tests {
     use super::*;
+    use shared::accounts::Role;
+    use shared::validation::{
+        MAX_DESCRIPTION_LENGTH, MAX_TITLE_LENGTH, description_too_long_message,
+        title_too_long_message,
+    };
 
     fn sample_account(role: Role) -> Account {
         Account {
@@ -1557,23 +1596,29 @@ mod tests {
     #[test]
     fn payload_with_long_title_fails() {
         let mut payload = sample_payload();
-        payload.title = "a".repeat(101);
+        payload.title = "a".repeat(MAX_TITLE_LENGTH + 1);
         let errors = validate_project_payload(&payload);
-        assert_eq!(
-            errors.get("title"),
-            Some(&"Title must be 100 characters or fewer".to_string())
-        );
+        assert_eq!(errors.errors.get("title"), Some(&title_too_long_message()));
     }
 
     #[test]
     fn payload_with_long_description_fails() {
         let mut payload = sample_payload();
-        payload.description = "a".repeat(5001);
+        payload.description = "a".repeat(MAX_DESCRIPTION_LENGTH + 1);
         let errors = validate_project_payload(&payload);
         assert_eq!(
-            errors.get("description"),
-            Some(&"Description must be 5000 characters or fewer".to_string())
+            errors.errors.get("description"),
+            Some(&description_too_long_message())
         );
+    }
+
+    /// Titles are limited by characters, so a non-ASCII title whose byte length
+    /// exceeds the limit is still accepted.
+    #[test]
+    fn payload_with_non_ascii_title_at_the_limit_passes() {
+        let mut payload = sample_payload();
+        payload.title = "ü".repeat(MAX_TITLE_LENGTH);
+        assert!(validate_project_payload(&payload).is_empty());
     }
 
     #[test]
@@ -1595,6 +1640,31 @@ mod tests {
         let account = sample_account(Role::Admin);
         let project = sample_project("other");
         assert!(can_edit_project(&account, &project));
+    }
+
+    #[test]
+    fn collaborator_can_edit_content_but_not_collaborators() {
+        let account = sample_account(Role::Creator);
+        let mut project = sample_project("other");
+        project.collaborator_ids = vec![account.id.clone()];
+        assert!(can_edit_project(&account, &project));
+        assert!(!project_permission(&account, &project).can_edit_collaborators());
+    }
+
+    #[test]
+    fn author_can_edit_collaborators() {
+        let account = sample_account(Role::Creator);
+        let project = sample_project(&account.id);
+        assert!(project_permission(&account, &project).can_edit_collaborators());
+    }
+
+    #[test]
+    fn stranger_can_edit_neither_content_nor_collaborators() {
+        let account = sample_account(Role::Creator);
+        let project = sample_project("other");
+        let permission = project_permission(&account, &project);
+        assert!(!permission.can_edit_content());
+        assert!(!permission.can_edit_collaborators());
     }
 
     #[test]

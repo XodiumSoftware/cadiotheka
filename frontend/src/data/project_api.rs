@@ -1,13 +1,12 @@
 use crate::data::error::RequestError;
-use crate::data::project_types::{
-    ProjectCreationResult, ProjectData, ProjectVersion, ValidationErrorResponse,
-};
+use crate::data::project_types::{ProjectCreationResult, ProjectData, ProjectVersion};
 use crate::utils::{
     project_downloads_url, project_favorites_url, project_glb_url, project_ifc_url, project_url,
     project_version_url, project_versions_url, projects_url,
 };
 use gloo_net::http::Request;
 use serde::Deserialize;
+use shared::validation::ValidationErrorResponse;
 use web_sys::RequestCredentials;
 
 /// Creates a new project on the backend.

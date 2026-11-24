@@ -33,7 +33,8 @@ use crate::utils::{
 };
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
-use shared::validation::{MAX_DESCRIPTION_LENGTH, MAX_TITLE_LENGTH};
+use shared::accounts::ProjectPermission;
+use shared::validation::{MAX_DESCRIPTION_LENGTH, MAX_TITLE_LENGTH, input_len};
 use std::rc::Rc;
 use three_d_asset::Srgba;
 
@@ -780,6 +781,16 @@ fn ProjectModalContent(
     let (description, set_description) = signal(card.description.clone());
 
     let (editing_collaborators, set_editing_collaborators) = signal(false);
+    let can_edit_collaborators = Signal::derive({
+        let author_id = card.author_id.clone();
+        let collaborator_ids = card.collaborator_ids.clone();
+        move || {
+            current_user.account.get().is_some_and(|me| {
+                ProjectPermission::project(me.role, &me.id, &author_id, &collaborator_ids)
+                    .can_edit_collaborators()
+            })
+        }
+    });
     let (collaborator_ids, set_collaborator_ids) = signal(card.collaborator_ids.clone());
     let (draft_collaborator_ids, set_draft_collaborator_ids) =
         signal(card.collaborator_ids.clone());
@@ -2976,7 +2987,7 @@ fn ProjectModalContent(
                                                 <div class="flex items-center gap-2">
                                                     <input
                                                         class=move || {
-                                                            let at_max = draft_title.get().len() >= MAX_TITLE_LENGTH;
+                                                            let at_max = input_len(&draft_title.get()) >= MAX_TITLE_LENGTH;
                                                             format!(
                                                                 "input input-sm input-bordered flex-1 text-base-content text-lg font-bold {}",
                                                                 if at_max { "hover:border-error" } else { "" }
@@ -2996,13 +3007,13 @@ fn ProjectModalContent(
                                                         autofocus
                                                     />
                                                     <span class=move || {
-                                                        if draft_title.get().len() >= MAX_TITLE_LENGTH {
+                                                        if input_len(&draft_title.get()) >= MAX_TITLE_LENGTH {
                                                             "text-xs text-error flex-shrink-0"
                                                         } else {
                                                             "text-xs text-base-content/50 flex-shrink-0"
                                                         }
                                                     }>
-                                                        {move || format!("{}/{}", draft_title.get().len(), MAX_TITLE_LENGTH)}
+                                                        {move || format!("{}/{}", input_len(&draft_title.get()), MAX_TITLE_LENGTH)}
                                                     </span>
                                                 </div>
                                                 <div class="flex justify-end gap-2">
@@ -3434,7 +3445,7 @@ fn ProjectModalContent(
                                             .cloned()
                                             .collect::<Vec<_>>();
 
-                                        if is_editable.get() && edit_mode.get() {
+                                        if is_editable.get() && edit_mode.get() && can_edit_collaborators.get() {
                                             let collaborators = current_collaborators.clone();
                                             view! {
                                                 <button
