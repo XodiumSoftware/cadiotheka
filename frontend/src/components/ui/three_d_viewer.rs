@@ -206,6 +206,8 @@ pub fn IfcViewer(
     let animation_handle: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
 
     let save_generation: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
+    let load_generation: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
+    let loaded_url: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
 
     let schedule_save = {
         let renderer = Rc::clone(&renderer);
@@ -530,10 +532,9 @@ pub fn IfcViewer(
             metadata.set(None);
             return;
         };
-        leptos::task::spawn_local({
-            let metadata = metadata;
-            async move {
-                metadata.set(fetch_metadata(&url).await);
+        leptos::task::spawn_local(async move {
+            if let Some(fetched) = fetch_metadata(&url).await {
+                metadata.set(Some(fetched));
             }
         });
     });
@@ -1017,53 +1018,73 @@ pub fn IfcViewer(
             }
         }
 
+        if *loaded_url.borrow() == Some(url.clone()) {
+            return;
+        }
+        *loaded_url.borrow_mut() = Some(url.clone());
+
         state.set(IfcViewerState::Loading);
         let renderer = Rc::clone(&renderer);
         let state = state;
         let request_render = Rc::clone(&request_render);
+        let load_generation = Rc::clone(&load_generation);
+        let loaded_url = Rc::clone(&loaded_url);
+
+        let expected = {
+            let mut generation = load_generation.borrow_mut();
+            *generation = generation.wrapping_add(1);
+            *generation
+        };
 
         leptos::task::spawn_local(async move {
-            match load_model_bytes(&url).await {
-                Some(glb_bytes) => {
-                    state.set(IfcViewerState::Processing);
+            let loaded = load_model_bytes(&url).await;
+            if *load_generation.borrow() != expected {
+                return;
+            }
+            let Some(glb_bytes) = loaded else {
+                state.set(IfcViewerState::Error);
+                loaded_url.borrow_mut().take();
+                return;
+            };
 
-                    let load_ok = renderer
-                        .borrow_mut()
-                        .as_mut()
-                        .is_some_and(|r| r.load_model(&glb_bytes));
+            state.set(IfcViewerState::Processing);
 
-                    if load_ok {
-                        state.set(IfcViewerState::Rendering);
+            let load_ok = renderer
+                .borrow_mut()
+                .as_mut()
+                .is_some_and(|r| r.load_model(&glb_bytes));
 
-                        let restored = storage_key
-                            .as_ref()
-                            .map(|s| s.get())
-                            .filter(|k| !k.is_empty())
-                            .and_then(|key| load_view_state(&key));
+            if load_ok {
+                state.set(IfcViewerState::Rendering);
 
-                        if let Some(state) = restored {
-                            if let Some(r) = renderer.borrow_mut().as_mut() {
-                                r.restore_view_state(&state, show_axes.get());
-                            }
-                        } else if let Some(r) = renderer.borrow_mut().as_mut() {
-                            r.reset_view(show_axes.get());
-                        }
+                let restored = storage_key
+                    .as_ref()
+                    .map(|s| s.get())
+                    .filter(|k| !k.is_empty())
+                    .and_then(|key| load_view_state(&key));
 
-                        if let Some(r) = renderer.borrow_mut().as_mut() {
-                            r.set_show_axes(show_axes.get());
-                            r.set_highlight_color(highlight_color.get_untracked());
-                            r.set_selection_color(selection_color.get_untracked());
-                            r.set_skybox_color(skybox_color.get_untracked());
-                        }
-
-                        request_render.borrow_mut()();
-                    } else {
-                        state.set(IfcViewerState::Error);
+                if let Some(saved) = restored {
+                    if let Some(r) = renderer.borrow_mut().as_mut() {
+                        r.restore_view_state(&saved, show_axes.get());
                     }
+                } else if let Some(r) = renderer.borrow_mut().as_mut() {
+                    r.reset_view(show_axes.get());
                 }
-                None => {
-                    state.set(IfcViewerState::Error);
+
+                if let Some(r) = renderer.borrow_mut().as_mut() {
+                    r.set_show_axes(show_axes.get());
+                    r.set_highlight_color(highlight_color.get_untracked());
+                    r.set_selection_color(selection_color.get_untracked());
+                    r.set_skybox_color(skybox_color.get_untracked());
+                    r.set_fov_y(fov.get_untracked());
+                    r.set_orthographic(orthographic.get_untracked());
+                    r.set_wireframe(wireframe.get_untracked());
                 }
+
+                request_render.borrow_mut()();
+            } else {
+                state.set(IfcViewerState::Error);
+                loaded_url.borrow_mut().take();
             }
         });
     });
