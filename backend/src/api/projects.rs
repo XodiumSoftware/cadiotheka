@@ -204,6 +204,41 @@ async fn invalidate_project_list(req: &Request) {
     crate::cache::delete(&key).await;
 }
 
+/// Purges cached binary assets whose R2 bodies a write is about to replace.
+///
+/// GLB and metadata URLs are stable per project, so unlike IFC downloads (whose
+/// URLs carry the version id) they must be purged by name whenever the bytes
+/// behind them change. Missing this would leave viewers rendering a stale model
+/// for up to a year.
+async fn invalidate_project_assets(req: &Request, project_id: &str) {
+    crate::cache::purge_asset(&crate::cache::project_asset_url(req, project_id, "glb")).await;
+    crate::cache::purge_asset(&crate::cache::project_asset_url(
+        req,
+        project_id,
+        "glb-metadata",
+    ))
+    .await;
+}
+
+/// Stores freshly converted GLB bytes under the requesting URL.
+///
+/// Called on the conversion path, which already holds the bytes in memory, so
+/// warming costs a single cache write instead of a second R2 round trip. A
+/// failure is logged away: the response is about to be served regardless.
+async fn warm_glb_cache(req: &Request, project_id: &str, asset: GlbAsset, bytes: &[u8]) {
+    let suffix = match asset {
+        GlbAsset::Binary => "glb",
+        GlbAsset::Metadata => "glb-metadata",
+    };
+    let Ok(headers) = asset_headers(asset.default_content_type()) else {
+        return;
+    };
+    let key = crate::cache::project_asset_url(req, project_id, suffix);
+    if let Err(err) = crate::cache::put_asset(&key, bytes.to_vec(), &headers).await {
+        console_log!("warm_glb_cache: failed for {key}: {err:?}");
+    }
+}
+
 /// Responds with the project matching the `:id` path parameter, or 404 if not found.
 pub(crate) async fn read_project(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let id = required_param(&ctx, "id")?;
@@ -528,6 +563,7 @@ pub(crate) async fn upload_project_ifc(
     // Clear any cached GLB for this project so the new version can be reconverted.
     let glb_cache_key = glb_key_for_project(&project_id);
     let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
+    invalidate_project_assets(&req, &project_id).await;
 
     enqueue_glb_conversion(&ctx.env, &project_id, &key).await;
 
@@ -567,10 +603,11 @@ pub(crate) async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> R
 
     db(&ctx)?
         .prepare("DELETE FROM project_versions WHERE project_id = ?1")
-        .bind(&[project_id.into()])?
+        .bind(&[project_id.clone().into()])?
         .run()
         .await?;
 
+    invalidate_project_assets(&req, &project_id).await;
     Response::from_json(&serde_json::json!({ "deleted": true }))
 }
 
@@ -624,6 +661,7 @@ pub(crate) async fn update_project_version(
 
         let glb_cache_key = glb_key_for_project(&project.id);
         let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
+        invalidate_project_assets(&req, &project.id).await;
     }
 
     Response::empty()
@@ -667,11 +705,93 @@ pub(crate) async fn delete_project_version(
     let glb_cache_key = glb_key_for_project(&project_id);
     let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
 
+    invalidate_project_assets(&req, &project_id).await;
     Response::empty()
 }
 
+/// Builds the response headers for a binary project asset.
+///
+/// `Vary: Origin` keeps Cloudflare from replaying a cached body carrying one
+/// frontend's CORS headers to a different origin. Without it a cross-origin
+/// visitor could be handed an entry whose `Access-Control-Allow-Origin` does
+/// not match, and the browser would reject the model.
+fn asset_headers(content_type: &str) -> Result<Headers> {
+    let headers = Headers::new();
+    headers.set("Content-Type", content_type)?;
+    headers.set("Vary", "Origin")?;
+    headers.set(
+        "Cache-Control",
+        &format!(
+            "public, max-age={}, immutable",
+            crate::cache::ASSET_MAX_AGE_SECONDS
+        ),
+    )?;
+    Ok(headers)
+}
+
+/// Serves a binary asset stored in R2, reusing an edge-cached body when one
+/// exists.
+///
+/// Cache hits are checked first so a model viewed repeatedly never pays for an
+/// R2 read. Misses stream the object straight through rather than buffering it;
+/// the entry is populated elsewhere, either by the GLB conversion (which holds
+/// the bytes in memory anyway) or by a request that already has them in hand.
+async fn serve_asset(
+    req: &Request,
+    ctx: &RouteContext<()>,
+    bucket_key: &str,
+    default_content_type: &str,
+    disposition: Option<&str>,
+) -> Result<Response> {
+    if let Some(key) = crate::cache::asset_cache_key(req)
+        && let Some(mut cached) = crate::cache::get_asset(&key).await
+        && let Ok(bytes) = cached.bytes().await
+    {
+        return Ok(Response::from_bytes(bytes)?.with_headers(cached_asset_headers(&cached)?));
+    }
+
+    let Some(object) = assets_bucket(ctx)?.get(bucket_key).execute().await? else {
+        return not_found("Not found");
+    };
+
+    let content_type = object
+        .http_metadata()
+        .content_type
+        .unwrap_or_else(|| default_content_type.to_string());
+    let headers = asset_headers(&content_type)?;
+    if let Some(disposition) = disposition {
+        headers.set("Content-Disposition", disposition)?;
+    }
+
+    let Some(body) = object.body() else {
+        return Err(worker::Error::RustError("asset object has no body".into()));
+    };
+
+    Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
+}
+
+/// Rebuilds the headers of a cached asset body.
+///
+/// Stored entries carry the headers they were written with, but CORS has not
+/// been applied yet at this point, so they are replayed as-is.
+fn cached_asset_headers(cached: &Response) -> Result<Headers> {
+    let headers = Headers::new();
+    let source = cached.headers();
+    for name in ["Content-Type", "Cache-Control", "Content-Disposition"] {
+        if let Ok(Some(value)) = source.get(name) {
+            headers.set(name, &value)?;
+        }
+    }
+    headers.set("Vary", "Origin")?;
+    Ok(headers)
+}
+
 /// Serves an IFC model from R2 by its version id and filename.
-pub(crate) async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
+///
+/// The version download counter is bumped before the response is returned but
+/// after the cached body has been located, so repeat downloads skip the R2 read
+/// that used to dominate this handler.
+pub(crate) async fn serve_ifc(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let version_id = required_param(&ctx, "version_id")?;
     let filename = required_param(&ctx, "filename")?;
 
@@ -685,35 +805,23 @@ pub(crate) async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Re
         return not_found("Not found");
     };
 
-    let object = assets_bucket(&ctx)?.get(&key.ifc_key).execute().await?;
+    let disposition = attachment_content_disposition(&filename);
+    let response = serve_asset(
+        &req,
+        &ctx,
+        &key.ifc_key,
+        "application/octet-stream",
+        Some(&disposition),
+    )
+    .await?;
 
-    let Some(object) = object else {
-        return not_found("Not found");
-    };
-
-    let http_metadata = object.http_metadata();
-    let content_type = http_metadata
-        .content_type
-        .unwrap_or_else(|| "application/octet-stream".to_string());
-    let body = object
-        .body()
-        .ok_or_else(|| worker::Error::RustError("IFC object has no body".into()))?;
-
-    let headers = Headers::new();
-    headers.set("Content-Type", &content_type)?;
-    headers.set(
-        "Content-Disposition",
-        &attachment_content_disposition(&filename),
-    )?;
-
-    // Increment the per-version download counter.
     let _ = db(&ctx)?
         .prepare("UPDATE project_versions SET downloads = downloads + 1 WHERE id = ?1")
         .bind(&[version_id.into()])?
         .run()
         .await;
 
-    Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
+    Ok(response)
 }
 
 /// Returns the R2 key used to cache a project's converted GLB.
@@ -939,115 +1047,112 @@ fn visit_gltf_node(
 }
 
 /// Serves a project's IFC model converted to a binary GLB for the 3D viewer.
-pub(crate) async fn serve_project_glb(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let id = required_param(&ctx, "id")?;
-
-    let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
-        return not_found("No IFC model uploaded for this project");
-    };
-
-    let glb_cache_key = glb_key_for_project(&id);
-    if let Some(cached) = assets_bucket(&ctx)?.get(&glb_cache_key).execute().await? {
-        let body = cached
-            .body()
-            .ok_or_else(|| worker::Error::RustError("GLB cache object has no body".into()))?;
-        let http_metadata = cached.http_metadata();
-        let content_type = http_metadata
-            .content_type
-            .unwrap_or_else(|| "model/gltf-binary".to_string());
-        let headers = Headers::new();
-        headers.set("Content-Type", &content_type)?;
-        headers.set("Cache-Control", "public, max-age=3600")?;
-        return Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers));
-    }
-
-    match ensure_glb_assets_cached(&ctx.env, &id, &key).await? {
-        Some(GlbConversion::Success(bytes)) => {
-            let headers = Headers::new();
-            headers.set("Content-Type", "model/gltf-binary")?;
-            headers.set("Cache-Control", "public, max-age=3600")?;
-            Response::from_bytes(bytes).map(|resp| resp.with_headers(headers))
-        }
-        Some(GlbConversion::NoGeometry) => {
-            error_response("IFC model has no renderable geometry", 422)
-        }
-        // The cache was populated between the check above and this call; serve it.
-        None => {
-            let cached = assets_bucket(&ctx)?
-                .get(glb_key_for_project(&id))
-                .execute()
-                .await?
-                .ok_or_else(|| worker::Error::RustError("GLB cache object has no body".into()))?;
-            let body = cached
-                .body()
-                .ok_or_else(|| worker::Error::RustError("GLB cache object has no body".into()))?;
-            let http_metadata = cached.http_metadata();
-            let content_type = http_metadata
-                .content_type
-                .unwrap_or_else(|| "model/gltf-binary".to_string());
-            let headers = Headers::new();
-            headers.set("Content-Type", &content_type)?;
-            headers.set("Cache-Control", "public, max-age=3600")?;
-            Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
-        }
-    }
+pub(crate) async fn serve_project_glb(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    serve_glb_asset(&req, &ctx, GlbAsset::Binary).await
 }
 
 /// Serves per-primitive metadata for a project's converted GLB.
 pub(crate) async fn serve_project_glb_metadata(
-    _req: Request,
+    req: Request,
     ctx: RouteContext<()>,
 ) -> Result<Response> {
-    let id = required_param(&ctx, "id")?;
+    serve_glb_asset(&req, &ctx, GlbAsset::Metadata).await
+}
 
-    let Some(key) = latest_visible_ifc_key(&ctx, &id).await? else {
+/// Which of the two derived GLB artifacts a request is for.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum GlbAsset {
+    /// The binary GLB the viewer renders.
+    Binary,
+    /// The JSON mapping primitives to IFC entities.
+    Metadata,
+}
+
+impl GlbAsset {
+    fn bucket_key(self, project_id: &str) -> String {
+        match self {
+            Self::Binary => glb_key_for_project(project_id),
+            Self::Metadata => glb_metadata_key_for_project(project_id),
+        }
+    }
+
+    fn default_content_type(self) -> &'static str {
+        match self {
+            Self::Binary => "model/gltf-binary",
+            Self::Metadata => "application/json",
+        }
+    }
+
+    fn error_label(self) -> &'static str {
+        match self {
+            Self::Binary => "GLB cache object has no body",
+            Self::Metadata => "GLB metadata cache object has no body",
+        }
+    }
+}
+
+/// Serves one of the derived GLB artifacts, from the edge cache when possible.
+///
+/// Both handlers follow the same sequence: locate the visible IFC version, try
+/// the edge cache, then R2, converting on demand if neither holds the artifact.
+/// The conversion writes both artifacts to R2, so a miss costs at most one
+/// conversion per project rather than one per artifact.
+async fn serve_glb_asset(
+    req: &Request,
+    ctx: &RouteContext<()>,
+    asset: GlbAsset,
+) -> Result<Response> {
+    let id = required_param(ctx, "id")?;
+
+    let Some(key) = latest_visible_ifc_key(ctx, &id).await? else {
         return not_found("No IFC model uploaded for this project");
     };
 
-    let metadata_cache_key = glb_metadata_key_for_project(&id);
-    if let Some(cached) = assets_bucket(&ctx)?
-        .get(&metadata_cache_key)
-        .execute()
-        .await?
+    if let Some(cache_key) = crate::cache::asset_cache_key(req)
+        && let Some(mut cached) = crate::cache::get_asset(&cache_key).await
+        && let Ok(bytes) = cached.bytes().await
     {
-        let body = cached.body().ok_or_else(|| {
-            worker::Error::RustError("GLB metadata cache object has no body".into())
-        })?;
-        let http_metadata = cached.http_metadata();
-        let content_type = http_metadata
-            .content_type
-            .unwrap_or_else(|| "application/json".to_string());
-        let headers = Headers::new();
-        headers.set("Content-Type", &content_type)?;
-        headers.set("Cache-Control", "public, max-age=3600")?;
-        return Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers));
+        return Ok(Response::from_bytes(bytes)?.with_headers(cached_asset_headers(&cached)?));
     }
 
-    match ensure_glb_assets_cached(&ctx.env, &id, &key).await? {
-        Some(GlbConversion::Success(_)) | None => {
-            let cached = assets_bucket(&ctx)?
-                .get(glb_metadata_key_for_project(&id))
-                .execute()
-                .await?
-                .ok_or_else(|| {
-                    worker::Error::RustError("GLB metadata cache object has no body".into())
-                })?;
-            let body = cached.body().ok_or_else(|| {
-                worker::Error::RustError("GLB metadata cache object has no body".into())
-            })?;
-            let http_metadata = cached.http_metadata();
-            let content_type = http_metadata
-                .content_type
-                .unwrap_or_else(|| "application/json".to_string());
-            let headers = Headers::new();
-            headers.set("Content-Type", &content_type)?;
-            headers.set("Cache-Control", "public, max-age=3600")?;
-            Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
-        }
-        Some(GlbConversion::NoGeometry) => {
-            error_response("IFC model has no renderable geometry", 422)
-        }
-    }
+    let bucket_key = asset.bucket_key(&id);
+    let headers = asset_headers(asset.default_content_type())?;
+
+    let Some(cached) = assets_bucket(ctx)?.get(&bucket_key).execute().await? else {
+        return match ensure_glb_assets_cached(&ctx.env, &id, &key).await? {
+            Some(GlbConversion::Success(bytes)) => {
+                warm_glb_cache(req, &id, asset, &bytes).await;
+                Response::from_bytes(bytes).map(|resp| resp.with_headers(headers))
+            }
+            Some(GlbConversion::NoGeometry) => {
+                error_response("IFC model has no renderable geometry", 422)
+            }
+            None => r2_asset_response(ctx, &bucket_key, &headers, asset.error_label()).await,
+        };
+    };
+
+    let Some(body) = cached.body() else {
+        return Err(worker::Error::RustError(asset.error_label().into()));
+    };
+    Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers))
+}
+
+/// Streams an object out of R2 with the given headers.
+async fn r2_asset_response(
+    ctx: &RouteContext<()>,
+    bucket_key: &str,
+    headers: &Headers,
+    error_label: &str,
+) -> Result<Response> {
+    let object = assets_bucket(ctx)?
+        .get(bucket_key)
+        .execute()
+        .await?
+        .ok_or_else(|| worker::Error::RustError(error_label.to_string()))?;
+    let body = object
+        .body()
+        .ok_or_else(|| worker::Error::RustError(error_label.to_string()))?;
+    Response::from_body(body.response_body()?).map(|resp| resp.with_headers(headers.clone()))
 }
 
 /// Eagerly converts a project's IFC model to GLB and caches it, returning the

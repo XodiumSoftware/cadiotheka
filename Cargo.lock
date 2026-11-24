@@ -419,12 +419,11 @@ dependencies = [
 
 [[package]]
 name = "cookie"
-version = "0.18.3"
+version = "0.19.0-rc.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d55f2d6c30eeec7d5c6f98bd4395d4abb1895629eab97ee6522d340623615f8a"
+checksum = "070dda2b7c5e3abce70384f51eb9bc83b56dcc464d6848d0f477086c1bfaac00"
 dependencies = [
- "time",
- "version_check",
+ "percent-encoding",
 ]
 
 [[package]]

@@ -15,6 +15,11 @@ const SESSION_COOKIE_NAME_PREFIX: &str = "__Host-session";
 const SESSION_COOKIE_NAME_PLAIN: &str = "session";
 const SESSION_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
 
+/// Session lifetime as a `std::time::Duration` for the cookie builder.
+fn session_ttl() -> std::time::Duration {
+    std::time::Duration::from_secs(SESSION_TTL_SECONDS)
+}
+
 /// Stored session metadata, keyed by session id in KV.
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionData {
@@ -69,6 +74,9 @@ fn is_https_origin(origin: &str) -> bool {
 ///
 /// HTTPS uses `SameSite=None` so the cookie is sent to the API subdomain from
 /// the frontend origin. HTTP (local dev) uses `SameSite=Lax`.
+///
+/// The value is already base64url-encoded, so [`Cookie::encoded`] percent-encodes
+/// it idempotently; `Cookie` itself no longer implements `Display`.
 fn build_session_cookie(name: &str, encoded: &str, is_https: bool) -> String {
     let same_site = if is_https {
         SameSite::None
@@ -76,14 +84,13 @@ fn build_session_cookie(name: &str, encoded: &str, is_https: bool) -> String {
         SameSite::Lax
     };
     Cookie::build((name, encoded))
-        .max_age(time::Duration::seconds(
-            i64::try_from(SESSION_TTL_SECONDS).unwrap_or(i64::MAX),
-        ))
+        .max_age(session_ttl())
         .path("/")
         .http_only(true)
         .secure(is_https)
         .same_site(same_site)
         .build()
+        .encoded()
         .to_string()
 }
 
@@ -95,12 +102,13 @@ fn build_clear_cookie(name: &str, is_https: bool) -> String {
         SameSite::Lax
     };
     Cookie::build((name, ""))
-        .max_age(time::Duration::seconds(0))
+        .max_age(std::time::Duration::ZERO)
         .path("/")
         .http_only(true)
         .secure(is_https)
         .same_site(same_site)
         .build()
+        .encoded()
         .to_string()
 }
 
