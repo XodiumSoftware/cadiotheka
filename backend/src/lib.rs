@@ -73,6 +73,10 @@ pub fn build_router() -> Router<'static, ()> {
         )
         .post_async(routes::PROJECT_GLBS, api::projects::convert_project_glb)
         .get_async(routes::IFCS, api::projects::serve_ifc)
+        .post_async(
+            routes::ADMIN_BACKFILL_IFC_HEADERS,
+            api::projects::backfill_ifc_headers,
+        )
         .patch_async(routes::PROJECT, api::projects::patch_project)
         .put_async(routes::PROJECT, api::projects::update_project)
         .delete_async(routes::PROJECT, api::projects::delete_project)
