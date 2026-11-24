@@ -1117,39 +1117,46 @@ fn ProjectModalContent(
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
                 set_deleting_version_id.set(Some(version_id.clone()));
-                match delete_project_version(&project_id, &version_id).await {
-                    Ok(()) => {
-                        if !scope_alive(&[&set_versions]) {
-                            return;
-                        }
+                if let Err(err) = delete_project_version(&project_id, &version_id).await {
+                    web_sys::console::error_1(
+                        &format!("Failed to delete version: {}", err.message()).into(),
+                    );
+                }
+
+                // Reconcile from the server instead of trusting the delete's own
+                // result, so a version that is already gone still disappears.
+                if !scope_alive(&[&set_versions]) {
+                    return;
+                }
+                match fetch_project_versions(&project_id).await {
+                    Ok(fetched) => set_versions.set(fetched),
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("Failed to refresh versions: {}", err.message()).into(),
+                        );
                         set_versions.update(|versions| {
                             versions.retain(|version| version.id != version_id);
                         });
-                        if latest_visible_ifc_url(&versions.get_untracked()).is_none() {
-                            set_glb_status.set(GlbConversionStatus::Idle);
-                        }
-                        projects_ctx.set_projects.update(|projects| {
-                            for project in projects.iter_mut() {
-                                if project.id == project_id {
-                                    project.versions.retain(|v| v.id != version_id);
-                                    break;
-                                }
-                            }
-                        });
-                        modal.set_card.update(|opt| {
-                            if let Some(card) = opt.as_mut() {
-                                card.versions.retain(|v| v.id != version_id);
-                            }
-                        });
-                        show_toast("Version deleted".to_string());
-                    }
-                    Err(err) => {
-                        web_sys::console::error_1(
-                            &format!("Failed to delete version: {}", err.message()).into(),
-                        );
-                        show_toast("Failed to delete version".to_string());
                     }
                 }
+                if latest_visible_ifc_url(&versions.get_untracked()).is_none() {
+                    set_glb_status.set(GlbConversionStatus::Idle);
+                }
+                projects_ctx.set_projects.update(|projects| {
+                    for project in projects.iter_mut() {
+                        if project.id == project_id {
+                            project.versions.retain(|v| v.id != version_id);
+                            break;
+                        }
+                    }
+                });
+                modal.set_card.update(|opt| {
+                    if let Some(card) = opt.as_mut() {
+                        card.versions.retain(|v| v.id != version_id);
+                    }
+                });
+                show_toast("Version deleted".to_string());
+
                 if scope_alive(&[&set_deleting_version_id]) {
                     set_deleting_version_id.set(None);
                 }
@@ -1173,31 +1180,34 @@ fn ProjectModalContent(
             let set_projects = set_projects;
             leptos::task::spawn_local(async move {
                 set_is_deleting.set(true);
-                match delete_project(&project_id).await {
-                    Ok(()) => {
-                        set_delete_confirm_input.set(String::new());
-                        set_show_delete_confirm.set(false);
-                        match fetch_projects().await {
-                            Ok(refreshed) => set_projects.set(refreshed),
-                            Err(err) => {
-                                web_sys::console::error_1(
-                                    &format!("Failed to refresh projects: {}", err.message())
-                                        .into(),
-                                );
-                            }
-                        }
-                        // `close` disposes this component's scope, so nothing
-                        // below may touch its signals afterwards.
-                        set_is_deleting.set(false);
-                        modal.close();
-                    }
+                if let Err(err) = delete_project(&project_id).await {
+                    // A failed delete can still mean the row is gone (another tab
+                    // already deleted it, or the request raced a refresh), so the
+                    // outcome is reported by reconciling below rather than here.
+                    web_sys::console::error_1(
+                        &format!("Failed to delete project: {}", err.message()).into(),
+                    );
+                }
+
+                // Reconcile unconditionally: the server decides what exists, and
+                // the card must not outlive a delete just because the request
+                // reported an error.
+                match fetch_projects().await {
+                    Ok(refreshed) => set_projects.set(refreshed),
                     Err(err) => {
                         web_sys::console::error_1(
-                            &format!("Failed to delete project: {}", err.message()).into(),
+                            &format!("Failed to refresh projects: {}", err.message()).into(),
                         );
-                        set_is_deleting.set(false);
+                        set_projects.update(|projects| projects.retain(|p| p.id != project_id));
                     }
                 }
+
+                set_delete_confirm_input.set(String::new());
+                set_show_delete_confirm.set(false);
+                set_is_deleting.set(false);
+                // `close` disposes this component's scope, so nothing may touch
+                // its signals afterwards.
+                modal.close();
             });
         })
     };

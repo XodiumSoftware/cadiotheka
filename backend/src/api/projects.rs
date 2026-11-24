@@ -234,9 +234,10 @@ pub(crate) async fn patch_project(mut req: Request, ctx: RouteContext<()>) -> Re
         GuardOutcome::Response(resp) => return Ok(resp),
     };
     let id = required_param(&ctx, "id")?;
-    let project = fetch_project(&ctx, &id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let project = match require_project(&ctx, &id).await? {
+        Ok(project) => project,
+        Err(resp) => return Ok(resp),
+    };
     if !can_edit_project(&account, &project) {
         return forbidden("Forbidden");
     }
@@ -312,9 +313,10 @@ pub(crate) async fn update_project(mut req: Request, ctx: RouteContext<()>) -> R
         GuardOutcome::Response(resp) => return Ok(resp),
     };
     let id = required_param(&ctx, "id")?;
-    let project = fetch_project(&ctx, &id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let project = match require_project(&ctx, &id).await? {
+        Ok(project) => project,
+        Err(resp) => return Ok(resp),
+    };
     if !can_edit_project(&account, &project) {
         return forbidden("Forbidden");
     }
@@ -397,15 +399,18 @@ pub(crate) async fn update_project(mut req: Request, ctx: RouteContext<()>) -> R
 }
 
 /// Deletes the project identified by the `:id` path parameter.
+///
+/// Deleting a project that no longer exists succeeds: the caller wanted it
+/// gone and it is, which makes retries and racing tabs harmless.
 pub(crate) async fn delete_project(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let account = match require_auth(&req, &ctx).await? {
         GuardOutcome::Account(account) => account,
         GuardOutcome::Response(resp) => return Ok(resp),
     };
     let id = required_param(&ctx, "id")?;
-    let project = fetch_project(&ctx, &id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let Some(project) = fetch_project(&ctx, &id).await? else {
+        return Response::empty();
+    };
     if !can_edit_project(&account, &project) {
         return forbidden("Forbidden");
     }
@@ -432,9 +437,10 @@ pub(crate) async fn upload_project_ifc(
             GuardOutcome::Response(resp) => return Ok(resp),
         };
     let project_id = required_param(&ctx, "id")?;
-    let project = fetch_project(&ctx, &project_id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let project = match require_project(&ctx, &project_id).await? {
+        Ok(project) => project,
+        Err(resp) => return Ok(resp),
+    };
     if !can_edit_project(&account, &project) {
         return forbidden("Forbidden");
     }
@@ -522,9 +528,10 @@ pub(crate) async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> R
             GuardOutcome::Response(resp) => return Ok(resp),
         };
     let project_id = required_param(&ctx, "id")?;
-    let project = fetch_project(&ctx, &project_id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let project = match require_project(&ctx, &project_id).await? {
+        Ok(project) => project,
+        Err(resp) => return Ok(resp),
+    };
     if !can_edit_project(&account, &project) {
         return forbidden("Forbidden");
     }
@@ -548,9 +555,10 @@ pub(crate) async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> R
 /// unless the caller can edit the project.
 pub(crate) async fn list_project_versions(req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let project_id = required_param(&ctx, "id")?;
-    let project = fetch_project(&ctx, &project_id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let project = match require_project(&ctx, &project_id).await? {
+        Ok(project) => project,
+        Err(resp) => return Ok(resp),
+    };
 
     let include_undefined = match read_session(&req, &ctx).await? {
         Some(account) => can_edit_project(&account, &project),
@@ -572,9 +580,10 @@ pub(crate) async fn update_project_version(
     };
     let project_id = required_param(&ctx, "id")?;
     let version_id = required_param(&ctx, "version_id")?;
-    let project = fetch_project(&ctx, &project_id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let project = match require_project(&ctx, &project_id).await? {
+        Ok(project) => project,
+        Err(resp) => return Ok(resp),
+    };
     if !can_edit_project(&account, &project) {
         return forbidden("Forbidden");
     }
@@ -609,9 +618,10 @@ pub(crate) async fn delete_project_version(
     };
     let project_id = required_param(&ctx, "id")?;
     let version_id = required_param(&ctx, "version_id")?;
-    let project = fetch_project(&ctx, &project_id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let project = match require_project(&ctx, &project_id).await? {
+        Ok(project) => project,
+        Err(resp) => return Ok(resp),
+    };
     if !can_edit_project(&account, &project) {
         return forbidden("Forbidden");
     }
@@ -1052,9 +1062,10 @@ pub(crate) async fn convert_project_glb(req: Request, ctx: RouteContext<()>) -> 
             GuardOutcome::Response(resp) => return Ok(resp),
         };
     let id = required_param(&ctx, "id")?;
-    let project = fetch_project(&ctx, &id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let project = match require_project(&ctx, &id).await? {
+        Ok(project) => project,
+        Err(resp) => return Ok(resp),
+    };
     if !can_edit_project(&account, &project) {
         return forbidden("Forbidden");
     }
@@ -1283,9 +1294,10 @@ pub(crate) async fn toggle_project_favorite(
         GuardOutcome::Response(resp) => return Ok(resp),
     };
     let id = required_param(&ctx, "id")?;
-    let mut project = fetch_project(&ctx, &id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let mut project = match require_project(&ctx, &id).await? {
+        Ok(project) => project,
+        Err(resp) => return Ok(resp),
+    };
 
     if let Some(index) = project
         .favorites
@@ -1328,9 +1340,10 @@ pub(crate) async fn increment_project_downloads(
 
     console_log!("increment_project_downloads: looking up project {id}");
 
-    let project = fetch_project(&ctx, &id)
-        .await?
-        .ok_or_else(|| worker::Error::RustError("project not found".into()))?;
+    let project = match require_project(&ctx, &id).await? {
+        Ok(project) => project,
+        Err(resp) => return Ok(resp),
+    };
 
     console_log!("increment_project_downloads: updating download count for {id}");
     db(&ctx)?
@@ -1408,6 +1421,21 @@ async fn fetch_project(ctx: &RouteContext<()>, id: &str) -> Result<Option<Projec
         .await?;
     let projects: Vec<Project> = result.results::<Project>()?;
     Ok(projects.into_iter().next())
+}
+
+/// Looks up a project, returning a `404` response when it does not exist.
+///
+/// Returning the response rather than a [`worker::Error`] matters: an error
+/// becomes a `500`, which tells the client to retry a request that can never
+/// succeed and hides the real cause from logs.
+async fn require_project(
+    ctx: &RouteContext<()>,
+    id: &str,
+) -> Result<std::result::Result<Project, Response>> {
+    Ok(match fetch_project(ctx, id).await? {
+        Some(project) => Ok(project),
+        None => Err(not_found("Project not found")?),
+    })
 }
 
 #[cfg(test)]
