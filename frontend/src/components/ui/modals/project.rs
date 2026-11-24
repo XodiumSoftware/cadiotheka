@@ -1483,8 +1483,6 @@ fn ProjectModalContent(
             leptos::task::spawn_local(async move {
                 match increment_project_downloads(&project_id).await {
                     Ok(updated) => {
-                        trigger_download(&url);
-
                         set_projects.update(|projects| {
                             if let Some(project) =
                                 projects.iter_mut().find(|project| project.id == updated.id)
@@ -1493,16 +1491,10 @@ fn ProjectModalContent(
                             }
                         });
 
-                        match fetch_project_versions(&project_id).await {
-                            Ok(fetched) => set_versions.set(fetched),
-                            Err(err) => web_sys::console::error_1(
-                                &format!(
-                                    "Failed to refresh versions after download: {}",
-                                    err.message()
-                                )
-                                .into(),
-                            ),
+                        if let Ok(fetched) = fetch_project_versions(&project_id).await {
+                            set_versions.set(fetched);
                         }
+                        trigger_download(&url);
                     }
                     Err(err) => {
                         web_sys::console::error_1(

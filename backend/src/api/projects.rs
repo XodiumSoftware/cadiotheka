@@ -204,13 +204,20 @@ async fn invalidate_project_list(req: &Request) {
     crate::cache::delete(&key).await;
 }
 
-/// Purges cached binary assets whose R2 bodies a write is about to replace.
+/// Drops a project's derived assets from R2 and the edge, so the next viewer
+/// gets a fresh conversion of the version that is now current.
 ///
 /// GLB and metadata URLs are stable per project, so unlike IFC downloads (whose
-/// URLs carry the version id) they must be purged by name whenever the bytes
-/// behind them change. Missing this would leave viewers rendering a stale model
-/// for up to a year.
-async fn invalidate_project_assets(req: &Request, project_id: &str) {
+/// URLs carry the version id) both the R2 objects and the cached responses must
+/// be cleared by name whenever the bytes behind them change. Missing the edge
+/// purge would leave viewers rendering a stale model for up to a year.
+async fn invalidate_project_assets(ctx: &RouteContext<()>, req: &Request, project_id: &str) {
+    if let Ok(bucket) = assets_bucket(ctx) {
+        let _ = bucket.delete(&glb_key_for_project(project_id)).await;
+        let _ = bucket
+            .delete(&glb_metadata_key_for_project(project_id))
+            .await;
+    }
     crate::cache::purge_asset(&crate::cache::project_asset_url(req, project_id, "glb")).await;
     crate::cache::purge_asset(&crate::cache::project_asset_url(
         req,
@@ -529,6 +536,7 @@ pub(crate) async fn upload_project_ifc(
     let key = format!("ifcs/{version_id}/{filename}");
     let http_metadata = HttpMetadata {
         content_type: Some("application/ifc".to_string()),
+        content_disposition: Some(attachment_content_disposition(&filename)),
         ..Default::default()
     };
 
@@ -560,10 +568,7 @@ pub(crate) async fn upload_project_ifc(
         .run()
         .await?;
 
-    // Clear any cached GLB for this project so the new version can be reconverted.
-    let glb_cache_key = glb_key_for_project(&project_id);
-    let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
-    invalidate_project_assets(&req, &project_id).await;
+    invalidate_project_assets(&ctx, &req, &project_id).await;
 
     enqueue_glb_conversion(&ctx.env, &project_id, &key).await;
 
@@ -598,16 +603,13 @@ pub(crate) async fn delete_project_ifc(req: Request, ctx: RouteContext<()>) -> R
         let _ = assets_bucket(&ctx)?.delete(&version.ifc_key).await;
     }
 
-    let glb_cache_key = glb_key_for_project(&project_id);
-    let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
-
     db(&ctx)?
         .prepare("DELETE FROM project_versions WHERE project_id = ?1")
         .bind(&[project_id.clone().into()])?
         .run()
         .await?;
 
-    invalidate_project_assets(&req, &project_id).await;
+    invalidate_project_assets(&ctx, &req, &project_id).await;
     Response::from_json(&serde_json::json!({ "deleted": true }))
 }
 
@@ -659,9 +661,7 @@ pub(crate) async fn update_project_version(
             .run()
             .await?;
 
-        let glb_cache_key = glb_key_for_project(&project.id);
-        let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
-        invalidate_project_assets(&req, &project.id).await;
+        invalidate_project_assets(&ctx, &req, &project.id).await;
     }
 
     Response::empty()
@@ -702,10 +702,7 @@ pub(crate) async fn delete_project_version(
         let _ = assets_bucket(&ctx)?.delete(&key.ifc_key).await;
     }
 
-    let glb_cache_key = glb_key_for_project(&project_id);
-    let _ = assets_bucket(&ctx)?.delete(&glb_cache_key).await;
-
-    invalidate_project_assets(&req, &project_id).await;
+    invalidate_project_assets(&ctx, &req, &project_id).await;
     Response::empty()
 }
 
@@ -772,6 +769,66 @@ pub(crate) async fn serve_ifc(_req: Request, ctx: RouteContext<()>) -> Result<Re
     let headers = Headers::new();
     headers.set("Location", &location)?;
     Ok(Response::empty()?.with_status(302).with_headers(headers))
+}
+
+/// Builds a `Content-Disposition: attachment` value for a user-controlled
+/// filename.
+///
+/// Needed because IFC downloads are served from the public asset origin, and
+/// browsers ignore the `download` attribute on cross-origin links: without this
+/// header a click would navigate the page to the raw file instead of saving it.
+///
+/// The quoted `filename` fallback is restricted to printable ASCII with `"` and
+/// `\` replaced, so the name cannot break out of the quoted string or inject
+/// extra header content. When sanitization changed the name, an RFC 5987
+/// `filename*` parameter carries the full percent-encoded UTF-8 name.
+fn attachment_content_disposition(filename: &str) -> String {
+    let ascii_filename: String = filename
+        .chars()
+        .map(|c| match c {
+            '"' | '\\' => '_',
+            c if c.is_ascii() && !c.is_ascii_control() => c,
+            _ => '_',
+        })
+        .collect();
+    if ascii_filename == filename {
+        format!("attachment; filename=\"{ascii_filename}\"")
+    } else {
+        format!(
+            "attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{}",
+            rfc5987_encode(filename)
+        )
+    }
+}
+
+/// Percent-encodes a value for an RFC 5987 `filename*` parameter, keeping the
+/// `attr-char` set unencoded as required by the grammar.
+fn rfc5987_encode(value: &str) -> String {
+    use std::fmt::Write as _;
+    let mut out = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        match byte {
+            b'0'..=b'9'
+            | b'a'..=b'z'
+            | b'A'..=b'Z'
+            | b'!'
+            | b'#'
+            | b'$'
+            | b'&'
+            | b'+'
+            | b'-'
+            | b'.'
+            | b'^'
+            | b'_'
+            | b'`'
+            | b'|'
+            | b'~' => out.push(char::from(byte)),
+            _ => {
+                let _ = write!(out, "%{byte:02X}");
+            }
+        }
+    }
+    out
 }
 
 /// Returns the R2 key used to cache a project's converted GLB.
@@ -1419,6 +1476,38 @@ mod tests {
             description: String::new(),
             tags: vec![],
         }
+    }
+
+    #[test]
+    fn content_disposition_keeps_plain_ascii_filename() {
+        assert_eq!(
+            attachment_content_disposition("mountain-bike.ifc"),
+            "attachment; filename=\"mountain-bike.ifc\""
+        );
+    }
+
+    #[test]
+    fn content_disposition_neutralizes_quotes_and_backslashes() {
+        assert_eq!(
+            attachment_content_disposition("evil\".ifc \\ x\".ifc"),
+            "attachment; filename=\"evil_.ifc _ x_.ifc\"; filename*=UTF-8''evil%22.ifc%20%5C%20x%22.ifc"
+        );
+    }
+
+    #[test]
+    fn content_disposition_adds_rfc5987_parameter_for_utf8_names() {
+        assert_eq!(
+            attachment_content_disposition("Schéma v2.ifc"),
+            "attachment; filename=\"Sch_ma v2.ifc\"; filename*=UTF-8''Sch%C3%A9ma%20v2.ifc"
+        );
+    }
+
+    #[test]
+    fn content_disposition_strips_control_characters() {
+        assert_eq!(
+            attachment_content_disposition("a\rb\n.ifc"),
+            "attachment; filename=\"a_b_.ifc\"; filename*=UTF-8''a%0Db%0A.ifc"
+        );
     }
 
     #[test]
