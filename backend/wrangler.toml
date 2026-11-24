@@ -39,6 +39,17 @@ max_batch_size = 10
 max_batch_timeout = 30
 max_retries = 3
 max_concurrency = 2
+# Messages that exhaust their retries land here instead of being discarded.
+dead_letter_queue = "cadiotheka-glb-conversion-dlq"
+
+# Records conversions that failed permanently. Keep retries at zero so a
+# poisoned message cannot bounce between the two queues forever.
+[[queues.consumers]]
+queue = "cadiotheka-glb-conversion-dlq"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 0
+max_concurrency = 1
 
 [triggers]
 crons = ["0 3 * * *"]

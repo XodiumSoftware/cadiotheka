@@ -180,12 +180,15 @@ binding = "PROJECT_ASSETS"
 bucket_name = "cadiotheka-assets"
 ```
 
-Create the GLB conversion queue before running with remote bindings:
+Create the GLB conversion queue and its dead-letter queue before running with remote bindings:
 
 ```bash
 cd backend
 npx wrangler queues create cadiotheka-glb-conversion
+npx wrangler queues create cadiotheka-glb-conversion-dlq
 ```
+
+A conversion that fails three times is moved to the dead-letter queue rather than discarded; its consumer logs the project and IFC key.
 
 Create accounts and projects through the application UI or API as needed.
 

@@ -146,12 +146,18 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 /// Delegates to the projects API so uploads can return immediately and the
 /// CPU-heavy IFC-to-GLB conversion runs with the queue's larger CPU budget and
 /// independent retries.
+///
+/// Both queues share this entry point because a Worker exports a single `queue`
+/// handler; the batch's queue name decides which one is being drained.
 #[event(queue)]
 async fn queue(
     batch: worker::MessageBatch<api::projects::GlbConversionJob>,
     env: Env,
     ctx: Context,
 ) -> Result<()> {
+    if batch.queue() == api::projects::GLB_CONVERSION_DLQ_QUEUE {
+        return api::projects::handle_glb_dead_letter_queue(&batch);
+    }
     api::projects::handle_glb_conversion_queue(batch, env, ctx).await
 }
 

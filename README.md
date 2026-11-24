@@ -133,14 +133,17 @@ binding = "PROJECT_ASSETS"
 bucket_name = "cadiotheka-assets"
 ```
 
-IFC models are converted to GLB asynchronously by a queue consumer. Create the queue before deploying:
+IFC models are converted to GLB asynchronously by a queue consumer. Create both queues before deploying:
 
 ```bash
 cd backend
 npx wrangler queues create cadiotheka-glb-conversion
+npx wrangler queues create cadiotheka-glb-conversion-dlq
 ```
 
-The `GLB_CONVERSION` producer and consumer bindings in `wrangler.toml` reference this queue. Uploads enqueue a conversion job and return immediately; if the queue is unavailable the conversion still runs lazily the first time the viewer requests the GLB.
+The `GLB_CONVERSION` producer and consumer bindings in `wrangler.toml` reference the first queue. Uploads enqueue a conversion job and return immediately; if the queue is unavailable the conversion still runs lazily the first time the viewer requests the GLB.
+
+A job that fails three times moves to the dead-letter queue instead of being discarded, where a consumer logs the project and IFC key. That log line is the only record of a permanently failed conversion, so watch for `glb conversion exhausted retries` in `wrangler tail`.
 
 A daily cron trigger (`[triggers] crons = ["0 3 * * *"]`) runs `maintenance::run_sweep`, which deletes expired KV tombstones and WebAuthn registration challenges whose account no longer exists. No extra setup is required; the trigger is deployed with the Worker.
 
@@ -200,10 +203,11 @@ The static site is placed in `frontend/dist/`.
 
     Then copy the resulting ID into `backend/wrangler.toml` under `[[kv_namespaces]]`.
 
-    Also create the GLB conversion queue:
+    Also create the GLB conversion queue and its dead-letter queue:
 
     ```bash
     npx wrangler queues create cadiotheka-glb-conversion
+    npx wrangler queues create cadiotheka-glb-conversion-dlq
     ```
 
 4. Configure secrets for OAuth, session signing, and Turnstile:

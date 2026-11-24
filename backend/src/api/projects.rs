@@ -1270,6 +1270,9 @@ async fn run_glb_conversion_job(env: &Env, job: &GlbConversionJob) -> Result<()>
     }
 }
 
+/// Name of the dead-letter queue that receives failed conversion jobs.
+pub(crate) const GLB_CONVERSION_DLQ_QUEUE: &str = "cadiotheka-glb-conversion-dlq";
+
 /// Queue consumer entry point for GLB conversion jobs.
 ///
 /// Messages that fail are retried via [`MessageBatch::retry_all`]; the rest are
@@ -1300,6 +1303,36 @@ pub(crate) async fn handle_glb_conversion_queue(
     } else {
         batch.ack_all();
     }
+    Ok(())
+}
+
+/// Handles a batch that exhausted its retries and reached the dead-letter queue.
+///
+/// The job is recorded with its failure and acknowledged unconditionally: a dead
+/// letter is terminal, so returning an error here would only loop the message.
+/// Nothing retries automatically afterwards, which is why the log line names the
+/// project and its IFC key — that is the only record of what went wrong.
+pub(crate) fn handle_glb_dead_letter_queue(
+    batch: &worker::MessageBatch<GlbConversionJob>,
+) -> Result<()> {
+    let messages = match batch.messages() {
+        Ok(messages) => messages,
+        Err(err) => {
+            console_log!("handle_glb_dead_letter_queue: failed to decode batch: {err:?}");
+            return Err(err);
+        }
+    };
+
+    for message in &messages {
+        let job = message.body();
+        console_log!(
+            "glb conversion exhausted retries: project={} ifc_key={}",
+            job.project_id,
+            job.ifc_key
+        );
+    }
+
+    batch.ack_all();
     Ok(())
 }
 
