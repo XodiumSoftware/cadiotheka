@@ -115,8 +115,6 @@ pub struct Renderer {
     pub(crate) theme: ViewerTheme,
     /// Vertical field of view in radians for the perspective camera.
     pub(crate) fov_y: f32,
-    /// Whether the camera uses an orthographic projection.
-    pub(crate) orthographic: bool,
     /// Whether models are rendered as screen-space wireframes.
     pub(crate) wireframe: bool,
     /// Parsed model retained so `models` can be rebuilt for wireframe toggles.
@@ -148,7 +146,6 @@ impl Renderer {
             [1.0, 1.0, 1.0],
             canvas,
             Self::DEFAULT_FOV_Y,
-            false,
         );
 
         Some(Self {
@@ -176,7 +173,6 @@ impl Renderer {
             pending_events: Rc::new(RefCell::new(Vec::new())),
             theme: ViewerTheme::default(),
             fov_y: Self::DEFAULT_FOV_Y,
-            orthographic: false,
             wireframe: false,
             source_model: None,
             wireframe_color: Srgba::new(0, 0, 0, 255),
@@ -204,7 +200,6 @@ impl Renderer {
             self.scene_bounds.1,
             &self.canvas,
             self.fov_y,
-            self.orthographic,
         );
         self.camera = camera;
         self.control = control;
@@ -254,29 +249,15 @@ impl Renderer {
     pub fn restore_view_state(&mut self, state: &ViewState, show_axes: bool) {
         let viewport =
             three_d_asset::Viewport::new_at_origo(self.canvas.width(), self.canvas.height());
-        if self.orthographic {
-            let distance = self.camera.position().distance(self.camera.target());
-            let height = 2.0 * distance * (self.fov_y * 0.5).tan();
-            self.camera = ThreeDCamera::new_orthographic(
-                viewport,
-                vec3(state.eye[0], state.eye[1], state.eye[2]),
-                vec3(state.target[0], state.target[1], state.target[2]),
-                vec3(state.up[0], state.up[1], state.up[2]),
-                height,
-                self.camera.z_near(),
-                self.camera.z_far(),
-            );
-        } else {
-            self.camera = ThreeDCamera::new_perspective(
-                viewport,
-                vec3(state.eye[0], state.eye[1], state.eye[2]),
-                vec3(state.target[0], state.target[1], state.target[2]),
-                vec3(state.up[0], state.up[1], state.up[2]),
-                three_d_asset::radians(self.fov_y),
-                self.camera.z_near(),
-                self.camera.z_far(),
-            );
-        }
+        self.camera = ThreeDCamera::new_perspective(
+            viewport,
+            vec3(state.eye[0], state.eye[1], state.eye[2]),
+            vec3(state.target[0], state.target[1], state.target[2]),
+            vec3(state.up[0], state.up[1], state.up[2]),
+            three_d_asset::radians(self.fov_y),
+            self.camera.z_near(),
+            self.camera.z_far(),
+        );
         self.control = OrbitControl::new(
             vec3(state.target[0], state.target[1], state.target[2]),
             self.camera.z_near(),
@@ -293,7 +274,6 @@ impl Renderer {
             self.scene_bounds.1,
             &self.canvas,
             self.fov_y,
-            self.orthographic,
         );
         self.camera = camera;
         self.control = control;
@@ -341,29 +321,15 @@ impl Renderer {
         let eye = center + eye;
 
         let viewport = three_d_asset::Viewport::new_at_origo(width, height);
-        if self.orthographic {
-            let distance = self.camera.position().distance(center);
-            let height = 2.0 * distance * (self.fov_y * 0.5).tan();
-            self.camera = ThreeDCamera::new_orthographic(
-                viewport,
-                eye,
-                center,
-                up,
-                height,
-                self.camera.z_near(),
-                self.camera.z_far(),
-            );
-        } else {
-            self.camera = ThreeDCamera::new_perspective(
-                viewport,
-                eye,
-                center,
-                up,
-                three_d_asset::radians(self.fov_y),
-                self.camera.z_near(),
-                self.camera.z_far(),
-            );
-        }
+        self.camera = ThreeDCamera::new_perspective(
+            viewport,
+            eye,
+            center,
+            up,
+            three_d_asset::radians(self.fov_y),
+            self.camera.z_near(),
+            self.camera.z_far(),
+        );
         self.control = OrbitControl::new(center, max_size * 0.001, max_size * 1_000.0);
     }
 
@@ -524,20 +490,6 @@ impl Renderer {
         self.rebuild_camera();
     }
 
-    /// Sets whether the camera uses an orthographic projection and rebuilds it.
-    pub fn set_orthographic(&mut self, orthographic: bool) {
-        if self.orthographic == orthographic {
-            return;
-        }
-        self.orthographic = orthographic;
-        self.rebuild_camera();
-    }
-
-    /// Returns whether the camera currently uses an orthographic projection.
-    pub fn orthographic(&self) -> bool {
-        self.orthographic
-    }
-
     /// Rebuilds the renderable objects from the stored source model.
     ///
     /// Uses either shaded PBR materials or screen-space wireframes depending on
@@ -634,29 +586,15 @@ impl Renderer {
     fn rebuild_camera(&mut self) {
         let viewport =
             three_d_asset::Viewport::new_at_origo(self.canvas.width(), self.canvas.height());
-        if self.orthographic {
-            let distance = self.camera.position().distance(self.camera.target());
-            let height = 2.0 * distance * (self.fov_y * 0.5).tan();
-            self.camera = ThreeDCamera::new_orthographic(
-                viewport,
-                self.camera.position(),
-                self.camera.target(),
-                self.camera.up_orthogonal(),
-                height,
-                self.camera.z_near(),
-                self.camera.z_far(),
-            );
-        } else {
-            self.camera = ThreeDCamera::new_perspective(
-                viewport,
-                self.camera.position(),
-                self.camera.target(),
-                self.camera.up_orthogonal(),
-                three_d_asset::radians(self.fov_y),
-                self.camera.z_near(),
-                self.camera.z_far(),
-            );
-        }
+        self.camera = ThreeDCamera::new_perspective(
+            viewport,
+            self.camera.position(),
+            self.camera.target(),
+            self.camera.up_orthogonal(),
+            three_d_asset::radians(self.fov_y),
+            self.camera.z_near(),
+            self.camera.z_far(),
+        );
     }
 
     /// Returns the current vertical field of view in radians.

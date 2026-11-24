@@ -137,9 +137,6 @@ pub fn IfcViewer(
     /// Vertical camera field of view in degrees.
     #[prop(into, optional)]
     fov_signal: Option<Signal<f32>>,
-    /// Switches the camera between perspective and orthographic projection.
-    #[prop(optional)]
-    orthographic_signal: Option<RwSignal<bool>>,
     /// Renders meshes as wireframe instead of shaded solids.
     #[prop(optional)]
     wireframe_signal: Option<RwSignal<bool>>,
@@ -174,7 +171,6 @@ pub fn IfcViewer(
     let skybox_color = skybox_color_signal.unwrap_or_else(|| Signal::derive(|| Srgba::WHITE));
     let _show_fps = show_fps_signal.unwrap_or_else(|| RwSignal::new(false));
     let fov = fov_signal.unwrap_or_else(|| Signal::derive(|| Renderer::DEFAULT_FOV_Y));
-    let orthographic = orthographic_signal.unwrap_or_else(|| RwSignal::new(false));
     let wireframe = wireframe_signal.unwrap_or_else(|| RwSignal::new(false));
     let metadata: RwSignal<Option<Vec<PrimitiveMetadata>>> = RwSignal::new(None);
     let selected_object = selected_object_signal.unwrap_or_else(|| RwSignal::new(None));
@@ -491,21 +487,6 @@ pub fn IfcViewer(
                 let mut renderer_ref = renderer.borrow_mut();
                 if let Some(renderer) = renderer_ref.as_mut() {
                     renderer.set_fov_y(fov);
-                }
-            }
-            request_render.borrow_mut()();
-        }
-    });
-
-    Effect::new({
-        let renderer = Rc::clone(&renderer);
-        let request_render = Rc::clone(&request_render);
-        move |_| {
-            let ortho = orthographic.get();
-            {
-                let mut renderer_ref = renderer.borrow_mut();
-                if let Some(renderer) = renderer_ref.as_mut() {
-                    renderer.set_orthographic(ortho);
                 }
             }
             request_render.borrow_mut()();
@@ -1077,7 +1058,6 @@ pub fn IfcViewer(
                     r.set_selection_color(selection_color.get_untracked());
                     r.set_skybox_color(skybox_color.get_untracked());
                     r.set_fov_y(fov.get_untracked());
-                    r.set_orthographic(orthographic.get_untracked());
                     r.set_wireframe(wireframe.get_untracked());
                 }
 
