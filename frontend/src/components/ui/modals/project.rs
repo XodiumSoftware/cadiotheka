@@ -1,7 +1,6 @@
 use crate::components::IfcViewer;
 use crate::components::Pagination;
 use crate::components::ViewerSettingsModal;
-use crate::components::cards::project::ProjectCardProperties;
 use crate::components::ui::icons::{
     AxesIcon, CubeIcon, DownloadArrowIcon, FilePlusIcon, FullscreenEnterIcon, FullscreenExitIcon,
     GearIcon, GizmoIcon, HeartIcon, MinusIcon, PencilIcon, PlusIcon, ResetIcon, TrashIcon,
@@ -10,6 +9,7 @@ use crate::components::ui::icons::{
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::base::BaseModal;
+use crate::components::ui::project_card::ProjectCardProperties;
 use crate::components::ui::toolbar_button::{ToolbarButton, TooltipPosition};
 use crate::components::ui::view_gizmo::GizmoPosition;
 use crate::three_d_viewer::ObjectHit;

@@ -1,6 +1,6 @@
-use crate::components::cards::project::{ProjectCard, ProjectCardProperties};
 use crate::components::ui::corner_frame::CornerFrame;
 use crate::components::ui::pagination::Pagination;
+use crate::components::ui::project_card::{ProjectCard, ProjectCardProperties};
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
 use crate::contexts::{
     AccountsContext, LayoutContext, MetadataContext, ProfileModalContext, ProjectModalContext,

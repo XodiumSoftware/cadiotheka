@@ -5,16 +5,10 @@
 /// Top-level application component and state.
 pub mod app;
 
-/// Presentation-layer components, grouped by kind (cards, icons, sections, ui).
+/// Presentation-layer components, grouped by kind (layout, ui).
 pub mod components {
-    /// Card-style presentations of domain entities.
-    pub mod cards {
-        /// Project card and its properties.
-        pub mod project;
-    }
-
-    /// Page-level sections that compose the layout.
-    pub mod sections {
+    /// Page-level layout components.
+    pub mod layout {
         /// Site footer.
         pub mod footer;
         /// Site header with navigation.
@@ -204,6 +198,8 @@ pub mod components {
         pub mod overflow_row;
         /// Page number navigation.
         pub mod pagination;
+        /// Project card and the properties it renders.
+        pub mod project_card;
         /// Transient notification toast.
         pub mod toast;
         /// Sliding on/off switch.
@@ -214,9 +210,9 @@ pub mod components {
         pub mod turnstile;
     }
 
-    pub use sections::footer::Footer;
-    pub use sections::header::Header;
-    pub use sections::projects::ProjectsSection;
+    pub use layout::footer::Footer;
+    pub use layout::header::Header;
+    pub use layout::projects::ProjectsSection;
 
     pub use ui::corner_frame::CornerFrame;
     pub use ui::icons::{buy_me_a_coffee::BuyMeACoffeeIcon, github::GitHubIcon};
@@ -231,6 +227,7 @@ pub mod components {
     pub use ui::modals::viewer_settings::ViewerSettingsModal;
     pub use ui::overflow_row::OverflowRow;
     pub use ui::pagination::Pagination;
+    pub use ui::project_card::{ProjectCard, ProjectCardProperties};
     pub use ui::three_d_viewer::{IfcViewer, IfcViewerState};
     pub use ui::toast::Toast;
     pub use ui::toggle::{ToggleSlider, ToggleSliderWithSlashLabel};

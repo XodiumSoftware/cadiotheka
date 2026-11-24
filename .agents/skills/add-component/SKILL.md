@@ -10,10 +10,8 @@ Use this skill when the user wants to create a new UI component.
 ## Steps
 
 1. Determine the component's purpose and where it belongs:
-    - `src/components/sections/` for page-level sections (header, footer, projects)
-    - `src/components/cards/` for card widgets
-    - `src/components/ui/` for reusable primitives
-    - `src/components/effects/` for visual effects
+    - `src/components/layout/` for page-level layout pieces (header, footer, projects)
+    - `src/components/ui/` for reusable widgets, icons, modals, and cards
 
 2. Create the file under the appropriate directory.
     - Do **not** create a `mod.rs` file. Cadiotheka registers all modules directly in `src/lib.rs`.

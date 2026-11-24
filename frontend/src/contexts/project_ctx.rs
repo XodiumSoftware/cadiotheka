@@ -1,5 +1,5 @@
-use crate::components::cards::project::ProjectCardProperties;
 use crate::components::ui::modals::project::ProjectDetailsTab;
+use crate::components::ui::project_card::ProjectCardProperties;
 use leptos::prelude::*;
 
 /// Provides and reads the project detail modal state.
