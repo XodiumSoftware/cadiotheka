@@ -27,11 +27,6 @@ pub mod components {
     pub mod ui {
         /// Decorative corner bracket frame.
         pub mod corner_frame;
-        /// Transition and fade effects.
-        pub mod effects {
-            /// Scroll-triggered section fade overlay.
-            pub mod section_fade;
-        }
         /// SVG icons, one component per file.
         pub mod icons {
             /// Arrow pointing down.
@@ -224,7 +219,6 @@ pub mod components {
     pub use sections::projects::ProjectsSection;
 
     pub use ui::corner_frame::CornerFrame;
-    pub use ui::effects::section_fade::FadeOverlay;
     pub use ui::icons::{buy_me_a_coffee::BuyMeACoffeeIcon, github::GitHubIcon};
     pub use ui::logo::Logo;
     pub use ui::markdown::MarkdownView;

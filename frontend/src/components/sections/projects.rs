@@ -1,6 +1,5 @@
 use crate::components::cards::project::{ProjectCard, ProjectCardProperties};
 use crate::components::ui::corner_frame::CornerFrame;
-use crate::components::ui::effects::section_fade::FadeOverlay;
 use crate::components::ui::pagination::Pagination;
 use crate::components::ui::toggle::ToggleSliderWithSlashLabel;
 use crate::contexts::{
@@ -253,9 +252,6 @@ pub fn ProjectsSection(
 
     view! {
         <section id="projects" class={format!("relative py-16 sm:py-20 px-6 flex-1 flex flex-col {class}")}>
-            <FadeOverlay />
-            <FadeOverlay position="spotlight-top" height="96" />
-            <FadeOverlay position="spotlight-bottom" height="96" />
             <div
                 class=move || {
                     if layout.wide.get() {
