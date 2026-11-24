@@ -1,3 +1,4 @@
+use crate::components::ui::icons::{ChevronLeftIcon, ChevronRightIcon};
 use leptos::prelude::*;
 
 /// Number of page buttons shown on each side of the current page.
@@ -51,42 +52,6 @@ fn pagination_pages(current: usize, total: usize, sibling_count: usize) -> Vec<P
     items
 }
 
-/// Left-pointing chevron icon.
-fn chevron_left(class: &'static str) -> impl IntoView {
-    view! {
-        <svg
-            class=class
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-        >
-            <polyline points="15 18 9 12 15 6" />
-        </svg>
-    }
-}
-
-/// Right-pointing chevron icon.
-fn chevron_right(class: &'static str) -> impl IntoView {
-    view! {
-        <svg
-            class=class
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-        >
-            <polyline points="9 18 15 12 9 6" />
-        </svg>
-    }
-}
-
 /// DaisyUI-styled pagination bar with previous/next arrows and ellipsis gaps.
 #[component]
 pub fn Pagination(
@@ -119,7 +84,7 @@ pub fn Pagination(
                 aria-label="Previous page"
                 on:click=move |_| set_page.set(display_page.get().saturating_sub(1))
             >
-                {chevron_left("w-4 h-4")}
+                <ChevronLeftIcon class="w-4 h-4" />
             </button>
             <For
                 each=move || items.get()
@@ -166,7 +131,7 @@ pub fn Pagination(
                 aria-label="Next page"
                 on:click=move |_| set_page.set((display_page.get() + 1).min(total_pages.get().saturating_sub(1)))
             >
-                {chevron_right("w-4 h-4")}
+                <ChevronRightIcon class="w-4 h-4" />
             </button>
         </div>
     }

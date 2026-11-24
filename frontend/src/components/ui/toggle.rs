@@ -1,3 +1,4 @@
+use crate::components::ui::icons::pencil::PENCIL_MARKUP;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 
@@ -125,14 +126,12 @@ pub fn EditToggle(
     #[prop(into)]
     on_change: Callback<bool>,
 ) -> impl IntoView {
-    let pencil_icon = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>"#;
-
     view! {
         <IconToggle
             checked=checked
             on_change=on_change
-            icon_off=pencil_icon.to_string()
-            icon_on=pencil_icon.to_string()
+            icon_off=PENCIL_MARKUP.to_string()
+            icon_on=PENCIL_MARKUP.to_string()
             tooltip_off="Enter edit mode"
             tooltip_on="Exit edit mode"
             class="w-8 h-8 rounded hover:bg-base-200 transition-colors"

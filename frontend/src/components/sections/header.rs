@@ -1,3 +1,4 @@
+use crate::components::ui::icons::{PlusIcon, SearchIcon, SignInIcon};
 use crate::components::ui::logo::Logo;
 use crate::components::ui::modals::base::BaseModal;
 use crate::contexts::{
@@ -486,20 +487,7 @@ pub fn Header() -> impl IntoView {
                         on:click=move |_| set_search_open.set(true)
                         aria-label="Open search"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
-                            <circle cx="11" cy="11" r="8" />
-                            <path d="m21 21-4.3-4.3" />
-                        </svg>
+                        <SearchIcon class="w-4 h-4" />
                         <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans ml-2" aria-hidden="true">"Alt + S"</kbd>
                     </button>
                     {move || {
@@ -517,18 +505,7 @@ pub fn Header() -> impl IntoView {
                                     AddProjectModalContext::use_context().open();
                                 }
                             >
-                                <svg
-                                    class="w-4 h-4"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    aria-hidden="true"
-                                >
-                                    <path d="M12 5v14M5 12h14" />
-                                </svg>
+                                <PlusIcon class="w-4 h-4" />
                                 <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans" aria-hidden="true">"Alt + N"</kbd>
                             </button>
                         })
@@ -703,20 +680,7 @@ pub fn Header() -> impl IntoView {
                                     aria-label="Log in"
                                     on:click=move |_| login_modal.open()
                                 >
-                                    <svg
-                                        class="w-4 h-4"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        aria-hidden="true"
-                                    >
-                                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                                        <polyline points="10 17 15 12 10 7" />
-                                        <line x1="15" y1="12" x2="3" y2="12" />
-                                    </svg>
+                                    <SignInIcon class="w-4 h-4" />
                                     <kbd class="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 min-w-[1.25rem] rounded border border-black/30 bg-black/10 text-black shadow-kbd text-xs font-sans">
                                         "Alt + L"
                                     </kbd>

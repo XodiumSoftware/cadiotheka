@@ -1,4 +1,5 @@
 use crate::components::ui::corner_frame::CornerFrame;
+use crate::components::ui::icons::{ClockIcon, DownloadArrowIcon, HeartIcon};
 use crate::components::ui::overflow_row::{OverflowItem, OverflowRow};
 use crate::contexts::{CurrentUserContext, MetadataContext, ProjectModalContext, ProjectsContext};
 use crate::data::{ProjectData, ProjectVersion};
@@ -64,74 +65,6 @@ pub fn project_card_properties_from_project_data(project: ProjectData) -> Projec
 }
 
 pub use project_card_properties_from_project_data as from_project_data;
-
-/// Renders the download-arrow glyph used next to the download count.
-#[component]
-pub fn DownloadIcon() -> impl IntoView {
-    view! {
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-        >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-        </svg>
-    }
-}
-
-/// Renders the heart glyph used for the favorite count.
-#[component]
-pub fn HeartIcon(
-    /// When true the heart is filled with the current color; otherwise it is
-    /// only outlined.
-    #[prop(optional, into)]
-    filled: Signal<bool>,
-) -> impl IntoView {
-    view! {
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill=move || if filled.get() { "currentColor" } else { "none" }
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-        >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-        </svg>
-    }
-}
-
-/// Renders the clock glyph used next to the relative publication time.
-#[component]
-pub fn ClockIcon() -> impl IntoView {
-    view! {
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-        >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-        </svg>
-    }
-}
 
 /// Grid card summarizing a project with its title, author, tags, download and
 /// favorite counts, and relative age.
@@ -342,7 +275,7 @@ pub fn ProjectCard(
                                 class="flex items-center gap-1 tooltip tooltip-top"
                                 data-tip={move || format!("{} downloads", format_number_full(download_count.get()))}
                             >
-                                <DownloadIcon />
+                                <DownloadArrowIcon />
                                 {move || format_number(download_count.get())}
                             </span>
                             {move || {

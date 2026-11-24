@@ -1,4 +1,7 @@
-use crate::components::Icon;
+use crate::components::ui::icons::{
+    BoldIcon, CodeIcon, HeadingIcon, ItalicIcon, LinkIcon, ListBulletIcon, ListNumberedIcon,
+    TaskIcon,
+};
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::toolbar_button::ToolbarButton;
 use leptos::prelude::*;
@@ -161,28 +164,28 @@ pub fn MarkdownEditor(
 
                 <div class="flex items-center gap-1 flex-wrap text-base-content/70">
                     <ToolbarButton label="Bold" on_click=Callback::new(move |()| apply_wrap("**", "**"))>
-                        <Icon::Bold />
+                        <BoldIcon />
                     </ToolbarButton>
                     <ToolbarButton label="Italic" on_click=Callback::new(move |()| apply_wrap("*", "*"))>
-                        <Icon::Italic />
+                        <ItalicIcon />
                     </ToolbarButton>
                     <ToolbarButton label="Heading" on_click=Callback::new(move |()| insert_snippet("## Heading"))>
-                        <Icon::Heading />
+                        <HeadingIcon />
                     </ToolbarButton>
                     <ToolbarButton label="Code" on_click=Callback::new(move |()| apply_wrap("`", "`"))>
-                        <Icon::Code />
+                        <CodeIcon />
                     </ToolbarButton>
                     <ToolbarButton label="Link" on_click=Callback::new(move |()| insert_snippet("[label](https://example.com)"))>
-                        <Icon::Link />
+                        <LinkIcon />
                     </ToolbarButton>
                     <ToolbarButton label="Bullet list" on_click=Callback::new(move |()| apply_line_prefix("- "))>
-                        <Icon::ListBullet />
+                        <ListBulletIcon />
                     </ToolbarButton>
                     <ToolbarButton label="Numbered list" on_click=Callback::new(move |()| insert_snippet("1. Item\n2. Item"))>
-                        <Icon::ListNumbered />
+                        <ListNumberedIcon />
                     </ToolbarButton>
                     <ToolbarButton label="Task list" on_click=Callback::new(move |()| insert_snippet("- [ ] Task"))>
-                        <Icon::Task />
+                        <TaskIcon />
                     </ToolbarButton>
                 </div>
             </div>

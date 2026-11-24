@@ -1,4 +1,8 @@
 use crate::components::ui::corner_frame::CornerFrame;
+use crate::components::ui::icons::{
+    ClockIcon, EyeIcon, EyeOffIcon, GitHubMarkIcon, GoogleBadgeIcon, MailIcon, MinusIcon,
+    PasskeyIcon, PencilIcon, PlusIcon,
+};
 use crate::components::ui::modals::base::BaseModal;
 use crate::contexts::{CurrentUserContext, ProfileModalContext, ToastContext};
 use crate::utils::{
@@ -299,10 +303,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                         {(!email.is_empty()).then(|| {
                             view! {
                                 <span class="inline-flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="2" y="4" width="20" height="16" rx="2" />
-                                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                                    </svg>
+                                    <MailIcon class="w-3.5 h-3.5 flex-shrink-0" />
                                     <span
                                         class="leading-none break-all"
                                         aria-live="polite"
@@ -322,20 +323,12 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                         {move || {
                                             if email_visible.get() {
                                                 view! {
-                                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                                                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-                                                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-                                                        <line x1="2" y1="2" x2="22" y2="22" />
-                                                    </svg>
+                                                    <EyeOffIcon class="w-3.5 h-3.5" />
                                                 }
                                                     .into_any()
                                             } else {
                                                 view! {
-                                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                                                        <circle cx="12" cy="12" r="3" />
-                                                    </svg>
+                                                    <EyeIcon class="w-3.5 h-3.5" />
                                                 }
                                                     .into_any()
                                             }
@@ -345,10 +338,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                             }
                         })}
                         <span class="inline-flex items-center gap-1">
-                            <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 6v6l4 2" />
-                            </svg>
+                            <ClockIcon class="w-3.5 h-3.5 flex-shrink-0" />
                             <span class="leading-none">{format_time_full(account.created_at)}</span>
                         </span>
                     </div>
@@ -435,17 +425,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                             >
                                                 <span class="text-base-content/70 group-hover:text-base-content transition-colors">{bio.get()}</span>
                                                 <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <svg
-                                                        class="w-5 h-5 text-primary"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        stroke-width="2"
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                    >
-                                                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                                                    </svg>
+                                                    <PencilIcon class="w-5 h-5 text-primary" />
                                                 </div>
                                             </button>
                                         }
@@ -501,26 +481,19 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                     }
                                 >
                                     <span class="flex items-center justify-center gap-2 transition-opacity group-hover:opacity-0">
-                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/>
-                                        </svg>
+                                        <GitHubMarkIcon class="w-4 h-4" />
                                         {move || if is_github_connected.get() { "GitHub connected" } else { "Connect GitHub" }}
                                     </span>
                                     {move || if is_github_connected.get() {
                                         view! {
                                             <span class="absolute inset-0 flex items-center justify-center gap-2 bg-error/80 text-error-content opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Disconnect GitHub">
-                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                                </svg>
+                                                <MinusIcon class="w-5 h-5" />
                                             </span>
                                         }.into_any()
                                     } else {
                                         view! {
                                             <span class="absolute inset-0 flex items-center justify-center gap-2 bg-success/80 text-success-content opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Connect GitHub">
-                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                    <line x1="12" y1="5" x2="12" y2="19" />
-                                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                                </svg>
+                                                <PlusIcon class="w-5 h-5" />
                                             </span>
                                         }.into_any()
                                     }}
@@ -545,27 +518,19 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                     }
                                 >
                                     <span class="flex items-center justify-center gap-2 transition-opacity group-hover:opacity-0">
-                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                            <circle cx="12" cy="12" r="10"/>
-                                            <text x="12" y="16" text-anchor="middle" font-size="12" fill="currentColor" stroke="none">"G"</text>
-                                        </svg>
+                                        <GoogleBadgeIcon class="w-4 h-4" />
                                         {move || if is_google_connected.get() { "Google connected" } else { "Connect Google" }}
                                     </span>
                                     {move || if is_google_connected.get() {
                                         view! {
                                             <span class="absolute inset-0 flex items-center justify-center gap-2 bg-error/80 text-error-content opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Disconnect Google">
-                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                                </svg>
+                                                <MinusIcon class="w-5 h-5" />
                                             </span>
                                         }.into_any()
                                     } else {
                                         view! {
                                             <span class="absolute inset-0 flex items-center justify-center gap-2 bg-success/80 text-success-content opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Connect Google">
-                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                    <line x1="12" y1="5" x2="12" y2="19" />
-                                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                                </svg>
+                                                <PlusIcon class="w-5 h-5" />
                                             </span>
                                         }.into_any()
                                     }}
@@ -679,9 +644,7 @@ fn ProfileModalContent(#[prop(into)] account: crate::data::AccountData) -> impl 
                                                     class="btn btn-outline btn-sm w-full justify-start gap-2 rounded-none"
                                                     on:click=start_naming_passkey
                                                 >
-                                                    <svg class="w-4 h-4" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-                                                        <path d="M216.57,39.43A80,80,0,0,0,83.91,120.78L28.69,176A15.86,15.86,0,0,0,24,187.31V216a16,16,0,0,0,16,16H72a8,8,0,0,0,8-8V208H96a8,8,0,0,0,8-8V184h16a8,8,0,0,0,5.66-2.34l9.56-9.57A79.73,79.73,0,0,0,160,176h.1A80,80,0,0,0,216.57,39.43ZM224,98.1c-1.09,34.09-29.75,61.86-63.89,61.9H160a63.7,63.7,0,0,1-23.65-4.51,8,8,0,0,0-8.84,1.68L116.69,168H96a8,8,0,0,0-8,8v16H72a8,8,0,0,0-8,8v16H40V187.31l58.83-58.82a8,8,0,0,0,1.68-8.84A63.72,63.72,0,0,1,96,95.92c0-34.14,27.81-62.8,61.9-63.89A64,64,0,0,1,224,98.1ZM192,76a12,12,0,1,1-12-12A12,12,0,0,1,192,76Z"/>
-                                                    </svg>
+                                                    <PasskeyIcon class="w-4 h-4" />
                                                     "Add passkey"
                                                 </button>
                                             }.into_any()

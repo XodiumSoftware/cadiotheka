@@ -13,9 +13,6 @@ pub mod components {
         pub mod project;
     }
 
-    /// Inline SVG icon set.
-    pub mod icons;
-
     /// Page-level sections that compose the layout.
     pub mod sections {
         /// Site footer.
@@ -35,12 +32,153 @@ pub mod components {
             /// Scroll-triggered section fade overlay.
             pub mod section_fade;
         }
-        /// Brand marks for outbound links.
+        /// SVG icons, one component per file.
         pub mod icons {
+            /// Arrow pointing down.
+            pub mod arrow_down;
+            /// Diagonal arrow pointing down-left.
+            pub mod arrow_down_left;
+            /// Diagonal arrow pointing down-right.
+            pub mod arrow_down_right;
+            /// Arrow pointing left.
+            pub mod arrow_left;
+            /// Arrow pointing right.
+            pub mod arrow_right;
+            /// Arrow pointing up.
+            pub mod arrow_up;
+            /// Diagonal arrow pointing up-left.
+            pub mod arrow_up_left;
+            /// Diagonal arrow pointing up-right.
+            pub mod arrow_up_right;
+            /// Compass-style axes indicator.
+            pub mod axes;
+            /// Bold-text mark.
+            pub mod bold;
             /// Buy Me a Coffee cup.
             pub mod buy_me_a_coffee;
+            /// Left-pointing chevron for pagination.
+            pub mod chevron_left;
+            /// Right-pointing chevron for pagination.
+            pub mod chevron_right;
+            /// Clock face, for relative timestamps.
+            pub mod clock;
+            /// X glyph to close panels and dialogs.
+            pub mod close;
+            /// Angle-bracket code mark.
+            pub mod code;
+            /// Solid cube.
+            pub mod cube;
+            /// Diagonal stripe over an unavailable tool.
+            pub mod disabled_stripe;
+            /// Download arrow with its tray.
+            pub mod download_arrow;
+            /// Open eye, for revealing a hidden value.
+            pub mod eye;
+            /// Crossed-out eye, for hiding a value.
+            pub mod eye_off;
+            /// File with a plus, standing in for an IFC document.
+            pub mod file_plus;
+            /// Enter-fullscreen corners.
+            pub mod fullscreen_enter;
+            /// Exit-fullscreen corners.
+            pub mod fullscreen_exit;
+            /// Settings gear.
+            pub mod gear;
             /// GitHub Octocat.
             pub mod github;
+            /// GitHub Octocat in a 24x24 box, for buttons and list rows.
+            pub mod github_mark;
+            /// Compass gizmo.
+            pub mod gizmo;
+            /// Circled G badge for a linked Google account.
+            pub mod google_badge;
+            /// Google's four-colour G mark.
+            pub mod google_mark;
+            /// Heading mark.
+            pub mod heading;
+            /// Heart, filled or outlined for the favorite state.
+            pub mod heart;
+            /// Italic-text mark.
+            pub mod italic;
+            /// Chain-link mark.
+            pub mod link;
+            /// Bulleted list.
+            pub mod list_bullet;
+            /// Numbered list.
+            pub mod list_numbered;
+            /// Mail envelope beside an account email.
+            pub mod mail;
+            /// Minus sign for remove and disconnect overlays.
+            pub mod minus;
+            /// Phosphor key glyph for passkey actions.
+            pub mod passkey;
+            /// Pencil for edit affordances.
+            pub mod pencil;
+            /// Plus sign for add/create actions.
+            pub mod plus;
+            /// Reset-to-defaults arrow loop.
+            pub mod reset;
+            /// Magnifier for the search button.
+            pub mod search;
+            /// Log-in arrow with its door.
+            pub mod sign_in;
+            /// Checklist mark.
+            pub mod task;
+            /// Trash can for delete actions.
+            pub mod trash;
+            /// Warning triangle for the danger zone.
+            pub mod warning;
+            /// Wireframe cube.
+            pub mod wireframe;
+
+            pub use arrow_down::ArrowDownIcon;
+            pub use arrow_down_left::ArrowDownLeftIcon;
+            pub use arrow_down_right::ArrowDownRightIcon;
+            pub use arrow_left::ArrowLeftIcon;
+            pub use arrow_right::ArrowRightIcon;
+            pub use arrow_up::ArrowUpIcon;
+            pub use arrow_up_left::ArrowUpLeftIcon;
+            pub use arrow_up_right::ArrowUpRightIcon;
+            pub use axes::AxesIcon;
+            pub use bold::BoldIcon;
+            pub use buy_me_a_coffee::BuyMeACoffeeIcon;
+            pub use chevron_left::ChevronLeftIcon;
+            pub use chevron_right::ChevronRightIcon;
+            pub use clock::ClockIcon;
+            pub use close::CloseIcon;
+            pub use code::CodeIcon;
+            pub use cube::CubeIcon;
+            pub use disabled_stripe::DisabledStripeIcon;
+            pub use download_arrow::DownloadArrowIcon;
+            pub use eye::EyeIcon;
+            pub use eye_off::EyeOffIcon;
+            pub use file_plus::FilePlusIcon;
+            pub use fullscreen_enter::FullscreenEnterIcon;
+            pub use fullscreen_exit::FullscreenExitIcon;
+            pub use gear::GearIcon;
+            pub use github::GitHubIcon;
+            pub use github_mark::GitHubMarkIcon;
+            pub use gizmo::GizmoIcon;
+            pub use google_badge::GoogleBadgeIcon;
+            pub use google_mark::GoogleMarkIcon;
+            pub use heading::HeadingIcon;
+            pub use heart::HeartIcon;
+            pub use italic::ItalicIcon;
+            pub use link::LinkIcon;
+            pub use list_bullet::ListBulletIcon;
+            pub use list_numbered::ListNumberedIcon;
+            pub use mail::MailIcon;
+            pub use minus::MinusIcon;
+            pub use passkey::PasskeyIcon;
+            pub use pencil::PencilIcon;
+            pub use plus::PlusIcon;
+            pub use reset::ResetIcon;
+            pub use search::SearchIcon;
+            pub use sign_in::SignInIcon;
+            pub use task::TaskIcon;
+            pub use trash::TrashIcon;
+            pub use warning::WarningIcon;
+            pub use wireframe::WireframeIcon;
         }
         /// Project logo.
         pub mod logo;
@@ -85,14 +223,6 @@ pub mod components {
     pub use sections::header::Header;
     pub use sections::projects::ProjectsSection;
 
-    pub use icons::Icon;
-    pub use icons::Icon::{
-        ICON_ARROW_DOWN, ICON_ARROW_DOWN_LEFT, ICON_ARROW_DOWN_RIGHT, ICON_ARROW_LEFT,
-        ICON_ARROW_RIGHT, ICON_ARROW_UP, ICON_ARROW_UP_LEFT, ICON_ARROW_UP_RIGHT, ICON_AXES,
-        ICON_BOLD, ICON_CODE, ICON_FULLSCREEN_ENTER, ICON_FULLSCREEN_EXIT, ICON_GEAR, ICON_GIZMO,
-        ICON_HEADING, ICON_ITALIC, ICON_LINK, ICON_LIST_BULLET, ICON_LIST_NUMBERED, ICON_RESET,
-        ICON_TASK,
-    };
     pub use ui::corner_frame::CornerFrame;
     pub use ui::effects::section_fade::FadeOverlay;
     pub use ui::icons::{buy_me_a_coffee::BuyMeACoffeeIcon, github::GitHubIcon};

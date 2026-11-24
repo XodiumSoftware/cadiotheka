@@ -3,7 +3,10 @@
 //! The viewer fetches a pre-converted GLB from the backend (`/data/projects/:id/glb`)
 //! and renders it with the `three-d` renderer in [`crate::three_d_viewer`].
 
-use crate::components::Icon;
+use crate::components::ui::icons::{
+    ArrowDownIcon, ArrowDownLeftIcon, ArrowDownRightIcon, ArrowLeftIcon, ArrowRightIcon,
+    ArrowUpIcon, ArrowUpLeftIcon, ArrowUpRightIcon, CloseIcon,
+};
 use crate::components::ui::view_gizmo::{GizmoPosition, ViewGizmo, ViewGizmoDirection};
 use crate::three_d_viewer::{
     ObjectHit, OrbitControls, PrimitiveMetadata, Renderer, ViewState, ViewerTheme, fetch_metadata,
@@ -1326,10 +1329,7 @@ pub fn IfcViewer(
                                                     aria-label="Close object info panel"
                                                     on:click=move |_| { selected_object.set(None); }
                                                 >
-                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                        <line x1="18" y1="6" x2="6" y2="18" />
-                                                        <line x1="6" y1="6" x2="18" y2="18" />
-                                                    </svg>
+                                                    <CloseIcon class="w-4 h-4" />
                                                 </button>
                                             </div>
                                             <div class="flex-1 min-h-0 overflow-y-auto">
@@ -1521,7 +1521,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowUpLeft class="w-6 h-6"/>
+                <ArrowUpLeftIcon class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::TopCenter
@@ -1529,7 +1529,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowUp class="w-6 h-6"/>
+                <ArrowUpIcon class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::TopRight
@@ -1537,7 +1537,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowUpRight class="w-6 h-6"/>
+                <ArrowUpRightIcon class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::LeftCenter
@@ -1545,7 +1545,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowLeft class="w-6 h-6"/>
+                <ArrowLeftIcon class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::RightCenter
@@ -1553,7 +1553,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowRight class="w-6 h-6"/>
+                <ArrowRightIcon class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::BottomLeft
@@ -1561,7 +1561,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowDownLeft class="w-6 h-6"/>
+                <ArrowDownLeftIcon class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::BottomCenter
@@ -1569,7 +1569,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowDown class="w-6 h-6"/>
+                <ArrowDownIcon class="w-6 h-6"/>
             </GizmoPositionButton>
             <GizmoPositionButton
                 pos=GizmoPosition::BottomRight
@@ -1577,7 +1577,7 @@ fn GizmoPositionSelector(
                 current=current
                 on_select=on_select
             >
-                <Icon::ArrowDownRight class="w-6 h-6"/>
+                <ArrowDownRightIcon class="w-6 h-6"/>
             </GizmoPositionButton>
         </div>
     }

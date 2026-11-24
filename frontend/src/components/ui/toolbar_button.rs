@@ -1,5 +1,6 @@
 //! Shared toolbar button component used by the markdown editor and IFC viewer.
 
+use crate::components::ui::icons::DisabledStripeIcon;
 use leptos::prelude::*;
 
 /// Vertical tooltip placement for a toolbar button.
@@ -94,21 +95,7 @@ pub fn ToolbarButton(
                     {children()}
                     {move || {
                         if show_stripe.get() {
-                            view! {
-                                <svg
-                                    class="absolute inset-0 w-full h-full text-error pointer-events-none"
-                                    viewBox="0 0 16 16"
-                                    fill="none"
-                                    aria-hidden="true"
-                                >
-                                    <path
-                                        d="M2 14 L14 2"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                    />
-                                </svg>
-                            }
+                            view! { <DisabledStripeIcon /> }
                                 .into_any()
                         } else {
                             ().into_any()

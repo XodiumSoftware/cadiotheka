@@ -1,8 +1,12 @@
-use crate::components::Icon;
 use crate::components::IfcViewer;
 use crate::components::Pagination;
 use crate::components::ViewerSettingsModal;
-use crate::components::cards::project::{DownloadIcon, HeartIcon, ProjectCardProperties};
+use crate::components::cards::project::ProjectCardProperties;
+use crate::components::ui::icons::{
+    AxesIcon, CubeIcon, DownloadArrowIcon, FilePlusIcon, FullscreenEnterIcon, FullscreenExitIcon,
+    GearIcon, GizmoIcon, HeartIcon, MinusIcon, PencilIcon, PlusIcon, ResetIcon, TrashIcon,
+    WarningIcon, WireframeIcon,
+};
 use crate::components::ui::markdown::MarkdownView;
 use crate::components::ui::markdown_editor::MarkdownEditor;
 use crate::components::ui::modals::base::BaseModal;
@@ -472,73 +476,6 @@ fn avatar_button(account: &AccountData, class: Option<String>) -> impl IntoView 
     }
 }
 
-fn trash_icon(class: &'static str) -> impl IntoView {
-    view! {
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class=class
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-        >
-            <path d="M3 6h18" />
-            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-        </svg>
-    }
-}
-
-fn warning_icon(class: &'static str) -> impl IntoView {
-    view! {
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class=class
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-        >
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-    }
-}
-
-fn edit_pencil_icon(class: &'static str) -> impl IntoView {
-    view! {
-        <svg
-            class=class
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-        >
-            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-        </svg>
-    }
-}
-
-fn ifc_file_icon(class: &'static str, color_class: &'static str) -> impl IntoView {
-    view! {
-        <svg class=format!("{class} {color_class}") viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="12" y1="18" x2="12" y2="12" />
-            <line x1="9" y1="15" x2="15" y2="15" />
-        </svg>
-    }
-}
-
 /// Modal that lets editors change a version's maturity state.
 #[component]
 fn VersionStateSelector(
@@ -565,7 +502,7 @@ fn VersionStateSelector(
                 {move || {
                     let s = state.get();
                     if s == VersionState::Undefined {
-                        ifc_file_icon("w-5 h-5", s.color_class()).into_any()
+                        view! { <FilePlusIcon class=format!("w-5 h-5 {}", s.color_class()) /> }.into_any()
                     } else {
                         view! {
                             <span class=format!("text-sm font-semibold {}", s.color_class())>{s.letter()}</span>
@@ -574,7 +511,7 @@ fn VersionStateSelector(
                     }
                 }}
                 <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    {edit_pencil_icon("w-4 h-4 text-primary")}
+                    <PencilIcon class="w-4 h-4 text-primary" />
                 </div>
             </button>
             <BaseModal
@@ -654,7 +591,7 @@ fn VersionStateBadge(#[prop(into)] state: Signal<VersionState>) -> impl IntoView
             {move || {
                 let s = state.get();
                 if s == VersionState::Undefined {
-                    ifc_file_icon("w-5 h-5", s.color_class()).into_any()
+                    view! { <FilePlusIcon class=format!("w-5 h-5 {}", s.color_class()) /> }.into_any()
                 } else {
                     view! {
                         <span class=format!("text-sm font-semibold {}", s.color_class())>{s.letter()}</span>
@@ -695,10 +632,7 @@ fn AddVersionRow(
                             .into_any()
                     } else {
                         view! {
-                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <line x1="12" y1="5" x2="12" y2="19" />
-                                <line x1="5" y1="12" x2="19" y2="12" />
-                            </svg>
+                            <PlusIcon class="w-6 h-6" />
                         }
                             .into_any()
                     }}
@@ -2795,7 +2729,7 @@ fn ProjectModalContent(
                                                         })
                                                         disabled_overlay=Signal::derive(move || !show_axes.get())
                                                     >
-                                                        <Icon::Axes />
+                                                        <AxesIcon />
                                                     </ToolbarButton>
                                                     <ToolbarButton
                                                         label="Reset view"
@@ -2805,7 +2739,7 @@ fn ProjectModalContent(
                                                         })
                                                         spin_on_click=true
                                                     >
-                                                        <Icon::Reset />
+                                                        <ResetIcon />
                                                     </ToolbarButton>
                                                     <ToolbarButton
                                                         label="L+click to toggle view gizmo\nR+click to edit view gizmos position"
@@ -2819,7 +2753,7 @@ fn ProjectModalContent(
                                                         })
                                                         disabled_overlay=Signal::derive(move || !show_gizmo.get())
                                                     >
-                                                        <Icon::Gizmo />
+                                                        <GizmoIcon />
                                                     </ToolbarButton>
                                                     <ToolbarButton
                                                         label="Toggle orthographic camera"
@@ -2829,7 +2763,7 @@ fn ProjectModalContent(
                                                             orthographic.update(|v| *v = !*v);
                                                         })
                                                     >
-                                                        <Icon::Cube />
+                                                        <CubeIcon />
                                                     </ToolbarButton>
                                                     <ToolbarButton
                                                         label="Toggle wireframe"
@@ -2839,7 +2773,7 @@ fn ProjectModalContent(
                                                             wireframe.update(|v| *v = !*v);
                                                         })
                                                     >
-                                                        <Icon::Wireframe />
+                                                        <WireframeIcon />
                                                     </ToolbarButton>
                                                     <ToolbarButton
                                                         label="Viewer settings"
@@ -2848,7 +2782,7 @@ fn ProjectModalContent(
                                                             viewer_settings_open.set(true);
                                                         })
                                                     >
-                                                        <Icon::Gear />
+                                                        <GearIcon />
                                                     </ToolbarButton>
                                                     <ToolbarButton
                                                         label="Toggle fullscreen"
@@ -2857,10 +2791,10 @@ fn ProjectModalContent(
                                                     >
                                                         {move || {
                                                             if viewer_fullscreen.get() {
-                                                                view! { <Icon::FullscreenExit /> }
+                                                                view! { <FullscreenExitIcon /> }
                                                                     .into_any()
                                                             } else {
-                                                                view! { <Icon::FullscreenEnter /> }
+                                                                view! { <FullscreenEnterIcon /> }
                                                                     .into_any()
                                                             }
                                                         }}
@@ -3096,7 +3030,7 @@ fn ProjectModalContent(
                                                                                                                 aria-label="Delete version"
                                                                                                                 data-tip="Delete"
                                                                                                             >
-                                                                                                                {trash_icon("w-3.5 h-3.5")}
+                                                                                                                <TrashIcon class="w-3.5 h-3.5" />
                                                                                                             </button>
                                                                                                         }
                                                                                                             .into_any()
@@ -3115,11 +3049,7 @@ fn ProjectModalContent(
                                                                                                                     increment_downloads.run(url);
                                                                                                                 }
                                                                                                             >
-                                                                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                                                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                                                                                    <polyline points="7 10 12 15 17 10" />
-                                                                                                                    <line x1="12" y1="15" x2="12" y2="3" />
-                                                                                                                </svg>
+                                                                                                                <DownloadArrowIcon class="w-4 h-4" />
                                                                                                             </button>
                                                                                                         }
                                                                                                             .into_any()
@@ -3256,7 +3186,7 @@ fn ProjectModalContent(
                                                             aria-label="Edit title"
                                                             on:click=move |_| start_edit_title()
                                                         >
-                                                                                    {edit_pencil_icon("w-4 h-4")}
+                                                                                    <PencilIcon class="w-4 h-4" />
                                                                                 </button>
                                                     }.into_any())}
                                                 </div>
@@ -3311,7 +3241,7 @@ fn ProjectModalContent(
                                                                         <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
                                                                     }.into_any()
                                                                 } else {
-                                                                    view! { <DownloadIcon /> }.into_any()
+                                                                    view! { <DownloadArrowIcon /> }.into_any()
                                                                 }}
                                                             </span>
                                                         </button>
@@ -3363,7 +3293,7 @@ fn ProjectModalContent(
                                                     data-tip=move || if edit_mode.get() { "Done editing" } else { "Edit project" }
                                                     on:click=move |_| toggle_edit_mode()
                                                 >
-                                                    {edit_pencil_icon("w-4 h-4")}
+                                                    <PencilIcon class="w-4 h-4" />
                                                 </button>
                                             }.into_any())}
                                         </div>
@@ -3406,7 +3336,7 @@ fn ProjectModalContent(
                                                                 <MarkdownView source=description.get() />
                                                             </div>
                                                             <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                {edit_pencil_icon("w-5 h-5 text-primary")}
+                                                                <PencilIcon class="w-5 h-5 text-primary" />
                                                             </div>
                                                         </button>
                                                     }
@@ -3481,7 +3411,7 @@ fn ProjectModalContent(
                                                     }).collect_view()}
                                                 </div>
                                                 <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {edit_pencil_icon("w-5 h-5 text-primary")}
+                                                    <PencilIcon class="w-5 h-5 text-primary" />
                                                 </div>
                                             </button>
                                         }
@@ -3567,9 +3497,7 @@ fn ProjectModalContent(
                                                                     aria-label={format!("Remove {display_name}")}
                                                                     on:click=move |_| remove_collaborator.run(account_id.clone())
                                                                 >
-                                                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                        <line x1="5" y1="12" x2="19" y2="12" />
-                                                                    </svg>
+                                                                    <MinusIcon class="w-5 h-5" />
                                                                 </button>
                                                             </div>
                                                         }
@@ -3581,10 +3509,7 @@ fn ProjectModalContent(
                                                         data-tip="Add collaborator"
                                                         on:click=move |_| set_add_open.set(true)
                                                     >
-                                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                            <line x1="12" y1="5" x2="12" y2="19" />
-                                                            <line x1="5" y1="12" x2="19" y2="12" />
-                                                        </svg>
+                                                        <PlusIcon class="w-5 h-5" />
                                                     </button>
                                                 </div>
                                                 <div class="flex justify-end gap-2">
@@ -3682,7 +3607,7 @@ fn ProjectModalContent(
                                                         }).collect_view()}
                                                     </div>
                                                     <div class="absolute inset-0 flex items-center justify-center bg-base-100/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {edit_pencil_icon("w-5 h-5 text-primary")}
+                                                        <PencilIcon class="w-5 h-5 text-primary" />
                                                     </div>
                                                 </button>
                                             }.into_any()
@@ -3736,7 +3661,7 @@ fn ProjectModalContent(
                                                         view! {
                                                             <div class="space-y-3">
                                                                 <div class="flex items-start gap-3">
-                                                                    {warning_icon("w-5 h-5 text-error flex-shrink-0 mt-0.5")}
+                                                                    <WarningIcon class="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
                                                                     <div class="flex-1 min-w-0">
                                                                         <p class="text-sm font-semibold text-error">{"Danger zone"}</p>
                                                                         <p class="text-sm text-base-content/80">
@@ -3784,7 +3709,7 @@ fn ProjectModalContent(
                                                                         } else {
                                                                             view! {
                                                                                 <span class="flex items-center gap-1">
-                                                                                    {trash_icon("w-3.5 h-3.5")}
+                                                                                    <TrashIcon class="w-3.5 h-3.5" />
                                                                                     <span>{"Delete"}</span>
                                                                                 </span>
                                                                             }
@@ -3802,7 +3727,7 @@ fn ProjectModalContent(
                                                                 class="btn btn-outline btn-error w-full flex items-center justify-center gap-2"
                                                                 on:click=move |_| set_show_delete_confirm.set(true)
                                                             >
-                                                                {trash_icon("w-4 h-4")}
+                                                                <TrashIcon class="w-4 h-4" />
                                                                 <span>{"Delete project"}</span>
                                                             </button>
                                                         }

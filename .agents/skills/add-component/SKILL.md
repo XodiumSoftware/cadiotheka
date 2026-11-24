@@ -10,20 +10,20 @@ Use this skill when the user wants to create a new UI component.
 ## Steps
 
 1. Determine the component's purpose and where it belongs:
-   - `src/components/sections/` for page-level sections (header, footer, projects)
-   - `src/components/cards/` for card widgets
-   - `src/components/ui/` for reusable primitives
-   - `src/components/effects/` for visual effects
+    - `src/components/sections/` for page-level sections (header, footer, projects)
+    - `src/components/cards/` for card widgets
+    - `src/components/ui/` for reusable primitives
+    - `src/components/effects/` for visual effects
 
 2. Create the file under the appropriate directory.
-   - Do **not** create a `mod.rs` file. Cadiotheka registers all modules directly in `src/lib.rs`.
+    - Do **not** create a `mod.rs` file. Cadiotheka registers all modules directly in `src/lib.rs`.
 
 3. Write the component using the project's conventions:
-   - Use `#[component]` from `leptos::prelude::*`.
-   - Accept props with `#[prop(into)]`, `#[prop(optional)]`, or `#[prop(default = ...)]` as needed.
-   - Use `t!` / `t_string!` and `use_i18n()` for any user-facing text.
-   - Prefer Tailwind utility classes. Use DaisyUI classes (`btn`, `card`, `badge`, etc.) where appropriate.
-   - Keep accessibility in mind: labels, `role`, `aria-*`, and keyboard handling.
+    - Use `#[component]` from `leptos::prelude::*`.
+    - Accept props with `#[prop(into)]`, `#[prop(optional)]`, or `#[prop(default = ...)]` as needed.
+    - Use `t!` / `t_string!` and `use_i18n()` for any user-facing text.
+    - Prefer Tailwind utility classes. Use DaisyUI classes (`btn`, `card`, `badge`, etc.) where appropriate.
+    - Keep accessibility in mind: labels, `role`, `aria-*`, and keyboard handling.
 
 4. If the component should be publicly usable, export it from `src/lib.rs` under the `components` module.
 
@@ -39,4 +39,4 @@ Use this skill when the user wants to create a new UI component.
 - Avoid hard-coded English strings; externalize via `locales/en.json`.
 - Use `CornerFrame`, `OverflowRow`, and other existing UI primitives when appropriate.
 - Keep components focused and small.
-- SVG icons added to `src/components/icons.rs` must be copied verbatim from the Phosphor icon set (regular weight, 256×256 view box). Do not construct or modify paths by hand.
+- SVG icons live one component per file in `src/components/ui/icons/` (registered in `src/lib.rs`). Glyphs added there must be copied verbatim from the Phosphor icon set (regular weight, 256×256 view box). Do not construct or modify paths by hand.

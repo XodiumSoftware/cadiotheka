@@ -4,7 +4,7 @@
 //! primitives in the 3D viewer. The color is persisted account-scoped in the
 //! `viewer_preferences` JSON blob.
 
-use crate::components::Icon;
+use crate::components::ui::icons::ResetIcon;
 use crate::components::ui::modals::base::BaseModal;
 use crate::utils::{contrast_color, hex_to_srgba, srgba_to_hex};
 use leptos::prelude::*;
@@ -116,7 +116,7 @@ pub fn ViewerSettingsModal(
                                 aria-label="Reset FPS counter setting"
                                 on:click=reset_show_fps
                             >
-                                <Icon::Reset class="w-3.5 h-3.5" />
+                                <ResetIcon class="w-3.5 h-3.5" />
                             </button>
                         </div>
                         <input
@@ -140,7 +140,7 @@ pub fn ViewerSettingsModal(
                                     aria-label="Reset field of view"
                                     on:click=reset_fov
                                 >
-                                    <Icon::Reset class="w-3.5 h-3.5" />
+                                    <ResetIcon class="w-3.5 h-3.5" />
                                 </button>
                             </div>
                             <span class="text-xs font-mono text-base-content/70">
@@ -170,7 +170,7 @@ pub fn ViewerSettingsModal(
                                 aria-label="Reset object highlight color"
                                 on:click=reset_highlight_color
                             >
-                                <Icon::Reset class="w-3.5 h-3.5" />
+                                <ResetIcon class="w-3.5 h-3.5" />
                             </button>
                         </div>
                         <div class="relative">
@@ -202,7 +202,7 @@ pub fn ViewerSettingsModal(
                                 aria-label="Reset object selection color"
                                 on:click=reset_selection_color
                             >
-                                <Icon::Reset class="w-3.5 h-3.5" />
+                                <ResetIcon class="w-3.5 h-3.5" />
                             </button>
                         </div>
                         <div class="relative">
@@ -234,7 +234,7 @@ pub fn ViewerSettingsModal(
                                 aria-label="Reset skybox color"
                                 on:click=reset_skybox_color
                             >
-                                <Icon::Reset class="w-3.5 h-3.5" />
+                                <ResetIcon class="w-3.5 h-3.5" />
                             </button>
                         </div>
                         <div class="relative">
