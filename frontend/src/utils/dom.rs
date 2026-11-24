@@ -134,3 +134,14 @@ where
 
     Some(())
 }
+
+/// Returns `true` when every supplied signal still belongs to a live scope.
+///
+/// Async work started from a component outlives the component when the user
+/// closes the modal while a request is still in flight. Owning any signal of a
+/// disposed scope and then writing to it panics with "Tried to access a
+/// reactive value that has already been disposed", so long-running tasks must
+/// check this before applying their result.
+pub fn scope_alive(signals: &[&dyn leptos::prelude::IsDisposed]) -> bool {
+    signals.iter().all(|signal| !signal.is_disposed())
+}

@@ -29,7 +29,7 @@ use crate::metadata::VersionState;
 use crate::metadata::tags::Tag;
 use crate::utils::{
     format_number, format_version_timestamp, hex_to_srgba, placeholder_color, placeholder_letter,
-    project_glb_metadata_url, project_glb_url, srgba_to_hex,
+    project_glb_metadata_url, project_glb_url, scope_alive, srgba_to_hex,
 };
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
@@ -858,7 +858,13 @@ fn ProjectModalContent(
             let project_id = project_id.clone();
             leptos::task::spawn_local(async move {
                 match fetch_project_versions(&project_id).await {
-                    Ok(fetched) => set_versions.set(fetched),
+                    Ok(fetched) => {
+                        // Deleting the project closes the modal, which disposes
+                        // these signals while this request is still in flight.
+                        if scope_alive(&[&set_versions]) {
+                            set_versions.set(fetched);
+                        }
+                    }
                     Err(err) => {
                         web_sys::console::error_1(
                             &format!("Failed to load project versions: {}", err.message()).into(),
@@ -990,6 +996,9 @@ fn ProjectModalContent(
                 set_glb_status.set(GlbConversionStatus::Idle);
                 match upload_project_ifc(&project_id, file, &version).await {
                     Ok(version) => {
+                        if !scope_alive(&[&set_versions, &set_glb_status]) {
+                            return;
+                        }
                         let version_for_projects = version.clone();
                         set_versions.update(|versions| {
                             versions.insert(0, version);
@@ -1010,20 +1019,26 @@ fn ProjectModalContent(
 
                         set_glb_status.set(GlbConversionStatus::Converting);
                         match convert_project_glb(&project_id).await {
-                            Ok(true) => {
-                                set_glb_status.set(GlbConversionStatus::Ready);
-                                show_toast("IFC model converted to 3D".to_string());
-                            }
-                            Ok(false) => {
-                                set_glb_status.set(GlbConversionStatus::NoGeometry);
-                                show_toast("IFC model has no renderable geometry".to_string());
+                            Ok(converted) => {
+                                if !scope_alive(&[&set_glb_status]) {
+                                    return;
+                                }
+                                if converted {
+                                    set_glb_status.set(GlbConversionStatus::Ready);
+                                    show_toast("IFC model converted to 3D".to_string());
+                                } else {
+                                    set_glb_status.set(GlbConversionStatus::NoGeometry);
+                                    show_toast("IFC model has no renderable geometry".to_string());
+                                }
                             }
                             Err(err) => {
                                 web_sys::console::error_1(
                                     &format!("Failed to convert IFC model: {}", err.message())
                                         .into(),
                                 );
-                                set_glb_status.set(GlbConversionStatus::Failed);
+                                if scope_alive(&[&set_glb_status]) {
+                                    set_glb_status.set(GlbConversionStatus::Failed);
+                                }
                                 show_toast("Failed to convert IFC model".to_string());
                             }
                         }
@@ -1035,8 +1050,10 @@ fn ProjectModalContent(
                         show_toast("Failed to upload IFC model".to_string());
                     }
                 }
-                set_is_uploading_ifc.set(false);
-                close_upload_modal();
+                if scope_alive(&[&set_is_uploading_ifc]) {
+                    set_is_uploading_ifc.set(false);
+                    close_upload_modal();
+                }
             });
         })
     };
@@ -1050,6 +1067,9 @@ fn ProjectModalContent(
             leptos::task::spawn_local(async move {
                 match update_project_version_state(&project_id, &version_id, state).await {
                     Ok(()) => {
+                        if !scope_alive(&[&set_versions]) {
+                            return;
+                        }
                         set_versions.update(|versions| {
                             for version in versions.iter_mut() {
                                 if version.id == version_id {
@@ -1099,6 +1119,9 @@ fn ProjectModalContent(
                 set_deleting_version_id.set(Some(version_id.clone()));
                 match delete_project_version(&project_id, &version_id).await {
                     Ok(()) => {
+                        if !scope_alive(&[&set_versions]) {
+                            return;
+                        }
                         set_versions.update(|versions| {
                             versions.retain(|version| version.id != version_id);
                         });
@@ -1127,7 +1150,9 @@ fn ProjectModalContent(
                         show_toast("Failed to delete version".to_string());
                     }
                 }
-                set_deleting_version_id.set(None);
+                if scope_alive(&[&set_deleting_version_id]) {
+                    set_deleting_version_id.set(None);
+                }
             });
         })
     };
@@ -1161,15 +1186,18 @@ fn ProjectModalContent(
                                 );
                             }
                         }
+                        // `close` disposes this component's scope, so nothing
+                        // below may touch its signals afterwards.
+                        set_is_deleting.set(false);
                         modal.close();
                     }
                     Err(err) => {
                         web_sys::console::error_1(
                             &format!("Failed to delete project: {}", err.message()).into(),
                         );
+                        set_is_deleting.set(false);
                     }
                 }
-                set_is_deleting.set(false);
             });
         })
     };
@@ -1238,6 +1266,9 @@ fn ProjectModalContent(
             leptos::task::spawn_local(async move {
                 match update_project_title(&project_id, draft_value).await {
                     Ok(new_title) => {
+                        if !scope_alive(&[&set_title, &set_draft_title]) {
+                            return;
+                        }
                         set_title.set(new_title.clone());
                         set_draft_title.set(new_title.clone());
                         modal_card.update(|opt| {
@@ -1260,7 +1291,9 @@ fn ProjectModalContent(
                         );
                     }
                 }
-                set_editing_title.set(false);
+                if scope_alive(&[&set_editing_title]) {
+                    set_editing_title.set(false);
+                }
             });
         })
     };
@@ -1278,6 +1311,9 @@ fn ProjectModalContent(
             leptos::task::spawn_local(async move {
                 match update_project_description(&project_id, draft_value).await {
                     Ok(new_description) => {
+                        if !scope_alive(&[&set_description, &set_draft_description]) {
+                            return;
+                        }
                         set_description.set(new_description.clone());
                         set_draft_description.set(new_description.clone());
                         modal_card.update(|opt| {
@@ -1300,7 +1336,9 @@ fn ProjectModalContent(
                         );
                     }
                 }
-                set_editing_description.set(false);
+                if scope_alive(&[&set_editing_description]) {
+                    set_editing_description.set(false);
+                }
             });
         })
     };
@@ -1318,6 +1356,9 @@ fn ProjectModalContent(
             leptos::task::spawn_local(async move {
                 match update_project_tags(&project_id, draft_value).await {
                     Ok(new_tags) => {
+                        if !scope_alive(&[&set_tags, &set_draft_tags]) {
+                            return;
+                        }
                         set_tags.set(new_tags.clone());
                         set_draft_tags.set(new_tags.clone());
                         modal_card.update(|opt| {
@@ -1340,7 +1381,9 @@ fn ProjectModalContent(
                         );
                     }
                 }
-                set_editing_tags.set(false);
+                if scope_alive(&[&set_editing_tags]) {
+                    set_editing_tags.set(false);
+                }
             });
         })
     };
@@ -1358,6 +1401,9 @@ fn ProjectModalContent(
             leptos::task::spawn_local(async move {
                 match update_project_collaborators(&project_id, draft_value).await {
                     Ok(new_ids) => {
+                        if !scope_alive(&[&set_collaborator_ids, &set_draft_collaborator_ids]) {
+                            return;
+                        }
                         set_collaborator_ids.set(new_ids.clone());
                         set_draft_collaborator_ids.set(new_ids.clone());
                         modal_card.update(|opt| {
@@ -1380,7 +1426,9 @@ fn ProjectModalContent(
                         );
                     }
                 }
-                set_editing_collaborators.set(false);
+                if scope_alive(&[&set_editing_collaborators]) {
+                    set_editing_collaborators.set(false);
+                }
             });
         })
     };
